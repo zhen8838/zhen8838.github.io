@@ -1,339 +1,285 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport">
+    <meta name="keywords" content="hexo, autumn">
+    <title>
+        Practice
+    </title>
+    <!-- favicon -->
+    
+    <link rel="icon" href="/img/logo.png">
+    
+    <link rel="stylesheet" href="/css/style.css">
 
+    <!-- highlight -->
+    <link rel="stylesheet" href="https://cdn.bootcss.com/highlight.js/9.12.0/styles/github-gist.min.css">
+    <script src="//cdn.bootcss.com/highlight.js/9.2.0/highlight.min.js"></script>
+    <script>
+        hljs.initHighlightingOnLoad()
+    </script>
+    <script src="https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="http://osly086qe.bkt.clouddn.com/hexo-infinite-scroll-v1.0.1.min.css">
+    <script src="http://osly086qe.bkt.clouddn.com/hexo-infinite-scroll-v1.0.3.min.js"></script>
+    <script>
+        infiniteScroll()
 
-
-<title>
-  
-    CMake编译静态库
-  
-</title>
-
-<meta name="description" content="CMake编译静态库 准备工作 安装cmake&amp;emsp;我的系统是ubuntu16，这一步就不赘述了，apt或者源代码安装都没问题。 源代码&amp;emsp;我是想在系统中学习好linux应用层编程，所以我买了Linux/Uinx系统编程手册。在学习过程中发现他的代码都依赖于作者所写的几个头文件，所以我产生了将其将其编译成静态库的想法，虽然文件不多，但是姑且也算是学习到了一些东西。需要的可以自行百度搜">
-<meta name="keywords" content="Linux,CMake">
-<meta property="og:type" content="article">
-<meta property="og:title" content="CMake编译静态库">
-<meta property="og:url" content="https://zhen8838.github.io/2018/05/08/编译静态库/index.html">
-<meta property="og:site_name" content="Practice">
-<meta property="og:description" content="CMake编译静态库 准备工作 安装cmake&amp;emsp;我的系统是ubuntu16，这一步就不赘述了，apt或者源代码安装都没问题。 源代码&amp;emsp;我是想在系统中学习好linux应用层编程，所以我买了Linux/Uinx系统编程手册。在学习过程中发现他的代码都依赖于作者所写的几个头文件，所以我产生了将其将其编译成静态库的想法，虽然文件不多，但是姑且也算是学习到了一些东西。需要的可以自行百度搜">
-<meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2018-06-01T06:52:06.631Z">
-<meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="CMake编译静态库">
-<meta name="twitter:description" content="CMake编译静态库 准备工作 安装cmake&amp;emsp;我的系统是ubuntu16，这一步就不赘述了，apt或者源代码安装都没问题。 源代码&amp;emsp;我是想在系统中学习好linux应用层编程，所以我买了Linux/Uinx系统编程手册。在学习过程中发现他的代码都依赖于作者所写的几个头文件，所以我产生了将其将其编译成静态库的想法，虽然文件不多，但是姑且也算是学习到了一些东西。需要的可以自行百度搜">
-
-
-  <link rel="alternative" href="/atom.xml" title="Practice" type="application/atom+xml">
-
-
-
-  <link rel="icon" href="/favicon.png">
-
-
-<link rel="stylesheet" href="/perfect-scrollbar/css/perfect-scrollbar.min.css">
-<link rel="stylesheet" href="/styles/main.css">
-
-
-
-
-
-
+        // for mobile menu
+        $(function() {
+            $('.social-button').click(function() {
+                if ($('.social-links').hasClass('hide-links')) {
+                    $('.social-links').removeClass('hide-links')
+                } else {
+                    $('.social-links').addClass('hide-links')
+                }
+            })
+        })
+    </script>
 </head>
-<body
-  
-    class="monochrome"
-  
-  >
-  <div class="mobile-header">
-  <button class="sidebar-toggle" type="button">
-    <span class="icon-bar"></span>
-    <span class="icon-bar"></span>
-    <span class="icon-bar"></span>
-  </button>
-  <a class="title" href="/">Practice</a>
-</div>
 
-  <div class="main-container">
-    <div class="sidebar">
-  <div class="header">
-    <h1 class="title"><a href="/">Practice</a></h1>
-    
-      <p class="subtitle">
-        一个分享经验的地方
-      </p>
-    
-    <div class="info">
-      <div class="content">
-        
-          <div class="description">一个关于寄托的地方</div>
-        
-        
-          <div class="author">NAke</div>
-        
-      </div>
-      
-        <div class="avatar">
-          
-            <a href="/about"><img src="/images/touxiang.png"></a>
-          
-        </div>
-      
-    </div>
-  </div>
-  <div class="body">
-    
-      
-        <ul class="nav">
-          
-            
-              <li class="category-list-container">
-                <a href="javascript:;">分类</a>
-                <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/学习/">学习</a><span class="category-list-count">12</span></li></ul>
-              </li>
-            
-          
-            
-              <li class="tag-list-container">
-                <a href="javascript:;">标签</a>
-                <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/CMake/">CMake</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/">Linux</a><span class="tag-list-count">8</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Matlab/">Matlab</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/博客/">博客</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/算法/">算法</a><span class="tag-list-count">1</span></li></ul>
-              </li>
-            
-          
-            
-              <li class="archive-list-container">
-                <a href="javascript:;">归档</a>
-                <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018</a><span class="archive-list-count">13</span></li></ul>
-              </li>
-            
-          
-        </ul>
-      
-        <ul class="nav">
-          
-            
-              <li>
-                <a href="/" title="Homepage">Homepage</a>
-              </li>
-            
-          
-            
-              <li>
-                <a href="/archives" title="By Year">By Year</a>
-              </li>
-            
-          
-        </ul>
-      
-        <ul class="nav">
-          
-            
-              <li>
-                <a href="https://github.com/denjones/hexo-theme-chan" title="Theme-Chan" target="_blank" rel="noopener">Theme-Chan</a>
-              </li>
-            
-          
-            
-              <li>
-                <a href="https://github.com/zhen8838" title="Github" target="_blank" rel="noopener">Github</a>
-              </li>
-            
-          
-            
-              <li>
-                <a href="/atom.xml" title="RSS">RSS</a>
-              </li>
-            
-          
-        </ul>
-      
-    
-  </div>
-</div>
-
-    <div class="main-content">
-      
-        <div style="max-width: 1000px">
-      
-          <article id="post-编译静态库" class="article article-type-post">
-  
-    <h1 class="article-header">
-      CMake编译静态库
+    <body style="background: url(/img/bg3.png) #f3f3f3">
+        <div class="container">
+            <header class="header">
+    <h1 class="title">
+        <a href="/" class="logo">
+            Practice
+        </a>
     </h1>
-  
-  
+    <h2 class="desc">
+        一个分享经验的地方
+    </h2>
 
-  <div class="article-info">
-    <span class="article-date">
-  2018-05-08
-</span>
-
+    <nav class="links">
+        <button class="social-button">
+            menu
+        </button>
+        <ul class="social-links hide-links">
+            
+                <li>
+                    <a href="https://github.com/zhen8838">
+                        Github
+                    </a>
+                </li>
+                
+        </ul>
+    </nav>
+</header>
+                <main class="main">
+                    <article class="post">
     
-	<span class="article-category tagcloud">
-	<ul class="article-category-list"><li class="article-category-list-item"><a class="article-category-list-link" href="/categories/学习/">学习</a></li></ul>
-	</span>
-
-
-    
-	<span class="article-tag tagcloud">
-		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/CMake/">CMake</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Linux/">Linux</a></li></ul>
-	</span>
-
-
-  </div>
-  <div class="article-entry">
-    <h1 id="CMake编译静态库"><a href="#CMake编译静态库" class="headerlink" title="CMake编译静态库"></a><strong>CMake编译静态库</strong></h1><hr>
+        <h4 class="post-cat">
+            <a href="/categories/学习/">
+                学习
+            </a>
+        </h4>
+        
+            <h2 class="post-title">
+                CMake编译静态库
+            </h2>
+            <ul class="post-date">
+                <li>
+                    2018-05-08
+                </li>
+                <li>
+                    NAke
+                </li>
+            </ul>
+            <div class="post-content">
+                <h1 id="CMake编译静态库"><a href="#CMake编译静态库" class="headerlink" title="CMake编译静态库"></a><strong>CMake编译静态库</strong></h1><hr>
 <h2 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a><strong>准备工作</strong></h2><ul>
 <li><strong>安装cmake</strong><br>&emsp;我的系统是ubuntu16，这一步就不赘述了，apt或者源代码安装都没问题。</li>
 <li><p><strong>源代码</strong><br>&emsp;我是想在系统中学习好linux应用层编程，所以我买了<a href="https://book.douban.com/subject/25809330/" target="_blank" rel="noopener">Linux/Uinx系统编程手册</a>。<br>在学习过程中发现他的代码都依赖于作者所写的几个头文件，所以我产生了将其将其编译成静态库的想法，虽然文件不多，但是姑且也算是学习到了一些东西。需要的可以自行百度搜索下载。<br>&emsp;源代码分布如下：</p>
-  <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">zqh@linux:~/system_program$ tree .</span><br><span class="line">.</span><br><span class="line">├── build</span><br><span class="line">├── CMakeLists.txt</span><br><span class="line">├── lib</span><br><span class="line">│   ├── alt_functions.c</span><br><span class="line">│   ├── alt_functions.h</span><br><span class="line">│   ├── CMakeLists.txt</span><br><span class="line">│   ├── ename.c.inc</span><br><span class="line">│   ├── error_functions.c</span><br><span class="line">│   ├── error_functions.h</span><br><span class="line">│   ├── get_num.c</span><br><span class="line">│   ├── get_num.h</span><br><span class="line">│   └── tlpi_hdr.h</span><br><span class="line">└── 编译静态库.md</span><br><span class="line"></span><br><span class="line">2 directories, 11 files</span><br></pre></td></tr></table></figure>
+<pre><code class="sh">  zqh@linux:~/system_program$ tree .
+  .
+  ├── build
+  ├── CMakeLists.txt
+  ├── lib
+  │   ├── alt_functions.c
+  │   ├── alt_functions.h
+  │   ├── CMakeLists.txt
+  │   ├── ename.c.inc
+  │   ├── error_functions.c
+  │   ├── error_functions.h
+  │   ├── get_num.c
+  │   ├── get_num.h
+  │   └── tlpi_hdr.h
+  └── 编译静态库.md
+
+  2 directories, 11 files
+</code></pre>
 </li>
 <li><p><strong>编写CMakeLists</strong></p>
 <ul>
 <li><p><em>lib目录下的CMakeLists</em></p>
-<figure class="highlight cmake"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CMAKE_MINIMUM_REQUIRED</span>(VERSION <span class="number">2.8</span>)  </span><br><span class="line"></span><br><span class="line"><span class="keyword">SET</span>(LIB_SRC alt_functions.c error_functions.c get_num.c)  <span class="comment">#添加源文件</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#添加静态库  </span></span><br><span class="line"><span class="keyword">ADD_LIBRARY</span>(tpli_static STATIC <span class="variable">$&#123;LIB_SRC&#125;</span>)  </span><br><span class="line"></span><br><span class="line"><span class="comment">#将静态库重新命名为Libtpli</span></span><br><span class="line"><span class="keyword">SET_TARGET_PROPERTIES</span>(tpli_static PROPERTIES OUTPUT_NAME <span class="string">"tpli"</span>)</span><br><span class="line">```  </span><br><span class="line">* *当前目录下的CMakeLists*</span><br><span class="line"></span><br><span class="line">```cmake</span><br><span class="line"><span class="keyword">CMAKE_MINIMUM_REQUIRED</span>(VERSION <span class="number">2.8</span>)  </span><br><span class="line"><span class="keyword">PROJECT</span>(TestLIB)  <span class="comment">#工程名</span></span><br><span class="line"><span class="keyword">ADD_SUBDIRECTORY</span>(lib) <span class="comment">#添加子目录</span></span><br></pre></td></tr></table></figure>
+<pre><code class="cmake">CMAKE_MINIMUM_REQUIRED(VERSION 2.8)  
+
+SET(LIB_SRC alt_functions.c error_functions.c get_num.c)  #添加源文件
+
+#添加静态库  
+ADD_LIBRARY(tpli_static STATIC ${LIB_SRC})  
+
+#将静态库重新命名为Libtpli
+SET_TARGET_PROPERTIES(tpli_static PROPERTIES OUTPUT_NAME &quot;tpli&quot;)
+</code></pre>
+</li>
+<li><p><em>当前目录下的CMakeLists</em></p>
+<pre><code class="cmake">CMAKE_MINIMUM_REQUIRED(VERSION 2.8)  
+PROJECT(TestLIB)  #工程名
+ADD_SUBDIRECTORY(lib) #添加子目录
+</code></pre>
 </li>
 </ul>
 </li>
-<li><p><strong>编译</strong></p>
-  <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> build/</span><br><span class="line">cmake ..</span><br><span class="line">make</span><br></pre></td></tr></table></figure>
-<p>  查看结果</p>
-  <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">zqh@linux:~/system_program/build$ ls</span><br><span class="line">CMakeCache.txt  CMakeFiles  cmake_install.cmake  lib  Makefile</span><br><span class="line">zqh@linux:~/system_program/build$ <span class="built_in">cd</span> lib/</span><br><span class="line">zqh@linux:~/system_program/build/lib$ ls</span><br><span class="line">CMakeFiles  cmake_install.cmake  libtpli.a  Makefile</span><br></pre></td></tr></table></figure>
-<p>  现在生成了静态库libtpli.a。</p>
-</li>
+<li><strong>编译</strong><pre><code class="sh">  cd build/
+  cmake ..
+  make
+</code></pre>
+  查看结果<pre><code class="sh">  zqh@linux:~/system_program/build$ ls
+  CMakeCache.txt  CMakeFiles  cmake_install.cmake  lib  Makefile
+  zqh@linux:~/system_program/build$ cd lib/
+  zqh@linux:~/system_program/build/lib$ ls
+  CMakeFiles  cmake_install.cmake  libtpli.a  Makefile
+</code></pre>
+  现在生成了静态库libtpli.a。</li>
 <li><p><strong>测试</strong></p>
 <ul>
 <li><p><em>准备</em><br>  新建了一个目录test，将头文件加入其中，内容如下</p>
-  <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">zqh@linux:~/system_program/<span class="built_in">test</span>$ tree</span><br><span class="line">.</span><br><span class="line">├── build</span><br><span class="line">├── CMakeLists.txt</span><br><span class="line">├── inc</span><br><span class="line">│   ├── alt_functions.h</span><br><span class="line">│   ├── ename.c.inc</span><br><span class="line">│   ├── error_functions.h</span><br><span class="line">│   ├── get_num.h</span><br><span class="line">│   └── tlpi_hdr.h</span><br><span class="line">└── test.c</span><br><span class="line"></span><br><span class="line">2 directories, 7 files</span><br></pre></td></tr></table></figure>
+<pre><code class="sh">  zqh@linux:~/system_program/test$ tree
+  .
+  ├── build
+  ├── CMakeLists.txt
+  ├── inc
+  │   ├── alt_functions.h
+  │   ├── ename.c.inc
+  │   ├── error_functions.h
+  │   ├── get_num.h
+  │   └── tlpi_hdr.h
+  └── test.c
+
+  2 directories, 7 files
+</code></pre>
 <p>  test.c（复制文件内容到另一个文件）:</p>
-  <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br></pre></td><td class="code"><pre><span class="line">    <span class="comment">/*************************************************************************\</span></span><br><span class="line"><span class="comment">*                  Copyright (C) Michael Kerrisk, 2017.                   *</span></span><br><span class="line"><span class="comment">*                                                                         *</span></span><br><span class="line"><span class="comment">* This program is free software. You may use, modify, and redistribute it *</span></span><br><span class="line"><span class="comment">* under the terms of the GNU General Public License as published by the   *</span></span><br><span class="line"><span class="comment">* Free Software Foundation, either version 3 or (at your option) any      *</span></span><br><span class="line"><span class="comment">* later version. This program is distributed without any warranty.  See   *</span></span><br><span class="line"><span class="comment">* the file COPYING.gpl-v3 for details.                                    *</span></span><br><span class="line"><span class="comment">\*************************************************************************/</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/* Listing 4-1 */</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/* copy.c</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment">Copy the file named argv[1] to a new file named in argv[2].</span></span><br><span class="line"><span class="comment">*/</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/stat.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;fcntl.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">"tlpi_hdr.h"</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifndef</span> BUF_SIZE        <span class="comment">/* Allow "cc -D" to override definition */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> BUF_SIZE 1024</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">int</span></span><br><span class="line">main(<span class="keyword">int</span> argc, <span class="keyword">char</span> *argv[])</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">int</span> inputFd, outputFd, openFlags;</span><br><span class="line">    <span class="keyword">mode_t</span> filePerms;</span><br><span class="line">    <span class="keyword">ssize_t</span> numRead;</span><br><span class="line">    <span class="keyword">char</span> buf[BUF_SIZE];</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (argc != <span class="number">3</span> || <span class="built_in">strcmp</span>(argv[<span class="number">1</span>], <span class="string">"--help"</span>) == <span class="number">0</span>)</span><br><span class="line">        usageErr(<span class="string">"%s old-file new-file\n"</span>, argv[<span class="number">0</span>]);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* Open input and output files */</span></span><br><span class="line"></span><br><span class="line">    inputFd = open(argv[<span class="number">1</span>], O_RDONLY);</span><br><span class="line">    <span class="keyword">if</span> (inputFd == <span class="number">-1</span>)</span><br><span class="line">        errExit(<span class="string">"opening file %s"</span>, argv[<span class="number">1</span>]);</span><br><span class="line"></span><br><span class="line">    openFlags = O_CREAT | O_WRONLY | O_TRUNC;</span><br><span class="line">    filePerms = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP |</span><br><span class="line">                S_IROTH | S_IWOTH;      <span class="comment">/* rw-rw-rw- */</span></span><br><span class="line">    outputFd = open(argv[<span class="number">2</span>], openFlags, filePerms);</span><br><span class="line">    <span class="keyword">if</span> (outputFd == <span class="number">-1</span>)</span><br><span class="line">        errExit(<span class="string">"opening file %s"</span>, argv[<span class="number">2</span>]);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* Transfer data until we encounter end of input or an error */</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span> ((numRead = read(inputFd, buf, BUF_SIZE)) &gt; <span class="number">0</span>)</span><br><span class="line">        <span class="keyword">if</span> (write(outputFd, buf, numRead) != numRead)</span><br><span class="line">            fatal(<span class="string">"couldn't write whole buffer"</span>);</span><br><span class="line">    <span class="keyword">if</span> (numRead == <span class="number">-1</span>)</span><br><span class="line">        errExit(<span class="string">"read"</span>);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (close(inputFd) == <span class="number">-1</span>)</span><br><span class="line">        errExit(<span class="string">"close input"</span>);</span><br><span class="line">    <span class="keyword">if</span> (close(outputFd) == <span class="number">-1</span>)</span><br><span class="line">        errExit(<span class="string">"close output"</span>);</span><br><span class="line"></span><br><span class="line">    <span class="built_in">exit</span>(EXIT_SUCCESS);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>  CMakeLists.txt:</p>
-  <figure class="highlight cmake"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CMAKE_MINIMUM_REQUIRED</span>(VERSION <span class="number">2.8</span>)  </span><br><span class="line"><span class="keyword">project</span> (Tutorial)  <span class="comment">#工程名</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 添加头文件目录</span></span><br><span class="line"><span class="keyword">include_directories</span>(<span class="variable">$&#123;PROJECT_SOURCE_DIR&#125;</span>/inc )</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">link_libraries</span>(/home/zqh/system_program/build/lib/libtpli.a)<span class="comment">#添加静态库</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">add_executable</span> (Tutorial test.c) <span class="comment">#创建可执行文件</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">target_link_libraries</span>(Tutorial /home/zqh/system_program/build/lib/libtpli.a)<span class="comment"># 连接静态库库</span></span><br></pre></td></tr></table></figure>
+<pre><code class="c">      /*************************************************************************\
+  *                  Copyright (C) Michael Kerrisk, 2017.                   *
+  *                                                                         *
+  * This program is free software. You may use, modify, and redistribute it *
+  * under the terms of the GNU General Public License as published by the   *
+  * Free Software Foundation, either version 3 or (at your option) any      *
+  * later version. This program is distributed without any warranty.  See   *
+  * the file COPYING.gpl-v3 for details.                                    *
+  \*************************************************************************/
+
+  /* Listing 4-1 */
+
+  /* copy.c
+
+  Copy the file named argv[1] to a new file named in argv[2].
+  */
+  #include &lt;sys/stat.h&gt;
+  #include &lt;fcntl.h&gt;
+  #include &quot;tlpi_hdr.h&quot;
+
+  #ifndef BUF_SIZE        /* Allow &quot;cc -D&quot; to override definition */
+  #define BUF_SIZE 1024
+  #endif
+
+  int
+  main(int argc, char *argv[])
+  {
+      int inputFd, outputFd, openFlags;
+      mode_t filePerms;
+      ssize_t numRead;
+      char buf[BUF_SIZE];
+
+      if (argc != 3 || strcmp(argv[1], &quot;--help&quot;) == 0)
+          usageErr(&quot;%s old-file new-file\n&quot;, argv[0]);
+
+      /* Open input and output files */
+
+      inputFd = open(argv[1], O_RDONLY);
+      if (inputFd == -1)
+          errExit(&quot;opening file %s&quot;, argv[1]);
+
+      openFlags = O_CREAT | O_WRONLY | O_TRUNC;
+      filePerms = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP |
+                  S_IROTH | S_IWOTH;      /* rw-rw-rw- */
+      outputFd = open(argv[2], openFlags, filePerms);
+      if (outputFd == -1)
+          errExit(&quot;opening file %s&quot;, argv[2]);
+
+      /* Transfer data until we encounter end of input or an error */
+
+      while ((numRead = read(inputFd, buf, BUF_SIZE)) &gt; 0)
+          if (write(outputFd, buf, numRead) != numRead)
+              fatal(&quot;couldn&#39;t write whole buffer&quot;);
+      if (numRead == -1)
+          errExit(&quot;read&quot;);
+
+      if (close(inputFd) == -1)
+          errExit(&quot;close input&quot;);
+      if (close(outputFd) == -1)
+          errExit(&quot;close output&quot;);
+
+      exit(EXIT_SUCCESS);
+  }
+</code></pre>
+<p>  CMakeLists.txt:<br>  <code>`</code>cmake<br>  CMAKE_MINIMUM_REQUIRED(VERSION 2.8)<br>  project (Tutorial)  #工程名</p>
+<h1 id="添加头文件目录"><a href="#添加头文件目录" class="headerlink" title="添加头文件目录"></a>添加头文件目录</h1><p>  include_directories(${PROJECT_SOURCE_DIR}/inc )</p>
 </li>
-<li><p><em>编译</em></p>
-  <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> build/</span><br><span class="line">cmake ..</span><br><span class="line">make</span><br></pre></td></tr></table></figure>
-</li>
-<li><p><em>运行</em></p>
-  <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">./Tutorial</span><br><span class="line">Usage: ./Tutorial old-file new-file</span><br><span class="line">cat 1.txt</span><br><span class="line">编译静态库成功</span><br><span class="line">./Tutorial 1.txt 2.txt</span><br><span class="line">cat 2.txt</span><br><span class="line">编译静态库成功</span><br></pre></td></tr></table></figure></li>
 </ul>
 </li>
 </ul>
+<pre><code>    link_libraries(/home/zqh/system_program/build/lib/libtpli.a)#添加静态库
 
-  </div>
-  <footer class="article-footer">
-    
-  <div class="cc">
-    <a href="http://creativecommons.org/licenses/by-sa/4.0/deed.z" target="_blank" title="署名-相同方式共享">
-      <img src="/images/cc/cc.png">
-      
-          <img src="/images/cc/by.png">
-        
-          <img src="/images/cc/sa.png">
-      
-      <span>
-        本作品采用知识共享 署名-相同方式共享 4.0 国际许可协议进行许可。
-      </span>
-    </a>
-  </div>
+    add_executable (Tutorial test.c) #创建可执行文件
 
-
-    
-
-  </footer>
-</article>
-
-
-
-
-
-
-
-          <div class="main-footer">
-  
-    © 2018 Practice - Powered by <a href="http://hexo.io" target="_blank">Hexo</a> - Theme <a href="https://github.com/denjones/hexo-theme-chan" target="_blank">Chan</a>
-  
-</div>
-
-      
-        </div>
-      
-    </div>
-  </div>
-  <script src="//apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
-
-  <link rel="stylesheet" href="/PhotoSwipe/photoswipe.css">
-  <link rel="stylesheet" href="/PhotoSwipe/default-skin/default-skin.css">
-
-  <!-- Root element of PhotoSwipe. Must have class pswp. -->
-  <div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
-
-    <!-- Background of PhotoSwipe.
-             It's a separate element as animating opacity is faster than rgba(). -->
-    <div class="pswp__bg"></div>
-
-    <!-- Slides wrapper with overflow:hidden. -->
-    <div class="pswp__scroll-wrap">
-
-      <!-- Container that holds slides.
-                PhotoSwipe keeps only 3 of them in the DOM to save memory.
-                Don't modify these 3 pswp__item elements, data is added later on. -->
-      <div class="pswp__container">
-        <div class="pswp__item"></div>
-        <div class="pswp__item"></div>
-        <div class="pswp__item"></div>
-      </div>
-
-      <!-- Default (PhotoSwipeUI_Default) interface on top of sliding area. Can be changed. -->
-      <div class="pswp__ui pswp__ui--hidden">
-
-        <div class="pswp__top-bar">
-
-          <!--  Controls are self-explanatory. Order can be changed. -->
-
-          <div class="pswp__counter"></div>
-
-          <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
-
-          <button class="pswp__button pswp__button--share" title="Share"></button>
-
-          <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
-
-          <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
-
-          <!-- Preloader demo http://codepen.io/dimsemenov/pen/yyBWoR -->
-          <!-- element will get class pswp__preloader--active when preloader is running -->
-          <div class="pswp__preloader">
-            <div class="pswp__preloader__icn">
-              <div class="pswp__preloader__cut">
-                <div class="pswp__preloader__donut"></div>
-              </div>
+    target_link_libraries(Tutorial /home/zqh/system_program/build/lib/libtpli.a)# 连接静态库库
+    ```
+* *编译*
+    ```sh
+    cd build/
+    cmake ..
+    make
+    ```
+* *运行*
+    ```sh
+    ./Tutorial
+    Usage: ./Tutorial old-file new-file
+    cat 1.txt
+    编译静态库成功
+    ./Tutorial 1.txt 2.txt
+    cat 2.txt
+    编译静态库成功  
+    ```
+</code></pre>
             </div>
-          </div>
+</article>
+                </main>
+                <aside class="aside">
+                    <section class="aside-section">
+                        
+    <h1>Categories</h1>
+
+    <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/学习/">学习</a></li></ul>
+
+                    </section>
+                    <section class="aside-section">
+                        
+    <h1>Archives</h1>
+
+    <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 06</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 05</a></li></ul>
+
+                    </section>
+                    <section class="aside-section tag">
+                        
+    <h1>Tags</h1>
+
+    <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/CMake/">CMake</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Matlab/">Matlab</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/博客/">博客</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/算法/">算法</a></li></ul>
+
+                    </section>
+                </aside>
         </div>
+    </body>
 
-        <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
-          <div class="pswp__share-tooltip"></div>
-        </div>
-
-        <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)"></button>
-
-        <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button>
-
-        <div class="pswp__caption">
-          <div class="pswp__caption__center"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script src="/PhotoSwipe/photoswipe.js"></script>
-  <script src="/PhotoSwipe/photoswipe-ui-default.js"></script>
-
-
-<script src="/perfect-scrollbar/js/min/perfect-scrollbar.min.js"></script>
-<script src="/scripts/main.js"></script>
-
-</body>
 </html>
