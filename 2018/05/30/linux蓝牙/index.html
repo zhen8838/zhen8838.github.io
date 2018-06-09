@@ -89,21 +89,21 @@
                 <h1 id="OrangePI蓝牙使用"><a href="#OrangePI蓝牙使用" class="headerlink" title="OrangePI蓝牙使用"></a>OrangePI蓝牙使用</h1><hr>
 <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>我使用的板子是OrangePI zero Plus2，基于全志H5。我在上面安装好了armbian系统。我现在要使用蓝牙功能，对接我的蓝牙耳机。</p>
 <h2 id="安装Bluez"><a href="#安装Bluez" class="headerlink" title="安装Bluez"></a>安装Bluez</h2><p>linux上的蓝牙官方协议即为Bluez。所以需要先安装Bluez：</p>
-<pre><code class="sh">root@H5:~# apt-get install bluez bluez-tools
+<pre><code class="lang-sh">root@H5:~# apt-get install bluez bluez-tools
 </code></pre>
 <p>安装完成后可以观察到系统上多出了几个工具：</p>
-<pre><code class="sh">root@H5:~# hci
-hciattach  hciconfig  hcitool 
+<pre><code class="lang-sh">root@H5:~# hci
+hciattach  hciconfig  hcitool
 </code></pre>
 <p>使用工具：</p>
-<pre><code class="sh">root@H5:~# hciconfig 
-root@H5:~# 
+<pre><code class="lang-sh">root@H5:~# hciconfig 
+root@H5:~#
 </code></pre>
 <p>发现并没有蓝牙设备。</p>
 <h2 id="开启蓝牙设备"><a href="#开启蓝牙设备" class="headerlink" title="开启蓝牙设备"></a>开启蓝牙设备</h2><p>接下来我在网络上寻找解决方法。找到armbian论坛中的这个<a href="https://forum.armbian.com/topic/5700-opz2-h5-onboard-bluetooth-support/?tab=comments#comment-53891" target="_blank" rel="noopener">帖子</a>，其中thc013网友描述到：</p>
 <blockquote>
 <p>  enable overlay uart 1 and add param_uart1_rtscts=1 to  armbianenv.txt and adjust /etc/init.d/ap6212-bluetooth so it looks like this</p>
-<pre><code class="sh">   # Start patching
+<pre><code class="lang-sh">   # Start patching
            rfkill unblock all  
            echo &quot;0&quot; &gt; /sys/class/rfkill/rfkill0/state
            echo &quot;1&quot; &gt; /sys/class/rfkill/rfkill0/state
@@ -123,7 +123,7 @@ root@H5:~#
 <p>当然我要尝试使用这个方法了。</p>
 <ol>
 <li><p><strong>首先使能覆盖串口1</strong><br>根据描述这个应该是在<em>armbianEnv.txt</em>中，我当即去寻找这个文件,这文件应该是在启动分区中的，所以我想将启动分区mount后去修改。</p>
-<pre><code class="sh">root@H5:~# mount /dev/mmcblk2boot1 /mnt
+<pre><code class="lang-sh">root@H5:~# mount /dev/mmcblk2boot1 /mnt
 mount: /dev/mmcblk2boot1 is write-protected, mounting read-only
 mount: wrong fs type, bad option, bad superblock on /dev/mmcblk2boot1,
    missing codepage or helper program, or other error
@@ -132,7 +132,7 @@ mount: wrong fs type, bad option, bad superblock on /dev/mmcblk2boot1,
    dmesg | tail or so.
 </code></pre>
 <p>然后我发现这个armbian系统和一般的系统不太一样。boot相关文件不需要挂载直接可以查看：</p>
-<pre><code class="sh">root@H5:~# cd /boot/
+<pre><code class="lang-sh">root@H5:~# cd /boot/
 root@H5:/boot# ls
 armbianEnv.txt                  dtb-4.16.0-sunxi64
 armbian_first_run.txt.template  Image
@@ -146,10 +146,10 @@ root@H5:/boot# vi armbianEnv.txt
 </code></pre>
 <p>在overlays后添加上了uart1，以及又添加了一行param_uart1_rtscts=1</p>
 </li>
-<li><strong>调整/etc/init.d/ap6212-bluetooth</strong><br>编辑这个文件<pre><code class="sh">root@H5:~# vi /etc/init.d/ap6212-bluetooth
+<li><strong>调整/etc/init.d/ap6212-bluetooth</strong><br>编辑这个文件<pre><code class="lang-sh">root@H5:~# vi /etc/init.d/ap6212-bluetooth
 </code></pre>
 根据上面的帖子去修改这个文件。</li>
-<li><strong>安装devmem2</strong><br>这是一个内核调试实用的工具，需要安装的话使用这个<a href="http://launchpadlibrarian.net/153545374/devmem2_0.0-0ubuntu1_arm64.deb" target="_blank" rel="noopener">链接</a><br>将软件包传入板子内安装：<pre><code class="sh">root@H5:~# dpkg -i devmem2_0.0-0ubuntu1_arm64.deb
+<li><strong>安装devmem2</strong><br>这是一个内核调试实用的工具，需要安装的话使用这个<a href="http://launchpadlibrarian.net/153545374/devmem2_0.0-0ubuntu1_arm64.deb" target="_blank" rel="noopener">链接</a><br>将软件包传入板子内安装：<pre><code class="lang-sh">root@H5:~# dpkg -i devmem2_0.0-0ubuntu1_arm64.deb
 Selecting previously unselected package devmem2.
 (Reading database ... 31834 files and directories currently installed.)
 Preparing to unpack devmem2_0.0-0ubuntu1_arm64.deb ...
@@ -159,7 +159,7 @@ Processing triggers for man-db (2.7.6.1-2) ...
 </code></pre>
 安装完成重启测试蓝牙功能。</li>
 <li><p><strong>失败</strong><br>我发现这个方法并不可行，我现在对这个方法有所了解了。他其实是使用这个方式开启蓝牙：</p>
-<pre><code class="sh">root@H5:~# /etc/init.d/ap6212-bluetooth start
+<pre><code class="lang-sh">root@H5:~# /etc/init.d/ap6212-bluetooth start
 [....] Starting ap6212-bluetooth (via systemctl): ap6212-bluetooth.serviceWarning: ap6212-bluetooth.service changed on disk. Run &#39;systemctl daemon-reload&#39; to reload units.
 
 Job for ap6212-bluetooth.service failed because the control process exited with error code.
@@ -189,7 +189,7 @@ Warning: ap6212-bluetooth.service changed on disk. Run &#39;systemctl daemon-rel
 </ol>
 <p>我找了一天，刷了十几个镜像，这次使用Orange PI官方的镜像：ubuntu_xenial_zeroplus2_H5_V0_3.img。<br>我首先安装上了这个镜像，进入了root账户。</p>
 <ol>
-<li><strong>升级软件包</strong><br>这里升级软件包时出现了一些错误，使用我这个命令将其修复。<pre><code class="sh">root@Orangepi:~# apt-get update
+<li><strong>升级软件包</strong><br>这里升级软件包时出现了一些错误，使用我这个命令将其修复。<pre><code class="lang-sh">root@Orangepi:~# apt-get update
 Hit:1 http://ports.ubuntu.com xenial InRelease
 Hit:2 http://ports.ubuntu.com xenial-updates InRelease
 Hit:3 http://ports.ubuntu.com xenial-security InRelease
@@ -208,7 +208,7 @@ Hit http://ports.ubuntu.com xenial-backports InRelease
 Hit http://ports.ubuntu.com/ubuntu-ports xenial-proposed InRelease
 </code></pre>
 </li>
-<li><strong>安装bulez</strong><pre><code class="sh">root@Orangepi:~# apt-get install bluez
+<li><strong>安装bulez</strong><pre><code class="lang-sh">root@Orangepi:~# apt-get install bluez
 Reading package lists... Done
 Building dependency tree
 Reading state information... Done
@@ -230,18 +230,18 @@ Setting up bluez (5.37-0ubuntu5.2) ...
 Processing triggers for dbus (1.10.6-1ubuntu3.1) ...
 Processing triggers for systemd (229-4ubuntu12) ...
 </code></pre>
-安装好之后查看蓝牙设备，当然不出我所料是没有蓝牙设备的，因为我在这个文件系统的<code>/etc/init.d/</code>下没有看到和蓝牙启动相关的脚本。<pre><code class="sh">root@Orangepi:~# hciconfig hci0
+安装好之后查看蓝牙设备，当然不出我所料是没有蓝牙设备的，因为我在这个文件系统的<code>/etc/init.d/</code>下没有看到和蓝牙启动相关的脚本。<pre><code class="lang-sh">root@Orangepi:~# hciconfig hci0
 Can&#39;t get device info: No such device
 </code></pre>
 </li>
-<li><strong>启动蓝牙</strong><br>我根据之前的启动蓝牙方法，尝试了如下命令：<pre><code class="sh">rfkill unblock all
+<li><strong>启动蓝牙</strong><br>我根据之前的启动蓝牙方法，尝试了如下命令：<pre><code class="lang-sh">rfkill unblock all
 echo &quot;0&quot; &gt; /sys/class/rfkill/rfkill0/state
 echo &quot;1&quot; &gt; /sys/class/rfkill/rfkill0/state
 echo &quot; &quot; &gt; /dev/ttyS1
 sleep 0.1
 hciattach /dev/ttyS1 bcm43xx 115200 flow bdaddr 43:29:B1:55:01:01
 </code></pre>
-执行结果(这里是前面的命令都执行了一遍)：<pre><code class="sh">root@Orangepi:~# hciattach /dev/ttyS1 bcm43xx 115200 flow bdaddr 43:29:B1:55:01:01
+执行结果(这里是前面的命令都执行了一遍)：<pre><code class="lang-sh">root@Orangepi:~# hciattach /dev/ttyS1 bcm43xx 115200 flow bdaddr 43:29:B1:55:01:01
 bcm43xx_init
 Patch not found, continue anyway
 Set BDADDR UART: 43:29:B1:55:01:01
@@ -264,9 +264,9 @@ Scanning ...
 </ol>
 <h1 id="后记"><a href="#后记" class="headerlink" title="后记"></a>后记</h1><p>我试了Armbian_5.45_Orangepizeroplus2-h5_Debian_stretch_next_4.14.44.img的镜像，然后进行了以下两步：</p>
 <ol>
-<li><strong>使能uart1</strong><pre><code class="sh">root@H5:/# vi /boot/armbianEnv.txt
+<li><strong>使能uart1</strong><pre><code class="lang-sh">root@H5:/# vi /boot/armbianEnv.txt
 </code></pre>
-修改如下：<pre><code class="git">verbosity=1
+修改如下：<pre><code class="lang-git">verbosity=1
 console=both
 overlay_prefix=sun50i-h5
 + overlays=usbhost2 usbhost3 uart1
@@ -276,9 +276,9 @@ rootfstype=ext4
 usbstoragequirks=0x2537:0x1066:u,0x2537:0x1068:u
 </code></pre>
 </li>
-<li><strong>修改蓝牙服务</strong><pre><code class="sh">root@H5:/# vi /etc/init.d/ap6212-bluetooth
+<li><strong>修改蓝牙服务</strong><pre><code class="lang-sh">root@H5:/# vi /etc/init.d/ap6212-bluetooth
 </code></pre>
-修改如下<pre><code class="git"># Start patching
+修改如下<pre><code class="lang-git"># Start patching
 rfkill unblock all
 echo &quot;0&quot; &gt; /sys/class/rfkill/rfkill0/state
 echo &quot;1&quot; &gt; /sys/class/rfkill/rfkill0/state
@@ -294,7 +294,7 @@ hciattach /dev/$PORT bcm43xx 115200 flow bdaddr $MAC_OPTIONS
 hciconfig hci0 up
 </code></pre>
 </li>
-<li><strong>启动蓝牙</strong><pre><code class="sh">root@H5:/# /etc/init.d/ap6212-bluetooth start
+<li><strong>启动蓝牙</strong><pre><code class="lang-sh">root@H5:/# /etc/init.d/ap6212-bluetooth start
 [....] Starting ap6212-bluetooth (via systemctl): ap6212-bluetooth.serviceWarning: ap6212-bluetooth.ser.
 . ok
 root@H5:/# hciconfig
@@ -335,24 +335,7 @@ hci0:   Type: Primary  Bus: UART
                 </aside>
         </div>
         <!-- 页面点击小红心 -->
-        <script type="text/javascript" src="/js/love.js"></script><!-- hexo-inject:begin --><!-- Begin: Injected MathJax -->
-<script type="text/x-mathjax-config">
-  MathJax.Hub.Config("");
-</script>
-
-<script type="text/x-mathjax-config">
-  MathJax.Hub.Queue(function() {
-    var all = MathJax.Hub.getAllJax(), i;
-    for(i=0; i < all.length; i += 1) {
-      all[i].SourceElement().parentNode.className += ' has-jax';
-    }
-  });
-</script>
-
-<script type="text/javascript" src="custom_mathjax_source">
-</script>
-<!-- End: Injected MathJax -->
-<!-- hexo-inject:end -->
+        <script type="text/javascript" src="/js/love.js"></script><!-- hexo-inject:begin --><!-- hexo-inject:end -->
     </body>
 
 </html>

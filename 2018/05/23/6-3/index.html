@@ -88,7 +88,7 @@
             <div class="post-content">
                 <h2 id="实现一个setenv函数"><a href="#实现一个setenv函数" class="headerlink" title="实现一个setenv函数"></a>实现一个setenv函数</h2><hr>
 <h2 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h2><p>我发现我直接使用如下程序，可以直接设置环境变量：</p>
-<pre><code class="c">const char name1[6]=&quot;SHELL&quot;;
+<pre><code class="lang-c">const char name1[6]=&quot;SHELL&quot;;
 const char name2[8]=&quot;USENAME&quot;;
 const char vaule[4]=&quot;zqh&quot;;
 putenv(&quot;SHELL=zqh&quot;);
@@ -97,12 +97,12 @@ printf(&quot;%s\n&quot;, getenv(name1));
 printf(&quot;%s\n&quot;, getenv(name2));
 </code></pre>
 <p>结果如下：</p>
-<pre><code class="bash">zqh
+<pre><code class="lang-bash">zqh
 zqh
 </code></pre>
 <p><strong>但是</strong><br>-</p>
 <p>当我使用函数的时候，自己将字符串赋值进去的时候，却无法修改环境变量：</p>
-<pre><code class="c">int my_setenv(const char *name,const char *var)
+<pre><code class="lang-c">int my_setenv(const char *name,const char *var)
 {
     char *pbuf = NULL;
     if (getenv(name) == NULL)
@@ -139,7 +139,7 @@ int main(int argc, char const *argv[])
 }
 </code></pre>
 <p><strong>结果如下：</strong></p>
-<pre><code class="bash">now modfiy SHELL
+<pre><code class="lang-bash">now modfiy SHELL
 pbuf SHELL=zqh
 putenv 0
 now add USENAME
@@ -150,7 +150,7 @@ putenv 0
 <p>可以看出，设置变量貌似是成功了，但是当我想获取我设置的变量值时，就会出现<strong>segmentation fault</strong>的错误。这是由于我想<strong>printf</strong>一个<strong>NULL</strong>指针引发的。</p>
 <p>这个就非常令人难受了，我在函数内打印<strong>pbuf</strong>的值，发现他的值的确是我要输入的值，但是却还是不能正确的<strong>putenv</strong>。</p>
 <h2 id="修复过程"><a href="#修复过程" class="headerlink" title="修复过程"></a>修复过程</h2><p>我现在尝试把东西放在主函数中运行，程序如下：</p>
-<pre><code class="c">int main(int argc, char const *argv[])
+<pre><code class="lang-c">int main(int argc, char const *argv[])
 {
     const char name1[6]=&quot;SHELL&quot;;
     const char name2[8]=&quot;USENAME&quot;;
@@ -165,12 +165,12 @@ putenv 0
 }
 </code></pre>
 <p><strong>结果：</strong></p>
-<pre><code class="bash">/bin/zsh
+<pre><code class="lang-bash">/bin/zsh
 zqh
 </code></pre>
 <p>现在非常正常，但是为什么我放在函数中运行，就会失败呢？接下来我尝试继续使用函数。</p>
 <h3 id="使用函数："><a href="#使用函数：" class="headerlink" title="使用函数："></a>使用函数：</h3><p>现在我把他放到函数中：</p>
-<pre><code class="c">int my_setenv(const char *pName,const char *pVar)
+<pre><code class="lang-c">int my_setenv(const char *pName,const char *pVar)
 {
     char *pbuf=NULL;
     pbuf=(char*)malloc(strlen(pName)+strlen(pVar)+1);
@@ -190,7 +190,7 @@ int main(int argc, char const *argv[])
 }
 </code></pre>
 <p>运行结果：</p>
-<pre><code class="bash">/bin/zsh
+<pre><code class="lang-bash">/bin/zsh
 zqh
 </code></pre>
 <h2 id="解决问题"><a href="#解决问题" class="headerlink" title="解决问题"></a>解决问题</h2><p>很无语，现在写的这个函数，与原来没有什么区别，但是就是没有问题。所以这个问题我解决了，但是就好像没有解决一般。令人难受。</p>
@@ -223,24 +223,7 @@ zqh
                 </aside>
         </div>
         <!-- 页面点击小红心 -->
-        <script type="text/javascript" src="/js/love.js"></script><!-- hexo-inject:begin --><!-- Begin: Injected MathJax -->
-<script type="text/x-mathjax-config">
-  MathJax.Hub.Config("");
-</script>
-
-<script type="text/x-mathjax-config">
-  MathJax.Hub.Queue(function() {
-    var all = MathJax.Hub.getAllJax(), i;
-    for(i=0; i < all.length; i += 1) {
-      all[i].SourceElement().parentNode.className += ' has-jax';
-    }
-  });
-</script>
-
-<script type="text/javascript" src="custom_mathjax_source">
-</script>
-<!-- End: Injected MathJax -->
-<!-- hexo-inject:end -->
+        <script type="text/javascript" src="/js/love.js"></script><!-- hexo-inject:begin --><!-- hexo-inject:end -->
     </body>
 
 </html>
