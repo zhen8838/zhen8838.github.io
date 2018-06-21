@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- hexo-inject:begin --><!-- hexo-inject:end --><meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport">
+    <meta name="keywords" content="hexo, autumn">
+    <title>
+        Practice
+    </title>
+    <!-- favicon -->
+    
+    <link rel="icon" href="/img/logo.png">
+    
+    <link rel="stylesheet" href="/css/style.css">
+
+    <!-- highlight -->
+    <link rel="stylesheet" href="https://cdn.bootcss.com/highlight.js/9.12.0/styles/github-gist.min.css">
+    <script src="//cdn.bootcss.com/highlight.js/9.2.0/highlight.min.js"></script>
+    <script>
+        hljs.initHighlightingOnLoad()
+    </script>
+    <script src="https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="http://osly086qe.bkt.clouddn.com/hexo-infinite-scroll-v1.0.1.min.css">
+    <script src="http://osly086qe.bkt.clouddn.com/hexo-infinite-scroll-v1.0.3.min.js"></script>
+    <script>
+        infiniteScroll()
+
+        // for mobile menu
+        $(function() {
+            $('.social-button').click(function() {
+                if ($('.social-links').hasClass('hide-links')) {
+                    $('.social-links').removeClass('hide-links')
+                } else {
+                    $('.social-links').addClass('hide-links')
+                }
+            })
+        })
+    </script><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+</head>
+
+    <body style="background: url(/img/bg3.png) #f3f3f3">
+        <!-- hexo-inject:begin --><!-- hexo-inject:end --><div class="container">
+            <header class="header">
+    <h1 class="title">
+        <a href="/" class="logo">
+            Practice
+        </a>
+    </h1>
+    <h2 class="desc">
+        一个分享经验的地方
+    </h2>
+
+    <nav class="links">
+        <button class="social-button">
+            menu
+        </button>
+        <ul class="social-links hide-links">
+            
+                <li>
+                    <a href="https://github.com/zhen8838">
+                        Github
+                    </a>
+                </li>
+                
+        </ul>
+    </nav>
+</header>
+                <main class="main">
+                    <article class="post">
+    
+        <h4 class="post-cat">
+            <a href="/categories/学习/">
+                学习
+            </a>
+        </h4>
+        
+            <h2 class="post-title">
+                自己实现cp的程序
+            </h2>
+            <ul class="post-date">
+                <li>
+                    2018-05-08
+                </li>
+                <li>
+                    NAke
+                </li>
+            </ul>
+            <div class="post-content">
+                <h1 id="编写一个类似cp的程序"><strong>编写一个类似cp的程序</strong></h1>
+<hr>
+<h3 id="题目"><strong>题目</strong></h3>
+<p> 编写一个类似cp命令的程序，当使用该程序复制一个包含空洞的普通文件时，要求目标文件的空洞与源文件一致。</p>
+<h3 id="准备工作"><strong>准备工作</strong></h3>
+<ul>
+<li><p><strong>创建一个空洞文件</strong>  首先先编写一个小程序去创建空洞文件。 代码如下： ```c #include &lt;stdio.h&gt; #include &lt;unistd.h&gt; #include &lt;fcntl.h&gt; #include &lt;stdlib.h&gt;</p>
+int main(void) { int fd; int ret; fd=open(“hole.txt”,O_CREAT|O_RDWR,0644); if(fd==-1) exit(EXIT_FAILURE); write(fd,“hello”,5); ret=lseek(fd,100000,SEEK_CUR); if(ret==-1) exit(EXIT_FAILURE); write(fd,“world”,5); close(fd); exit(EXIT_SUCCESS); } ```</li>
+<li><p><strong>编译运行</strong></p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><a class="sourceLine" id="cb1-1" data-line-number="1">$ <span class="fu">gcc</span> 4-2.c -o hole</a>
+<a class="sourceLine" id="cb1-2" data-line-number="2">$ <span class="ex">./hole</span></a>
+<a class="sourceLine" id="cb1-3" data-line-number="3">$ <span class="fu">cat</span> hole.txt</a>
+<a class="sourceLine" id="cb1-4" data-line-number="4"><span class="ex">helloworld</span></a>
+<a class="sourceLine" id="cb1-5" data-line-number="5">$ <span class="fu">du</span> -h hole.txt</a>
+<a class="sourceLine" id="cb1-6" data-line-number="6"><span class="ex">8.0K</span>    hole.txt</a>
+<a class="sourceLine" id="cb1-7" data-line-number="7">$ <span class="fu">od</span> -c hole.txt</a>
+<a class="sourceLine" id="cb1-8" data-line-number="8"><span class="ex">0000000</span>   h   e   l   l   o  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0</a>
+<a class="sourceLine" id="cb1-9" data-line-number="9"><span class="ex">0000020</span>  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0</a>
+<a class="sourceLine" id="cb1-10" data-line-number="10"><span class="ex">*</span></a>
+<a class="sourceLine" id="cb1-11" data-line-number="11"><span class="ex">0303240</span>  \0  \0  \0  \0  \0   w   o   r   l   d</a>
+<a class="sourceLine" id="cb1-12" data-line-number="12"><span class="ex">0303252</span></a></code></pre></div></li>
+<li><p><strong>程序代码</strong></p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode c"><code class="sourceCode c"><a class="sourceLine" id="cb2-1" data-line-number="1"><span class="pp">#include </span><span class="im">&lt;ctype.h&gt;</span></a>
+<a class="sourceLine" id="cb2-2" data-line-number="2"><span class="pp">#include </span><span class="im">&quot;tlpi_hdr.h&quot;</span></a>
+<a class="sourceLine" id="cb2-3" data-line-number="3"><span class="pp">#include </span><span class="im">&lt;stdbool.h&gt;</span></a>
+<a class="sourceLine" id="cb2-4" data-line-number="4"><span class="pp">#include </span><span class="im">&lt;sys/stat.h&gt;</span></a>
+<a class="sourceLine" id="cb2-5" data-line-number="5"><span class="pp">#include </span><span class="im">&lt;fcntl.h&gt;</span></a>
+<a class="sourceLine" id="cb2-6" data-line-number="6"><span class="dt">int</span> main(<span class="dt">int</span> argc, <span class="dt">char</span> *argv[])</a>
+<a class="sourceLine" id="cb2-7" data-line-number="7">{</a>
+<a class="sourceLine" id="cb2-8" data-line-number="8"><span class="dt">char</span> buf[<span class="dv">1024</span>];</a>
+<a class="sourceLine" id="cb2-9" data-line-number="9"><span class="dt">int</span> input,output, ret;</a>
+<a class="sourceLine" id="cb2-10" data-line-number="10"><span class="dt">ssize_t</span> len;</a>
+<a class="sourceLine" id="cb2-11" data-line-number="11"><span class="co">/* 读取选项 */</span></a>
+<a class="sourceLine" id="cb2-12" data-line-number="12"></a>
+<a class="sourceLine" id="cb2-13" data-line-number="13"><span class="cf">if</span>(argc!=<span class="dv">3</span>||strcmp(argv[<span class="dv">1</span>],<span class="st">&quot;--help&quot;</span>)==<span class="dv">0</span>)</a>
+<a class="sourceLine" id="cb2-14" data-line-number="14">{</a>
+<a class="sourceLine" id="cb2-15" data-line-number="15"> printf(<span class="st">&quot;usage:%s cp file1 to file2 </span><span class="sc">\n</span><span class="st">&quot;</span>,argv[<span class="dv">0</span>]);</a>
+<a class="sourceLine" id="cb2-16" data-line-number="16"> exit(EXIT_SUCCESS);</a>
+<a class="sourceLine" id="cb2-17" data-line-number="17">}</a>
+<a class="sourceLine" id="cb2-18" data-line-number="18">input=open(argv[<span class="dv">1</span>], O_RDONLY , S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);</a>
+<a class="sourceLine" id="cb2-19" data-line-number="19"><span class="cf">if</span>(input==-<span class="dv">1</span>)</a>
+<a class="sourceLine" id="cb2-20" data-line-number="20">    errExit(<span class="st">&quot;open input&quot;</span>);</a>
+<a class="sourceLine" id="cb2-21" data-line-number="21">output=open(argv[<span class="dv">2</span>], O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);</a>
+<a class="sourceLine" id="cb2-22" data-line-number="22"><span class="cf">if</span>(input==-<span class="dv">1</span>)</a>
+<a class="sourceLine" id="cb2-23" data-line-number="23">    errExit(<span class="st">&quot;open output&quot;</span>);</a>
+<a class="sourceLine" id="cb2-24" data-line-number="24"><span class="cf">while</span>((ret=read(input,buf,<span class="dv">1024</span>))&gt;<span class="dv">0</span>)</a>
+<a class="sourceLine" id="cb2-25" data-line-number="25">{</a>
+<a class="sourceLine" id="cb2-26" data-line-number="26">    write(output,buf,ret);</a>
+<a class="sourceLine" id="cb2-27" data-line-number="27">}</a>
+<a class="sourceLine" id="cb2-28" data-line-number="28"></a>
+<a class="sourceLine" id="cb2-29" data-line-number="29">exit(EXIT_SUCCESS);</a>
+<a class="sourceLine" id="cb2-30" data-line-number="30">}  </a></code></pre></div></li>
+<li><p><strong>编译运行</strong></p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh"><code class="sourceCode bash"><a class="sourceLine" id="cb3-1" data-line-number="1"><span class="fu">make</span> <span class="kw">&amp;&amp;</span> <span class="ex">./4-2</span> hole.txt test.txt</a></code></pre></div></li>
+<li><p><strong>检查结果</strong></p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><a class="sourceLine" id="cb4-1" data-line-number="1">$ <span class="fu">od</span> -c test.txt</a>
+<a class="sourceLine" id="cb4-2" data-line-number="2"><span class="ex">0000000</span>   h   e   l   l   o  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0</a>
+<a class="sourceLine" id="cb4-3" data-line-number="3"><span class="ex">0000020</span>  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0</a>
+<a class="sourceLine" id="cb4-4" data-line-number="4"><span class="ex">*</span></a>
+<a class="sourceLine" id="cb4-5" data-line-number="5"><span class="ex">0303240</span>  \0  \0  \0  \0  \0   w   o   r   l   d</a>
+<a class="sourceLine" id="cb4-6" data-line-number="6"><span class="ex">0303252</span></a></code></pre></div></li>
+</ul>
+
+            </div>
+</article>
+                </main>
+                <aside class="aside">
+                    <section class="aside-section">
+                        
+    <h1>Categories</h1>
+
+    <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/学习/">学习</a></li></ul>
+
+                    </section>
+                    <section class="aside-section">
+                        
+    <h1>Archives</h1>
+
+    <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 06</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 05</a></li></ul>
+
+                    </section>
+                    <section class="aside-section tag">
+                        
+    <h1>Tags</h1>
+
+    <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/CMake/">CMake</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Matlab/">Matlab</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/git/">git</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/博客/">博客</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/嵌入式/">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/算法/">算法</a></li></ul>
+
+                    </section>
+                </aside>
+        </div>
+        <!-- 页面点击小红心 -->
+        <script type="text/javascript" src="/js/love.js"></script><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+    </body>
+
+</html>
