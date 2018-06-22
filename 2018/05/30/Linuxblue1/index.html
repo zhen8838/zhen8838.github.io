@@ -86,89 +86,265 @@
                 </li>
             </ul>
             <div class="post-content">
-                <h1 id="orangepi蓝牙开启蓝牙">OrangePI蓝牙：开启蓝牙</h1>
-<hr>
-<h2 id="前言">前言</h2>
-<p>我使用的板子是OrangePI zero Plus2，基于全志H5。我在上面安装好了armbian系统。我现在要使用蓝牙功能，对接我的蓝牙耳机。</p>
-<h2 id="安装bluez">安装Bluez</h2>
-<p>linux上的蓝牙官方协议即为Bluez。所以需要先安装Bluez：</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><a class="sourceLine" id="cb1-1" data-line-number="1"><span class="ex">root@H5</span>:~# apt-get install bluez bluez-tools</a></code></pre></div>
+                <h1 id="OrangePI蓝牙：开启蓝牙"><a href="#OrangePI蓝牙：开启蓝牙" class="headerlink" title="OrangePI蓝牙：开启蓝牙"></a>OrangePI蓝牙：开启蓝牙</h1><hr>
+<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>我使用的板子是OrangePI zero Plus2，基于全志H5。我在上面安装好了armbian系统。我现在要使用蓝牙功能，对接我的蓝牙耳机。</p>
+<h2 id="安装Bluez"><a href="#安装Bluez" class="headerlink" title="安装Bluez"></a>安装Bluez</h2><p>linux上的蓝牙官方协议即为Bluez。所以需要先安装Bluez：</p>
+<pre><code class="lang-sh">root@H5:~# apt-get install bluez bluez-tools
+</code></pre>
 <p>安装完成后可以观察到系统上多出了几个工具：</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><a class="sourceLine" id="cb2-1" data-line-number="1"><span class="ex">root@H5</span>:~# hci</a>
-<a class="sourceLine" id="cb2-2" data-line-number="2"><span class="ex">hciattach</span>  hciconfig  hcitool </a></code></pre></div>
+<pre><code class="lang-sh">root@H5:~# hci
+hciattach  hciconfig  hcitool
+</code></pre>
 <p>使用工具：</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode sh"><code class="sourceCode bash"><a class="sourceLine" id="cb3-1" data-line-number="1"><span class="ex">root@H5</span>:~# hciconfig </a>
-<a class="sourceLine" id="cb3-2" data-line-number="2"><span class="ex">root@H5</span>:~# </a></code></pre></div>
+<pre><code class="lang-sh">root@H5:~# hciconfig 
+root@H5:~#
+</code></pre>
 <p>发现并没有蓝牙设备。</p>
-<h2 id="开启蓝牙设备">开启蓝牙设备</h2>
-<p>接下来我在网络上寻找解决方法。找到armbian论坛中的这个<a href="https://forum.armbian.com/topic/5700-opz2-h5-onboard-bluetooth-support/?tab=comments#comment-53891" target="_blank" rel="noopener">帖子</a>，其中thc013网友描述到： &gt; enable overlay uart 1 and add param_uart1_rtscts=1 to armbianenv.txt and adjust /etc/init.d/ap6212-bluetooth so it looks like this &gt; <code>sh &gt;    # Start patching &gt;            rfkill unblock all   &gt;            echo &quot;0&quot; &gt; /sys/class/rfkill/rfkill0/state &gt;            echo &quot;1&quot; &gt; /sys/class/rfkill/rfkill0/state &gt;            echo &quot; &quot; &gt; /dev/$PORT &gt;            devmem2 0x1f00060 b 1 &gt;            echo 10 &gt; /sys/class/gpio/export &gt;            echo out &gt; /sys/class/gpio/gpio10/direction &gt;            echo 0 &gt; /sys/class/gpio/gpio10/value &gt;            echo 1 &gt; /sys/class/gpio/gpio10/value &gt;            sleep 0.1 &gt;            hciattach /dev/$PORT bcm43xx 115200 flow bdaddr  &gt;           $MAC_OPTIONS &gt;            hciconfig hci0 up &gt;</code> &gt; and reboot &gt; oh you might need to install devmem2</p>
+<h2 id="开启蓝牙设备"><a href="#开启蓝牙设备" class="headerlink" title="开启蓝牙设备"></a>开启蓝牙设备</h2><p>接下来我在网络上寻找解决方法。找到armbian论坛中的这个<a href="https://forum.armbian.com/topic/5700-opz2-h5-onboard-bluetooth-support/?tab=comments#comment-53891" target="_blank" rel="noopener">帖子</a>，其中thc013网友描述到：</p>
+<blockquote>
+<p>  enable overlay uart 1 and add param_uart1_rtscts=1 to  armbianenv.txt and adjust /etc/init.d/ap6212-bluetooth so it looks like this</p>
+<pre><code class="lang-sh">   # Start patching
+           rfkill unblock all  
+           echo &quot;0&quot; &gt; /sys/class/rfkill/rfkill0/state
+           echo &quot;1&quot; &gt; /sys/class/rfkill/rfkill0/state
+           echo &quot; &quot; &gt; /dev/$PORT
+           devmem2 0x1f00060 b 1
+           echo 10 &gt; /sys/class/gpio/export
+           echo out &gt; /sys/class/gpio/gpio10/direction
+           echo 0 &gt; /sys/class/gpio/gpio10/value
+           echo 1 &gt; /sys/class/gpio/gpio10/value
+           sleep 0.1
+           hciattach /dev/$PORT bcm43xx 115200 flow bdaddr 
+          $MAC_OPTIONS
+           hciconfig hci0 up
+</code></pre>
+<p>   and reboot<br>   oh you might need to install devmem2</p>
+</blockquote>
 <p>当然我要尝试使用这个方法了。</p>
-<ol type="1">
-<li><p><strong>首先使能覆盖串口1</strong> 根据描述这个应该是在<em>armbianEnv.txt</em>中，我当即去寻找这个文件,这文件应该是在启动分区中的，所以我想将启动分区mount后去修改。</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><a class="sourceLine" id="cb4-1" data-line-number="1"><span class="ex">root@H5</span>:~# mount /dev/mmcblk2boot1 /mnt</a>
-<a class="sourceLine" id="cb4-2" data-line-number="2"><span class="ex">mount</span>: /dev/mmcblk2boot1 is write-protected, mounting read-only</a>
-<a class="sourceLine" id="cb4-3" data-line-number="3"><span class="ex">mount</span>: wrong fs type, bad option, bad superblock on /dev/mmcblk2boot1,</a>
-<a class="sourceLine" id="cb4-4" data-line-number="4">   <span class="ex">missing</span> codepage or helper program, or other error</a>
-<a class="sourceLine" id="cb4-5" data-line-number="5"></a>
-<a class="sourceLine" id="cb4-6" data-line-number="6">   <span class="ex">In</span> some cases useful info is found in syslog - try</a>
-<a class="sourceLine" id="cb4-7" data-line-number="7">   <span class="fu">dmesg</span> <span class="kw">|</span> <span class="fu">tail</span> or so.</a></code></pre></div>
-<p>然后我发现这个armbian系统和一般的系统不太一样。boot相关文件不需要挂载直接可以查看：</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode sh"><code class="sourceCode bash"><a class="sourceLine" id="cb5-1" data-line-number="1"><span class="ex">root@H5</span>:~# cd /boot/</a>
-<a class="sourceLine" id="cb5-2" data-line-number="2"><span class="ex">root@H5</span>:/boot# ls</a>
-<a class="sourceLine" id="cb5-3" data-line-number="3"><span class="ex">armbianEnv.txt</span>                  dtb-4.16.0-sunxi64</a>
-<a class="sourceLine" id="cb5-4" data-line-number="4"><span class="ex">armbian_first_run.txt.template</span>  Image</a>
-<a class="sourceLine" id="cb5-5" data-line-number="5"><span class="ex">boot.bmp</span>                        initrd.img-4.16.0-sunxi64</a>
-<a class="sourceLine" id="cb5-6" data-line-number="6"><span class="ex">boot.cmd</span>                        System.map-4.16.0-sunxi64</a>
-<a class="sourceLine" id="cb5-7" data-line-number="7"><span class="ex">boot-desktop.png</span>                uInitrd</a>
-<a class="sourceLine" id="cb5-8" data-line-number="8"><span class="ex">boot.scr</span>                        uInitrd-4.16.0-sunxi64</a>
-<a class="sourceLine" id="cb5-9" data-line-number="9"><span class="ex">config-4.16.0-sunxi64</span>           vmlinuz-4.16.0-sunxi64</a>
-<a class="sourceLine" id="cb5-10" data-line-number="10"><span class="ex">dtb</span></a>
-<a class="sourceLine" id="cb5-11" data-line-number="11"><span class="ex">root@H5</span>:/boot# vi armbianEnv.txt</a></code></pre></div>
-在overlays后添加上了uart1，以及又添加了一行param_uart1_rtscts=1</li>
-<li><p><strong>调整/etc/init.d/ap6212-bluetooth</strong> 编辑这个文件</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode sh"><code class="sourceCode bash"><a class="sourceLine" id="cb6-1" data-line-number="1"><span class="ex">root@H5</span>:~# vi /etc/init.d/ap6212-bluetooth</a></code></pre></div>
-根据上面的帖子去修改这个文件。</li>
-<li><p><strong>安装devmem2</strong> 这是一个内核调试实用的工具，需要安装的话使用这个<a href="http://launchpadlibrarian.net/153545374/devmem2_0.0-0ubuntu1_arm64.deb" target="_blank" rel="noopener">链接</a> 将软件包传入板子内安装：</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode sh"><code class="sourceCode bash"><a class="sourceLine" id="cb7-1" data-line-number="1"><span class="ex">root@H5</span>:~# dpkg -i devmem2_0.0-0ubuntu1_arm64.deb</a>
-<a class="sourceLine" id="cb7-2" data-line-number="2"><span class="ex">Selecting</span> previously unselected package devmem2.</a>
-<a class="sourceLine" id="cb7-3" data-line-number="3"><span class="kw">(</span><span class="ex">Reading</span> database ... 31834 files and directories currently installed.<span class="kw">)</span></a>
-<a class="sourceLine" id="cb7-4" data-line-number="4"><span class="ex">Preparing</span> to unpack devmem2_0.0-0ubuntu1_arm64.deb ...</a>
-<a class="sourceLine" id="cb7-5" data-line-number="5"><span class="ex">Unpacking</span> devmem2 (0.0-0ubuntu1) <span class="ex">...</span></a>
-<a class="sourceLine" id="cb7-6" data-line-number="6"><span class="ex">Setting</span> up devmem2 (0.0-0ubuntu1) <span class="ex">...</span></a>
-<a class="sourceLine" id="cb7-7" data-line-number="7"><span class="ex">Processing</span> triggers for man-db (2.7.6.1-2) <span class="ex">...</span></a></code></pre></div>
-安装完成重启测试蓝牙功能。</li>
-<li><p><strong>失败</strong> 我发现这个方法并不可行，我现在对这个方法有所了解了。他其实是使用这个方式开启蓝牙：</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode sh"><code class="sourceCode bash"><a class="sourceLine" id="cb8-1" data-line-number="1"><span class="ex">root@H5</span>:~# /etc/init.d/ap6212-bluetooth start</a>
-<a class="sourceLine" id="cb8-2" data-line-number="2">[<span class="ex">....</span>] Starting ap6212-bluetooth (via systemctl)<span class="bu">:</span> ap6212-bluetooth.serviceWarning: ap6212-bluetooth.service changed on disk. Run <span class="st">&#39;systemctl daemon-reload&#39;</span> to reload units.</a>
-<a class="sourceLine" id="cb8-3" data-line-number="3"></a>
-<a class="sourceLine" id="cb8-4" data-line-number="4"><span class="ex">Job</span> for ap6212-bluetooth.service failed because the control process exited with error code.</a>
-<a class="sourceLine" id="cb8-5" data-line-number="5"><span class="ex">See</span> <span class="st">&quot;systemctl status ap6212-bluetooth.service&quot;</span> and <span class="st">&quot;journalctl -xe&quot;</span> for details.</a>
-<a class="sourceLine" id="cb8-6" data-line-number="6"><span class="ex">failed</span>!</a>
-<a class="sourceLine" id="cb8-7" data-line-number="7"></a>
-<a class="sourceLine" id="cb8-8" data-line-number="8"><span class="ex">root@H5</span>:~# systemctl status ap6212-bluetooth.service</a>
-<a class="sourceLine" id="cb8-9" data-line-number="9">● <span class="ex">ap6212-bluetooth.service</span> - LSB: Patch firmware for ap6212 adapter</a>
-<a class="sourceLine" id="cb8-10" data-line-number="10"><span class="ex">Loaded</span>: loaded (/etc/init.d/ap6212-bluetooth<span class="kw">;</span> <span class="ex">generated</span><span class="kw">;</span> <span class="ex">vendor</span> preset: enabled)</a>
-<a class="sourceLine" id="cb8-11" data-line-number="11"><span class="ex">Active</span>: failed (Result: exit-code) <span class="ex">since</span> Sun 2018-05-27 06:20:39 UTC<span class="kw">;</span> <span class="ex">2min</span> 16s ago</a>
-<a class="sourceLine" id="cb8-12" data-line-number="12">    <span class="ex">Docs</span>: man:systemd-sysv-generator(8)</a>
-<a class="sourceLine" id="cb8-13" data-line-number="13"><span class="ex">Process</span>: 2164 ExecStart=/etc/init.d/ap6212-bluetooth start (code=exited, status=1/FAILURE)</a>
-<a class="sourceLine" id="cb8-14" data-line-number="14"></a>
-<a class="sourceLine" id="cb8-15" data-line-number="15"><span class="ex">May</span> 27 06:20:29 H5 ap6212-bluetooth[2164]: Value at address 0x1F00060 (0xffff97239060)<span class="bu">:</span> 0x1</a>
-<a class="sourceLine" id="cb8-16" data-line-number="16"><span class="ex">May</span> 27 06:20:29 H5 ap6212-bluetooth[2164]: Written 0x1<span class="kw">;</span> <span class="ex">readback</span> 0x1</a>
-<a class="sourceLine" id="cb8-17" data-line-number="17"><span class="ex">May</span> 27 06:20:29 H5 ap6212-bluetooth[2164]: sh: echo: I/O error</a>
-<a class="sourceLine" id="cb8-18" data-line-number="18"><span class="ex">May</span> 27 06:20:39 H5 ap6212-bluetooth[2164]: Initialization timed out.</a>
-<a class="sourceLine" id="cb8-19" data-line-number="19"><span class="ex">May</span> 27 06:20:39 H5 ap6212-bluetooth[2164]: bcm43xx_init</a>
-<a class="sourceLine" id="cb8-20" data-line-number="20"><span class="ex">May</span> 27 06:20:39 H5 ap6212-bluetooth[2164]: Can<span class="st">&#39;t get device info: No such device</span></a>
-<a class="sourceLine" id="cb8-21" data-line-number="21"><span class="st">May 27 06:20:39 H5 systemd[1]: ap6212-bluetooth.service: Control process exited, code=exited status=1</span></a>
-<a class="sourceLine" id="cb8-22" data-line-number="22"><span class="st">May 27 06:20:39 H5 systemd[1]: Failed to start LSB: Patch firmware for ap6212 adapter.</span></a>
-<a class="sourceLine" id="cb8-23" data-line-number="23"><span class="st">May 27 06:20:39 H5 systemd[1]: ap6212-bluetooth.service: Unit entered failed state.</span></a>
-<a class="sourceLine" id="cb8-24" data-line-number="24"><span class="st">May 27 06:20:39 H5 systemd[1]: ap6212-bluetooth.service: Failed with result &#39;</span>exit-code<span class="st">&#39;.</span></a>
-<a class="sourceLine" id="cb8-25" data-line-number="25"><span class="st">Warning: ap6212-bluetooth.service changed on disk. Run &#39;</span>systemctl daemon-reload<span class="st">&#39; to reload units.</span></a></code></pre></div>
-<h1 id="尝试别的解决方法">尝试别的解决方法</h1></li>
+<ol>
+<li><strong>首先使能覆盖串口1</strong></li>
 </ol>
-<p>我找了一天，刷了十几个镜像，这次使用Orange PI官方的镜像：ubuntu_xenial_zeroplus2_H5_V0_3.img。 我首先安装上了这个镜像，进入了root账户。 1. <strong>升级软件包</strong> 这里升级软件包时出现了一些错误，使用我这个命令将其修复。 <code>sh     root@Orangepi:~# apt-get update     Hit:1 http://ports.ubuntu.com xenial InRelease     Hit:2 http://ports.ubuntu.com xenial-updates InRelease     Hit:3 http://ports.ubuntu.com xenial-security InRelease     Hit:4 http://ports.ubuntu.com xenial-backports InRelease     Hit:5 http://ports.ubuntu.com/ubuntu-ports xenial-proposed InRelease     Reading package lists... Error!     E: Unable to parse package file /var/lib/dpkg/status (1)     W: You may want to run apt-get update to correct these problems     E: The package cache file is corrupted     root@Orangepi:~# cp /var/lib/dpkg/status-old /var/lib/dpkg/status     root@Orangepi:~# aptitude update     Hit http://ports.ubuntu.com xenial InRelease     Hit http://ports.ubuntu.com xenial-updates InRelease     Hit http://ports.ubuntu.com xenial-security InRelease     Hit http://ports.ubuntu.com xenial-backports InRelease     Hit http://ports.ubuntu.com/ubuntu-ports xenial-proposed InRelease</code> 2. <strong>安装bulez</strong> <code>sh     root@Orangepi:~# apt-get install bluez     Reading package lists... Done     Building dependency tree     Reading state information... Done     The following NEW packages will be installed:     bluez     0 upgraded, 1 newly installed, 0 to remove and 393 not upgraded.     Need to get 713 kB of archives.     After this operation, 3902 kB of additional disk space will be used.     Get:1 http://ports.ubuntu.com/ubuntu-ports xenial-proposed/main arm64 bluez arm64 5.37-0ubuntu5.2 [713 kB]     Fetched 713 kB in 5s (121 kB/s)     Selecting previously unselected package bluez.     (Reading database ... 125410 files and directories currently installed.)     Preparing to unpack .../bluez_5.37-0ubuntu5.2_arm64.deb ...     Unpacking bluez (5.37-0ubuntu5.2) ...     Processing triggers for dbus (1.10.6-1ubuntu3.1) ...     Processing triggers for man-db (2.7.5-1) ...     Processing triggers for systemd (229-4ubuntu12) ...     Setting up bluez (5.37-0ubuntu5.2) ...     Processing triggers for dbus (1.10.6-1ubuntu3.1) ...     Processing triggers for systemd (229-4ubuntu12) ...</code> 安装好之后查看蓝牙设备，当然不出我所料是没有蓝牙设备的，因为我在这个文件系统的<code>/etc/init.d/</code>下没有看到和蓝牙启动相关的脚本。 <code>sh     root@Orangepi:~# hciconfig hci0     Can't get device info: No such device</code> 3. <strong>启动蓝牙</strong> 我根据之前的启动蓝牙方法，尝试了如下命令： <code>sh     rfkill unblock all     echo &quot;0&quot; &gt; /sys/class/rfkill/rfkill0/state     echo &quot;1&quot; &gt; /sys/class/rfkill/rfkill0/state     echo &quot; &quot; &gt; /dev/ttyS1     sleep 0.1     hciattach /dev/ttyS1 bcm43xx 115200 flow bdaddr 43:29:B1:55:01:01</code> 执行结果(这里是前面的命令都执行了一遍)： <code>sh     root@Orangepi:~# hciattach /dev/ttyS1 bcm43xx 115200 flow bdaddr 43:29:B1:55:01:01     bcm43xx_init     Patch not found, continue anyway     Set BDADDR UART: 43:29:B1:55:01:01     Set Controller UART speed to 115200 bit/s     Device setup complete     root@Orangepi:~# hciconfig     hci0:   Type: BR/EDR  Bus: UART         BD Address: 43:29:B1:55:01:01  ACL MTU: 1021:8  SCO MTU: 64:1         UP RUNNING PSCAN         RX bytes:689 acl:0 sco:0 events:42 errors:0         TX bytes:2730 acl:0 sco:0 commands:42 errors:0     root@Orangepi:~# hcitool scan     Scanning ...         22:22:B8:95:DE:DC       X800+</code> # 总结 经过以上尝试，我觉得他们官方的镜像应该都可以。 1. 我觉得这个ubuntu xenial太过臃肿，我想用ubuntu server版，但是没有尝试，因为刷镜像太过烦恼。。。 2. 我之前的那个方法不行，应该是因为我使用的armbian基于4.16内核的镜像。但是我这个板子他不支持armbian 4.14内核的镜像，会无限重启。后来我下载了Armbian源代码，自行编译出Armbian_5.45_Orangepizeroplus2-h5_Debian_stretch_next_4.14.44.img这个镜像。这个也值得一试，毕竟armbian是定制的镜像，效率会高很多，发热量也很小。 3. 当然我觉得也可以在armbian上直接使用Orange Pi官方的wifi驱动，因为蓝牙不能用大概率是因为内核驱动的问题。</p>
-<h1 id="后记">后记</h1>
-<p>我试了Armbian_5.45_Orangepizeroplus2-h5_Debian_stretch_next_4.14.44.img的镜像，然后进行了以下两步： 1. <strong>使能uart1</strong> <code>sh     root@H5:/# vi /boot/armbianEnv.txt</code> 修改如下： <code>git     verbosity=1     console=both     overlay_prefix=sun50i-h5     + overlays=usbhost2 usbhost3 uart1     rootdev=UUID=73662019-22c8-4039-a605-680b57d0fb1c     rootfstype=ext4     + param_uart1_rtscts=1     usbstoragequirks=0x2537:0x1066:u,0x2537:0x1068:u</code> 2. <strong>修改蓝牙服务</strong> <code>sh     root@H5:/# vi /etc/init.d/ap6212-bluetooth</code> 修改如下 <code>git     # Start patching     rfkill unblock all     echo &quot;0&quot; &gt; /sys/class/rfkill/rfkill0/state     echo &quot;1&quot; &gt; /sys/class/rfkill/rfkill0/state     echo &quot; &quot; &gt; /dev/$PORT     +devmem2 0x1f00060 b 1     #on orangepi win following command never ends on first try... force to run with a timeout...     -timeout 5s echo &quot; &quot; &gt; /dev/$PORT     -if [ $? != 0 ]; then     -        #timed out... retry     -        echo &quot; &quot; &gt; /dev/$PORT     -fi     hciattach /dev/$PORT bcm43xx 115200 flow bdaddr $MAC_OPTIONS     hciconfig hci0 up</code> 3. <strong>启动蓝牙</strong> <code>sh     root@H5:/# /etc/init.d/ap6212-bluetooth start     [....] Starting ap6212-bluetooth (via systemctl): ap6212-bluetooth.serviceWarning: ap6212-bluetooth.ser.     . ok     root@H5:/# hciconfig     hci0:   Type: Primary  Bus: UART             BD Address: 43:29:B1:55:01:01  ACL MTU: 1021:8  SCO MTU: 64:1             DOWN             RX bytes:696 acl:0 sco:0 events:42 errors:0             TX bytes:2214 acl:0 sco:0 commands:42 errors:0</code> 启动成功</p>
+<pre><code>根据描述这个应该是在*armbianEnv.txt*中，我当即去寻找这个文件,这文件应该是在启动分区中的，所以我想将启动分区mount后去修改。
+```sh
+root@H5:~# mount /dev/mmcblk2boot1 /mnt
+mount: /dev/mmcblk2boot1 is write-protected, mounting read-only
+mount: wrong fs type, bad option, bad superblock on /dev/mmcblk2boot1,
+   missing codepage or helper program, or other error
 
+   In some cases useful info is found in syslog - try
+   dmesg | tail or so.
+```
+然后我发现这个armbian系统和一般的系统不太一样。boot相关文件不需要挂载直接可以查看：
+```sh
+root@H5:~# cd /boot/
+root@H5:/boot# ls
+armbianEnv.txt                  dtb-4.16.0-sunxi64
+armbian_first_run.txt.template  Image
+boot.bmp                        initrd.img-4.16.0-sunxi64
+boot.cmd                        System.map-4.16.0-sunxi64
+boot-desktop.png                uInitrd
+boot.scr                        uInitrd-4.16.0-sunxi64
+config-4.16.0-sunxi64           vmlinuz-4.16.0-sunxi64
+dtb
+root@H5:/boot# vi armbianEnv.txt
+```
+在overlays后添加上了uart1，以及又添加了一行param_uart1_rtscts=1
+</code></pre><ol>
+<li><strong>调整/etc/init.d/ap6212-bluetooth</strong></li>
+</ol>
+<pre><code>编辑这个文件
+```sh
+root@H5:~# vi /etc/init.d/ap6212-bluetooth
+```
+根据上面的帖子去修改这个文件。
+</code></pre><ol>
+<li><strong>安装devmem2</strong></li>
+</ol>
+<pre><code>这是一个内核调试实用的工具，需要安装的话使用这个[链接](http://launchpadlibrarian.net/153545374/devmem2_0.0-0ubuntu1_arm64.deb)
+将软件包传入板子内安装：
+```sh
+root@H5:~# dpkg -i devmem2_0.0-0ubuntu1_arm64.deb
+Selecting previously unselected package devmem2.
+(Reading database ... 31834 files and directories currently installed.)
+Preparing to unpack devmem2_0.0-0ubuntu1_arm64.deb ...
+Unpacking devmem2 (0.0-0ubuntu1) ...
+Setting up devmem2 (0.0-0ubuntu1) ...
+Processing triggers for man-db (2.7.6.1-2) ...
+```
+安装完成重启测试蓝牙功能。
+</code></pre><ol>
+<li><strong>失败</strong></li>
+</ol>
+<pre><code>我发现这个方法并不可行，我现在对这个方法有所了解了。他其实是使用这个方式开启蓝牙：
+```sh
+root@H5:~# /etc/init.d/ap6212-bluetooth start
+[....] Starting ap6212-bluetooth (via systemctl): ap6212-bluetooth.serviceWarning: ap6212-bluetooth.service changed on disk. Run &#39;systemctl daemon-reload&#39; to reload units.
+
+Job for ap6212-bluetooth.service failed because the control process exited with error code.
+See &quot;systemctl status ap6212-bluetooth.service&quot; and &quot;journalctl -xe&quot; for details.
+failed!
+
+root@H5:~# systemctl status ap6212-bluetooth.service
+● ap6212-bluetooth.service - LSB: Patch firmware for ap6212 adapter
+Loaded: loaded (/etc/init.d/ap6212-bluetooth; generated; vendor preset: enabled)
+Active: failed (Result: exit-code) since Sun 2018-05-27 06:20:39 UTC; 2min 16s ago
+    Docs: man:systemd-sysv-generator(8)
+Process: 2164 ExecStart=/etc/init.d/ap6212-bluetooth start (code=exited, status=1/FAILURE)
+
+May 27 06:20:29 H5 ap6212-bluetooth[2164]: Value at address 0x1F00060 (0xffff97239060): 0x1
+May 27 06:20:29 H5 ap6212-bluetooth[2164]: Written 0x1; readback 0x1
+May 27 06:20:29 H5 ap6212-bluetooth[2164]: sh: echo: I/O error
+May 27 06:20:39 H5 ap6212-bluetooth[2164]: Initialization timed out.
+May 27 06:20:39 H5 ap6212-bluetooth[2164]: bcm43xx_init
+May 27 06:20:39 H5 ap6212-bluetooth[2164]: Can&#39;t get device info: No such device
+May 27 06:20:39 H5 systemd[1]: ap6212-bluetooth.service: Control process exited, code=exited status=1
+May 27 06:20:39 H5 systemd[1]: Failed to start LSB: Patch firmware for ap6212 adapter.
+May 27 06:20:39 H5 systemd[1]: ap6212-bluetooth.service: Unit entered failed state.
+May 27 06:20:39 H5 systemd[1]: ap6212-bluetooth.service: Failed with result &#39;exit-code&#39;.
+Warning: ap6212-bluetooth.service changed on disk. Run &#39;systemctl daemon-reload&#39; to reload units.
+```
+</code></pre><h1 id="尝试别的解决方法"><a href="#尝试别的解决方法" class="headerlink" title="尝试别的解决方法"></a>尝试别的解决方法</h1><p>我找了一天，刷了十几个镜像，这次使用Orange PI官方的镜像：ubuntu_xenial_zeroplus2_H5_V0_3.img。<br>我首先安装上了这个镜像，进入了root账户。</p>
+<ol>
+<li><strong>升级软件包</strong></li>
+</ol>
+<pre><code>这里升级软件包时出现了一些错误，使用我这个命令将其修复。
+```sh
+root@Orangepi:~# apt-get update
+Hit:1 http://ports.ubuntu.com xenial InRelease
+Hit:2 http://ports.ubuntu.com xenial-updates InRelease
+Hit:3 http://ports.ubuntu.com xenial-security InRelease
+Hit:4 http://ports.ubuntu.com xenial-backports InRelease
+Hit:5 http://ports.ubuntu.com/ubuntu-ports xenial-proposed InRelease
+Reading package lists... Error!
+E: Unable to parse package file /var/lib/dpkg/status (1)
+W: You may want to run apt-get update to correct these problems
+E: The package cache file is corrupted
+root@Orangepi:~# cp /var/lib/dpkg/status-old /var/lib/dpkg/status
+root@Orangepi:~# aptitude update
+Hit http://ports.ubuntu.com xenial InRelease
+Hit http://ports.ubuntu.com xenial-updates InRelease
+Hit http://ports.ubuntu.com xenial-security InRelease
+Hit http://ports.ubuntu.com xenial-backports InRelease
+Hit http://ports.ubuntu.com/ubuntu-ports xenial-proposed InRelease
+```
+</code></pre><ol>
+<li><p><strong>安装bulez</strong></p>
+<pre><code class="lang-sh">root@Orangepi:~# apt-get install bluez
+Reading package lists... Done
+Building dependency tree
+Reading state information... Done
+The following NEW packages will be installed:
+bluez
+0 upgraded, 1 newly installed, 0 to remove and 393 not upgraded.
+Need to get 713 kB of archives.
+After this operation, 3902 kB of additional disk space will be used.
+Get:1 http://ports.ubuntu.com/ubuntu-ports xenial-proposed/main arm64 bluez arm64 5.37-0ubuntu5.2 [713 kB]
+Fetched 713 kB in 5s (121 kB/s)
+Selecting previously unselected package bluez.
+(Reading database ... 125410 files and directories currently installed.)
+Preparing to unpack .../bluez_5.37-0ubuntu5.2_arm64.deb ...
+Unpacking bluez (5.37-0ubuntu5.2) ...
+Processing triggers for dbus (1.10.6-1ubuntu3.1) ...
+Processing triggers for man-db (2.7.5-1) ...
+Processing triggers for systemd (229-4ubuntu12) ...
+Setting up bluez (5.37-0ubuntu5.2) ...
+Processing triggers for dbus (1.10.6-1ubuntu3.1) ...
+Processing triggers for systemd (229-4ubuntu12) ...
+</code></pre>
+<p>安装好之后查看蓝牙设备，当然不出我所料是没有蓝牙设备的，因为我在这个文件系统的<code>/etc/init.d/</code>下没有看到和蓝牙启动相关的脚本。</p>
+<pre><code class="lang-sh">root@Orangepi:~# hciconfig hci0
+Can&#39;t get device info: No such device
+</code></pre>
+</li>
+<li><strong>启动蓝牙</strong><br>我根据之前的启动蓝牙方法，尝试了如下命令：<pre><code class="lang-sh">rfkill unblock all
+echo &quot;0&quot; &gt; /sys/class/rfkill/rfkill0/state
+echo &quot;1&quot; &gt; /sys/class/rfkill/rfkill0/state
+echo &quot; &quot; &gt; /dev/ttyS1
+sleep 0.1
+hciattach /dev/ttyS1 bcm43xx 115200 flow bdaddr 43:29:B1:55:01:01
+</code></pre>
+执行结果(这里是前面的命令都执行了一遍)：<pre><code class="lang-sh">root@Orangepi:~# hciattach /dev/ttyS1 bcm43xx 115200 flow bdaddr 43:29:B1:55:01:01
+bcm43xx_init
+Patch not found, continue anyway
+Set BDADDR UART: 43:29:B1:55:01:01
+Set Controller UART speed to 115200 bit/s
+Device setup complete
+root@Orangepi:~# hciconfig
+hci0:   Type: BR/EDR  Bus: UART
+    BD Address: 43:29:B1:55:01:01  ACL MTU: 1021:8  SCO MTU: 64:1
+    UP RUNNING PSCAN
+    RX bytes:689 acl:0 sco:0 events:42 errors:0
+    TX bytes:2730 acl:0 sco:0 commands:42 errors:0
+root@Orangepi:~# hcitool scan
+Scanning ...
+    22:22:B8:95:DE:DC       X800+
+</code></pre>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1>经过以上尝试，我觉得他们官方的镜像应该都可以。</li>
+<li>我觉得这个ubuntu xenial太过臃肿，我想用ubuntu server版，但是没有尝试，因为刷镜像太过烦恼。。。</li>
+</ol>
+<ol>
+<li>我之前的那个方法不行，应该是因为我使用的armbian基于4.16内核的镜像。但是我这个板子他不支持armbian 4.14内核的镜像，会无限重启。后来我下载了Armbian源代码，自行编译出Armbian_5.45_Orangepizeroplus2-h5_Debian_stretch_next_4.14.44.img这个镜像。这个也值得一试，毕竟armbian是定制的镜像，效率会高很多，发热量也很小。</li>
+</ol>
+<ol>
+<li>当然我觉得也可以在armbian上直接使用Orange Pi官方的wifi驱动，因为蓝牙不能用大概率是因为内核驱动的问题。</li>
+</ol>
+<h1 id="后记"><a href="#后记" class="headerlink" title="后记"></a>后记</h1><p>我试了Armbian_5.45_Orangepizeroplus2-h5_Debian_stretch_next_4.14.44.img的镜像，然后进行了以下两步：</p>
+<ol>
+<li><strong>使能uart1</strong></li>
+</ol>
+<pre><code>```sh
+root@H5:/# vi /boot/armbianEnv.txt
+```
+修改如下：
+```git
+verbosity=1
+console=both
+overlay_prefix=sun50i-h5
++ overlays=usbhost2 usbhost3 uart1
+rootdev=UUID=73662019-22c8-4039-a605-680b57d0fb1c
+rootfstype=ext4
++ param_uart1_rtscts=1
+usbstoragequirks=0x2537:0x1066:u,0x2537:0x1068:u
+```
+</code></pre><ol>
+<li><strong>修改蓝牙服务</strong></li>
+</ol>
+<pre><code>```sh
+root@H5:/# vi /etc/init.d/ap6212-bluetooth
+```
+修改如下
+```git
+# Start patching
+rfkill unblock all
+echo &quot;0&quot; &gt; /sys/class/rfkill/rfkill0/state
+echo &quot;1&quot; &gt; /sys/class/rfkill/rfkill0/state
+echo &quot; &quot; &gt; /dev/$PORT
++devmem2 0x1f00060 b 1
+#on orangepi win following command never ends on first try... force to run with a timeout...
+-timeout 5s echo &quot; &quot; &gt; /dev/$PORT
+-if [ $? != 0 ]; then
+-        #timed out... retry
+-        echo &quot; &quot; &gt; /dev/$PORT
+-fi
+hciattach /dev/$PORT bcm43xx 115200 flow bdaddr $MAC_OPTIONS
+hciconfig hci0 up
+```
+</code></pre><ol>
+<li><strong>启动蓝牙</strong></li>
+</ol>
+<pre><code>```sh
+root@H5:/# /etc/init.d/ap6212-bluetooth start
+[....] Starting ap6212-bluetooth (via systemctl): ap6212-bluetooth.serviceWarning: ap6212-bluetooth.ser.
+. ok
+root@H5:/# hciconfig
+hci0:   Type: Primary  Bus: UART
+        BD Address: 43:29:B1:55:01:01  ACL MTU: 1021:8  SCO MTU: 64:1
+        DOWN
+        RX bytes:696 acl:0 sco:0 events:42 errors:0
+        TX bytes:2214 acl:0 sco:0 commands:42 errors:0
+```
+启动成功
+</code></pre>
             </div>
 </article>
                 </main>
