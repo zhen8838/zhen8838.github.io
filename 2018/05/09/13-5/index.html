@@ -86,118 +86,120 @@
                 </li>
             </ul>
             <div class="post-content">
-                <h1 id="自己实现tail命令"><a href="#自己实现tail命令" class="headerlink" title="自己实现tail命令"></a>自己实现tail命令</h1><p>这是linux系统编程手册中的题目。</p>
-<h1 id="代码"><a href="#代码" class="headerlink" title="代码"></a>代码</h1><p>废话不多说直接上代码，虽然感觉还有个小bug。。</p>
-<pre><code class="lang-c">#include &quot;tlpi_hdr.h&quot;
-#include &lt;stdio.h&gt;
-#include &lt;stdlib.h&gt;
-#include &lt;ctype.h&gt;
-#include &lt;fcntl.h&gt;
-#include &lt;unistd.h&gt;
-#include &lt;stdbool.h&gt;
-#include &lt;getopt.h&gt;
-
-#define BUFFSIZE 4096
-char buf[BUFFSIZE] = {0};
-int cntline = 0;   //用于计算已经读取的行数
-int showline = 10; //默认是10
-bool over = false;
-
-int serchline(int fd, int pos)
-{
-    while (pos &gt; BUFFSIZE)
-    {
-        pos = lseek(fd, -BUFFSIZE, SEEK_END); //如果文件长度大于4096,那么移动-4096字节开始读
-        read(fd, buf, BUFFSIZE);
-        for (int i = (BUFFSIZE - 1); i &gt; 0; i--) //倒序访问
-        {
-            if (buf[i] == &#39;\n&#39;)
-            {
-                cntline++;
-            }
-            if (cntline &gt; showline) //如果读取到了10行
-            {
-                pos += i; //记录位置
-                over = true;
-                return pos;
-            }
-        }
-        memset(buf,0,BUFFSIZE);//要清空一下数组
-    }
-    //执行到这里说明找了4096字节都没找到showline行,或者是文件本身就没有这么长
-    lseek(fd, 0, SEEK_SET);       //那么从头开始读
-    read(fd, buf, pos);           //读postion个字节
-    for (int i = pos; i &gt; 0; i--) //倒序访问
-    {
-        if (buf[i] == &#39;\n&#39;)
-        {
-            cntline++;
-            // printf(&quot;cntline : %d postion : %d \n&quot;, cntline, pos);  
-        }
-        if (cntline &gt; showline) //如果读取到了showline行
-        {
-            pos = i; //记录位置
-            over = true;
-            return pos;
-        }
-    }
-    memset(buf,0,BUFFSIZE);//要清空一下数组
-    //执行到这里说明寻找结束也没有showline行
-    return -1;
-}
-
-int main(int argc, char *argv[])
-{
-    int fd = -1;
-    char ch;
-    int postion = -1;
-    int readsize=0;
-    if (argc == 1)
-    {
-        usageErr(&quot;[ -n num ] filename \n to printf last num line of file\n&quot;);
-    }
-    while ((ch = getopt(argc, argv, &quot;n:num&quot;)) != -1)
-    {
-        switch (ch)
-        {
-        case &#39;n&#39;:
-            showline = atoi(optarg);
-            break;
-        default:
-            usageErr(&quot;[ -n num ] filename \n to printf last num line of file\n&quot;);
-            break;
-        }
-    }
-    if (showline &gt; 0)
-    { //如果要显示大于0的行数
-        if ((fd = open(argv[optind], O_RDONLY)) == -1)
-        {
-            errExit(&quot;open&quot;);
-        }
-
-        if ((postion = lseek(fd, 0, SEEK_END)) == -1) //先得出文件总长度
-        {
-            errExit(&quot;lseek&quot;);
-        }
-        // printf(&quot;file all length: %d\n&quot;, postion);
-        postion = serchline(fd, postion);
-        if (postion != -1)
-            lseek(fd, postion, SEEK_SET); //说明找到了最后showline行
-        do
-        {
-            readsize=read(fd, buf, BUFFSIZE);
-            printf(&quot;%s&quot;,buf);
-            memset(buf,0,BUFFSIZE);//输出完了就清空
-        } while(readsize &gt; BUFFSIZE);//输出所有
-    }
-    else
-    {
-        usageErr(&quot;[ -n num ] filename \n to printf last num line of file\n&quot;);
-    }
-    return 0;
-}
-</code></pre>
-<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>通过这个题目，学会了如何在vscode里面使用gdb：<br>vscode自带的gdb调试不好使，还是要下载插件Native Debug才好使。我使用自带的gdb调试，第一句话就报错退出。但是我用上插件就没有问题了。</p>
+                <h1 id="自己实现tail命令">自己实现tail命令</h1>
+<p>这是linux系统编程手册中的题目。</p>
+<h1 id="代码">代码</h1>
+<p>废话不多说直接上代码，虽然感觉还有个小bug。。</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode c"><code class="sourceCode c"><a class="sourceLine" id="cb1-1" data-line-number="1"><span class="pp">#include </span><span class="im">&quot;tlpi_hdr.h&quot;</span></a>
+<a class="sourceLine" id="cb1-2" data-line-number="2"><span class="pp">#include </span><span class="im">&lt;stdio.h&gt;</span></a>
+<a class="sourceLine" id="cb1-3" data-line-number="3"><span class="pp">#include </span><span class="im">&lt;stdlib.h&gt;</span></a>
+<a class="sourceLine" id="cb1-4" data-line-number="4"><span class="pp">#include </span><span class="im">&lt;ctype.h&gt;</span></a>
+<a class="sourceLine" id="cb1-5" data-line-number="5"><span class="pp">#include </span><span class="im">&lt;fcntl.h&gt;</span></a>
+<a class="sourceLine" id="cb1-6" data-line-number="6"><span class="pp">#include </span><span class="im">&lt;unistd.h&gt;</span></a>
+<a class="sourceLine" id="cb1-7" data-line-number="7"><span class="pp">#include </span><span class="im">&lt;stdbool.h&gt;</span></a>
+<a class="sourceLine" id="cb1-8" data-line-number="8"><span class="pp">#include </span><span class="im">&lt;getopt.h&gt;</span></a>
+<a class="sourceLine" id="cb1-9" data-line-number="9"></a>
+<a class="sourceLine" id="cb1-10" data-line-number="10"><span class="pp">#define BUFFSIZE 4096</span></a>
+<a class="sourceLine" id="cb1-11" data-line-number="11"><span class="dt">char</span> buf[BUFFSIZE] = {<span class="dv">0</span>};</a>
+<a class="sourceLine" id="cb1-12" data-line-number="12"><span class="dt">int</span> cntline = <span class="dv">0</span>;   <span class="co">//用于计算已经读取的行数</span></a>
+<a class="sourceLine" id="cb1-13" data-line-number="13"><span class="dt">int</span> showline = <span class="dv">10</span>; <span class="co">//默认是10</span></a>
+<a class="sourceLine" id="cb1-14" data-line-number="14"><span class="dt">bool</span> over = false;</a>
+<a class="sourceLine" id="cb1-15" data-line-number="15"></a>
+<a class="sourceLine" id="cb1-16" data-line-number="16"><span class="dt">int</span> serchline(<span class="dt">int</span> fd, <span class="dt">int</span> pos)</a>
+<a class="sourceLine" id="cb1-17" data-line-number="17">{</a>
+<a class="sourceLine" id="cb1-18" data-line-number="18">    <span class="cf">while</span> (pos &gt; BUFFSIZE)</a>
+<a class="sourceLine" id="cb1-19" data-line-number="19">    {</a>
+<a class="sourceLine" id="cb1-20" data-line-number="20">        pos = lseek(fd, -BUFFSIZE, SEEK_END); <span class="co">//如果文件长度大于4096,那么移动-4096字节开始读</span></a>
+<a class="sourceLine" id="cb1-21" data-line-number="21">        read(fd, buf, BUFFSIZE);</a>
+<a class="sourceLine" id="cb1-22" data-line-number="22">        <span class="cf">for</span> (<span class="dt">int</span> i = (BUFFSIZE - <span class="dv">1</span>); i &gt; <span class="dv">0</span>; i--) <span class="co">//倒序访问</span></a>
+<a class="sourceLine" id="cb1-23" data-line-number="23">        {</a>
+<a class="sourceLine" id="cb1-24" data-line-number="24">            <span class="cf">if</span> (buf[i] == <span class="ch">&#39;\n&#39;</span>)</a>
+<a class="sourceLine" id="cb1-25" data-line-number="25">            {</a>
+<a class="sourceLine" id="cb1-26" data-line-number="26">                cntline++;</a>
+<a class="sourceLine" id="cb1-27" data-line-number="27">            }</a>
+<a class="sourceLine" id="cb1-28" data-line-number="28">            <span class="cf">if</span> (cntline &gt; showline) <span class="co">//如果读取到了10行</span></a>
+<a class="sourceLine" id="cb1-29" data-line-number="29">            {</a>
+<a class="sourceLine" id="cb1-30" data-line-number="30">                pos += i; <span class="co">//记录位置</span></a>
+<a class="sourceLine" id="cb1-31" data-line-number="31">                over = true;</a>
+<a class="sourceLine" id="cb1-32" data-line-number="32">                <span class="cf">return</span> pos;</a>
+<a class="sourceLine" id="cb1-33" data-line-number="33">            }</a>
+<a class="sourceLine" id="cb1-34" data-line-number="34">        }</a>
+<a class="sourceLine" id="cb1-35" data-line-number="35">        memset(buf,<span class="dv">0</span>,BUFFSIZE);<span class="co">//要清空一下数组</span></a>
+<a class="sourceLine" id="cb1-36" data-line-number="36">    }</a>
+<a class="sourceLine" id="cb1-37" data-line-number="37">    <span class="co">//执行到这里说明找了4096字节都没找到showline行,或者是文件本身就没有这么长</span></a>
+<a class="sourceLine" id="cb1-38" data-line-number="38">    lseek(fd, <span class="dv">0</span>, SEEK_SET);       <span class="co">//那么从头开始读</span></a>
+<a class="sourceLine" id="cb1-39" data-line-number="39">    read(fd, buf, pos);           <span class="co">//读postion个字节</span></a>
+<a class="sourceLine" id="cb1-40" data-line-number="40">    <span class="cf">for</span> (<span class="dt">int</span> i = pos; i &gt; <span class="dv">0</span>; i--) <span class="co">//倒序访问</span></a>
+<a class="sourceLine" id="cb1-41" data-line-number="41">    {</a>
+<a class="sourceLine" id="cb1-42" data-line-number="42">        <span class="cf">if</span> (buf[i] == <span class="ch">&#39;\n&#39;</span>)</a>
+<a class="sourceLine" id="cb1-43" data-line-number="43">        {</a>
+<a class="sourceLine" id="cb1-44" data-line-number="44">            cntline++;</a>
+<a class="sourceLine" id="cb1-45" data-line-number="45">            <span class="co">// printf(&quot;cntline : %d postion : %d \n&quot;, cntline, pos);  </span></a>
+<a class="sourceLine" id="cb1-46" data-line-number="46">        }</a>
+<a class="sourceLine" id="cb1-47" data-line-number="47">        <span class="cf">if</span> (cntline &gt; showline) <span class="co">//如果读取到了showline行</span></a>
+<a class="sourceLine" id="cb1-48" data-line-number="48">        {</a>
+<a class="sourceLine" id="cb1-49" data-line-number="49">            pos = i; <span class="co">//记录位置</span></a>
+<a class="sourceLine" id="cb1-50" data-line-number="50">            over = true;</a>
+<a class="sourceLine" id="cb1-51" data-line-number="51">            <span class="cf">return</span> pos;</a>
+<a class="sourceLine" id="cb1-52" data-line-number="52">        }</a>
+<a class="sourceLine" id="cb1-53" data-line-number="53">    }</a>
+<a class="sourceLine" id="cb1-54" data-line-number="54">    memset(buf,<span class="dv">0</span>,BUFFSIZE);<span class="co">//要清空一下数组</span></a>
+<a class="sourceLine" id="cb1-55" data-line-number="55">    <span class="co">//执行到这里说明寻找结束也没有showline行</span></a>
+<a class="sourceLine" id="cb1-56" data-line-number="56">    <span class="cf">return</span> <span class="dv">-1</span>;</a>
+<a class="sourceLine" id="cb1-57" data-line-number="57">}</a>
+<a class="sourceLine" id="cb1-58" data-line-number="58"></a>
+<a class="sourceLine" id="cb1-59" data-line-number="59"><span class="dt">int</span> main(<span class="dt">int</span> argc, <span class="dt">char</span> *argv[])</a>
+<a class="sourceLine" id="cb1-60" data-line-number="60">{</a>
+<a class="sourceLine" id="cb1-61" data-line-number="61">    <span class="dt">int</span> fd = <span class="dv">-1</span>;</a>
+<a class="sourceLine" id="cb1-62" data-line-number="62">    <span class="dt">char</span> ch;</a>
+<a class="sourceLine" id="cb1-63" data-line-number="63">    <span class="dt">int</span> postion = <span class="dv">-1</span>;</a>
+<a class="sourceLine" id="cb1-64" data-line-number="64">    <span class="dt">int</span> readsize=<span class="dv">0</span>;</a>
+<a class="sourceLine" id="cb1-65" data-line-number="65">    <span class="cf">if</span> (argc == <span class="dv">1</span>)</a>
+<a class="sourceLine" id="cb1-66" data-line-number="66">    {</a>
+<a class="sourceLine" id="cb1-67" data-line-number="67">        usageErr(<span class="st">&quot;[ -n num ] filename </span><span class="sc">\n</span><span class="st"> to printf last num line of file</span><span class="sc">\n</span><span class="st">&quot;</span>);</a>
+<a class="sourceLine" id="cb1-68" data-line-number="68">    }</a>
+<a class="sourceLine" id="cb1-69" data-line-number="69">    <span class="cf">while</span> ((ch = getopt(argc, argv, <span class="st">&quot;n:num&quot;</span>)) != <span class="dv">-1</span>)</a>
+<a class="sourceLine" id="cb1-70" data-line-number="70">    {</a>
+<a class="sourceLine" id="cb1-71" data-line-number="71">        <span class="cf">switch</span> (ch)</a>
+<a class="sourceLine" id="cb1-72" data-line-number="72">        {</a>
+<a class="sourceLine" id="cb1-73" data-line-number="73">        <span class="cf">case</span> <span class="ch">&#39;n&#39;</span>:</a>
+<a class="sourceLine" id="cb1-74" data-line-number="74">            showline = atoi(optarg);</a>
+<a class="sourceLine" id="cb1-75" data-line-number="75">            <span class="cf">break</span>;</a>
+<a class="sourceLine" id="cb1-76" data-line-number="76">        <span class="cf">default</span>:</a>
+<a class="sourceLine" id="cb1-77" data-line-number="77">            usageErr(<span class="st">&quot;[ -n num ] filename </span><span class="sc">\n</span><span class="st"> to printf last num line of file</span><span class="sc">\n</span><span class="st">&quot;</span>);</a>
+<a class="sourceLine" id="cb1-78" data-line-number="78">            <span class="cf">break</span>;</a>
+<a class="sourceLine" id="cb1-79" data-line-number="79">        }</a>
+<a class="sourceLine" id="cb1-80" data-line-number="80">    }</a>
+<a class="sourceLine" id="cb1-81" data-line-number="81">    <span class="cf">if</span> (showline &gt; <span class="dv">0</span>)</a>
+<a class="sourceLine" id="cb1-82" data-line-number="82">    { <span class="co">//如果要显示大于0的行数</span></a>
+<a class="sourceLine" id="cb1-83" data-line-number="83">        <span class="cf">if</span> ((fd = open(argv[optind], O_RDONLY)) == <span class="dv">-1</span>)</a>
+<a class="sourceLine" id="cb1-84" data-line-number="84">        {</a>
+<a class="sourceLine" id="cb1-85" data-line-number="85">            errExit(<span class="st">&quot;open&quot;</span>);</a>
+<a class="sourceLine" id="cb1-86" data-line-number="86">        }</a>
+<a class="sourceLine" id="cb1-87" data-line-number="87"></a>
+<a class="sourceLine" id="cb1-88" data-line-number="88">        <span class="cf">if</span> ((postion = lseek(fd, <span class="dv">0</span>, SEEK_END)) == <span class="dv">-1</span>) <span class="co">//先得出文件总长度</span></a>
+<a class="sourceLine" id="cb1-89" data-line-number="89">        {</a>
+<a class="sourceLine" id="cb1-90" data-line-number="90">            errExit(<span class="st">&quot;lseek&quot;</span>);</a>
+<a class="sourceLine" id="cb1-91" data-line-number="91">        }</a>
+<a class="sourceLine" id="cb1-92" data-line-number="92">        <span class="co">// printf(&quot;file all length: %d\n&quot;, postion);</span></a>
+<a class="sourceLine" id="cb1-93" data-line-number="93">        postion = serchline(fd, postion);</a>
+<a class="sourceLine" id="cb1-94" data-line-number="94">        <span class="cf">if</span> (postion != <span class="dv">-1</span>)</a>
+<a class="sourceLine" id="cb1-95" data-line-number="95">            lseek(fd, postion, SEEK_SET); <span class="co">//说明找到了最后showline行</span></a>
+<a class="sourceLine" id="cb1-96" data-line-number="96">        <span class="cf">do</span></a>
+<a class="sourceLine" id="cb1-97" data-line-number="97">        {</a>
+<a class="sourceLine" id="cb1-98" data-line-number="98">            readsize=read(fd, buf, BUFFSIZE);</a>
+<a class="sourceLine" id="cb1-99" data-line-number="99">            printf(<span class="st">&quot;%s&quot;</span>,buf);</a>
+<a class="sourceLine" id="cb1-100" data-line-number="100">            memset(buf,<span class="dv">0</span>,BUFFSIZE);<span class="co">//输出完了就清空</span></a>
+<a class="sourceLine" id="cb1-101" data-line-number="101">        } <span class="cf">while</span>(readsize &gt; BUFFSIZE);<span class="co">//输出所有</span></a>
+<a class="sourceLine" id="cb1-102" data-line-number="102">    }</a>
+<a class="sourceLine" id="cb1-103" data-line-number="103">    <span class="cf">else</span></a>
+<a class="sourceLine" id="cb1-104" data-line-number="104">    {</a>
+<a class="sourceLine" id="cb1-105" data-line-number="105">        usageErr(<span class="st">&quot;[ -n num ] filename </span><span class="sc">\n</span><span class="st"> to printf last num line of file</span><span class="sc">\n</span><span class="st">&quot;</span>);</a>
+<a class="sourceLine" id="cb1-106" data-line-number="106">    }</a>
+<a class="sourceLine" id="cb1-107" data-line-number="107">    <span class="cf">return</span> <span class="dv">0</span>;</a>
+<a class="sourceLine" id="cb1-108" data-line-number="108">}</a></code></pre></div>
+<h1 id="总结">总结</h1>
+<p>通过这个题目，学会了如何在vscode里面使用gdb： vscode自带的gdb调试不好使，还是要下载插件Native Debug才好使。我使用自带的gdb调试，第一句话就报错退出。但是我用上插件就没有问题了。</p>
 
             </div>
 </article>
