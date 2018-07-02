@@ -86,73 +86,67 @@
                 </li>
             </ul>
             <div class="post-content">
-                <h1 id="Matlab使用ThunderSVM"><a href="#Matlab使用ThunderSVM" class="headerlink" title="Matlab使用ThunderSVM"></a>Matlab使用ThunderSVM</h1><p>我决定用这个SVM库加速我的svr模型训练。我的系统是Windows，Matlab版本是2017b。我需要自己编译安装入坑一波。<a href="http://thundersvm.readthedocs.io/en/latest/get-started.html#" target="_blank" rel="noopener">官方手册</a></p>
-<h1 id="准备"><a href="#准备" class="headerlink" title="准备"></a>准备</h1><ol>
-<li><p>cmake<br>在cmake<a href="https://cmake.org/download/" target="_blank" rel="noopener">官网</a>下载Windows win64-x64 Installer并安装。</p>
-</li>
-<li><p>Visual C++<br>这个我的电脑已经安装了Visual Studio 2015。我可以在matlab中查看我的c++编译器版本</p>
-<pre><code class="lang-matlab">&gt;&gt; mex -setup c++
-MEX 配置为使用 &#39;Microsoft Visual C++ 2015 Professional&#39; 以进行 C++ 语言编译。
-警告: MATLAB C 和 Fortran API 已更改，现可支持
-    包含 2^32-1 个以上元素的 MATLAB 变量。您需要
-    更新代码以利用新的 API。
-    您可以在以下网址找到更多的相关信息:
-    http://www.mathworks.com/help/matlab/matlab_external/upgrading-mex-files-to-use-64-bit-api.html。
-
-要选择不同的 C++ 编译器，请从以下选项中选择一种命令:
-Microsoft Visual C++ 2015  mex -setup:H:\MATLAB\R2017b\bin\win64\mexopts\msvcpp2015.xml C++
-Microsoft Visual C++ 2015 Professional  mex -setup:C:\Users\59732\AppData\Roaming\MathWorks\MATLAB\R2017b\mex_C++_win64.xml C++
-</code></pre>
-</li>
-<li><p>CUDA<br>如果需要使用gpu加速，需要安装<a href="https://developer.nvidia.com/cuda-downloads" target="_blank" rel="noopener">CUDA</a> 7.5以上版本。<strong>(必须先安装Visual Studio)</strong></p>
-</li>
+                <h1 id="matlab使用thundersvm">Matlab使用ThunderSVM</h1>
+<p>我决定用这个SVM库加速我的svr模型训练。我的系统是Windows，Matlab版本是2017b。我需要自己编译安装入坑一波。<a href="http://thundersvm.readthedocs.io/en/latest/get-started.html#" target="_blank" rel="noopener">官方手册</a> # 准备</p>
+<ol type="1">
+<li><p>cmake 在cmake<a href="https://cmake.org/download/" target="_blank" rel="noopener">官网</a>下载Windows win64-x64 Installer并安装。</p></li>
+<li><p>Visual C++ 这个我的电脑已经安装了Visual Studio 2015。我可以在matlab中查看我的c++编译器版本</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode matlab"><code class="sourceCode matlab"><a class="sourceLine" id="cb1-1" data-line-number="1">&gt;&gt; mex -setup c++</a>
+<a class="sourceLine" id="cb1-2" data-line-number="2">MEX 配置为使用 <span class="st">&#39;Microsoft Visual C++ 2015 Professional&#39;</span> 以进行 C++ 语言编译。</a>
+<a class="sourceLine" id="cb1-3" data-line-number="3">警告: MATLAB C 和 Fortran API 已更改，现可支持</a>
+<a class="sourceLine" id="cb1-4" data-line-number="4">    包含 <span class="fl">2</span>^<span class="fl">32</span>-<span class="fl">1</span> 个以上元素的 MATLAB 变量。您需要</a>
+<a class="sourceLine" id="cb1-5" data-line-number="5">    更新代码以利用新的 API。</a>
+<a class="sourceLine" id="cb1-6" data-line-number="6">    您可以在以下网址找到更多的相关信息:</a>
+<a class="sourceLine" id="cb1-7" data-line-number="7">    http://www.mathworks.com/help/matlab/matlab_external/upgrading-mex-files-to-use-<span class="fl">64</span>-bit-api.html。</a>
+<a class="sourceLine" id="cb1-8" data-line-number="8"></a>
+<a class="sourceLine" id="cb1-9" data-line-number="9">要选择不同的 C++ 编译器，请从以下选项中选择一种命令:</a>
+<a class="sourceLine" id="cb1-10" data-line-number="10">Microsoft Visual C++ <span class="fl">2015</span>  mex -setup:H:\MATLAB\R2017b\bin\win64\mexopts\msvcpp2015.xml C++</a>
+<a class="sourceLine" id="cb1-11" data-line-number="11">Microsoft Visual C++ <span class="fl">2015</span> Professional  mex -setup:C:\Users\<span class="fl">59732</span>\AppData\Roaming\MathWorks\MATLAB\R2017b\mex_C++_win64.xml C++</a></code></pre></div></li>
+<li><p>CUDA 如果需要使用gpu加速，需要安装<a href="https://developer.nvidia.com/cuda-downloads" target="_blank" rel="noopener">CUDA</a> 7.5以上版本。<strong>(必须先安装Visual Studio)</strong></p></li>
 </ol>
-<h1 id="Windows版安装"><a href="#Windows版安装" class="headerlink" title="Windows版安装"></a>Windows版安装</h1><ol>
-<li><p>下载工程。<br>手动下载zip的话，文件夹名不一样，需要修改。</p>
-<pre><code class="lang-sh">git clone https://github.com/zeyiwen/thundersvm.git
-</code></pre>
-</li>
-<li><p>构建Visual Studio工程<br>进入文件夹中。</p>
-<pre><code class="lang-sh">cd thundersvm
-mkdir build
-cd build
-cmake .. -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE -DBUILD_SHARED_LIBS=TRUE -G &quot;Visual Studio 14 2015 Win64&quot;
-</code></pre>
-<p>这个<code>Visual Studio 14 2015 Win64</code>是因为我安装了Visual Studio 15，对应的cmake选择的版本是这个，成功后生成如下文件。</p>
-<div align="center">
-<img src="./thunder.png" width="80%">
-</div>
-</li>
-<li><p>编译<br>打开<code>thundersvm.sln</code>。选择<code>生成</code>-&gt;<code>生成ALL_BUILD</code>。成功后如下：</p>
-<pre><code class="lang-sh">5&gt;------ 已启动生成: 项目: ALL_BUILD, 配置: Debug x64 ------
-5&gt;  Building Custom Rule F:/thundersvm/CMakeLists.txt
-5&gt;  CMake does not need to re-run because F:/thundersvm/build/CMakeFiles/generate.stamp is up-to-date.
-========== 生成: 成功 5 个，失败 0 个，最新 0 个，跳过 0 个 ==========
-</code></pre>
-</li>
+<h1 id="windows版安装">Windows版安装</h1>
+<ol type="1">
+<li>下载工程。 手动下载zip的话，文件夹名不一样，需要修改。</li>
 </ol>
-<h1 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h1><p>我这里直接测试Matlab的使用。</p>
-<ol>
-<li><p>添加路径<br>将他的matlab函数添加到默认路径。</p>
-<div align="center">
-<img src="./dir.png" width="80%">
-</div>
-</li>
-<li><p>程序<br>因为我是Windows，所以官方的例子的斜杠需要更换</p>
-<pre><code class="lang-matlab">n = [&quot;-c&quot;, &quot;10&quot;, &quot;-g&quot;, &quot;0.125&quot;, &quot;..\dataset\test_dataset.txt&quot;, &quot;test_dataset.model&quot;];
-m = cellstr(n);
-svm_train_matlab(m);
-n = [&quot;..\dataset\test_dataset.txt&quot;, &quot;test_dataset.model&quot;, &quot;test_datset.out&quot;];
-m = cellstr(n);
-svm_predict_matlab(m);
-a=load(&#39;F:\thundersvm\dataset\test_datset.out&#39;)
-</code></pre>
-<p>svm分类结果输出如下：</p>
-<div align="center">
-<img src="./test.png" width="80%">
-</div>
-</li>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><a class="sourceLine" id="cb2-1" data-line-number="1"><span class="fu">git</span> clone https://github.com/zeyiwen/thundersvm.git</a></code></pre></div>
+<ol start="2" type="1">
+<li>构建Visual Studio工程 进入文件夹中。</li>
 </ol>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh"><code class="sourceCode bash"><a class="sourceLine" id="cb3-1" data-line-number="1"><span class="bu">cd</span> thundersvm</a>
+<a class="sourceLine" id="cb3-2" data-line-number="2"><span class="fu">mkdir</span> build</a>
+<a class="sourceLine" id="cb3-3" data-line-number="3"><span class="bu">cd</span> build</a>
+<a class="sourceLine" id="cb3-4" data-line-number="4"><span class="fu">cmake</span> .. -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE -DBUILD_SHARED_LIBS=TRUE -G <span class="st">&quot;Visual Studio 14 2015 Win64&quot;</span></a></code></pre></div>
+这个<code>Visual Studio 14 2015 Win64</code>是因为我安装了Visual Studio 15，对应的cmake选择的版本是这个，成功后生成如下文件。
+<div data-align="center">
+<p><img src="./thunder.png" width="80%"></p>
+</div>
+<ol start="3" type="1">
+<li>编译 打开<code>thundersvm.sln</code>。选择<code>生成</code>-&gt;<code>生成ALL_BUILD</code>。成功后如下：</li>
+</ol>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><a class="sourceLine" id="cb4-1" data-line-number="1"><span class="op">5&gt;</span><span class="ex">------</span> 已启动生成: 项目: ALL_BUILD, 配置: Debug x64 ------</a>
+<a class="sourceLine" id="cb4-2" data-line-number="2"><span class="op">5&gt;</span>  <span class="ex">Building</span> Custom Rule F:/thundersvm/CMakeLists.txt</a>
+<a class="sourceLine" id="cb4-3" data-line-number="3"><span class="op">5&gt;</span>  <span class="ex">CMake</span> does not need to re-run because F:/thundersvm/build/CMakeFiles/generate.stamp is up-to-date.</a>
+<a class="sourceLine" id="cb4-4" data-line-number="4">========== 生成: 成功 <span class="ex">5</span> 个，失败 0 个，最新 0 个，跳过 0 个 ==========</a></code></pre></div>
+<h1 id="测试">测试</h1>
+<p>我这里直接测试Matlab的使用。</p>
+<ol type="1">
+<li>添加路径 将他的matlab函数添加到默认路径。
+<div data-align="center">
+<p><img src="./dir.png" width="80%"></p>
+</div></li>
+<li>程序 因为我是Windows，所以官方的例子的斜杠需要更换</li>
+</ol>
+<div class="sourceCode" id="cb5"><pre class="sourceCode matlab"><code class="sourceCode matlab"><a class="sourceLine" id="cb5-1" data-line-number="1">n = [&quot;-c&quot;, &quot;<span class="fl">10</span>&quot;, &quot;-g&quot;, &quot;<span class="fl">0.125</span>&quot;, &quot;..\dataset\test_dataset.txt&quot;, &quot;test_dataset.model&quot;];</a>
+<a class="sourceLine" id="cb5-2" data-line-number="2">m = cellstr(n);</a>
+<a class="sourceLine" id="cb5-3" data-line-number="3">svm_train_matlab(m);</a>
+<a class="sourceLine" id="cb5-4" data-line-number="4">n = [&quot;..\dataset\test_dataset.txt&quot;, &quot;test_dataset.model&quot;, &quot;test_datset.out&quot;];</a>
+<a class="sourceLine" id="cb5-5" data-line-number="5">m = cellstr(n);</a>
+<a class="sourceLine" id="cb5-6" data-line-number="6">svm_predict_matlab(m);</a>
+<a class="sourceLine" id="cb5-7" data-line-number="7">a=load(<span class="st">&#39;F:\thundersvm\dataset\test_datset.out&#39;</span>)</a></code></pre></div>
+svm分类结果输出如下：
+<div data-align="center">
+<p><img src="./test.png" width="80%"></p>
+</div>
 
             </div>
 </article>
@@ -169,14 +163,14 @@ a=load(&#39;F:\thundersvm\dataset\test_datset.out&#39;)
                         
     <h1>Archives</h1>
 
-    <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 06</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 05</a></li></ul>
+    <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 07</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 06</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 05</a></li></ul>
 
                     </section>
                     <section class="aside-section tag">
                         
     <h1>Tags</h1>
 
-    <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CMake/">CMake</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Matlab/">Matlab</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/git/">git</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/博客/">博客</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/嵌入式/">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/算法/">算法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/蓝牙/">蓝牙</a></li></ul>
+    <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CMake/">CMake</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Matlab/">Matlab</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/git/">git</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/博客/">博客</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/嵌入式/">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构/">数据结构</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/算法/">算法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/蓝牙/">蓝牙</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/链表/">链表</a></li></ul>
 
                     </section>
                 </aside>

@@ -86,41 +86,45 @@
                 </li>
             </ul>
             <div class="post-content">
-                <h1 id="Matlab自带GA函数"><a href="#Matlab自带GA函数" class="headerlink" title="Matlab自带GA函数"></a>Matlab自带GA函数</h1><p>我使用的matlab是2017b，但是我在官方查找文档，其中的例子这个版本没有。所以我摸索了一番。使用这个函数的动机是我需要是用libsvm做回归模型的训练，其中训练的优化函数是遗传算法（谢菲尔德工具箱），老的工具箱不支持并行计算以及GPU加速，所以我使用Matlab自带的遗传算法函数进行参数的优化。</p>
-<h1 id="利用ga优化非光滑函数"><a href="#利用ga优化非光滑函数" class="headerlink" title="利用ga优化非光滑函数"></a>利用ga优化非光滑函数</h1><h2 id="程序"><a href="#程序" class="headerlink" title="程序"></a>程序</h2><pre><code class="lang-matlab">xi = linspace(-6,2,300);
-yi = linspace(-4,4,300);
-[X,Y] = meshgrid(xi,yi);
-Z = ps_example([X(:),Y(:)]);% 构造函数
-Z = reshape(Z,size(X));
-
-surf(X,Y,Z,&#39;MeshStyle&#39;,&#39;none&#39;)% 绘图
-colormap &#39;jet&#39;
-view(-26,43)
-xlabel(&#39;x(1)&#39;)
-ylabel(&#39;x(2)&#39;)
-title(&#39;ps\_example(x)&#39;)
-
-rng default % 保证再生性
-x = ga(@ps_example,2)
-</code></pre>
+                <h1 id="matlab自带ga函数">Matlab自带GA函数</h1>
+<p>我使用的matlab是2017b，但是我在官方查找文档，其中的例子这个版本没有。所以我摸索了一番。使用这个函数的动机是我需要是用libsvm做回归模型的训练，其中训练的优化函数是遗传算法（谢菲尔德工具箱），老的工具箱不支持并行计算以及GPU加速，所以我使用Matlab自带的遗传算法函数进行参数的优化。</p>
+<h1 id="利用ga优化非光滑函数">利用ga优化非光滑函数</h1>
+<h2 id="程序">程序</h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode matlab"><code class="sourceCode matlab"><a class="sourceLine" id="cb1-1" data-line-number="1">xi = linspace(-<span class="fl">6</span>,<span class="fl">2</span>,<span class="fl">300</span>);</a>
+<a class="sourceLine" id="cb1-2" data-line-number="2">yi = linspace(-<span class="fl">4</span>,<span class="fl">4</span>,<span class="fl">300</span>);</a>
+<a class="sourceLine" id="cb1-3" data-line-number="3">[X,Y] = meshgrid(xi,yi);</a>
+<a class="sourceLine" id="cb1-4" data-line-number="4">Z = ps_example([X(:),Y(:)]);<span class="co">% 构造函数</span></a>
+<a class="sourceLine" id="cb1-5" data-line-number="5">Z = reshape(Z,size(X));</a>
+<a class="sourceLine" id="cb1-6" data-line-number="6"></a>
+<a class="sourceLine" id="cb1-7" data-line-number="7">surf(X,Y,Z,<span class="st">&#39;MeshStyle&#39;</span>,<span class="st">&#39;none&#39;</span>)<span class="co">% 绘图</span></a>
+<a class="sourceLine" id="cb1-8" data-line-number="8">colormap <span class="st">&#39;jet&#39;</span></a>
+<a class="sourceLine" id="cb1-9" data-line-number="9">view(-<span class="fl">26</span>,<span class="fl">43</span>)</a>
+<a class="sourceLine" id="cb1-10" data-line-number="10">xlabel(<span class="st">&#39;x(1)&#39;</span>)</a>
+<a class="sourceLine" id="cb1-11" data-line-number="11">ylabel(<span class="st">&#39;x(2)&#39;</span>)</a>
+<a class="sourceLine" id="cb1-12" data-line-number="12">title(<span class="st">&#39;ps\_example(x)&#39;</span>)</a>
+<a class="sourceLine" id="cb1-13" data-line-number="13"></a>
+<a class="sourceLine" id="cb1-14" data-line-number="14">rng default <span class="co">% 保证再生性</span></a>
+<a class="sourceLine" id="cb1-15" data-line-number="15">x = ga(@ps_example,<span class="fl">2</span>)</a></code></pre></div>
 <p>结果：</p>
-<pre><code class="lang-matlab">Optimization terminated: average change in the fitness value less than options.FunctionTolerance.
-
-x =
-
-   -4.6793   -0.0860
-</code></pre>
+<div class="sourceCode" id="cb2"><pre class="sourceCode matlab"><code class="sourceCode matlab"><a class="sourceLine" id="cb2-1" data-line-number="1">Optimization terminated: average change in the fitness value less than options.FunctionTolerance.</a>
+<a class="sourceLine" id="cb2-2" data-line-number="2"></a>
+<a class="sourceLine" id="cb2-3" data-line-number="3">x =</a>
+<a class="sourceLine" id="cb2-4" data-line-number="4"></a>
+<a class="sourceLine" id="cb2-5" data-line-number="5">   -<span class="fl">4.6793</span>   -<span class="fl">0.0860</span></a></code></pre></div>
 <p>函数图像：</p>
-<div align="center">
-<img src="./eg1.png">
+<div data-align="center">
+<p><img src="./eg1.png"></p>
 </div>
-
-<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>GA函数最基本的用法就是构造一个输入为行向量，输出为数值的函数例如<code>Z = ps_example([X(:),Y(:)])</code>。<br>接下来使用GA函数的时候，第一个参数是<strong>函数句柄</strong>，第二个参数是函数<strong>参数个数</strong>。<br>返回值则是输出参数函数句柄所使用的<strong>参数行向量矩阵</strong>。</p>
-<h1 id="最小化具有线性约束的非光滑函数"><a href="#最小化具有线性约束的非光滑函数" class="headerlink" title="最小化具有线性约束的非光滑函数"></a>最小化具有线性约束的非光滑函数</h1><h2 id="程序-1"><a href="#程序-1" class="headerlink" title="程序"></a>程序</h2><p>待寻优函数的输入参数是一个行向量，因此传入<strong>x(1)代表x，x(2)代表y</strong>。<br>如果需要设置区域范围<code>x + y &gt;= 1</code>和<code>y &lt;= 5 + x</code>的ps_example函数最小化。<br>首先, 将两个不等式约束转换为矩阵形式<code>A*x &lt;= b</code>。换言之, 获取不等式左侧的x变量, 并使两个不等式小于等于:</p>
-<p><div align="center">
-<img src="./em1.png">
-</div><br>那么将矩阵乘法的系数作为约束条件：令<code>A = [-1,-1;-1,1];  b = [-1;5];</code>。全程序如下：</p>
-<pre><code class="lang-git">    xi = linspace(-6,2,300);
+<h2 id="分析">分析</h2>
+<p>GA函数最基本的用法就是构造一个输入为行向量，输出为数值的函数例如<code>Z = ps_example([X(:),Y(:)])</code>。 接下来使用GA函数的时候，第一个参数是<strong>函数句柄</strong>，第二个参数是函数<strong>参数个数</strong>。 返回值则是输出参数函数句柄所使用的<strong>参数行向量矩阵</strong>。</p>
+<h1 id="最小化具有线性约束的非光滑函数">最小化具有线性约束的非光滑函数</h1>
+<h2 id="程序-1">程序</h2>
+待寻优函数的输入参数是一个行向量，因此传入<strong>x(1)代表x，x(2)代表y</strong>。 如果需要设置区域范围<code>x + y &gt;= 1</code>和<code>y &lt;= 5 + x</code>的ps_example函数最小化。 首先, 将两个不等式约束转换为矩阵形式<code>A*x &lt;= b</code>。换言之, 获取不等式左侧的x变量, 并使两个不等式小于等于:
+<div data-align="center">
+<p><img src="./em1.png"></p>
+</div>
+<p>那么将矩阵乘法的系数作为约束条件：令<code>A = [-1,-1;-1,1];  b = [-1;5];</code>。全程序如下：</p>
+<pre class="git"><code>    xi = linspace(-6,2,300);
     yi = linspace(-4,4,300);
     [X,Y] = meshgrid(xi,yi);
     Z = ps_example([X(:),Y(:)]);% 构造函数
@@ -137,124 +141,115 @@ x =
     title(&#39;ps\_example(x)&#39;)
 
     rng default; % 再生性
-+   x = ga(@ps_example,2,A,b)
-</code></pre>
++   x = ga(@ps_example,2,A,b)</code></pre>
 <p>结果如下：</p>
-<pre><code class="lang-matlab">Optimization terminated: average change in the fitness value less than options.FunctionTolerance.
-
-x =
-
-    0.9991   -0.0000
-</code></pre>
-<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>为待寻优函数添加约束条件时，需要将其转换为矩阵乘法的形式，再提取出其中的参数。</p>
-<h1 id="最小化具有线性等式和不等式约束的非光滑函数"><a href="#最小化具有线性等式和不等式约束的非光滑函数" class="headerlink" title="最小化具有线性等式和不等式约束的非光滑函数"></a>最小化具有线性等式和不等式约束的非光滑函数</h1><h2 id="程序-2"><a href="#程序-2" class="headerlink" title="程序"></a>程序</h2><p>如果添加的约束条件不是小于等于，而是一个小于等于，一个等于。</p>
-<p><div align="center">
-<img src="./em2.png">
-</div><br>那么设置约束条件时就需要分开设置(A对应b,Aeq对应beq):</p>
-<pre><code class="lang-matlab">A = [-1 -1];
-b = -1;
-Aeq = [-1 1];
-beq = 5;
-</code></pre>
+<div class="sourceCode" id="cb4"><pre class="sourceCode matlab"><code class="sourceCode matlab"><a class="sourceLine" id="cb4-1" data-line-number="1">Optimization terminated: average change in the fitness value less than options.FunctionTolerance.</a>
+<a class="sourceLine" id="cb4-2" data-line-number="2"></a>
+<a class="sourceLine" id="cb4-3" data-line-number="3">x =</a>
+<a class="sourceLine" id="cb4-4" data-line-number="4"></a>
+<a class="sourceLine" id="cb4-5" data-line-number="5">    <span class="fl">0.9991</span>   -<span class="fl">0.0000</span></a></code></pre></div>
+<h1 id="总结">总结</h1>
+<p>为待寻优函数添加约束条件时，需要将其转换为矩阵乘法的形式，再提取出其中的参数。</p>
+<h1 id="最小化具有线性等式和不等式约束的非光滑函数">最小化具有线性等式和不等式约束的非光滑函数</h1>
+<h2 id="程序-2">程序</h2>
+如果添加的约束条件不是小于等于，而是一个小于等于，一个等于。
+<div data-align="center">
+<p><img src="./em2.png"></p>
+</div>
+<p>那么设置约束条件时就需要分开设置(A对应b,Aeq对应beq):</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode matlab"><code class="sourceCode matlab"><a class="sourceLine" id="cb5-1" data-line-number="1">A = [-<span class="fl">1</span> -<span class="fl">1</span>];</a>
+<a class="sourceLine" id="cb5-2" data-line-number="2">b = -<span class="fl">1</span>;</a>
+<a class="sourceLine" id="cb5-3" data-line-number="3">Aeq = [-<span class="fl">1</span> <span class="fl">1</span>];</a>
+<a class="sourceLine" id="cb5-4" data-line-number="4">beq = <span class="fl">5</span>;</a></code></pre></div>
 <p>修改ga函数输入为：</p>
-<pre><code class="lang-matlab">x = ga(@ps_example,2,A,b,Aeq,beq)
-</code></pre>
+<div class="sourceCode" id="cb6"><pre class="sourceCode matlab"><code class="sourceCode matlab"><a class="sourceLine" id="cb6-1" data-line-number="1">x = ga(@ps_example,<span class="fl">2</span>,A,b,Aeq,beq)</a></code></pre></div>
 <p>结果：</p>
-<pre><code class="lang-matlab">Optimization terminated: average change in the fitness value less than options.FunctionTolerance.
-x = 1×2
-
-   -2.0000    2.9990
-</code></pre>
-<h2 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h2><p>小于等于的约束条件和等于的约束条件要分开来写。</p>
-<h1 id="线性约束和边界优化"><a href="#线性约束和边界优化" class="headerlink" title="线性约束和边界优化"></a>线性约束和边界优化</h1><h2 id="程序-3"><a href="#程序-3" class="headerlink" title="程序"></a>程序</h2><p>保持上一例不变，现在若要约束x,y的取值范围为<code>1 &lt;= x &lt;= 6和-3 &lt;= y &lt;= 8</code>。<br>那么设置界限lb和ub。</p>
-<pre><code class="lang-matlab">lb = [1 -3];
-ub = [6 8];
-</code></pre>
+<div class="sourceCode" id="cb7"><pre class="sourceCode matlab"><code class="sourceCode matlab"><a class="sourceLine" id="cb7-1" data-line-number="1">Optimization terminated: average change in the fitness value less than options.FunctionTolerance.</a>
+<a class="sourceLine" id="cb7-2" data-line-number="2">x = <span class="fl">1</span>×<span class="fl">2</span></a>
+<a class="sourceLine" id="cb7-3" data-line-number="3"></a>
+<a class="sourceLine" id="cb7-4" data-line-number="4">   -<span class="fl">2.0000</span>    <span class="fl">2.9990</span></a></code></pre></div>
+<h2 id="结论">结论</h2>
+<p>小于等于的约束条件和等于的约束条件要分开来写。 # 线性约束和边界优化 ## 程序 保持上一例不变，现在若要约束x,y的取值范围为<code>1 &lt;= x &lt;= 6和-3 &lt;= y &lt;= 8</code>。 那么设置界限lb和ub。</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode matlab"><code class="sourceCode matlab"><a class="sourceLine" id="cb8-1" data-line-number="1">lb = [<span class="fl">1</span> -<span class="fl">3</span>];</a>
+<a class="sourceLine" id="cb8-2" data-line-number="2">ub = [<span class="fl">6</span> <span class="fl">8</span>];</a></code></pre></div>
 <p>修改ga函数为：</p>
-<pre><code class="lang-matlab">x = ga(@ps_example,2,A,b,Aeq,beq,lb,ub)
-</code></pre>
+<div class="sourceCode" id="cb9"><pre class="sourceCode matlab"><code class="sourceCode matlab"><a class="sourceLine" id="cb9-1" data-line-number="1">x = ga(@ps_example,<span class="fl">2</span>,A,b,Aeq,beq,lb,ub)</a></code></pre></div>
 <p>结果：</p>
-<pre><code class="lang-matlab">Optimization terminated: average change in the fitness value less than options.FunctionTolerance.
-x = 1×2
-
-    1.0001    5.9992
-</code></pre>
-<h1 id="结论-1"><a href="#结论-1" class="headerlink" title="结论"></a>结论</h1><p>对于输入参数限制的进一步深入。</p>
-<h1 id="利用ga优化非线性约束"><a href="#利用ga优化非线性约束" class="headerlink" title="利用ga优化非线性约束"></a>利用ga优化非线性约束</h1><h1 id="程序-4"><a href="#程序-4" class="headerlink" title="程序"></a>程序</h1><p>如果约束条件改为非线性的函数：$2x^2+y^2\le3$和$(x^2+1)^2=(\frac{y}{2})^4$。<br>那么首先先将非线性的约束条件写成函数的形式：</p>
-<ol>
-<li><p>新建函数ellipsecons.m</p>
-<pre><code class="lang-matlab">function [c,ceq] = ellipsecons(x)
-
-c = 2*x(1)^2 + x(2)^2 - 3;
+<div class="sourceCode" id="cb10"><pre class="sourceCode matlab"><code class="sourceCode matlab"><a class="sourceLine" id="cb10-1" data-line-number="1">Optimization terminated: average change in the fitness value less than options.FunctionTolerance.</a>
+<a class="sourceLine" id="cb10-2" data-line-number="2">x = <span class="fl">1</span>×<span class="fl">2</span></a>
+<a class="sourceLine" id="cb10-3" data-line-number="3"></a>
+<a class="sourceLine" id="cb10-4" data-line-number="4">    <span class="fl">1.0001</span>    <span class="fl">5.9992</span></a></code></pre></div>
+<h1 id="结论-1">结论</h1>
+<p>对于输入参数限制的进一步深入。</p>
+<h1 id="利用ga优化非线性约束">利用ga优化非线性约束</h1>
+<h1 id="程序-3">程序</h1>
+<p>如果约束条件改为非线性的函数：<span class="math inline">\(2x^2+y^2\le3\)</span>和<span class="math inline">\((x^2+1)^2=(\frac{y}{2})^4\)</span>。 那么首先先将非线性的约束条件写成函数的形式： 1. 新建函数ellipsecons.m ```matlab function [c,ceq] = ellipsecons(x)</p>
+<pre><code>c = 2*x(1)^2 + x(2)^2 - 3;
 ceq = (x(1)+1)^2 - (x(2)/2)^4;
 end
-</code></pre>
-</li>
+```</code></pre>
+<ol type="1">
 <li><p>修改原程序为：</p>
-<pre><code class="lang-matlab">xi = linspace(-6,2,300);
-yi = linspace(-4,4,300);
-[X,Y] = meshgrid(xi,yi);
-Z = ps_example([X(:),Y(:)]);% 构造函数
-Z = reshape(Z,size(X));
-
-surf(X,Y,Z,&#39;MeshStyle&#39;,&#39;none&#39;)% 绘图
-colormap &#39;jet&#39;
-view(-26,43)
-xlabel(&#39;x(1)&#39;)
-ylabel(&#39;x(2)&#39;)
-title(&#39;ps\_example(x)&#39;)
-
-rng default; % 再生性
-x = ga(@ps_example,2,[],[],[],[],[],[],@ellipsecons)
-</code></pre>
-<p>结果：</p>
-</li>
+<div class="sourceCode" id="cb12"><pre class="sourceCode matlab"><code class="sourceCode matlab"><a class="sourceLine" id="cb12-1" data-line-number="1">xi = linspace(-<span class="fl">6</span>,<span class="fl">2</span>,<span class="fl">300</span>);</a>
+<a class="sourceLine" id="cb12-2" data-line-number="2">yi = linspace(-<span class="fl">4</span>,<span class="fl">4</span>,<span class="fl">300</span>);</a>
+<a class="sourceLine" id="cb12-3" data-line-number="3">[X,Y] = meshgrid(xi,yi);</a>
+<a class="sourceLine" id="cb12-4" data-line-number="4">Z = ps_example([X(:),Y(:)]);<span class="co">% 构造函数</span></a>
+<a class="sourceLine" id="cb12-5" data-line-number="5">Z = reshape(Z,size(X));</a>
+<a class="sourceLine" id="cb12-6" data-line-number="6"></a>
+<a class="sourceLine" id="cb12-7" data-line-number="7">surf(X,Y,Z,<span class="st">&#39;MeshStyle&#39;</span>,<span class="st">&#39;none&#39;</span>)<span class="co">% 绘图</span></a>
+<a class="sourceLine" id="cb12-8" data-line-number="8">colormap <span class="st">&#39;jet&#39;</span></a>
+<a class="sourceLine" id="cb12-9" data-line-number="9">view(-<span class="fl">26</span>,<span class="fl">43</span>)</a>
+<a class="sourceLine" id="cb12-10" data-line-number="10">xlabel(<span class="st">&#39;x(1)&#39;</span>)</a>
+<a class="sourceLine" id="cb12-11" data-line-number="11">ylabel(<span class="st">&#39;x(2)&#39;</span>)</a>
+<a class="sourceLine" id="cb12-12" data-line-number="12">title(<span class="st">&#39;ps\_example(x)&#39;</span>)</a>
+<a class="sourceLine" id="cb12-13" data-line-number="13"></a>
+<a class="sourceLine" id="cb12-14" data-line-number="14">rng default; <span class="co">% 再生性</span></a>
+<a class="sourceLine" id="cb12-15" data-line-number="15">x = ga(@ps_example,<span class="fl">2</span>,[],[],[],[],[],[],@ellipsecons)</a></code></pre></div>
+<p>结果：</p></li>
 </ol>
-<pre><code class="lang-matlab">Optimization terminated: average change in the fitness value less than options.FunctionTolerance
- and constraint violation is less than options.ConstraintTolerance.
-
-x =
-
-   -0.9766    0.0362
-</code></pre>
-<h2 id="结论-2"><a href="#结论-2" class="headerlink" title="结论"></a>结论</h2><p>前面四个空矩阵都是ps_example的约束条件，约束条件函数ellipsecons的约束条件是后面两个空矩阵。</p>
-<h1 id="使用非默认选项最小化"><a href="#使用非默认选项最小化" class="headerlink" title="使用非默认选项最小化"></a>使用非默认选项最小化</h1><h2 id="程序-5"><a href="#程序-5" class="headerlink" title="程序"></a>程序</h2><p>为了获得更精确的解决方案, 可以将约束公差设置为1e-6。并监视规划求解进度, 设置一个绘图函数。<br>总程序如下：</p>
-<pre><code class="lang-matlab">close all
-clear
-xi = linspace(-6,2,300);
-yi = linspace(-4,4,300);
-[X,Y] = meshgrid(xi,yi);
-Z = ps_example([X(:),Y(:)]);% 构造函数
-Z = reshape(Z,size(X));
-
-A = [-1 -1];%添加约束
-b = -1;
-Aeq = [-1 1];
-beq = 5;
-
-surf(X,Y,Z,&#39;MeshStyle&#39;,&#39;none&#39;)% 绘图
-colormap &#39;jet&#39;
-view(-26,43)
-xlabel(&#39;x(1)&#39;)
-ylabel(&#39;x(2)&#39;)
-title(&#39;ps\_example(x)&#39;)
-
-
-options = optimoptions(&#39;ga&#39;,&#39;ConstraintTolerance&#39;,1e-6,&#39;PlotFcn&#39;, @gaplotbestf);%设置选项
-rng default; % 再生性
-x = ga(@ps_example,2,A,b,Aeq,beq,[],[],[],options)
-</code></pre>
+<div class="sourceCode" id="cb13"><pre class="sourceCode matlab"><code class="sourceCode matlab"><a class="sourceLine" id="cb13-1" data-line-number="1">Optimization terminated: average change in the fitness value less than options.FunctionTolerance</a>
+<a class="sourceLine" id="cb13-2" data-line-number="2"> and constraint violation is less than options.ConstraintTolerance.</a>
+<a class="sourceLine" id="cb13-3" data-line-number="3"></a>
+<a class="sourceLine" id="cb13-4" data-line-number="4">x =</a>
+<a class="sourceLine" id="cb13-5" data-line-number="5"></a>
+<a class="sourceLine" id="cb13-6" data-line-number="6">   -<span class="fl">0.9766</span>    <span class="fl">0.0362</span></a></code></pre></div>
+<h2 id="结论-2">结论</h2>
+<p>前面四个空矩阵都是ps_example的约束条件，约束条件函数ellipsecons的约束条件是后面两个空矩阵。 # 使用非默认选项最小化 ## 程序 为了获得更精确的解决方案, 可以将约束公差设置为1e-6。并监视规划求解进度, 设置一个绘图函数。 总程序如下：</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode matlab"><code class="sourceCode matlab"><a class="sourceLine" id="cb14-1" data-line-number="1">close all</a>
+<a class="sourceLine" id="cb14-2" data-line-number="2">clear</a>
+<a class="sourceLine" id="cb14-3" data-line-number="3">xi = linspace(-<span class="fl">6</span>,<span class="fl">2</span>,<span class="fl">300</span>);</a>
+<a class="sourceLine" id="cb14-4" data-line-number="4">yi = linspace(-<span class="fl">4</span>,<span class="fl">4</span>,<span class="fl">300</span>);</a>
+<a class="sourceLine" id="cb14-5" data-line-number="5">[X,Y] = meshgrid(xi,yi);</a>
+<a class="sourceLine" id="cb14-6" data-line-number="6">Z = ps_example([X(:),Y(:)]);<span class="co">% 构造函数</span></a>
+<a class="sourceLine" id="cb14-7" data-line-number="7">Z = reshape(Z,size(X));</a>
+<a class="sourceLine" id="cb14-8" data-line-number="8"></a>
+<a class="sourceLine" id="cb14-9" data-line-number="9">A = [-<span class="fl">1</span> -<span class="fl">1</span>];<span class="co">%添加约束</span></a>
+<a class="sourceLine" id="cb14-10" data-line-number="10">b = -<span class="fl">1</span>;</a>
+<a class="sourceLine" id="cb14-11" data-line-number="11">Aeq = [-<span class="fl">1</span> <span class="fl">1</span>];</a>
+<a class="sourceLine" id="cb14-12" data-line-number="12">beq = <span class="fl">5</span>;</a>
+<a class="sourceLine" id="cb14-13" data-line-number="13"></a>
+<a class="sourceLine" id="cb14-14" data-line-number="14">surf(X,Y,Z,<span class="st">&#39;MeshStyle&#39;</span>,<span class="st">&#39;none&#39;</span>)<span class="co">% 绘图</span></a>
+<a class="sourceLine" id="cb14-15" data-line-number="15">colormap <span class="st">&#39;jet&#39;</span></a>
+<a class="sourceLine" id="cb14-16" data-line-number="16">view(-<span class="fl">26</span>,<span class="fl">43</span>)</a>
+<a class="sourceLine" id="cb14-17" data-line-number="17">xlabel(<span class="st">&#39;x(1)&#39;</span>)</a>
+<a class="sourceLine" id="cb14-18" data-line-number="18">ylabel(<span class="st">&#39;x(2)&#39;</span>)</a>
+<a class="sourceLine" id="cb14-19" data-line-number="19">title(<span class="st">&#39;ps\_example(x)&#39;</span>)</a>
+<a class="sourceLine" id="cb14-20" data-line-number="20"></a>
+<a class="sourceLine" id="cb14-21" data-line-number="21"></a>
+<a class="sourceLine" id="cb14-22" data-line-number="22">options = optimoptions(<span class="st">&#39;ga&#39;</span>,<span class="st">&#39;ConstraintTolerance&#39;</span>,<span class="fl">1e-6</span>,<span class="st">&#39;PlotFcn&#39;</span>, @gaplotbestf);<span class="co">%设置选项</span></a>
+<a class="sourceLine" id="cb14-23" data-line-number="23">rng default; <span class="co">% 再生性</span></a>
+<a class="sourceLine" id="cb14-24" data-line-number="24">x = ga(@ps_example,<span class="fl">2</span>,A,b,Aeq,beq,[],[],[],options)</a></code></pre></div>
 <p>结果：</p>
-<pre><code class="lang-matlab">Optimization terminated: average change in the fitness value less than options.FunctionTolerance.
-
-x =
-
-   -2.0000    3.0000
-</code></pre>
-<p><div align="center">
-<img src="./eg2.png">
-</div></p>
-<h1 id="实例：优化libsvm训练模型"><a href="#实例：优化libsvm训练模型" class="headerlink" title="实例：优化libsvm训练模型"></a><del>实例：优化libsvm训练模型</del></h1><p>很难受，我尝试改写了程序，但是并不能使用并行加速，还是很慢。。接下来我要找别的方式去加速。</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode matlab"><code class="sourceCode matlab"><a class="sourceLine" id="cb15-1" data-line-number="1">Optimization terminated: average change in the fitness value less than options.FunctionTolerance.</a>
+<a class="sourceLine" id="cb15-2" data-line-number="2"></a>
+<a class="sourceLine" id="cb15-3" data-line-number="3">x =</a>
+<a class="sourceLine" id="cb15-4" data-line-number="4"></a>
+<a class="sourceLine" id="cb15-5" data-line-number="5">   -<span class="fl">2.0000</span>    <span class="fl">3.0000</span></a></code></pre></div>
+<div data-align="center">
+<p><img src="./eg2.png"></p>
+</div>
+<h1 id="实例优化libsvm训练模型"><del>实例：优化libsvm训练模型</del></h1>
+<p>很难受，我尝试改写了程序，但是并不能使用并行加速，还是很慢。。接下来我要找别的方式去加速。</p>
 
             </div>
 </article>
@@ -271,14 +266,14 @@ x =
                         
     <h1>Archives</h1>
 
-    <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 06</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 05</a></li></ul>
+    <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 07</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 06</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 05</a></li></ul>
 
                     </section>
                     <section class="aside-section tag">
                         
     <h1>Tags</h1>
 
-    <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CMake/">CMake</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Matlab/">Matlab</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/git/">git</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/博客/">博客</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/嵌入式/">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/算法/">算法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/蓝牙/">蓝牙</a></li></ul>
+    <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CMake/">CMake</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Matlab/">Matlab</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/git/">git</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/博客/">博客</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/嵌入式/">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构/">数据结构</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/算法/">算法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/蓝牙/">蓝牙</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/链表/">链表</a></li></ul>
 
                     </section>
                 </aside>

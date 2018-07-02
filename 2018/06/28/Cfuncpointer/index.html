@@ -86,68 +86,66 @@
                 </li>
             </ul>
             <div class="post-content">
-                <h1 id="C函数指针的使用"><a href="#C函数指针的使用" class="headerlink" title="C函数指针的使用"></a>C函数指针的使用</h1><hr>
-<p>今天发现有本C陷阱与缺陷，就打开看看，发现其中有个非常有意思的东西：<br><code>(*(void(*)())0())</code>.作者介绍到，这一语句的作用是调用首地址为0的地址的程序。我对他进行了一些学习。</p>
-<h2 id="函数指针"><a href="#函数指针" class="headerlink" title="函数指针"></a>函数指针</h2><p>首先来一个简单的函数指针使用。</p>
-<pre><code class="lang-c">void prt(void)
-{
-    printf(&quot;hello\n&quot;);
-}
-
-int main(int argc, char const *argv[])
-{
-    void (*pf)(void);
-    pf=prt;
-    pf();
-    return 0;
-}
-</code></pre>
+                <p>#C函数指针的使用</p>
+<hr>
+<p>今天发现有本C陷阱与缺陷，就打开看看，发现其中有个非常有意思的东西： <code>(*(void(*)())0())</code>.作者介绍到，这一语句的作用是调用首地址为0的地址的程序。我对他进行了一些学习。</p>
+<h2 id="函数指针">函数指针</h2>
+<p>首先来一个简单的函数指针使用。</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode c"><code class="sourceCode c"><a class="sourceLine" id="cb1-1" data-line-number="1"><span class="dt">void</span> prt(<span class="dt">void</span>)</a>
+<a class="sourceLine" id="cb1-2" data-line-number="2">{</a>
+<a class="sourceLine" id="cb1-3" data-line-number="3">    printf(<span class="st">&quot;hello</span><span class="sc">\n</span><span class="st">&quot;</span>);</a>
+<a class="sourceLine" id="cb1-4" data-line-number="4">}</a>
+<a class="sourceLine" id="cb1-5" data-line-number="5"></a>
+<a class="sourceLine" id="cb1-6" data-line-number="6"><span class="dt">int</span> main(<span class="dt">int</span> argc, <span class="dt">char</span> <span class="dt">const</span> *argv[])</a>
+<a class="sourceLine" id="cb1-7" data-line-number="7">{</a>
+<a class="sourceLine" id="cb1-8" data-line-number="8">    <span class="dt">void</span> (*pf)(<span class="dt">void</span>);</a>
+<a class="sourceLine" id="cb1-9" data-line-number="9">    pf=prt;</a>
+<a class="sourceLine" id="cb1-10" data-line-number="10">    pf();</a>
+<a class="sourceLine" id="cb1-11" data-line-number="11">    <span class="cf">return</span> <span class="dv">0</span>;</a>
+<a class="sourceLine" id="cb1-12" data-line-number="12">}</a></code></pre></div>
 <p>我们将这个函数指针的定义做一些小小的改动，可以获得一个类型转换符。</p>
-<h2 id="类型转换符"><a href="#类型转换符" class="headerlink" title="类型转换符"></a>类型转换符</h2><p>改动定义如下。</p>
-<pre><code class="lang-c">void (*pf)(void) ---&gt; (void (*)())
-</code></pre>
+<h2 id="类型转换符">类型转换符</h2>
+<p>改动定义如下。</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode c"><code class="sourceCode c"><a class="sourceLine" id="cb2-1" data-line-number="1"><span class="dt">void</span> (*pf)(<span class="dt">void</span>) ---&gt; (<span class="dt">void</span> (*)()) </a></code></pre></div>
 <p>从前面我们可以发现函数指针的赋值，其实也是地址的交互。那么我可以将一个地址强制转换为函数指针并使用吗？</p>
-<pre><code class="lang-c">void prt(void)
-{
-    printf(&quot;hello\n&quot;);
-}
-
-int main(int argc, char const *argv[])
-{
-    void (*pf)(void);
-    pf=prt;
-    pf();
-
-    int64_t addr=(int64_t)prt;
-    pf=(void (*)())addr;
-    pf();
-
-    return 0;
-}
-</code></pre>
+<div class="sourceCode" id="cb3"><pre class="sourceCode c"><code class="sourceCode c"><a class="sourceLine" id="cb3-1" data-line-number="1"><span class="dt">void</span> prt(<span class="dt">void</span>)</a>
+<a class="sourceLine" id="cb3-2" data-line-number="2">{</a>
+<a class="sourceLine" id="cb3-3" data-line-number="3">    printf(<span class="st">&quot;hello</span><span class="sc">\n</span><span class="st">&quot;</span>);</a>
+<a class="sourceLine" id="cb3-4" data-line-number="4">}</a>
+<a class="sourceLine" id="cb3-5" data-line-number="5"></a>
+<a class="sourceLine" id="cb3-6" data-line-number="6"><span class="dt">int</span> main(<span class="dt">int</span> argc, <span class="dt">char</span> <span class="dt">const</span> *argv[])</a>
+<a class="sourceLine" id="cb3-7" data-line-number="7">{</a>
+<a class="sourceLine" id="cb3-8" data-line-number="8">    <span class="dt">void</span> (*pf)(<span class="dt">void</span>);</a>
+<a class="sourceLine" id="cb3-9" data-line-number="9">    pf=prt;</a>
+<a class="sourceLine" id="cb3-10" data-line-number="10">    pf();</a>
+<a class="sourceLine" id="cb3-11" data-line-number="11">    </a>
+<a class="sourceLine" id="cb3-12" data-line-number="12">    <span class="dt">int64_t</span> addr=(<span class="dt">int64_t</span>)prt;</a>
+<a class="sourceLine" id="cb3-13" data-line-number="13">    pf=(<span class="dt">void</span> (*)())addr;</a>
+<a class="sourceLine" id="cb3-14" data-line-number="14">    pf();</a>
+<a class="sourceLine" id="cb3-15" data-line-number="15"></a>
+<a class="sourceLine" id="cb3-16" data-line-number="16">    <span class="cf">return</span> <span class="dv">0</span>;</a>
+<a class="sourceLine" id="cb3-17" data-line-number="17">}</a></code></pre></div>
 <p>输出如下：</p>
-<pre><code class="lang-shell">☁  Desktop  gcc 1.c &amp;&amp; ./a.out
+<pre class="shell"><code>☁  Desktop  gcc 1.c &amp;&amp; ./a.out
 hello
-hello
-</code></pre>
+hello</code></pre>
 <p>显而易见这个强制转换是起作用的。</p>
-<h2 id="任意地址运行程序"><a href="#任意地址运行程序" class="headerlink" title="任意地址运行程序"></a>任意地址运行程序</h2><p>那么现在可以做最后一步：</p>
-<pre><code class="lang-c">void prt(void)
-{
-    printf(&quot;hello\n&quot;);
-}
-
-int main(int argc, char const *argv[])
-{
-    int64_t addr=(int64_t)prt;
-    (*(void (*)())addr)();
-    return 0;
-}
-</code></pre>
+<h2 id="任意地址运行程序">任意地址运行程序</h2>
+<p>那么现在可以做最后一步：</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode c"><code class="sourceCode c"><a class="sourceLine" id="cb5-1" data-line-number="1"><span class="dt">void</span> prt(<span class="dt">void</span>)</a>
+<a class="sourceLine" id="cb5-2" data-line-number="2">{</a>
+<a class="sourceLine" id="cb5-3" data-line-number="3">    printf(<span class="st">&quot;hello</span><span class="sc">\n</span><span class="st">&quot;</span>);</a>
+<a class="sourceLine" id="cb5-4" data-line-number="4">}</a>
+<a class="sourceLine" id="cb5-5" data-line-number="5"></a>
+<a class="sourceLine" id="cb5-6" data-line-number="6"><span class="dt">int</span> main(<span class="dt">int</span> argc, <span class="dt">char</span> <span class="dt">const</span> *argv[])</a>
+<a class="sourceLine" id="cb5-7" data-line-number="7">{</a>
+<a class="sourceLine" id="cb5-8" data-line-number="8">    <span class="dt">int64_t</span> addr=(<span class="dt">int64_t</span>)prt;</a>
+<a class="sourceLine" id="cb5-9" data-line-number="9">    (*(<span class="dt">void</span> (*)())addr)();</a>
+<a class="sourceLine" id="cb5-10" data-line-number="10">    <span class="cf">return</span> <span class="dv">0</span>;</a>
+<a class="sourceLine" id="cb5-11" data-line-number="11">}</a></code></pre></div>
 <p>输出：</p>
-<pre><code class="lang-sh">☁  Desktop  gcc 1.c &amp;&amp; ./a.out
-hello
-</code></pre>
+<div class="sourceCode" id="cb6"><pre class="sourceCode sh"><code class="sourceCode bash"><a class="sourceLine" id="cb6-1" data-line-number="1">☁  <span class="ex">Desktop</span>  gcc 1.c <span class="kw">&amp;&amp;</span> <span class="ex">./a.out</span></a>
+<a class="sourceLine" id="cb6-2" data-line-number="2"><span class="ex">hello</span></a></code></pre></div>
 <p>现在我们就可以运行任意地址的程序了~</p>
 
             </div>
@@ -165,14 +163,14 @@ hello
                         
     <h1>Archives</h1>
 
-    <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 06</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 05</a></li></ul>
+    <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 07</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 06</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 05</a></li></ul>
 
                     </section>
                     <section class="aside-section tag">
                         
     <h1>Tags</h1>
 
-    <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CMake/">CMake</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Matlab/">Matlab</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/git/">git</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/博客/">博客</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/嵌入式/">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/算法/">算法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/蓝牙/">蓝牙</a></li></ul>
+    <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CMake/">CMake</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Matlab/">Matlab</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/git/">git</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/博客/">博客</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/嵌入式/">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构/">数据结构</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/算法/">算法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/蓝牙/">蓝牙</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/链表/">链表</a></li></ul>
 
                     </section>
                 </aside>
