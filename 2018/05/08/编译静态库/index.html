@@ -86,92 +86,173 @@
                 </li>
             </ul>
             <div class="post-content">
-                <h2 id="cmake编译静态库"># <strong>CMake编译静态库</strong></h2>
-<h2 id="准备工作"><strong>准备工作</strong></h2>
+                <h1 id="CMake编译静态库"><a href="#CMake编译静态库" class="headerlink" title="CMake编译静态库"></a><strong>CMake编译静态库</strong></h1><hr>
+<h2 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a><strong>准备工作</strong></h2><ul>
+<li><strong>安装cmake</strong><br>&emsp;我的系统是ubuntu16，这一步就不赘述了，apt或者源代码安装都没问题。</li>
+<li><p><strong>源代码</strong><br>&emsp;我是想在系统中学习好linux应用层编程，所以我买了<a href="https://book.douban.com/subject/25809330/" target="_blank" rel="noopener">Linux/Uinx系统编程手册</a>。<br>在学习过程中发现他的代码都依赖于作者所写的几个头文件，所以我产生了将其将其编译成静态库的想法，虽然文件不多，但是姑且也算是学习到了一些东西。需要的可以自行百度搜索下载。<br>&emsp;源代码分布如下：</p>
+<pre><code class="lang-sh">  zqh@linux:~/system_program$ tree .
+  .
+  ├── build
+  ├── CMakeLists.txt
+  ├── lib
+  │   ├── alt_functions.c
+  │   ├── alt_functions.h
+  │   ├── CMakeLists.txt
+  │   ├── ename.c.inc
+  │   ├── error_functions.c
+  │   ├── error_functions.h
+  │   ├── get_num.c
+  │   ├── get_num.h
+  │   └── tlpi_hdr.h
+  └── 编译静态库.md
+
+  2 directories, 11 files
+</code></pre>
+</li>
+<li><p><strong>编写CMakeLists</strong></p>
 <ul>
-<li><strong>安装cmake</strong>  我的系统是ubuntu16，这一步就不赘述了，apt或者源代码安装都没问题。</li>
-<li><p><strong>源代码</strong>  我是想在系统中学习好linux应用层编程，所以我买了<a href="https://book.douban.com/subject/25809330/" target="_blank" rel="noopener">Linux/Uinx系统编程手册</a>。 在学习过程中发现他的代码都依赖于作者所写的几个头文件，所以我产生了将其将其编译成静态库的想法，虽然文件不多，但是姑且也算是学习到了一些东西。需要的可以自行百度搜索下载。  源代码分布如下： ```sh zqh@linux:~/system_program$ tree . . ├── build ├── CMakeLists.txt ├── lib │ ├── alt_functions.c │ ├── alt_functions.h │ ├── CMakeLists.txt │ ├── ename.c.inc │ ├── error_functions.c │ ├── error_functions.h │ ├── get_num.c │ ├── get_num.h │ └── tlpi_hdr.h └── 编译静态库.md</p>
-2 directories, 11 files ```</li>
-<li><strong>编写CMakeLists</strong>
-<ul>
-<li><em>lib目录下的CMakeLists</em></li>
+<li><p><em>lib目录下的CMakeLists</em></p>
+<pre><code class="lang-cmake">CMAKE_MINIMUM_REQUIRED(VERSION 2.8)  
+
+SET(LIB_SRC alt_functions.c error_functions.c get_num.c)  #添加源文件
+
+#添加静态库  
+ADD_LIBRARY(tpli_static STATIC ${LIB_SRC})  
+
+#将静态库重新命名为Libtpli
+SET_TARGET_PROPERTIES(tpli_static PROPERTIES OUTPUT_NAME &quot;tpli&quot;)
+</code></pre>
+</li>
+<li><p><em>当前目录下的CMakeLists</em></p>
+<pre><code class="lang-cmake">CMAKE_MINIMUM_REQUIRED(VERSION 2.8)  
+PROJECT(TestLIB)  #工程名
+ADD_SUBDIRECTORY(lib) #添加子目录
+</code></pre>
+</li>
 </ul>
-<div class="sourceCode" id="cb1"><pre class="sourceCode cmake"><code class="sourceCode cmake"><a class="sourceLine" id="cb1-1" data-line-number="1"><span class="fu">CMAKE_MINIMUM_REQUIRED</span>(VERSION 2.8)  </a>
-<a class="sourceLine" id="cb1-2" data-line-number="2"></a>
-<a class="sourceLine" id="cb1-3" data-line-number="3"><span class="fu">SET</span>(LIB_SRC alt_functions.c error_functions.c get_num.c)  <span class="co">#添加源文件</span></a>
-<a class="sourceLine" id="cb1-4" data-line-number="4"></a>
-<a class="sourceLine" id="cb1-5" data-line-number="5"><span class="co">#添加静态库  </span></a>
-<a class="sourceLine" id="cb1-6" data-line-number="6"><span class="fu">ADD_LIBRARY</span>(tpli_static STATIC <span class="va">${LIB_SRC}</span>)  </a>
-<a class="sourceLine" id="cb1-7" data-line-number="7"></a>
-<a class="sourceLine" id="cb1-8" data-line-number="8"><span class="co">#将静态库重新命名为Libtpli</span></a>
-<a class="sourceLine" id="cb1-9" data-line-number="9"><span class="fu">SET_TARGET_PROPERTIES</span>(tpli_static PROPERTIES OUTPUT_NAME <span class="st">&quot;tpli&quot;</span>)</a></code></pre></div>
+</li>
+<li><strong>编译</strong><pre><code class="lang-sh">  cd build/
+  cmake ..
+  make
+</code></pre>
+  查看结果<pre><code class="lang-sh">  zqh@linux:~/system_program/build$ ls
+  CMakeCache.txt  CMakeFiles  cmake_install.cmake  lib  Makefile
+  zqh@linux:~/system_program/build$ cd lib/
+  zqh@linux:~/system_program/build/lib$ ls
+  CMakeFiles  cmake_install.cmake  libtpli.a  Makefile
+</code></pre>
+  现在生成了静态库libtpli.a。</li>
+<li><p><strong>测试</strong></p>
 <ul>
-<li><em>当前目录下的CMakeLists</em></li>
+<li><p><em>准备</em><br>  新建了一个目录test，将头文件加入其中，内容如下</p>
+<pre><code class="lang-sh">  zqh@linux:~/system_program/test$ tree
+  .
+  ├── build
+  ├── CMakeLists.txt
+  ├── inc
+  │   ├── alt_functions.h
+  │   ├── ename.c.inc
+  │   ├── error_functions.h
+  │   ├── get_num.h
+  │   └── tlpi_hdr.h
+  └── test.c
+
+  2 directories, 7 files
+</code></pre>
+<p>  test.c（复制文件内容到另一个文件）:</p>
+<pre><code class="lang-c">      /*************************************************************************\
+  *                  Copyright (C) Michael Kerrisk, 2017.                   *
+  *                                                                         *
+  * This program is free software. You may use, modify, and redistribute it *
+  * under the terms of the GNU General Public License as published by the   *
+  * Free Software Foundation, either version 3 or (at your option) any      *
+  * later version. This program is distributed without any warranty.  See   *
+  * the file COPYING.gpl-v3 for details.                                    *
+  \*************************************************************************/
+
+  /* Listing 4-1 */
+
+  /* copy.c
+
+  Copy the file named argv[1] to a new file named in argv[2].
+  */
+  #include &lt;sys/stat.h&gt;
+  #include &lt;fcntl.h&gt;
+  #include &quot;tlpi_hdr.h&quot;
+
+  #ifndef BUF_SIZE        /* Allow &quot;cc -D&quot; to override definition */
+  #define BUF_SIZE 1024
+  #endif
+
+  int
+  main(int argc, char *argv[])
+  {
+      int inputFd, outputFd, openFlags;
+      mode_t filePerms;
+      ssize_t numRead;
+      char buf[BUF_SIZE];
+
+      if (argc != 3 || strcmp(argv[1], &quot;--help&quot;) == 0)
+          usageErr(&quot;%s old-file new-file\n&quot;, argv[0]);
+
+      /* Open input and output files */
+
+      inputFd = open(argv[1], O_RDONLY);
+      if (inputFd == -1)
+          errExit(&quot;opening file %s&quot;, argv[1]);
+
+      openFlags = O_CREAT | O_WRONLY | O_TRUNC;
+      filePerms = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP |
+                  S_IROTH | S_IWOTH;      /* rw-rw-rw- */
+      outputFd = open(argv[2], openFlags, filePerms);
+      if (outputFd == -1)
+          errExit(&quot;opening file %s&quot;, argv[2]);
+
+      /* Transfer data until we encounter end of input or an error */
+
+      while ((numRead = read(inputFd, buf, BUF_SIZE)) &gt; 0)
+          if (write(outputFd, buf, numRead) != numRead)
+              fatal(&quot;couldn&#39;t write whole buffer&quot;);
+      if (numRead == -1)
+          errExit(&quot;read&quot;);
+
+      if (close(inputFd) == -1)
+          errExit(&quot;close input&quot;);
+      if (close(outputFd) == -1)
+          errExit(&quot;close output&quot;);
+
+      exit(EXIT_SUCCESS);
+  }
+</code></pre>
+<p>  CMakeLists.txt:<br>  ```cmake<br>  CMAKE_MINIMUM_REQUIRED(VERSION 2.8)<br>  project (Tutorial)  #工程名</p>
+<h1 id="添加头文件目录"><a href="#添加头文件目录" class="headerlink" title="添加头文件目录"></a>添加头文件目录</h1><p>  include_directories(${PROJECT_SOURCE_DIR}/inc )</p>
+</li>
 </ul>
-<div class="sourceCode" id="cb2"><pre class="sourceCode cmake"><code class="sourceCode cmake"><a class="sourceLine" id="cb2-1" data-line-number="1"><span class="fu">CMAKE_MINIMUM_REQUIRED</span>(VERSION 2.8)  </a>
-<a class="sourceLine" id="cb2-2" data-line-number="2"><span class="fu">PROJECT</span>(TestLIB)  <span class="co">#工程名</span></a>
-<a class="sourceLine" id="cb2-3" data-line-number="3"><span class="fu">ADD_SUBDIRECTORY</span>(lib) <span class="co">#添加子目录</span></a></code></pre></div></li>
-<li><strong>编译</strong> <code>sh   cd build/   cmake ..   make</code> 查看结果 <code>sh   zqh@linux:~/system_program/build$ ls   CMakeCache.txt  CMakeFiles  cmake_install.cmake  lib  Makefile   zqh@linux:~/system_program/build$ cd lib/   zqh@linux:~/system_program/build/lib$ ls   CMakeFiles  cmake_install.cmake  libtpli.a  Makefile</code> 现在生成了静态库libtpli.a。</li>
-<li><strong>测试</strong>
-<ul>
-<li><p><em>准备</em> 新建了一个目录test，将头文件加入其中，内容如下 ```sh zqh@linux:~/system_program/test$ tree . ├── build ├── CMakeLists.txt ├── inc │ ├── alt_functions.h │ ├── ename.c.inc │ ├── error_functions.h │ ├── get_num.h │ └── tlpi_hdr.h └── test.c</p>
-2 directories, 7 files <code>test.c（复制文件内容到另一个文件）:</code>c /*************************************************************************<br>
-
-<ul>
-<li><pre><code>             Copyright (C) Michael Kerrisk, 2017.                   *</code></pre></li>
-<li><pre><code>                                                                    *</code></pre></li>
-<li>This program is free software. You may use, modify, and redistribute it *</li>
-<li>under the terms of the GNU General Public License as published by the *</li>
-<li>Free Software Foundation, either version 3 or (at your option) any *</li>
-<li>later version. This program is distributed without any warranty. See *</li>
-<li>the file COPYING.gpl-v3 for details. <em> *</em>***********************************************************************/</li>
+</li>
 </ul>
-<p>/* Listing 4-1 */</p>
-<p>/* copy.c</p>
-<p>Copy the file named argv[1] to a new file named in argv[2]. */ #include &lt;sys/stat.h&gt; #include &lt;fcntl.h&gt; #include “tlpi_hdr.h”</p>
-<p>#ifndef BUF_SIZE /* Allow “cc -D” to override definition */ #define BUF_SIZE 1024 #endif</p>
-<p>int main(int argc, char *argv[]) { int inputFd, outputFd, openFlags; mode_t filePerms; ssize_t numRead; char buf[BUF_SIZE];</p>
-<pre><code>  if (argc != 3 || strcmp(argv[1], &quot;--help&quot;) == 0)
-      usageErr(&quot;%s old-file new-file\n&quot;, argv[0]);
+<pre><code>    link_libraries(/home/zqh/system_program/build/lib/libtpli.a)#添加静态库
 
-  /* Open input and output files */
+    add_executable (Tutorial test.c) #创建可执行文件
 
-  inputFd = open(argv[1], O_RDONLY);
-  if (inputFd == -1)
-      errExit(&quot;opening file %s&quot;, argv[1]);
-
-  openFlags = O_CREAT | O_WRONLY | O_TRUNC;
-  filePerms = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP |
-              S_IROTH | S_IWOTH;      /* rw-rw-rw- */
-  outputFd = open(argv[2], openFlags, filePerms);
-  if (outputFd == -1)
-      errExit(&quot;opening file %s&quot;, argv[2]);
-
-  /* Transfer data until we encounter end of input or an error */
-
-  while ((numRead = read(inputFd, buf, BUF_SIZE)) &gt; 0)
-      if (write(outputFd, buf, numRead) != numRead)
-          fatal(&quot;couldn&#39;t write whole buffer&quot;);
-  if (numRead == -1)
-      errExit(&quot;read&quot;);
-
-  if (close(inputFd) == -1)
-      errExit(&quot;close input&quot;);
-  if (close(outputFd) == -1)
-      errExit(&quot;close output&quot;);
-
-  exit(EXIT_SUCCESS);</code></pre>
-<p>} <code>CMakeLists.txt:</code>cmake CMAKE_MINIMUM_REQUIRED(VERSION 2.8)<br>
-project (Tutorial) #工程名</p>
-<p># 添加头文件目录 include_directories(${PROJECT_SOURCE_DIR}/inc )</p>
-<p>link_libraries(/home/zqh/system_program/build/lib/libtpli.a)#添加静态库</p>
-<p>add_executable (Tutorial test.c) #创建可执行文件</p>
-target_link_libraries(Tutorial /home/zqh/system_program/build/lib/libtpli.a)# 连接静态库库 ```</li>
-<li><em>编译</em> <code>sh   cd build/   cmake ..   make</code></li>
-<li><p><em>运行</em> <code>sh   ./Tutorial   Usage: ./Tutorial old-file new-file   cat 1.txt   编译静态库成功   ./Tutorial 1.txt 2.txt   cat 2.txt   编译静态库成功</code></p></li>
-</ul></li>
-</ul>
-
+    target_link_libraries(Tutorial /home/zqh/system_program/build/lib/libtpli.a)# 连接静态库库
+    ```
+* *编译*
+    ```sh
+    cd build/
+    cmake ..
+    make
+    ```
+* *运行*
+    ```sh
+    ./Tutorial
+    Usage: ./Tutorial old-file new-file
+    cat 1.txt
+    编译静态库成功
+    ./Tutorial 1.txt 2.txt
+    cat 2.txt
+    编译静态库成功  
+    ```
+</code></pre>
             </div>
 </article>
                 </main>
