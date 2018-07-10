@@ -86,100 +86,92 @@
                 </li>
             </ul>
             <div class="post-content">
-                <h1 id="理解原子操作"><a href="#理解原子操作" class="headerlink" title="理解原子操作"></a><strong>理解原子操作</strong></h1><hr>
-<h3 id="题目"><a href="#题目" class="headerlink" title="题目"></a><strong>题目</strong></h3><p>&emsp;编写一个程序，最多可接收3个命令行参数：</p>
-<pre><code class="lang-sh">$ ./5-3 filename num-bytes [-x]
-</code></pre>
+                <h1 id="理解原子操作"><strong>理解原子操作</strong></h1>
+<hr>
+<h3 id="题目"><strong>题目</strong></h3>
+<p> 编写一个程序，最多可接收3个命令行参数：</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><a class="sourceLine" id="cb1-1" data-line-number="1">$ <span class="ex">./5-3</span> filename num-bytes [-x]</a></code></pre></div>
 <p>该程序打开指定的文件，然后每次写入一个字节的方式，向尾部追加num-bytes字节。缺省情况下，打开文件的标志应有O_APPEND，但若存在第三个命令行参数，那么就使用lseek到文件末尾再进行写入。最后运行这两个命令查看结果：</p>
-<pre><code class="lang-sh">./5-3 f1 1000000  &amp; ./5-3 f1 1000000 
-和
-./5-3 f1 1000000 -x &amp; ./5-3 f1 1000000 -x
-</code></pre>
-<h3 id="代码"><a href="#代码" class="headerlink" title="代码"></a><strong>代码</strong></h3><pre><code class="lang-c">#include &lt;ctype.h&gt;
-#include &quot;tlpi_hdr.h&quot;
-#include &lt;stdbool.h&gt;
-#include &lt;sys/stat.h&gt;
-#include &lt;fcntl.h&gt;
-int main(int argc, char *argv[])
-{
-    char ch;
-    char byte=&#39;a&#39;;
-    bool x = FALSE;
-    int fd=-1,cnt;
-    /* 读取选项 */
-    if (argc &lt; 3)
-    {
-        usageErr(&quot;filename num-bytes [-x]\n&quot;);
-        exit(EXIT_SUCCESS);
-    }
-    while ((ch = getopt(argc, argv, &quot;x&quot;)) != -1)
-    {
-        switch (ch)
-        {
-        case &#39;x&#39;:
-            printf(&quot;have x\n&quot;);
-            x = TRUE;
-            break;
-        default:
-            usageErr(&quot;filename num-bytes [-x]\n&quot;);
-            break;
-        }
-    }
-
-    if (x)//有x的情况
-    {
-        //当判断到了-x后，参数会被重新排列
-        cnt=atoi(argv[3]);
-        byte=&#39;x&#39;;
-        //改成lseek来调整
-        fd=open(argv[2],O_RDWR | O_CREAT , S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
-        if(fd==-1)
-        {
-            errExit(&quot;open&quot;);
-        }
-        while(cnt)
-        {
-            lseek(fd,0,SEEK_END);
-            write(fd,&amp;byte,1);
-            cnt--;
-        }   
-    }else
-    {   
-        cnt=atoi(argv[2]);
-        //只写 追加 证明了O_APPEND是原子操作，使用时不会受多线程的影响
-        fd=open(argv[1],O_RDWR | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
-        if(fd==-1)
-        {
-            errExit(&quot;open&quot;);
-        }
-        while(cnt)
-        {
-             write(fd,&amp;byte,1);
-            cnt--;
-        }
-    }
-
-    exit(EXIT_SUCCESS);
-}
-</code></pre>
-<h3 id="结果"><a href="#结果" class="headerlink" title="结果"></a><strong>结果</strong></h3><ul>
-<li><strong>不带-x参数</strong><pre><code class="lang-sh">  $ ./5-3 f1 1000000 &amp; ./5-3 f1 1000000 
-  $ ls -lh f1
-  -rw-rw-r-- 1 zqh zqh 2.0M 5月   9 10:38 f1
-</code></pre>
-</li>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><a class="sourceLine" id="cb2-1" data-line-number="1"><span class="ex">./5-3</span> f1 1000000  <span class="kw">&amp;</span> <span class="ex">./5-3</span> f1 1000000 </a>
+<a class="sourceLine" id="cb2-2" data-line-number="2">和</a>
+<a class="sourceLine" id="cb2-3" data-line-number="3"><span class="ex">./5-3</span> f1 1000000 -x <span class="kw">&amp;</span> <span class="ex">./5-3</span> f1 1000000 -x</a></code></pre></div>
+<h3 id="代码"><strong>代码</strong></h3>
+<div class="sourceCode" id="cb3"><pre class="sourceCode c"><code class="sourceCode c"><a class="sourceLine" id="cb3-1" data-line-number="1"><span class="pp">#include </span><span class="im">&lt;ctype.h&gt;</span></a>
+<a class="sourceLine" id="cb3-2" data-line-number="2"><span class="pp">#include </span><span class="im">&quot;tlpi_hdr.h&quot;</span></a>
+<a class="sourceLine" id="cb3-3" data-line-number="3"><span class="pp">#include </span><span class="im">&lt;stdbool.h&gt;</span></a>
+<a class="sourceLine" id="cb3-4" data-line-number="4"><span class="pp">#include </span><span class="im">&lt;sys/stat.h&gt;</span></a>
+<a class="sourceLine" id="cb3-5" data-line-number="5"><span class="pp">#include </span><span class="im">&lt;fcntl.h&gt;</span></a>
+<a class="sourceLine" id="cb3-6" data-line-number="6"><span class="dt">int</span> main(<span class="dt">int</span> argc, <span class="dt">char</span> *argv[])</a>
+<a class="sourceLine" id="cb3-7" data-line-number="7">{</a>
+<a class="sourceLine" id="cb3-8" data-line-number="8">    <span class="dt">char</span> ch;</a>
+<a class="sourceLine" id="cb3-9" data-line-number="9">    <span class="dt">char</span> byte=<span class="ch">&#39;a&#39;</span>;</a>
+<a class="sourceLine" id="cb3-10" data-line-number="10">    <span class="dt">bool</span> x = FALSE;</a>
+<a class="sourceLine" id="cb3-11" data-line-number="11">    <span class="dt">int</span> fd=-<span class="dv">1</span>,cnt;</a>
+<a class="sourceLine" id="cb3-12" data-line-number="12">    <span class="co">/* 读取选项 */</span></a>
+<a class="sourceLine" id="cb3-13" data-line-number="13">    <span class="cf">if</span> (argc &lt; <span class="dv">3</span>)</a>
+<a class="sourceLine" id="cb3-14" data-line-number="14">    {</a>
+<a class="sourceLine" id="cb3-15" data-line-number="15">        usageErr(<span class="st">&quot;filename num-bytes [-x]</span><span class="sc">\n</span><span class="st">&quot;</span>);</a>
+<a class="sourceLine" id="cb3-16" data-line-number="16">        exit(EXIT_SUCCESS);</a>
+<a class="sourceLine" id="cb3-17" data-line-number="17">    }</a>
+<a class="sourceLine" id="cb3-18" data-line-number="18">    <span class="cf">while</span> ((ch = getopt(argc, argv, <span class="st">&quot;x&quot;</span>)) != <span class="dv">-1</span>)</a>
+<a class="sourceLine" id="cb3-19" data-line-number="19">    {</a>
+<a class="sourceLine" id="cb3-20" data-line-number="20">        <span class="cf">switch</span> (ch)</a>
+<a class="sourceLine" id="cb3-21" data-line-number="21">        {</a>
+<a class="sourceLine" id="cb3-22" data-line-number="22">        <span class="cf">case</span> <span class="ch">&#39;x&#39;</span>:</a>
+<a class="sourceLine" id="cb3-23" data-line-number="23">            printf(<span class="st">&quot;have x</span><span class="sc">\n</span><span class="st">&quot;</span>);</a>
+<a class="sourceLine" id="cb3-24" data-line-number="24">            x = TRUE;</a>
+<a class="sourceLine" id="cb3-25" data-line-number="25">            <span class="cf">break</span>;</a>
+<a class="sourceLine" id="cb3-26" data-line-number="26">        <span class="cf">default</span>:</a>
+<a class="sourceLine" id="cb3-27" data-line-number="27">            usageErr(<span class="st">&quot;filename num-bytes [-x]</span><span class="sc">\n</span><span class="st">&quot;</span>);</a>
+<a class="sourceLine" id="cb3-28" data-line-number="28">            <span class="cf">break</span>;</a>
+<a class="sourceLine" id="cb3-29" data-line-number="29">        }</a>
+<a class="sourceLine" id="cb3-30" data-line-number="30">    }</a>
+<a class="sourceLine" id="cb3-31" data-line-number="31">    </a>
+<a class="sourceLine" id="cb3-32" data-line-number="32">    <span class="cf">if</span> (x)<span class="co">//有x的情况</span></a>
+<a class="sourceLine" id="cb3-33" data-line-number="33">    {</a>
+<a class="sourceLine" id="cb3-34" data-line-number="34">        <span class="co">//当判断到了-x后，参数会被重新排列</span></a>
+<a class="sourceLine" id="cb3-35" data-line-number="35">        cnt=atoi(argv[<span class="dv">3</span>]);</a>
+<a class="sourceLine" id="cb3-36" data-line-number="36">        byte=<span class="ch">&#39;x&#39;</span>;</a>
+<a class="sourceLine" id="cb3-37" data-line-number="37">        <span class="co">//改成lseek来调整</span></a>
+<a class="sourceLine" id="cb3-38" data-line-number="38">        fd=open(argv[<span class="dv">2</span>],O_RDWR | O_CREAT , S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);</a>
+<a class="sourceLine" id="cb3-39" data-line-number="39">        <span class="cf">if</span>(fd==-<span class="dv">1</span>)</a>
+<a class="sourceLine" id="cb3-40" data-line-number="40">        {</a>
+<a class="sourceLine" id="cb3-41" data-line-number="41">            errExit(<span class="st">&quot;open&quot;</span>);</a>
+<a class="sourceLine" id="cb3-42" data-line-number="42">        }</a>
+<a class="sourceLine" id="cb3-43" data-line-number="43">        <span class="cf">while</span>(cnt)</a>
+<a class="sourceLine" id="cb3-44" data-line-number="44">        {</a>
+<a class="sourceLine" id="cb3-45" data-line-number="45">            lseek(fd,<span class="dv">0</span>,SEEK_END);</a>
+<a class="sourceLine" id="cb3-46" data-line-number="46">            write(fd,&amp;byte,<span class="dv">1</span>);</a>
+<a class="sourceLine" id="cb3-47" data-line-number="47">            cnt--;</a>
+<a class="sourceLine" id="cb3-48" data-line-number="48">        }   </a>
+<a class="sourceLine" id="cb3-49" data-line-number="49">    }<span class="cf">else</span></a>
+<a class="sourceLine" id="cb3-50" data-line-number="50">    {   </a>
+<a class="sourceLine" id="cb3-51" data-line-number="51">        cnt=atoi(argv[<span class="dv">2</span>]);</a>
+<a class="sourceLine" id="cb3-52" data-line-number="52">        <span class="co">//只写 追加 证明了O_APPEND是原子操作，使用时不会受多线程的影响</span></a>
+<a class="sourceLine" id="cb3-53" data-line-number="53">        fd=open(argv[<span class="dv">1</span>],O_RDWR | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);</a>
+<a class="sourceLine" id="cb3-54" data-line-number="54">        <span class="cf">if</span>(fd==-<span class="dv">1</span>)</a>
+<a class="sourceLine" id="cb3-55" data-line-number="55">        {</a>
+<a class="sourceLine" id="cb3-56" data-line-number="56">            errExit(<span class="st">&quot;open&quot;</span>);</a>
+<a class="sourceLine" id="cb3-57" data-line-number="57">        }</a>
+<a class="sourceLine" id="cb3-58" data-line-number="58">        <span class="cf">while</span>(cnt)</a>
+<a class="sourceLine" id="cb3-59" data-line-number="59">        {</a>
+<a class="sourceLine" id="cb3-60" data-line-number="60">             write(fd,&amp;byte,<span class="dv">1</span>);</a>
+<a class="sourceLine" id="cb3-61" data-line-number="61">            cnt--;</a>
+<a class="sourceLine" id="cb3-62" data-line-number="62">        }</a>
+<a class="sourceLine" id="cb3-63" data-line-number="63">    }</a>
+<a class="sourceLine" id="cb3-64" data-line-number="64"></a>
+<a class="sourceLine" id="cb3-65" data-line-number="65">    exit(EXIT_SUCCESS);</a>
+<a class="sourceLine" id="cb3-66" data-line-number="66">}</a></code></pre></div>
+<h3 id="结果"><strong>结果</strong></h3>
+<ul>
+<li><strong>不带-x参数</strong> <code>sh   $ ./5-3 f1 1000000 &amp; ./5-3 f1 1000000    $ ls -lh f1   -rw-rw-r-- 1 zqh zqh 2.0M 5月   9 10:38 f1</code></li>
 <li><p><strong>带-x参数</strong></p>
-<pre><code class="lang-sh">$ ./5-3 f1 1000000 -x &amp; ./5-3 f1 1000000 -x
-$ ls -lh f1
--rw-rw-r-- 1 zqh zqh 1010K 5月   9 10:46 f1
-</code></pre>
-</li>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><a class="sourceLine" id="cb4-1" data-line-number="1">$ <span class="ex">./5-3</span> f1 1000000 -x <span class="kw">&amp;</span> <span class="ex">./5-3</span> f1 1000000 -x</a>
+<a class="sourceLine" id="cb4-2" data-line-number="2">$ <span class="fu">ls</span> -lh f1</a>
+<a class="sourceLine" id="cb4-3" data-line-number="3"><span class="ex">-rw-rw-r--</span> 1 zqh zqh 1010K 5月   9 10:46 f1</a></code></pre></div></li>
 <li><p><strong>总结</strong></p>
-<p>&emsp;使用O_APPEND参数打开的文件属于原子操作，两个不同的进程对一个文件做输入，是不可分割的操作<br>&emsp;使用lseek操作，不属于原子操作。</p>
-<h3 id="扩展"><a href="#扩展" class="headerlink" title="扩展"></a><strong>扩展</strong></h3><p>&emsp;我尝试修改了这个程序名为5-3.1，并且查看结果<br>|           |  原程序   |  新程序   |<br>|—         |—————|—————|<br>|<strong>无 -x</strong>  |写入a      |写入b      |<br>|<strong>有 -x</strong>  |写入x      |写入y      |</p>
-</li>
-<li><p><strong>不带-x参数</strong></p>
-</li>
+<p> 使用O_APPEND参数打开的文件属于原子操作，两个不同的进程对一个文件做输入，是不可分割的操作  使用lseek操作，不属于原子操作。 ### <strong>扩展</strong>  我尝试修改了这个程序名为5-3.1，并且查看结果 | | 原程序 | 新程序 | |– |———-|———-| |<strong>无 -x</strong> |写入a |写入b | |<strong>有 -x</strong> |写入x |写入y |</p></li>
+<li><p><strong>不带-x参数</strong></p></li>
 </ul>
 
             </div>
@@ -204,7 +196,7 @@ $ ls -lh f1
                         
     <h1>Tags</h1>
 
-    <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CMake/">CMake</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Matlab/">Matlab</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/git/">git</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/博客/">博客</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/堆栈/">堆栈</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/嵌入式/">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构/">数据结构</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/算法/">算法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/蓝牙/">蓝牙</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/链表/">链表</a></li></ul>
+    <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CMake/">CMake</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Matlab/">Matlab</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/git/">git</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/博客/">博客</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/堆栈/">堆栈</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/嵌入式/">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构/">数据结构</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/树/">树</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/算法/">算法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/蓝牙/">蓝牙</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/链表/">链表</a></li></ul>
 
                     </section>
                 </aside>
