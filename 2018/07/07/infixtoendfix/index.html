@@ -86,305 +86,304 @@
                 </li>
             </ul>
             <div class="post-content">
-                <h1 id="中缀表达式转后缀表达式">中缀表达式转后缀表达式</h1>
-<p>我用c语言写了个中缀表达式转后缀表达式代码。。。网上教程多的不要不要的，不过我觉得还是看数据结构-c语言实现是最舒服的。</p>
-<h1 id="程序">程序</h1>
-<p>这个程序只支持<strong>个位数</strong>的数字运算！(我偷懒不想写太多~~)</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode c"><code class="sourceCode c"><a class="sourceLine" id="cb1-1" data-line-number="1"><span class="co">/*</span></a>
-<a class="sourceLine" id="cb1-2" data-line-number="2"><span class="co"> * @Author: Zheng Qihang</span></a>
-<a class="sourceLine" id="cb1-3" data-line-number="3"><span class="co"> * @Date: 2018-07-05 20:14:48</span></a>
-<a class="sourceLine" id="cb1-4" data-line-number="4"><span class="co"> * @Last Modified by: Zheng Qihang</span></a>
-<a class="sourceLine" id="cb1-5" data-line-number="5"><span class="co"> * @Last Modified time: 2018-07-05 21:12:49</span></a>
-<a class="sourceLine" id="cb1-6" data-line-number="6"><span class="co"> */</span></a>
-<a class="sourceLine" id="cb1-7" data-line-number="7"><span class="pp">#include </span><span class="im">&lt;stdint.h&gt;</span></a>
-<a class="sourceLine" id="cb1-8" data-line-number="8"><span class="pp">#include </span><span class="im">&lt;stdio.h&gt;</span></a>
-<a class="sourceLine" id="cb1-9" data-line-number="9"><span class="pp">#include </span><span class="im">&lt;stdlib.h&gt;</span></a>
-<a class="sourceLine" id="cb1-10" data-line-number="10"><span class="pp">#include </span><span class="im">&lt;string.h&gt;</span></a>
-<a class="sourceLine" id="cb1-11" data-line-number="11"><span class="pp">#include </span><span class="im">&lt;time.h&gt;</span></a>
-<a class="sourceLine" id="cb1-12" data-line-number="12"></a>
-<a class="sourceLine" id="cb1-13" data-line-number="13"><span class="kw">typedef</span> <span class="kw">enum</span> {</a>
-<a class="sourceLine" id="cb1-14" data-line-number="14">    ADD = <span class="dv">0</span>,</a>
-<a class="sourceLine" id="cb1-15" data-line-number="15">    SUBT = <span class="dv">0</span>,</a>
-<a class="sourceLine" id="cb1-16" data-line-number="16">    MULT = <span class="dv">1</span>,</a>
-<a class="sourceLine" id="cb1-17" data-line-number="17">    DIVD = <span class="dv">1</span>,</a>
-<a class="sourceLine" id="cb1-18" data-line-number="18">    LEFTB = <span class="dv">-1</span>,</a>
-<a class="sourceLine" id="cb1-19" data-line-number="19">    RIGHTB =-<span class="dv">1</span>,</a>
-<a class="sourceLine" id="cb1-20" data-line-number="20">    NLL = <span class="dv">-2</span>,</a>
-<a class="sourceLine" id="cb1-21" data-line-number="21">} Operator;</a>
-<a class="sourceLine" id="cb1-22" data-line-number="22"></a>
-<a class="sourceLine" id="cb1-23" data-line-number="23"><span class="kw">typedef</span> <span class="dt">char</span> ElementType; <span class="co">// data type</span></a>
-<a class="sourceLine" id="cb1-24" data-line-number="24"><span class="pp">#define Node ptrNode      </span><span class="co">// Node defination</span></a>
-<a class="sourceLine" id="cb1-25" data-line-number="25"><span class="pp">#define Stack ptrNode     </span><span class="co">// list defination</span></a>
-<a class="sourceLine" id="cb1-26" data-line-number="26"><span class="kw">typedef</span> <span class="kw">struct</span> _Node      <span class="co">// node defination</span></a>
-<a class="sourceLine" id="cb1-27" data-line-number="27">{</a>
-<a class="sourceLine" id="cb1-28" data-line-number="28">    ElementType data;</a>
-<a class="sourceLine" id="cb1-29" data-line-number="29">    <span class="kw">struct</span> _Node *next;</a>
-<a class="sourceLine" id="cb1-30" data-line-number="30">} * ptrNode; <span class="co">// Node is a pointer to _Node</span></a>
-<a class="sourceLine" id="cb1-31" data-line-number="31"></a>
-<a class="sourceLine" id="cb1-32" data-line-number="32"><span class="dt">void</span> CheckStack(Stack S) {</a>
-<a class="sourceLine" id="cb1-33" data-line-number="33">    <span class="cf">if</span> (S == NULL) {</a>
-<a class="sourceLine" id="cb1-34" data-line-number="34">        printf(<span class="st">&quot;stack is invaild!</span><span class="sc">\n</span><span class="st">&quot;</span>);</a>
-<a class="sourceLine" id="cb1-35" data-line-number="35">    }</a>
-<a class="sourceLine" id="cb1-36" data-line-number="36">}</a>
-<a class="sourceLine" id="cb1-37" data-line-number="37"></a>
-<a class="sourceLine" id="cb1-38" data-line-number="38"><span class="dt">int</span> IsEmpty(Stack S) {</a>
-<a class="sourceLine" id="cb1-39" data-line-number="39">    CheckStack(S);</a>
-<a class="sourceLine" id="cb1-40" data-line-number="40">    <span class="cf">return</span> S-&gt;next == NULL;</a>
-<a class="sourceLine" id="cb1-41" data-line-number="41">}</a>
-<a class="sourceLine" id="cb1-42" data-line-number="42"></a>
-<a class="sourceLine" id="cb1-43" data-line-number="43">Stack CreateStack(<span class="dt">void</span>) {</a>
-<a class="sourceLine" id="cb1-44" data-line-number="44">    Stack S = (Stack)malloc(<span class="kw">sizeof</span>(<span class="kw">struct</span> _Node));</a>
-<a class="sourceLine" id="cb1-45" data-line-number="45">    CheckStack(S);</a>
-<a class="sourceLine" id="cb1-46" data-line-number="46">    S-&gt;next = NULL;</a>
-<a class="sourceLine" id="cb1-47" data-line-number="47">    <span class="cf">return</span> S;</a>
-<a class="sourceLine" id="cb1-48" data-line-number="48">}</a>
-<a class="sourceLine" id="cb1-49" data-line-number="49"></a>
-<a class="sourceLine" id="cb1-50" data-line-number="50">ElementType Pop(Stack S) {</a>
-<a class="sourceLine" id="cb1-51" data-line-number="51">    <span class="dt">int</span> temp;</a>
-<a class="sourceLine" id="cb1-52" data-line-number="52">    CheckStack(S);</a>
-<a class="sourceLine" id="cb1-53" data-line-number="53">    Node tmepNode = S-&gt;next;</a>
-<a class="sourceLine" id="cb1-54" data-line-number="54">    <span class="cf">if</span> (tmepNode != NULL) {</a>
-<a class="sourceLine" id="cb1-55" data-line-number="55">        temp = tmepNode-&gt;data;</a>
-<a class="sourceLine" id="cb1-56" data-line-number="56">        S-&gt;next = tmepNode-&gt;next;</a>
-<a class="sourceLine" id="cb1-57" data-line-number="57">        free(tmepNode);</a>
-<a class="sourceLine" id="cb1-58" data-line-number="58">        <span class="cf">return</span> temp;</a>
-<a class="sourceLine" id="cb1-59" data-line-number="59">    } <span class="cf">else</span> {</a>
-<a class="sourceLine" id="cb1-60" data-line-number="60">        <span class="cf">return</span> <span class="dv">-1</span>;</a>
-<a class="sourceLine" id="cb1-61" data-line-number="61">    }</a>
-<a class="sourceLine" id="cb1-62" data-line-number="62">}</a>
-<a class="sourceLine" id="cb1-63" data-line-number="63"></a>
-<a class="sourceLine" id="cb1-64" data-line-number="64"><span class="dt">void</span> MakeEmpty(Stack S) {</a>
-<a class="sourceLine" id="cb1-65" data-line-number="65">    CheckStack(S);</a>
-<a class="sourceLine" id="cb1-66" data-line-number="66">    <span class="cf">while</span> (S-&gt;next != NULL) {</a>
-<a class="sourceLine" id="cb1-67" data-line-number="67">        Pop(S);</a>
-<a class="sourceLine" id="cb1-68" data-line-number="68">    }</a>
-<a class="sourceLine" id="cb1-69" data-line-number="69">}</a>
-<a class="sourceLine" id="cb1-70" data-line-number="70"><span class="dt">void</span> DisposeStack(Stack S) {</a>
-<a class="sourceLine" id="cb1-71" data-line-number="71">    CheckStack(S);</a>
-<a class="sourceLine" id="cb1-72" data-line-number="72">    MakeEmpty(S);</a>
-<a class="sourceLine" id="cb1-73" data-line-number="73">    free(S);</a>
-<a class="sourceLine" id="cb1-74" data-line-number="74">}</a>
-<a class="sourceLine" id="cb1-75" data-line-number="75"></a>
-<a class="sourceLine" id="cb1-76" data-line-number="76"><span class="dt">void</span> Push(ElementType X, Stack S) {</a>
-<a class="sourceLine" id="cb1-77" data-line-number="77">    CheckStack(S);</a>
-<a class="sourceLine" id="cb1-78" data-line-number="78">    Node tempNode = S-&gt;next;</a>
-<a class="sourceLine" id="cb1-79" data-line-number="79">    Node newNode = (Node)malloc(<span class="kw">sizeof</span>(<span class="kw">struct</span> _Node));</a>
-<a class="sourceLine" id="cb1-80" data-line-number="80">    newNode-&gt;data = X;</a>
-<a class="sourceLine" id="cb1-81" data-line-number="81">    <span class="co">// printf(&quot;S-&gt;next %p\n&quot;,S-&gt;next);</span></a>
-<a class="sourceLine" id="cb1-82" data-line-number="82">    <span class="cf">if</span> (tempNode != NULL) {</a>
-<a class="sourceLine" id="cb1-83" data-line-number="83">        newNode-&gt;next = tempNode;</a>
-<a class="sourceLine" id="cb1-84" data-line-number="84">        <span class="co">// printf(&quot;%p = %p\n&quot;,newNode-&gt;next,tempNode);</span></a>
-<a class="sourceLine" id="cb1-85" data-line-number="85">    } <span class="cf">else</span> {</a>
-<a class="sourceLine" id="cb1-86" data-line-number="86">        newNode-&gt;next = NULL;</a>
-<a class="sourceLine" id="cb1-87" data-line-number="87">    }</a>
-<a class="sourceLine" id="cb1-88" data-line-number="88">    S-&gt;next = newNode;</a>
-<a class="sourceLine" id="cb1-89" data-line-number="89">    <span class="co">// printf(&quot;S-&gt;next %p\n&quot;,S-&gt;next);</span></a>
-<a class="sourceLine" id="cb1-90" data-line-number="90">}</a>
-<a class="sourceLine" id="cb1-91" data-line-number="91"></a>
-<a class="sourceLine" id="cb1-92" data-line-number="92">ElementType Top(Stack S) {</a>
-<a class="sourceLine" id="cb1-93" data-line-number="93">    CheckStack(S);</a>
-<a class="sourceLine" id="cb1-94" data-line-number="94">    <span class="cf">if</span> (S-&gt;next != NULL) {</a>
-<a class="sourceLine" id="cb1-95" data-line-number="95">        <span class="cf">return</span> S-&gt;next-&gt;data;</a>
-<a class="sourceLine" id="cb1-96" data-line-number="96">    } <span class="cf">else</span> {</a>
-<a class="sourceLine" id="cb1-97" data-line-number="97">        <span class="cf">return</span> <span class="dv">-1</span>;</a>
-<a class="sourceLine" id="cb1-98" data-line-number="98">    }</a>
-<a class="sourceLine" id="cb1-99" data-line-number="99">}</a>
-<a class="sourceLine" id="cb1-100" data-line-number="100"></a>
-<a class="sourceLine" id="cb1-101" data-line-number="101"><span class="dt">void</span> PrintOutPut(Stack S) {</a>
-<a class="sourceLine" id="cb1-102" data-line-number="102">    Node tep = S-&gt;next;</a>
-<a class="sourceLine" id="cb1-103" data-line-number="103">    <span class="dt">char</span> *str=(<span class="dt">char</span>*)malloc(<span class="dv">30</span>*<span class="kw">sizeof</span>(<span class="dt">char</span>));</a>
-<a class="sourceLine" id="cb1-104" data-line-number="104">    <span class="dt">int</span> cnt=<span class="dv">0</span>;</a>
-<a class="sourceLine" id="cb1-105" data-line-number="105">    CheckStack(S);</a>
-<a class="sourceLine" id="cb1-106" data-line-number="106">    <span class="cf">while</span> (tep != NULL) {</a>
-<a class="sourceLine" id="cb1-107" data-line-number="107">        *(str+(cnt++))=tep-&gt;data;<span class="co">//add char to string;</span></a>
-<a class="sourceLine" id="cb1-108" data-line-number="108">        tep = tep-&gt;next;</a>
-<a class="sourceLine" id="cb1-109" data-line-number="109">    }</a>
-<a class="sourceLine" id="cb1-110" data-line-number="110">    <span class="cf">while</span>(cnt--){</a>
-<a class="sourceLine" id="cb1-111" data-line-number="111">        printf(<span class="st">&quot;%c&quot;</span>,*(str+cnt));<span class="co">//Reverse the string and print</span></a>
-<a class="sourceLine" id="cb1-112" data-line-number="112">    }</a>
-<a class="sourceLine" id="cb1-113" data-line-number="113">    free(str);<span class="co">//avoid memory leaks!!</span></a>
-<a class="sourceLine" id="cb1-114" data-line-number="114">}</a>
-<a class="sourceLine" id="cb1-115" data-line-number="115"></a>
-<a class="sourceLine" id="cb1-116" data-line-number="116"><span class="dt">void</span> PrintStack(Stack S) {</a>
-<a class="sourceLine" id="cb1-117" data-line-number="117">    Node tep = S-&gt;next;</a>
-<a class="sourceLine" id="cb1-118" data-line-number="118">    <span class="cf">while</span> (tep != NULL) {</a>
-<a class="sourceLine" id="cb1-119" data-line-number="119">        printf(<span class="st">&quot;addr=0x%3lX  data=%d  nextaddr=0x%3lX</span><span class="sc">\n</span><span class="st">&quot;</span>,</a>
-<a class="sourceLine" id="cb1-120" data-line-number="120">               (<span class="dt">unsigned</span> <span class="dt">long</span> <span class="dt">int</span>)tep &amp; <span class="bn">0xFFF</span>, tep-&gt;data,</a>
-<a class="sourceLine" id="cb1-121" data-line-number="121">               (<span class="dt">unsigned</span> <span class="dt">long</span> <span class="dt">int</span>)tep-&gt;next &amp; <span class="bn">0xFFF</span>);</a>
-<a class="sourceLine" id="cb1-122" data-line-number="122">        tep = tep-&gt;next;</a>
-<a class="sourceLine" id="cb1-123" data-line-number="123">    }</a>
-<a class="sourceLine" id="cb1-124" data-line-number="124">}</a>
-<a class="sourceLine" id="cb1-125" data-line-number="125"></a>
-<a class="sourceLine" id="cb1-126" data-line-number="126">Operator ChToOpt(<span class="dt">char</span> C) {</a>
-<a class="sourceLine" id="cb1-127" data-line-number="127">    Operator temp;</a>
-<a class="sourceLine" id="cb1-128" data-line-number="128">    <span class="cf">switch</span> (C) {</a>
-<a class="sourceLine" id="cb1-129" data-line-number="129">    <span class="cf">case</span> <span class="ch">&#39;+&#39;</span>:</a>
-<a class="sourceLine" id="cb1-130" data-line-number="130">        temp = ADD;</a>
-<a class="sourceLine" id="cb1-131" data-line-number="131">        <span class="cf">break</span>;</a>
-<a class="sourceLine" id="cb1-132" data-line-number="132">    <span class="cf">case</span> <span class="ch">&#39;-&#39;</span>:</a>
-<a class="sourceLine" id="cb1-133" data-line-number="133">        temp = SUBT;</a>
-<a class="sourceLine" id="cb1-134" data-line-number="134">        <span class="cf">break</span>;</a>
-<a class="sourceLine" id="cb1-135" data-line-number="135">    <span class="cf">case</span> <span class="ch">&#39;*&#39;</span>:</a>
-<a class="sourceLine" id="cb1-136" data-line-number="136">        temp = MULT;</a>
-<a class="sourceLine" id="cb1-137" data-line-number="137">        <span class="cf">break</span>;</a>
-<a class="sourceLine" id="cb1-138" data-line-number="138">    <span class="cf">case</span> <span class="ch">&#39;/&#39;</span>:</a>
-<a class="sourceLine" id="cb1-139" data-line-number="139">        temp = DIVD;</a>
-<a class="sourceLine" id="cb1-140" data-line-number="140">        <span class="cf">break</span>;</a>
-<a class="sourceLine" id="cb1-141" data-line-number="141">    <span class="cf">case</span> <span class="ch">&#39;(&#39;</span>:</a>
-<a class="sourceLine" id="cb1-142" data-line-number="142">        temp = LEFTB;</a>
-<a class="sourceLine" id="cb1-143" data-line-number="143">        <span class="cf">break</span>;</a>
-<a class="sourceLine" id="cb1-144" data-line-number="144">    <span class="cf">case</span> <span class="ch">&#39;)&#39;</span>:</a>
-<a class="sourceLine" id="cb1-145" data-line-number="145">        temp = RIGHTB;</a>
-<a class="sourceLine" id="cb1-146" data-line-number="146">        <span class="cf">break</span>;</a>
-<a class="sourceLine" id="cb1-147" data-line-number="147">    <span class="cf">default</span>:</a>
-<a class="sourceLine" id="cb1-148" data-line-number="148">        temp = NLL;</a>
-<a class="sourceLine" id="cb1-149" data-line-number="149">        <span class="cf">break</span>;</a>
-<a class="sourceLine" id="cb1-150" data-line-number="150">    }</a>
-<a class="sourceLine" id="cb1-151" data-line-number="151">    <span class="cf">return</span> temp;</a>
-<a class="sourceLine" id="cb1-152" data-line-number="152">}</a>
-<a class="sourceLine" id="cb1-153" data-line-number="153"></a>
-<a class="sourceLine" id="cb1-154" data-line-number="154"><span class="dt">void</span> printfCovt(Stack stack, Stack out, <span class="dt">int</span> i) {</a>
-<a class="sourceLine" id="cb1-155" data-line-number="155">    printf(<span class="st">&quot;-------STEP  %d---------</span><span class="sc">\n</span><span class="st">&quot;</span>, i);</a>
-<a class="sourceLine" id="cb1-156" data-line-number="156">    printf(<span class="st">&quot;stack :  &quot;</span>);</a>
-<a class="sourceLine" id="cb1-157" data-line-number="157">    PrintOutPut(stack);</a>
-<a class="sourceLine" id="cb1-158" data-line-number="158">    printf(<span class="st">&quot;   &lt;--</span><span class="sc">\n</span><span class="st">&quot;</span>);</a>
-<a class="sourceLine" id="cb1-159" data-line-number="159">    printf(<span class="st">&quot;output:  &quot;</span>);</a>
-<a class="sourceLine" id="cb1-160" data-line-number="160">    PrintOutPut(out);</a>
-<a class="sourceLine" id="cb1-161" data-line-number="161">    printf(<span class="st">&quot;   &lt;--</span><span class="sc">\n</span><span class="st">&quot;</span>);</a>
-<a class="sourceLine" id="cb1-162" data-line-number="162">    printf(<span class="st">&quot;-----------------------</span><span class="sc">\n\n</span><span class="st">&quot;</span>);</a>
-<a class="sourceLine" id="cb1-163" data-line-number="163">}</a>
-<a class="sourceLine" id="cb1-164" data-line-number="164"></a>
-<a class="sourceLine" id="cb1-165" data-line-number="165"><span class="dt">int</span> main(<span class="dt">int</span> argc, <span class="dt">char</span> <span class="dt">const</span> *argv[]) {</a>
-<a class="sourceLine" id="cb1-166" data-line-number="166">    <span class="dt">int</span> tempint;</a>
-<a class="sourceLine" id="cb1-167" data-line-number="167">    Stack MyStack, output = NULL;</a>
-<a class="sourceLine" id="cb1-168" data-line-number="168">    <span class="dt">uint8_t</span> i = <span class="dv">0</span>;</a>
-<a class="sourceLine" id="cb1-169" data-line-number="169">    <span class="dt">char</span> *func = <span class="st">&quot;1+2*3+(4*5+6)*7&quot;</span>;</a>
-<a class="sourceLine" id="cb1-170" data-line-number="170">    Operator curOp;</a>
-<a class="sourceLine" id="cb1-171" data-line-number="171">    Operator TopOp;</a>
-<a class="sourceLine" id="cb1-172" data-line-number="172">    MyStack = CreateStack(); <span class="co">// make new stack;</span></a>
-<a class="sourceLine" id="cb1-173" data-line-number="173">    output = CreateStack();</a>
-<a class="sourceLine" id="cb1-174" data-line-number="174">    <span class="cf">for</span> (i = <span class="dv">0</span>; i &lt; strlen(func); i++) {</a>
-<a class="sourceLine" id="cb1-175" data-line-number="175"></a>
-<a class="sourceLine" id="cb1-176" data-line-number="176">        <span class="cf">switch</span> (*(func + i)) {</a>
-<a class="sourceLine" id="cb1-177" data-line-number="177">        <span class="cf">case</span> <span class="ch">&#39;+&#39;</span>:</a>
-<a class="sourceLine" id="cb1-178" data-line-number="178">        <span class="cf">case</span> <span class="ch">&#39;-&#39;</span>:</a>
-<a class="sourceLine" id="cb1-179" data-line-number="179">        <span class="cf">case</span> <span class="ch">&#39;*&#39;</span>:</a>
-<a class="sourceLine" id="cb1-180" data-line-number="180">        <span class="cf">case</span> <span class="ch">&#39;/&#39;</span>:</a>
-<a class="sourceLine" id="cb1-181" data-line-number="181">            <span class="cf">do</span> {</a>
-<a class="sourceLine" id="cb1-182" data-line-number="182">                curOp = ChToOpt(*(func + i));</a>
-<a class="sourceLine" id="cb1-183" data-line-number="183">                TopOp = ChToOpt(Top(MyStack));</a>
-<a class="sourceLine" id="cb1-184" data-line-number="184">                <span class="co">// printf(&quot;topop:%d curop :%d\n&quot;, TopOp, curOp);</span></a>
-<a class="sourceLine" id="cb1-185" data-line-number="185">                <span class="cf">if</span> (TopOp &gt;= curOp) {</a>
-<a class="sourceLine" id="cb1-186" data-line-number="186">                    Push(Pop(MyStack), output);    <span class="co">// move stack to output</span></a>
-<a class="sourceLine" id="cb1-187" data-line-number="187">                    TopOp = ChToOpt(Top(MyStack)); <span class="co">// refresh TopOperater</span></a>
-<a class="sourceLine" id="cb1-188" data-line-number="188">                }</a>
-<a class="sourceLine" id="cb1-189" data-line-number="189">            } <span class="cf">while</span> (TopOp &gt;= curOp);</a>
-<a class="sourceLine" id="cb1-190" data-line-number="190">            Push(*(func + i), MyStack); <span class="co">// add Current Operater in stack</span></a>
-<a class="sourceLine" id="cb1-191" data-line-number="191">            <span class="cf">break</span>;</a>
-<a class="sourceLine" id="cb1-192" data-line-number="192">        <span class="cf">case</span> <span class="ch">&#39;(&#39;</span>:</a>
-<a class="sourceLine" id="cb1-193" data-line-number="193">            Push(*(func + i), MyStack); <span class="co">// add left brackets in stack</span></a>
-<a class="sourceLine" id="cb1-194" data-line-number="194">            <span class="cf">break</span>;</a>
-<a class="sourceLine" id="cb1-195" data-line-number="195">        <span class="cf">case</span> <span class="ch">&#39;)&#39;</span>:</a>
-<a class="sourceLine" id="cb1-196" data-line-number="196">            <span class="cf">while</span> (Top(MyStack) != <span class="ch">&#39;(&#39;</span>) {</a>
-<a class="sourceLine" id="cb1-197" data-line-number="197">                <span class="co">// move stack to output utill top is &#39;(&#39;</span></a>
-<a class="sourceLine" id="cb1-198" data-line-number="198">                Push(Pop(MyStack), output); </a>
-<a class="sourceLine" id="cb1-199" data-line-number="199">            }</a>
-<a class="sourceLine" id="cb1-200" data-line-number="200">            Pop(MyStack); <span class="co">// pop the &#39;(&#39;</span></a>
-<a class="sourceLine" id="cb1-201" data-line-number="201">            <span class="cf">break</span>;</a>
-<a class="sourceLine" id="cb1-202" data-line-number="202">        <span class="cf">default</span>: <span class="co">// when func[i]=0~9</span></a>
-<a class="sourceLine" id="cb1-203" data-line-number="203">            Push(*(func + i), output);</a>
-<a class="sourceLine" id="cb1-204" data-line-number="204">            <span class="cf">break</span>;</a>
-<a class="sourceLine" id="cb1-205" data-line-number="205">        }</a>
-<a class="sourceLine" id="cb1-206" data-line-number="206">        printfCovt(MyStack, output, i);</a>
-<a class="sourceLine" id="cb1-207" data-line-number="207">    }</a>
-<a class="sourceLine" id="cb1-208" data-line-number="208"></a>
-<a class="sourceLine" id="cb1-209" data-line-number="209">    <span class="cf">while</span> (!IsEmpty(MyStack)) {</a>
-<a class="sourceLine" id="cb1-210" data-line-number="210">        Push(Pop(MyStack), output); <span class="co">// move stack to output</span></a>
-<a class="sourceLine" id="cb1-211" data-line-number="211">    }</a>
-<a class="sourceLine" id="cb1-212" data-line-number="212">    printfCovt(MyStack, output, i++);</a>
-<a class="sourceLine" id="cb1-213" data-line-number="213"></a>
-<a class="sourceLine" id="cb1-214" data-line-number="214">    <span class="cf">return</span> <span class="dv">0</span>;</a>
-<a class="sourceLine" id="cb1-215" data-line-number="215">}</a></code></pre></div>
-<h1 id="运行结果">运行结果</h1>
-<div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><a class="sourceLine" id="cb2-1" data-line-number="1"><span class="ex">-------STEP</span>  0---------</a>
-<a class="sourceLine" id="cb2-2" data-line-number="2"><span class="ex">stack</span> :     <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-3" data-line-number="3"><span class="ex">output</span>:  1   <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-4" data-line-number="4"><span class="ex">-----------------------</span></a>
-<a class="sourceLine" id="cb2-5" data-line-number="5"></a>
-<a class="sourceLine" id="cb2-6" data-line-number="6"><span class="ex">-------STEP</span>  1---------</a>
-<a class="sourceLine" id="cb2-7" data-line-number="7"><span class="ex">stack</span> :  +   <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-8" data-line-number="8"><span class="ex">output</span>:  1   <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-9" data-line-number="9"><span class="ex">-----------------------</span></a>
-<a class="sourceLine" id="cb2-10" data-line-number="10"></a>
-<a class="sourceLine" id="cb2-11" data-line-number="11"><span class="ex">-------STEP</span>  2---------</a>
-<a class="sourceLine" id="cb2-12" data-line-number="12"><span class="ex">stack</span> :  +   <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-13" data-line-number="13"><span class="ex">output</span>:  12   <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-14" data-line-number="14"><span class="ex">-----------------------</span></a>
-<a class="sourceLine" id="cb2-15" data-line-number="15"></a>
-<a class="sourceLine" id="cb2-16" data-line-number="16"><span class="ex">-------STEP</span>  3---------</a>
-<a class="sourceLine" id="cb2-17" data-line-number="17"><span class="ex">stack</span> :  +*   <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-18" data-line-number="18"><span class="ex">output</span>:  12   <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-19" data-line-number="19"><span class="ex">-----------------------</span></a>
-<a class="sourceLine" id="cb2-20" data-line-number="20"></a>
-<a class="sourceLine" id="cb2-21" data-line-number="21"><span class="ex">-------STEP</span>  4---------</a>
-<a class="sourceLine" id="cb2-22" data-line-number="22"><span class="ex">stack</span> :  +*   <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-23" data-line-number="23"><span class="ex">output</span>:  123   <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-24" data-line-number="24"><span class="ex">-----------------------</span></a>
-<a class="sourceLine" id="cb2-25" data-line-number="25"></a>
-<a class="sourceLine" id="cb2-26" data-line-number="26"><span class="ex">-------STEP</span>  5---------</a>
-<a class="sourceLine" id="cb2-27" data-line-number="27"><span class="ex">stack</span> :  +   <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-28" data-line-number="28"><span class="ex">output</span>:  123*+   <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-29" data-line-number="29"><span class="ex">-----------------------</span></a>
-<a class="sourceLine" id="cb2-30" data-line-number="30"></a>
-<a class="sourceLine" id="cb2-31" data-line-number="31"><span class="ex">-------STEP</span>  6---------</a>
-<a class="sourceLine" id="cb2-32" data-line-number="32"><span class="ex">stack</span> :  +(   <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-33" data-line-number="33"><span class="ex">output</span>:  123*+   <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-34" data-line-number="34"><span class="ex">-----------------------</span></a>
-<a class="sourceLine" id="cb2-35" data-line-number="35"></a>
-<a class="sourceLine" id="cb2-36" data-line-number="36"><span class="ex">-------STEP</span>  7---------</a>
-<a class="sourceLine" id="cb2-37" data-line-number="37"><span class="ex">stack</span> :  +(   <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-38" data-line-number="38"><span class="ex">output</span>:  123*+4   <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-39" data-line-number="39"><span class="ex">-----------------------</span></a>
-<a class="sourceLine" id="cb2-40" data-line-number="40"></a>
-<a class="sourceLine" id="cb2-41" data-line-number="41"><span class="ex">-------STEP</span>  8---------</a>
-<a class="sourceLine" id="cb2-42" data-line-number="42"><span class="ex">stack</span> :  +(*   <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-43" data-line-number="43"><span class="ex">output</span>:  123*+4   <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-44" data-line-number="44"><span class="ex">-----------------------</span></a>
-<a class="sourceLine" id="cb2-45" data-line-number="45"></a>
-<a class="sourceLine" id="cb2-46" data-line-number="46"><span class="ex">-------STEP</span>  9---------</a>
-<a class="sourceLine" id="cb2-47" data-line-number="47"><span class="ex">stack</span> :  +(*   <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-48" data-line-number="48"><span class="ex">output</span>:  123*+45   <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-49" data-line-number="49"><span class="ex">-----------------------</span></a>
-<a class="sourceLine" id="cb2-50" data-line-number="50"></a>
-<a class="sourceLine" id="cb2-51" data-line-number="51"><span class="ex">-------STEP</span>  10---------</a>
-<a class="sourceLine" id="cb2-52" data-line-number="52"><span class="ex">stack</span> :  +(+   <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-53" data-line-number="53"><span class="ex">output</span>:  123*+45*   <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-54" data-line-number="54"><span class="ex">-----------------------</span></a>
-<a class="sourceLine" id="cb2-55" data-line-number="55"></a>
-<a class="sourceLine" id="cb2-56" data-line-number="56"><span class="ex">-------STEP</span>  11---------</a>
-<a class="sourceLine" id="cb2-57" data-line-number="57"><span class="ex">stack</span> :  +(+   <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-58" data-line-number="58"><span class="ex">output</span>:  123*+45*6   <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-59" data-line-number="59"><span class="ex">-----------------------</span></a>
-<a class="sourceLine" id="cb2-60" data-line-number="60"></a>
-<a class="sourceLine" id="cb2-61" data-line-number="61"><span class="ex">-------STEP</span>  12---------</a>
-<a class="sourceLine" id="cb2-62" data-line-number="62"><span class="ex">stack</span> :  +   <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-63" data-line-number="63"><span class="ex">output</span>:  123*+45*6+   <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-64" data-line-number="64"><span class="ex">-----------------------</span></a>
-<a class="sourceLine" id="cb2-65" data-line-number="65"></a>
-<a class="sourceLine" id="cb2-66" data-line-number="66"><span class="ex">-------STEP</span>  13---------</a>
-<a class="sourceLine" id="cb2-67" data-line-number="67"><span class="ex">stack</span> :  +*   <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-68" data-line-number="68"><span class="ex">output</span>:  123*+45*6+   <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-69" data-line-number="69"><span class="ex">-----------------------</span></a>
-<a class="sourceLine" id="cb2-70" data-line-number="70"></a>
-<a class="sourceLine" id="cb2-71" data-line-number="71"><span class="ex">-------STEP</span>  14---------</a>
-<a class="sourceLine" id="cb2-72" data-line-number="72"><span class="ex">stack</span> :  +*   <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-73" data-line-number="73"><span class="ex">output</span>:  123*+45*6+7   <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-74" data-line-number="74"><span class="ex">-----------------------</span></a>
-<a class="sourceLine" id="cb2-75" data-line-number="75"></a>
-<a class="sourceLine" id="cb2-76" data-line-number="76"><span class="ex">-------STEP</span>  15---------</a>
-<a class="sourceLine" id="cb2-77" data-line-number="77"><span class="ex">stack</span> :     <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-78" data-line-number="78"><span class="ex">output</span>:  123*+45*6+7*+   <span class="op">&lt;</span>--</a>
-<a class="sourceLine" id="cb2-79" data-line-number="79"><span class="ex">-----------------------</span></a></code></pre></div>
+                <h1 id="中缀表达式转后缀表达式"><a href="#中缀表达式转后缀表达式" class="headerlink" title="中缀表达式转后缀表达式"></a>中缀表达式转后缀表达式</h1><p>我用c语言写了个中缀表达式转后缀表达式代码。。。网上教程多的不要不要的，不过我觉得还是看数据结构-c语言实现是最舒服的。</p>
+<h1 id="程序"><a href="#程序" class="headerlink" title="程序"></a>程序</h1><p>这个程序只支持<strong>个位数</strong>的数字运算！(我偷懒不想写太多~~)</p>
+<pre><code class="lang-c">/*
+ * @Author: Zheng Qihang
+ * @Date: 2018-07-05 20:14:48
+ * @Last Modified by: Zheng Qihang
+ * @Last Modified time: 2018-07-05 21:12:49
+ */
+#include &lt;stdint.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+#include &lt;time.h&gt;
+
+typedef enum {
+    ADD = 0,
+    SUBT = 0,
+    MULT = 1,
+    DIVD = 1,
+    LEFTB = -1,
+    RIGHTB =-1,
+    NLL = -2,
+} Operator;
+
+typedef char ElementType; // data type
+#define Node ptrNode      // Node defination
+#define Stack ptrNode     // list defination
+typedef struct _Node      // node defination
+{
+    ElementType data;
+    struct _Node *next;
+} * ptrNode; // Node is a pointer to _Node
+
+void CheckStack(Stack S) {
+    if (S == NULL) {
+        printf(&quot;stack is invaild!\n&quot;);
+    }
+}
+
+int IsEmpty(Stack S) {
+    CheckStack(S);
+    return S-&gt;next == NULL;
+}
+
+Stack CreateStack(void) {
+    Stack S = (Stack)malloc(sizeof(struct _Node));
+    CheckStack(S);
+    S-&gt;next = NULL;
+    return S;
+}
+
+ElementType Pop(Stack S) {
+    int temp;
+    CheckStack(S);
+    Node tmepNode = S-&gt;next;
+    if (tmepNode != NULL) {
+        temp = tmepNode-&gt;data;
+        S-&gt;next = tmepNode-&gt;next;
+        free(tmepNode);
+        return temp;
+    } else {
+        return -1;
+    }
+}
+
+void MakeEmpty(Stack S) {
+    CheckStack(S);
+    while (S-&gt;next != NULL) {
+        Pop(S);
+    }
+}
+void DisposeStack(Stack S) {
+    CheckStack(S);
+    MakeEmpty(S);
+    free(S);
+}
+
+void Push(ElementType X, Stack S) {
+    CheckStack(S);
+    Node tempNode = S-&gt;next;
+    Node newNode = (Node)malloc(sizeof(struct _Node));
+    newNode-&gt;data = X;
+    // printf(&quot;S-&gt;next %p\n&quot;,S-&gt;next);
+    if (tempNode != NULL) {
+        newNode-&gt;next = tempNode;
+        // printf(&quot;%p = %p\n&quot;,newNode-&gt;next,tempNode);
+    } else {
+        newNode-&gt;next = NULL;
+    }
+    S-&gt;next = newNode;
+    // printf(&quot;S-&gt;next %p\n&quot;,S-&gt;next);
+}
+
+ElementType Top(Stack S) {
+    CheckStack(S);
+    if (S-&gt;next != NULL) {
+        return S-&gt;next-&gt;data;
+    } else {
+        return -1;
+    }
+}
+
+void PrintOutPut(Stack S) {
+    Node tep = S-&gt;next;
+    char *str=(char*)malloc(30*sizeof(char));
+    int cnt=0;
+    CheckStack(S);
+    while (tep != NULL) {
+        *(str+(cnt++))=tep-&gt;data;//add char to string;
+        tep = tep-&gt;next;
+    }
+    while(cnt--){
+        printf(&quot;%c&quot;,*(str+cnt));//Reverse the string and print
+    }
+    free(str);//avoid memory leaks!!
+}
+
+void PrintStack(Stack S) {
+    Node tep = S-&gt;next;
+    while (tep != NULL) {
+        printf(&quot;addr=0x%3lX  data=%d  nextaddr=0x%3lX\n&quot;,
+               (unsigned long int)tep &amp; 0xFFF, tep-&gt;data,
+               (unsigned long int)tep-&gt;next &amp; 0xFFF);
+        tep = tep-&gt;next;
+    }
+}
+
+Operator ChToOpt(char C) {
+    Operator temp;
+    switch (C) {
+    case &#39;+&#39;:
+        temp = ADD;
+        break;
+    case &#39;-&#39;:
+        temp = SUBT;
+        break;
+    case &#39;*&#39;:
+        temp = MULT;
+        break;
+    case &#39;/&#39;:
+        temp = DIVD;
+        break;
+    case &#39;(&#39;:
+        temp = LEFTB;
+        break;
+    case &#39;)&#39;:
+        temp = RIGHTB;
+        break;
+    default:
+        temp = NLL;
+        break;
+    }
+    return temp;
+}
+
+void printfCovt(Stack stack, Stack out, int i) {
+    printf(&quot;-------STEP  %d---------\n&quot;, i);
+    printf(&quot;stack :  &quot;);
+    PrintOutPut(stack);
+    printf(&quot;   &lt;--\n&quot;);
+    printf(&quot;output:  &quot;);
+    PrintOutPut(out);
+    printf(&quot;   &lt;--\n&quot;);
+    printf(&quot;-----------------------\n\n&quot;);
+}
+
+int main(int argc, char const *argv[]) {
+    int tempint;
+    Stack MyStack, output = NULL;
+    uint8_t i = 0;
+    char *func = &quot;1+2*3+(4*5+6)*7&quot;;
+    Operator curOp;
+    Operator TopOp;
+    MyStack = CreateStack(); // make new stack;
+    output = CreateStack();
+    for (i = 0; i &lt; strlen(func); i++) {
+
+        switch (*(func + i)) {
+        case &#39;+&#39;:
+        case &#39;-&#39;:
+        case &#39;*&#39;:
+        case &#39;/&#39;:
+            do {
+                curOp = ChToOpt(*(func + i));
+                TopOp = ChToOpt(Top(MyStack));
+                // printf(&quot;topop:%d curop :%d\n&quot;, TopOp, curOp);
+                if (TopOp &gt;= curOp) {
+                    Push(Pop(MyStack), output);    // move stack to output
+                    TopOp = ChToOpt(Top(MyStack)); // refresh TopOperater
+                }
+            } while (TopOp &gt;= curOp);
+            Push(*(func + i), MyStack); // add Current Operater in stack
+            break;
+        case &#39;(&#39;:
+            Push(*(func + i), MyStack); // add left brackets in stack
+            break;
+        case &#39;)&#39;:
+            while (Top(MyStack) != &#39;(&#39;) {
+                // move stack to output utill top is &#39;(&#39;
+                Push(Pop(MyStack), output); 
+            }
+            Pop(MyStack); // pop the &#39;(&#39;
+            break;
+        default: // when func[i]=0~9
+            Push(*(func + i), output);
+            break;
+        }
+        printfCovt(MyStack, output, i);
+    }
+
+    while (!IsEmpty(MyStack)) {
+        Push(Pop(MyStack), output); // move stack to output
+    }
+    printfCovt(MyStack, output, i++);
+
+    return 0;
+}
+</code></pre>
+<h1 id="运行结果"><a href="#运行结果" class="headerlink" title="运行结果"></a>运行结果</h1><pre><code class="lang-sh">-------STEP  0---------
+stack :     &lt;--
+output:  1   &lt;--
+-----------------------
+
+-------STEP  1---------
+stack :  +   &lt;--
+output:  1   &lt;--
+-----------------------
+
+-------STEP  2---------
+stack :  +   &lt;--
+output:  12   &lt;--
+-----------------------
+
+-------STEP  3---------
+stack :  +*   &lt;--
+output:  12   &lt;--
+-----------------------
+
+-------STEP  4---------
+stack :  +*   &lt;--
+output:  123   &lt;--
+-----------------------
+
+-------STEP  5---------
+stack :  +   &lt;--
+output:  123*+   &lt;--
+-----------------------
+
+-------STEP  6---------
+stack :  +(   &lt;--
+output:  123*+   &lt;--
+-----------------------
+
+-------STEP  7---------
+stack :  +(   &lt;--
+output:  123*+4   &lt;--
+-----------------------
+
+-------STEP  8---------
+stack :  +(*   &lt;--
+output:  123*+4   &lt;--
+-----------------------
+
+-------STEP  9---------
+stack :  +(*   &lt;--
+output:  123*+45   &lt;--
+-----------------------
+
+-------STEP  10---------
+stack :  +(+   &lt;--
+output:  123*+45*   &lt;--
+-----------------------
+
+-------STEP  11---------
+stack :  +(+   &lt;--
+output:  123*+45*6   &lt;--
+-----------------------
+
+-------STEP  12---------
+stack :  +   &lt;--
+output:  123*+45*6+   &lt;--
+-----------------------
+
+-------STEP  13---------
+stack :  +*   &lt;--
+output:  123*+45*6+   &lt;--
+-----------------------
+
+-------STEP  14---------
+stack :  +*   &lt;--
+output:  123*+45*6+7   &lt;--
+-----------------------
+
+-------STEP  15---------
+stack :     &lt;--
+output:  123*+45*6+7*+   &lt;--
+-----------------------
+</code></pre>
 
             </div>
 </article>
@@ -408,7 +407,7 @@
                         
     <h1>Tags</h1>
 
-    <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CMake/">CMake</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Matlab/">Matlab</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/git/">git</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/博客/">博客</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/堆栈/">堆栈</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/嵌入式/">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构/">数据结构</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/树/">树</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/算法/">算法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/蓝牙/">蓝牙</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/链表/">链表</a></li></ul>
+    <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CMake/">CMake</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Matlab/">Matlab</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/git/">git</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/二叉树/">二叉树</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/博客/">博客</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/堆栈/">堆栈</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/嵌入式/">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构/">数据结构</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/树/">树</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/算法/">算法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/蓝牙/">蓝牙</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/链表/">链表</a></li></ul>
 
                     </section>
                 </aside>
