@@ -86,100 +86,95 @@
                 </li>
             </ul>
             <div class="post-content">
-                <h1 id="理解原子操作"><a href="#理解原子操作" class="headerlink" title="理解原子操作"></a><strong>理解原子操作</strong></h1><hr>
-<h3 id="题目"><a href="#题目" class="headerlink" title="题目"></a><strong>题目</strong></h3><p>&emsp;编写一个程序，最多可接收3个命令行参数：</p>
-<pre><code class="lang-sh">$ ./5-3 filename num-bytes [-x]
-</code></pre>
+                <h1 id="理解原子操作"><strong>理解原子操作</strong></h1>
+<hr>
+<h3 id="题目"><strong>题目</strong></h3>
+<p> 编写一个程序，最多可接收3个命令行参数：</p>
+<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash">$ <span class="ex">./5-3</span> filename num-bytes [-x]</code></pre></div>
 <p>该程序打开指定的文件，然后每次写入一个字节的方式，向尾部追加num-bytes字节。缺省情况下，打开文件的标志应有O_APPEND，但若存在第三个命令行参数，那么就使用lseek到文件末尾再进行写入。最后运行这两个命令查看结果：</p>
-<pre><code class="lang-sh">./5-3 f1 1000000  &amp; ./5-3 f1 1000000 
+<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash"><span class="ex">./5-3</span> f1 1000000  <span class="kw">&amp;</span> <span class="ex">./5-3</span> f1 1000000 
 和
-./5-3 f1 1000000 -x &amp; ./5-3 f1 1000000 -x
-</code></pre>
-<h3 id="代码"><a href="#代码" class="headerlink" title="代码"></a><strong>代码</strong></h3><pre><code class="lang-c">#include &lt;ctype.h&gt;
-#include &quot;tlpi_hdr.h&quot;
-#include &lt;stdbool.h&gt;
-#include &lt;sys/stat.h&gt;
-#include &lt;fcntl.h&gt;
-int main(int argc, char *argv[])
+<span class="ex">./5-3</span> f1 1000000 -x <span class="kw">&amp;</span> <span class="ex">./5-3</span> f1 1000000 -x</code></pre></div>
+<h3 id="代码"><strong>代码</strong></h3>
+<div class="sourceCode"><pre class="sourceCode c"><code class="sourceCode c"><span class="pp">#include </span><span class="im">&lt;ctype.h&gt;</span>
+<span class="pp">#include </span><span class="im">&quot;tlpi_hdr.h&quot;</span>
+<span class="pp">#include </span><span class="im">&lt;stdbool.h&gt;</span>
+<span class="pp">#include </span><span class="im">&lt;sys/stat.h&gt;</span>
+<span class="pp">#include </span><span class="im">&lt;fcntl.h&gt;</span>
+<span class="dt">int</span> main(<span class="dt">int</span> argc, <span class="dt">char</span> *argv[])
 {
-    char ch;
-    char byte=&#39;a&#39;;
+    <span class="dt">char</span> ch;
+    <span class="dt">char</span> byte=&#39;a&#39;;
     bool x = FALSE;
-    int fd=-1,cnt;
-    /* 读取选项 */
-    if (argc &lt; 3)
+    <span class="dt">int</span> fd=-<span class="dv">1</span>,cnt;
+    <span class="co">/* 读取选项 */</span>
+    <span class="cf">if</span> (argc &lt; <span class="dv">3</span>)
     {
-        usageErr(&quot;filename num-bytes [-x]\n&quot;);
+        usageErr(<span class="st">&quot;filename num-bytes [-x]</span><span class="sc">\n</span><span class="st">&quot;</span>);
         exit(EXIT_SUCCESS);
     }
-    while ((ch = getopt(argc, argv, &quot;x&quot;)) != -1)
+    <span class="cf">while</span> ((ch = getopt(argc, argv, <span class="st">&quot;x&quot;</span>)) != -<span class="dv">1</span>)
     {
-        switch (ch)
+        <span class="cf">switch</span> (ch)
         {
-        case &#39;x&#39;:
-            printf(&quot;have x\n&quot;);
+        <span class="cf">case</span> &#39;x&#39;:
+            printf(<span class="st">&quot;have x</span><span class="sc">\n</span><span class="st">&quot;</span>);
             x = TRUE;
-            break;
-        default:
-            usageErr(&quot;filename num-bytes [-x]\n&quot;);
-            break;
+            <span class="cf">break</span>;
+        <span class="cf">default</span>:
+            usageErr(<span class="st">&quot;filename num-bytes [-x]</span><span class="sc">\n</span><span class="st">&quot;</span>);
+            <span class="cf">break</span>;
         }
     }
-
-    if (x)//有x的情况
+    
+    <span class="cf">if</span> (x)<span class="co">//有x的情况</span>
     {
-        //当判断到了-x后，参数会被重新排列
-        cnt=atoi(argv[3]);
+        <span class="co">//当判断到了-x后，参数会被重新排列</span>
+        cnt=atoi(argv[<span class="dv">3</span>]);
         byte=&#39;x&#39;;
-        //改成lseek来调整
-        fd=open(argv[2],O_RDWR | O_CREAT , S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
-        if(fd==-1)
+        <span class="co">//改成lseek来调整</span>
+        fd=open(argv[<span class="dv">2</span>],O_RDWR | O_CREAT , S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
+        <span class="cf">if</span>(fd==-<span class="dv">1</span>)
         {
-            errExit(&quot;open&quot;);
+            errExit(<span class="st">&quot;open&quot;</span>);
         }
-        while(cnt)
+        <span class="cf">while</span>(cnt)
         {
-            lseek(fd,0,SEEK_END);
-            write(fd,&amp;byte,1);
+            lseek(fd,<span class="dv">0</span>,SEEK_END);
+            write(fd,&amp;byte,<span class="dv">1</span>);
             cnt--;
         }   
-    }else
+    }<span class="cf">else</span>
     {   
-        cnt=atoi(argv[2]);
-        //只写 追加 证明了O_APPEND是原子操作，使用时不会受多线程的影响
-        fd=open(argv[1],O_RDWR | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
-        if(fd==-1)
+        cnt=atoi(argv[<span class="dv">2</span>]);
+        <span class="co">//只写 追加 证明了O_APPEND是原子操作，使用时不会受多线程的影响</span>
+        fd=open(argv[<span class="dv">1</span>],O_RDWR | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
+        <span class="cf">if</span>(fd==-<span class="dv">1</span>)
         {
-            errExit(&quot;open&quot;);
+            errExit(<span class="st">&quot;open&quot;</span>);
         }
-        while(cnt)
+        <span class="cf">while</span>(cnt)
         {
-             write(fd,&amp;byte,1);
+             write(fd,&amp;byte,<span class="dv">1</span>);
             cnt--;
         }
     }
 
     exit(EXIT_SUCCESS);
-}
-</code></pre>
-<h3 id="结果"><a href="#结果" class="headerlink" title="结果"></a><strong>结果</strong></h3><ul>
-<li><strong>不带-x参数</strong><pre><code class="lang-sh">  $ ./5-3 f1 1000000 &amp; ./5-3 f1 1000000 
-  $ ls -lh f1
-  -rw-rw-r-- 1 zqh zqh 2.0M 5月   9 10:38 f1
-</code></pre>
-</li>
-<li><p><strong>带-x参数</strong></p>
-<pre><code class="lang-sh">$ ./5-3 f1 1000000 -x &amp; ./5-3 f1 1000000 -x
-$ ls -lh f1
--rw-rw-r-- 1 zqh zqh 1010K 5月   9 10:46 f1
-</code></pre>
-</li>
-<li><p><strong>总结</strong></p>
-<p>&emsp;使用O_APPEND参数打开的文件属于原子操作，两个不同的进程对一个文件做输入，是不可分割的操作<br>&emsp;使用lseek操作，不属于原子操作。</p>
-<h3 id="扩展"><a href="#扩展" class="headerlink" title="扩展"></a><strong>扩展</strong></h3><p>&emsp;我尝试修改了这个程序名为5-3.1，并且查看结果<br>|           |  原程序   |  新程序   |<br>|—         |—————|—————|<br>|<strong>无 -x</strong>  |写入a      |写入b      |<br>|<strong>有 -x</strong>  |写入x      |写入y      |</p>
-</li>
+}</code></pre></div>
+<h3 id="结果"><strong>结果</strong></h3>
+<ul>
 <li><p><strong>不带-x参数</strong></p>
-</li>
+<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash">$ <span class="ex">./5-3</span> f1 1000000 <span class="kw">&amp;</span> <span class="ex">./5-3</span> f1 1000000 
+$ <span class="fu">ls</span> -lh f1
+<span class="ex">-rw-rw-r--</span> 1 zqh zqh 2.0M 5月   9 10:38 f1</code></pre></div></li>
+<li><p><strong>带-x参数</strong></p>
+<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash">$ <span class="ex">./5-3</span> f1 1000000 -x <span class="kw">&amp;</span> <span class="ex">./5-3</span> f1 1000000 -x
+$ <span class="fu">ls</span> -lh f1
+<span class="ex">-rw-rw-r--</span> 1 zqh zqh 1010K 5月   9 10:46 f1</code></pre></div></li>
+<li><p><strong>总结</strong></p>
+<p> 使用O_APPEND参数打开的文件属于原子操作，两个不同的进程对一个文件做输入，是不可分割的操作  使用lseek操作，不属于原子操作。 ### <strong>扩展</strong>  我尝试修改了这个程序名为5-3.1，并且查看结果 | | 原程序 | 新程序 | |-- |----------|----------| |<strong>无 -x</strong> |写入a |写入b | |<strong>有 -x</strong> |写入x |写入y |</p></li>
+<li><p><strong>不带-x参数</strong></p></li>
 </ul>
 
             </div>
@@ -204,7 +199,7 @@ $ ls -lh f1
                         
     <h1>Tags</h1>
 
-    <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CMake/">CMake</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Matlab/">Matlab</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/git/">git</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/二叉树/">二叉树</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/博客/">博客</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/堆栈/">堆栈</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/嵌入式/">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构/">数据结构</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/树/">树</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/算法/">算法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/蓝牙/">蓝牙</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/链表/">链表</a></li></ul>
+    <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CMake/">CMake</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Matlab/">Matlab</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/PCB/">PCB</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/git/">git</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/二叉树/">二叉树</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/博客/">博客</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/堆栈/">堆栈</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/嵌入式/">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构/">数据结构</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/树/">树</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/算法/">算法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/蓝牙/">蓝牙</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/链表/">链表</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/错误记录/">错误记录</a></li></ul>
 
                     </section>
                 </aside>
