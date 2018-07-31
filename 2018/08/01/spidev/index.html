@@ -86,81 +86,84 @@
                 </li>
             </ul>
             <div class="post-content">
-                <h1 id="orangpi开启spi-dev">OrangPi开启spi-dev</h1>
-<p>我想在OrangePi Zero中打开Spidev，编写一些应用层的驱动。</p>
-<h1 id="配置armbian-config">配置armbian-config</h1>
-<p>我首先打开armbian-config，进入hardware使能spidev以及spidev-add-cs1并重启。</p>
-<h1 id="发现问题">发现问题</h1>
-<p>接着我发现在/dev/目录下没有spidev生成。我查看了许多。 发现他们的系统在armbian-config中使能了，就会去加载对应的dtbo。 我做如下查看:</p>
-<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash"><span class="ex">root@pi</span>:~# vi /boot/dtb-4.17.11-sunxi64/allwinner/overlay/sun50i-h5-spi-spidev.dtbo 
-Ð^<span class="ex">M</span>þí^@^@^C^L^@^@^@8^@^@^B¬^@^@^@(^@^@^@^Q^@^@^@^P^@^@^@^@^@^@^@<span class="kw">`</span>^<span class="ex">@</span>^@^Bt^@^@^@^@
-^<span class="ex">@</span>^@^@^@^@^@^@^@^@^@^@^@^@^@^@^A^@^@^@^@^@^@^@^C^@^@^@^T^@^@^@^@allwinner,sun50i
-<span class="ex">-h5</span>^@^@^@^@^Afragment@0^@^@^@^@^@^C^@^@^@       ^@^@^@^K/aliases^@^@^@^@^@^@^@^A
-<span class="ex">__overlay__</span>^@^@^@^@^C^@^@^@^Q^@^@^@^W/soc/spi@1c68000^@^@^@^@^@^@^@^C^@^@^@^Q^@^
-<span class="ex">@</span>^@^\/soc/spi@1c69000^@^@^@^@^@^@^@^B^@^@^@^B^@^@^@^Afragment@1^@^@^@^@^@^C^@^@^
-<span class="ex">@</span>^D^@^@^@!ÿÿÿÿ^@^@^@^A__overlay__^@^@^@^@^C^@^@^@^D^@^@^@(^@^@^@^A^@^@^@^C^@^@^@
-^<span class="ex">D</span>^@^@^@7^@^@^@^@^@^@^@^Aspidev^@^@^@^@^@^C^@^@^@^G^@^@^@^@spidev^@^@^@^@^@^C^@^
-<span class="ex">@</span>^@     ^@^@^@Cdisabled^@^@^@^@^@^@^@^C^@^@^@^D^@^@^@J^@^@^@^@^@^@^@^C^@^@^@^D^@
-^<span class="ex">@</span>^@N^@^OB@^@^@^@^B^@^@^@^B^@^@^@^B^@^@^@^Afragment@2^@^@^@^@^@^C^@^@^@^D^@^@^@!
-ÿÿÿÿ^<span class="ex">@</span>^@^@^A__overlay__^@^@^@^@^C^@^@^@^D^@^@^@(^@^@^@^A^@^@^@^C^@^@^@^D^@^@^@7^
-<span class="ex">@</span>^@^@^@^@^@^@^Aspidev^@^@^@^@^@^C^@^@^@^G^@^@^@^@spidev^@^@^@^@^@^C^@^@^@
-^<span class="ex">@</span>^@^@Cdisabled^@^@^@^@^@^@^@^C^@^@^@^D^@^@^@J^@^@^@^@^@^@^@^C^@^@^@^D^@^@^@N^@^
-<span class="ex">OB@</span>^@^@^@^B^@^@^@^B^@^@^@^B^@^@^@^A__fixups__^@^@^@^@^@^C^@^@^@^U^@^@^@^W/fragme
-<span class="ex">nt@1</span>:target:0^@^@^@^@^@^@^@^C^@^@^@^U^@^@^@^\/fragment@2:target:0^@^@^@^@^@^@^@^
-<span class="ex">B</span>^@^@^@^B^@^@^@ compatible^@target-path^@spi0^@spi1^@target^@#address-cells^@#si
-<span class="ex">ze-cells</span>^@status^@reg^@spi-max-frequency^@</code></pre></div>
-<p>这里发现这里spidev跟着的状态是disable的。然后我又查看了他的源码： <code>/linux-4.17.y/arch/arm64/boot/dts/allwinner/overlay/sun50i-h5-spi-spidev.dts</code></p>
-<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash"><span class="ex">/dts-v1/</span>;
-<span class="ex">/plugin/</span>;
+                <h1 id="OrangPi开启spi-dev"><a href="#OrangPi开启spi-dev" class="headerlink" title="OrangPi开启spi-dev"></a>OrangPi开启spi-dev</h1><p>我想在OrangePi Zero中打开Spidev，编写一些应用层的驱动。</p>
+<h1 id="配置armbian-config"><a href="#配置armbian-config" class="headerlink" title="配置armbian-config"></a>配置armbian-config</h1><p>我首先打开armbian-config，进入hardware使能spidev以及spidev-add-cs1并重启。</p>
+<h1 id="发现问题"><a href="#发现问题" class="headerlink" title="发现问题"></a>发现问题</h1><p>接着我发现在/dev/目录下没有spidev生成。我查看了许多。<br>发现他们的系统在armbian-config中使能了，就会去加载对应的dtbo。<br>我做如下查看:</p>
+<pre><code class="lang-sh">root@pi:~# vi /boot/dtb-4.17.11-sunxi64/allwinner/overlay/sun50i-h5-spi-spidev.dtbo 
+Ð^Mþí^@^@^C^L^@^@^@8^@^@^B¬^@^@^@(^@^@^@^Q^@^@^@^P^@^@^@^@^@^@^@`^@^@^Bt^@^@^@^@
+^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@^A^@^@^@^@^@^@^@^C^@^@^@^T^@^@^@^@allwinner,sun50i
+-h5^@^@^@^@^Afragment@0^@^@^@^@^@^C^@^@^@       ^@^@^@^K/aliases^@^@^@^@^@^@^@^A
+__overlay__^@^@^@^@^C^@^@^@^Q^@^@^@^W/soc/spi@1c68000^@^@^@^@^@^@^@^C^@^@^@^Q^@^
+@^@^\/soc/spi@1c69000^@^@^@^@^@^@^@^B^@^@^@^B^@^@^@^Afragment@1^@^@^@^@^@^C^@^@^
+@^D^@^@^@!ÿÿÿÿ^@^@^@^A__overlay__^@^@^@^@^C^@^@^@^D^@^@^@(^@^@^@^A^@^@^@^C^@^@^@
+^D^@^@^@7^@^@^@^@^@^@^@^Aspidev^@^@^@^@^@^C^@^@^@^G^@^@^@^@spidev^@^@^@^@^@^C^@^
+@^@     ^@^@^@Cdisabled^@^@^@^@^@^@^@^C^@^@^@^D^@^@^@J^@^@^@^@^@^@^@^C^@^@^@^D^@
+^@^@N^@^OB@^@^@^@^B^@^@^@^B^@^@^@^B^@^@^@^Afragment@2^@^@^@^@^@^C^@^@^@^D^@^@^@!
+ÿÿÿÿ^@^@^@^A__overlay__^@^@^@^@^C^@^@^@^D^@^@^@(^@^@^@^A^@^@^@^C^@^@^@^D^@^@^@7^
+@^@^@^@^@^@^@^Aspidev^@^@^@^@^@^C^@^@^@^G^@^@^@^@spidev^@^@^@^@^@^C^@^@^@
+^@^@^@Cdisabled^@^@^@^@^@^@^@^C^@^@^@^D^@^@^@J^@^@^@^@^@^@^@^C^@^@^@^D^@^@^@N^@^
+OB@^@^@^@^B^@^@^@^B^@^@^@^B^@^@^@^A__fixups__^@^@^@^@^@^C^@^@^@^U^@^@^@^W/fragme
+nt@1:target:0^@^@^@^@^@^@^@^C^@^@^@^U^@^@^@^\/fragment@2:target:0^@^@^@^@^@^@^@^
+B^@^@^@^B^@^@^@ compatible^@target-path^@spi0^@spi1^@target^@#address-cells^@#si
+ze-cells^@status^@reg^@spi-max-frequency^@
+</code></pre>
+<p>这里发现这里spidev跟着的状态是disable的。然后我又查看了他的源码：<br><code>/linux-4.17.y/arch/arm64/boot/dts/allwinner/overlay/sun50i-h5-spi-spidev.dts</code></p>
+<pre><code class="lang-sh">/dts-v1/;
+/plugin/;
 
-<span class="ex">/</span> {
-    <span class="ex">compatible</span> = <span class="st">&quot;allwinner,sun50i-h5&quot;</span><span class="kw">;</span>
+/ {
+    compatible = &quot;allwinner,sun50i-h5&quot;;
 
-    <span class="ex">fragment@0</span> {
-        <span class="ex">target-path</span> = <span class="st">&quot;/aliases&quot;</span><span class="kw">;</span>
-        <span class="ex">__overlay__</span> {
-            <span class="ex">spi0</span> = <span class="st">&quot;/soc/spi@1c68000&quot;</span><span class="kw">;</span>
-            <span class="ex">spi1</span> = <span class="st">&quot;/soc/spi@1c69000&quot;</span><span class="kw">;</span>
+    fragment@0 {
+        target-path = &quot;/aliases&quot;;
+        __overlay__ {
+            spi0 = &quot;/soc/spi@1c68000&quot;;
+            spi1 = &quot;/soc/spi@1c69000&quot;;
         };
     };
 
-    <span class="ex">fragment@1</span> {
-        <span class="ex">target</span> = <span class="op">&lt;</span><span class="kw">&amp;</span><span class="ex">spi0</span><span class="op">&gt;</span><span class="kw">;</span>
-        <span class="ex">__overlay__</span> {
-            <span class="co">#address-cells = &lt;1&gt;;</span>
-            <span class="co">#size-cells = &lt;0&gt;;</span>
-            <span class="ex">spidev</span> {
-                <span class="ex">compatible</span> = <span class="st">&quot;spidev&quot;</span><span class="kw">;</span>
-                <span class="ex">status</span> = <span class="st">&quot;disabled&quot;</span><span class="kw">;</span>
-                <span class="ex">reg</span> = <span class="op">&lt;0&gt;</span><span class="kw">;</span>
-                <span class="ex">spi-max-frequency</span> = <span class="op">&lt;1000000&gt;</span><span class="kw">;</span>
+    fragment@1 {
+        target = &lt;&amp;spi0&gt;;
+        __overlay__ {
+            #address-cells = &lt;1&gt;;
+            #size-cells = &lt;0&gt;;
+            spidev {
+                compatible = &quot;spidev&quot;;
+                status = &quot;disabled&quot;;
+                reg = &lt;0&gt;;
+                spi-max-frequency = &lt;1000000&gt;;
             };
         };
     };
 
-    <span class="ex">fragment@2</span> {
-        <span class="ex">target</span> = <span class="op">&lt;</span><span class="kw">&amp;</span><span class="ex">spi1</span><span class="op">&gt;</span><span class="kw">;</span>
-        <span class="ex">__overlay__</span> {
-            <span class="co">#address-cells = &lt;1&gt;;</span>
-            <span class="co">#size-cells = &lt;0&gt;;</span>
-            <span class="ex">spidev</span> {
-                <span class="ex">compatible</span> = <span class="st">&quot;spidev&quot;</span><span class="kw">;</span>
-                <span class="ex">status</span> = <span class="st">&quot;disabled&quot;</span><span class="kw">;</span>
-                <span class="ex">reg</span> = <span class="op">&lt;0&gt;</span><span class="kw">;</span>
-                <span class="ex">spi-max-frequency</span> = <span class="op">&lt;1000000&gt;</span><span class="kw">;</span>
+    fragment@2 {
+        target = &lt;&amp;spi1&gt;;
+        __overlay__ {
+            #address-cells = &lt;1&gt;;
+            #size-cells = &lt;0&gt;;
+            spidev {
+                compatible = &quot;spidev&quot;;
+                status = &quot;disabled&quot;;
+                reg = &lt;0&gt;;
+                spi-max-frequency = &lt;1000000&gt;;
             };
         };
     };
-};</code></pre></div>
+};
+</code></pre>
 <p>我就开始认为没有打开使能才会没有产生spidev。但是在我又询问了论坛的人后才知道。</p>
-<h1 id="修改armbianenv.txt">修改armbianEnv.txt</h1>
-<p>他们的<a href="https://docs.armbian.com/Hardware_Allwinner_overlays/" target="_blank" rel="noopener">手册</a>中写到：</p>
-<p><code>param_* - overlay parameters</code> 需要添加参数。。</p>
+<h1 id="修改armbianEnv-txt"><a href="#修改armbianEnv-txt" class="headerlink" title="修改armbianEnv.txt"></a>修改armbianEnv.txt</h1><p>他们的<a href="https://docs.armbian.com/Hardware_Allwinner_overlays/" target="_blank" rel="noopener">手册</a>中写到：</p>
+<p><code>param_* - overlay parameters</code></p>
+<p>需要添加参数。。</p>
 <p>我看了一会知道了他们的启动运行流程：</p>
-<p>启动-&gt;读取armbianEnv.txt-&gt;加载overlay参数对应的dtbo-&gt;继续读取armbianEnv.txt的参数项-&gt;根据参数来运行sun50i-h5-fixup.scr-&gt;将对应的外设使能 所以现在需要添加：这个两个参数使能spidev。 <code>param_spidev_spi_bus=1 param_spidev_spi_cs=1</code> # 完成</p>
-<p>最终可以看到：</p>
-<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash"><span class="ex">root@pi</span>:~# ls /dev/s
-<span class="ex">shm/</span>       snd/       spidev1.1  stderr     stdin      stdout </code></pre></div>
+<p>启动-&gt;读取armbianEnv.txt-&gt;加载overlay参数对应的dtbo-&gt;继续读取armbianEnv.txt的参数项-&gt;根据参数来运行sun50i-h5-fixup.scr-&gt;将对应的外设使能</p>
+<p>所以现在需要添加：这个两个参数使能spidev。</p>
+<p><code>param_spidev_spi_bus=1
+param_spidev_spi_cs=1</code></p>
+<h1 id="完成"><a href="#完成" class="headerlink" title="完成"></a>完成</h1><p>最终可以看到：</p>
+<pre><code class="lang-sh">root@pi:~# ls /dev/s
+shm/       snd/       spidev1.1  stderr     stdin      stdout
+</code></pre>
 
             </div>
 </article>
