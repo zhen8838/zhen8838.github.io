@@ -86,252 +86,251 @@
                 </li>
             </ul>
             <div class="post-content">
-                <h1 id="双向链表"><a href="#双向链表" class="headerlink" title="双向链表"></a>双向链表</h1><p>我对这个循环链表的理解是一个节点既有指向前一个元素的指针，又有指向后一个元素的指针。</p>
+                <h1 id="双向链表">双向链表</h1>
+我对这个循环链表的理解是一个节点既有指向前一个元素的指针，又有指向后一个元素的指针。
 <div align="center">
-<img src="./1.png">
+<p><img src="./1.png"></p>
 </div>
-
-<p>空链表的定义就如下：</p>
+空链表的定义就如下：
 <div align="center">
-<img src="./2.png">
+<p><img src="./2.png"></p>
 </div>
+<h1 id="程序">程序</h1>
+<div class="sourceCode"><pre class="sourceCode c"><code class="sourceCode c"><span class="co">/*</span>
+<span class="co"> * @Author: Zheng Qihang </span>
+<span class="co"> * @Date: 2018-07-03 21:33:00 </span>
+<span class="co"> * @Last Modified by: Zheng Qihang</span>
+<span class="co"> * @Last Modified time: 2018-07-04 20:51:25</span>
+<span class="co"> */</span>
+<span class="pp">#include </span><span class="im">&lt;stdlib.h&gt;</span>
+<span class="pp">#include </span><span class="im">&lt;stdio.h&gt;</span>
+<span class="pp">#include </span><span class="im">&lt;stdint.h&gt;</span>
+<span class="pp">#include </span><span class="im">&lt;time.h&gt;</span>
 
-<h1 id="程序"><a href="#程序" class="headerlink" title="程序"></a>程序</h1><pre><code class="lang-c">/*
- * @Author: Zheng Qihang 
- * @Date: 2018-07-03 21:33:00 
- * @Last Modified by: Zheng Qihang
- * @Last Modified time: 2018-07-04 20:51:25
- */
-#include &lt;stdlib.h&gt;
-#include &lt;stdio.h&gt;
-#include &lt;stdint.h&gt;
-#include &lt;time.h&gt;
-
-typedef int ElementType; //data type
-#define Node ptrNode     //Node defination
-#define List ptrNode     //list defination
-typedef struct _Node     //node defination
+<span class="kw">typedef</span> <span class="dt">int</span> ElementType; <span class="co">//data type</span>
+<span class="pp">#define Node ptrNode     </span><span class="co">//Node defination</span>
+<span class="pp">#define List ptrNode     </span><span class="co">//list defination</span>
+<span class="kw">typedef</span> <span class="kw">struct</span> _Node     <span class="co">//node defination</span>
 {
     ElementType data;
-    struct _Node *pre;
-    struct _Node *next;
-} * ptrNode; //Node is a pointer to _Node
+    <span class="kw">struct</span> _Node *pre;
+    <span class="kw">struct</span> _Node *next;
+} * ptrNode; <span class="co">//Node is a pointer to _Node</span>
 
 
 
-void logd(const char *c, int d)
+<span class="dt">void</span> logd(<span class="dt">const</span> <span class="dt">char</span> *c, <span class="dt">int</span> d)
 {
-    printf(&quot;%s is %d\n&quot;, c, d);
+    printf(<span class="st">&quot;%s is %d</span><span class="sc">\n</span><span class="st">&quot;</span>, c, d);
 }
 
-List MakeEmpty(uint8_t Len, List L)
+List MakeEmpty(<span class="dt">uint8_t</span> Len, List L)
 {
     Node tepNode = NULL;
     Node last = NULL;
-    // printf(&quot;sizeof(List)=%d sizeof(Node)=%d\n &quot;,sizeof(List),sizeof(Node));
-    // Test !!! malloc(sizeof(List)) and malloc(sizeof(Node)) does have different
-    L = (List)malloc(sizeof(struct _Node)); //create a list header!
-    srand((unsigned int)time(0));
-    L-&gt;data = rand() % 10;
+    <span class="co">// printf(&quot;sizeof(List)=%d sizeof(Node)=%d\n &quot;,sizeof(List),sizeof(Node));</span>
+    <span class="co">// Test !!! malloc(sizeof(List)) and malloc(sizeof(Node)) does have different</span>
+    L = (List)malloc(<span class="kw">sizeof</span>(<span class="kw">struct</span> _Node)); <span class="co">//create a list header!</span>
+    srand((<span class="dt">unsigned</span> <span class="dt">int</span>)time(<span class="dv">0</span>));
+    L-&gt;data = rand() % <span class="dv">10</span>;
     L-&gt;next = L;
     L-&gt;pre = L;
     last = L;
-    while (Len--)
+    <span class="cf">while</span> (Len--)
     {
-        tepNode = (Node)malloc(sizeof(struct _Node));
+        tepNode = (Node)malloc(<span class="kw">sizeof</span>(<span class="kw">struct</span> _Node));
         last-&gt;next = tepNode;
-        tepNode-&gt;data = rand() % 10;
-        // logd(&quot;tepNode-&gt;data&quot;, tepNode-&gt;data);
+        tepNode-&gt;data = rand() % <span class="dv">10</span>;
+        <span class="co">// logd(&quot;tepNode-&gt;data&quot;, tepNode-&gt;data);</span>
         tepNode-&gt;next = L;
         tepNode-&gt;pre = last;
         last = tepNode;
     }
     L-&gt;pre=last;
-    return L;
+    <span class="cf">return</span> L;
 }
 
-int IsEmpty(List L)
+<span class="dt">int</span> IsEmpty(List L)
 {
-    return (L-&gt;next == L-&gt;pre);
+    <span class="cf">return</span> (L-&gt;next == L-&gt;pre);
 }
 
-int IsLast(Node P, List L)
+<span class="dt">int</span> IsLast(Node P, List L)
 {
-    return (P-&gt;next == L);
+    <span class="cf">return</span> (P-&gt;next == L);
 }
 
 Node Find(ElementType x, List L)
 {
     Node temnode = L-&gt;next;
-    while (temnode-&gt;next != L)
+    <span class="cf">while</span> (temnode-&gt;next != L)
     {
-        if (temnode-&gt;data == x)
+        <span class="cf">if</span> (temnode-&gt;data == x)
         {
-            return temnode;
+            <span class="cf">return</span> temnode;
         }
         temnode = temnode-&gt;next;
     }
-    return NULL;
+    <span class="cf">return</span> NULL;
 }
 
-void Delete(ElementType x, List L)
+<span class="dt">void</span> Delete(ElementType x, List L)
 {
     Node temnode = L-&gt;next;
-    while (temnode-&gt;next != L)
+    <span class="cf">while</span> (temnode-&gt;next != L)
     {
-        if (temnode-&gt;data == x)
+        <span class="cf">if</span> (temnode-&gt;data == x)
         {
             temnode-&gt;pre-&gt;next = temnode-&gt;next;
             temnode-&gt;next-&gt;pre = temnode-&gt;pre;
-            printf(&quot;delete the %p data is %d\n&quot;, temnode, temnode-&gt;data);
+            printf(<span class="st">&quot;delete the %p data is %d</span><span class="sc">\n</span><span class="st">&quot;</span>, temnode, temnode-&gt;data);
             free(temnode);
-            return;
+            <span class="cf">return</span>;
         }
         temnode = temnode-&gt;next;
     }
-    printf(&quot;delete failed\n&quot;);
+    printf(<span class="st">&quot;delete failed</span><span class="sc">\n</span><span class="st">&quot;</span>);
 }
 
-void Insert(ElementType X, List L, Node P)
+<span class="dt">void</span> Insert(ElementType X, List L, Node P)
 {
-    if (P != NULL)
+    <span class="cf">if</span> (P != NULL)
     {
-        Node newNode = (Node)malloc(sizeof(struct _Node));
+        Node newNode = (Node)malloc(<span class="kw">sizeof</span>(<span class="kw">struct</span> _Node));
         newNode-&gt;data = X;
         newNode-&gt;pre = P;
         newNode-&gt;next = P-&gt;next;
         P-&gt;next-&gt;pre = newNode;
         P-&gt;next = newNode;
     }
-    else
+    <span class="cf">else</span>
     {
-        printf(&quot;error:Node is null\n&quot;);
+        printf(<span class="st">&quot;error:Node is null</span><span class="sc">\n</span><span class="st">&quot;</span>);
     }
 }
 
-void DeleteList(List L)
+<span class="dt">void</span> DeleteList(List L)
 {
-    if (L-&gt;next == L)
+    <span class="cf">if</span> (L-&gt;next == L)
     {
-        printf(&quot;List already empty!\n&quot;);
-        return;
+        printf(<span class="st">&quot;List already empty!</span><span class="sc">\n</span><span class="st">&quot;</span>);
+        <span class="cf">return</span>;
     }
-    // printf(&quot;%p\n&quot;,L-&gt;pre);
-    // printf(&quot;%p\n&quot;,L);
-    // printf(&quot;%p\n&quot;,L-&gt;next);
+    <span class="co">// printf(&quot;%p\n&quot;,L-&gt;pre);</span>
+    <span class="co">// printf(&quot;%p\n&quot;,L);</span>
+    <span class="co">// printf(&quot;%p\n&quot;,L-&gt;next);</span>
     Node tmpNode = L-&gt;pre;
-    do
+    <span class="cf">do</span>
     {
         tmpNode = tmpNode-&gt;pre;
         free(tmpNode-&gt;next);
-    } while (tmpNode!=L);
+    } <span class="cf">while</span> (tmpNode!=L);
     tmpNode-&gt;next=tmpNode;
     tmpNode-&gt;pre=tmpNode;
 }
 
-void PrintList(List L)
+<span class="dt">void</span> PrintList(List L)
 {
     Node tep = L-&gt;next;
-    printf(&quot;--------------------------------------------------------\n&quot;);
-    printf(&quot;|                                                      |\n&quot;);
+    printf(<span class="st">&quot;--------------------------------------------------------</span><span class="sc">\n</span><span class="st">&quot;</span>);
+    printf(<span class="st">&quot;|                                                      |</span><span class="sc">\n</span><span class="st">&quot;</span>);
 
-    for (; tep != L; tep = tep-&gt;next)
+    <span class="cf">for</span> (; tep != L; tep = tep-&gt;next)
     {
-        printf(&quot;|preaddr=0x%lX   addr=0x%lX   data=%d   nextaddr=0x%lX  |\n&quot;,
-               (unsigned long int)tep-&gt;pre &amp; 0xFFF, (unsigned long int)tep &amp; 0xFFF,
-               tep-&gt;data, (unsigned long int)tep-&gt;next &amp; 0xFFF);
+        printf(<span class="st">&quot;|preaddr=0x%lX   addr=0x%lX   data=%d   nextaddr=0x%lX  |</span><span class="sc">\n</span><span class="st">&quot;</span>,
+               (<span class="dt">unsigned</span> <span class="dt">long</span> <span class="dt">int</span>)tep-&gt;pre &amp; <span class="bn">0xFFF</span>, (<span class="dt">unsigned</span> <span class="dt">long</span> <span class="dt">int</span>)tep &amp; <span class="bn">0xFFF</span>,
+               tep-&gt;data, (<span class="dt">unsigned</span> <span class="dt">long</span> <span class="dt">int</span>)tep-&gt;next &amp; <span class="bn">0xFFF</span>);
     }
 
-    printf(&quot;|                                                      |\n&quot;);
-    printf(&quot;--------------------------------------------------------\n&quot;);
+    printf(<span class="st">&quot;|                                                      |</span><span class="sc">\n</span><span class="st">&quot;</span>);
+    printf(<span class="st">&quot;--------------------------------------------------------</span><span class="sc">\n</span><span class="st">&quot;</span>);
 }
 
-int main(int argc, char const *argv[])
+<span class="dt">int</span> main(<span class="dt">int</span> argc, <span class="dt">char</span> <span class="dt">const</span> *argv[])
 {
-    int tempint;
+    <span class="dt">int</span> tempint;
     List MyList = NULL;
     Node pos = NULL;
-    printf(&quot;\n \
-循环链表的基本操作：\n \
-(a).make new linked list;\n \
-(b).check the list is empty;\n \
-(c).check the node is list&#39;s tail;\n \
-(d).find  the data in list;\n \
-(e).find  the data in list and delete it;\n \
-(f).Insert the data in List(first need (d));\n \
-(g).Delete the all List:\n \
-(p).print the all list;\n \
-(q).quit;\n \
-    &quot;);
-    while (1)
+    printf(<span class="st">&quot;</span><span class="sc">\n</span><span class="st"> \</span>
+<span class="st">循环链表的基本操作：</span><span class="sc">\n</span><span class="st"> \</span>
+<span class="st">(a).make new linked list;</span><span class="sc">\n</span><span class="st"> \</span>
+<span class="st">(b).check the list is empty;</span><span class="sc">\n</span><span class="st"> \</span>
+<span class="st">(c).check the node is list&#39;s tail;</span><span class="sc">\n</span><span class="st"> \</span>
+<span class="st">(d).find  the data in list;</span><span class="sc">\n</span><span class="st"> \</span>
+<span class="st">(e).find  the data in list and delete it;</span><span class="sc">\n</span><span class="st"> \</span>
+<span class="st">(f).Insert the data in List(first need (d));</span><span class="sc">\n</span><span class="st"> \</span>
+<span class="st">(g).Delete the all List:</span><span class="sc">\n</span><span class="st"> \</span>
+<span class="st">(p).print the all list;</span><span class="sc">\n</span><span class="st"> \</span>
+<span class="st">(q).quit;</span><span class="sc">\n</span><span class="st"> \</span>
+<span class="st">    &quot;</span>);
+    <span class="cf">while</span> (<span class="dv">1</span>)
     {
-        switch (getchar())
+        <span class="cf">switch</span> (getchar())
         {
-        case &#39;a&#39;:
-            printf(&quot;please make sure list len:&quot;);
-            scanf(&quot;%d&quot;, &amp;tempint);
-            MyList = MakeEmpty((uint8_t)tempint, MyList);
+        <span class="cf">case</span> &#39;a&#39;:
+            printf(<span class="st">&quot;please make sure list len:&quot;</span>);
+            scanf(<span class="st">&quot;%d&quot;</span>, &amp;tempint);
+            MyList = MakeEmpty((<span class="dt">uint8_t</span>)tempint, MyList);
 
-            if (MyList != NULL)
+            <span class="cf">if</span> (MyList != NULL)
             {
-                printf(&quot;Make a Len:%d List\n&quot;, tempint);
-            }
-
-            break;
-        case &#39;b&#39;:
-            if (IsEmpty(MyList))
-            {
-                printf(&quot;Is Empty!\n&quot;);
-            }
-            else
-            {
-                printf(&quot;Isn&#39;t Empty!\n&quot;);
+                printf(<span class="st">&quot;Make a Len:%d List</span><span class="sc">\n</span><span class="st">&quot;</span>, tempint);
             }
 
-            break;
-        case &#39;c&#39;:
-            if (IsLast(pos, MyList))
+            <span class="cf">break</span>;
+        <span class="cf">case</span> &#39;b&#39;:
+            <span class="cf">if</span> (IsEmpty(MyList))
             {
-                printf(&quot;Is IsLast!\n&quot;);
+                printf(<span class="st">&quot;Is Empty!</span><span class="sc">\n</span><span class="st">&quot;</span>);
             }
-            else
+            <span class="cf">else</span>
             {
-                printf(&quot;Isn&#39;t IsLast!\n&quot;);
+                printf(<span class="st">&quot;Isn&#39;t Empty!</span><span class="sc">\n</span><span class="st">&quot;</span>);
             }
-            break;
-        case &#39;d&#39;:
-            printf(&quot;please tell me which data you need find:&quot;);
-            scanf(&quot;%d&quot;, &amp;tempint);
+
+            <span class="cf">break</span>;
+        <span class="cf">case</span> &#39;c&#39;:
+            <span class="cf">if</span> (IsLast(pos, MyList))
+            {
+                printf(<span class="st">&quot;Is IsLast!</span><span class="sc">\n</span><span class="st">&quot;</span>);
+            }
+            <span class="cf">else</span>
+            {
+                printf(<span class="st">&quot;Isn&#39;t IsLast!</span><span class="sc">\n</span><span class="st">&quot;</span>);
+            }
+            <span class="cf">break</span>;
+        <span class="cf">case</span> &#39;d&#39;:
+            printf(<span class="st">&quot;please tell me which data you need find:&quot;</span>);
+            scanf(<span class="st">&quot;%d&quot;</span>, &amp;tempint);
             pos = Find(tempint, MyList);
-            printf(&quot;find the data in %p\n&quot;, pos);
-            break;
-        case &#39;e&#39;:
-            printf(&quot;please tell me which data you need delete:&quot;);
-            scanf(&quot;%d&quot;, &amp;tempint);
+            printf(<span class="st">&quot;find the data in %p</span><span class="sc">\n</span><span class="st">&quot;</span>, pos);
+            <span class="cf">break</span>;
+        <span class="cf">case</span> &#39;e&#39;:
+            printf(<span class="st">&quot;please tell me which data you need delete:&quot;</span>);
+            scanf(<span class="st">&quot;%d&quot;</span>, &amp;tempint);
             Delete(tempint, MyList);
-            break;
-        case &#39;f&#39;:
-            printf(&quot;please tell me which data you need Insert:&quot;);
-            scanf(&quot;%d&quot;, &amp;tempint);
+            <span class="cf">break</span>;
+        <span class="cf">case</span> &#39;f&#39;:
+            printf(<span class="st">&quot;please tell me which data you need Insert:&quot;</span>);
+            scanf(<span class="st">&quot;%d&quot;</span>, &amp;tempint);
             Insert(tempint, MyList, pos);
-            break;
-        case &#39;g&#39;:
+            <span class="cf">break</span>;
+        <span class="cf">case</span> &#39;g&#39;:
             DeleteList(MyList);
-            break;
-        case &#39;p&#39;:
+            <span class="cf">break</span>;
+        <span class="cf">case</span> &#39;p&#39;:
             PrintList(MyList);
-            break;
-        case &#39;q&#39;:
-            exit(0);
-            break;
-        default:
-            break;
+            <span class="cf">break</span>;
+        <span class="cf">case</span> &#39;q&#39;:
+            exit(<span class="dv">0</span>);
+            <span class="cf">break</span>;
+        <span class="cf">default</span>:
+            <span class="cf">break</span>;
         }
     }
 
-    return 0;
-}
-</code></pre>
+    <span class="cf">return</span> <span class="dv">0</span>;
+}</code></pre></div>
 
             </div>
 </article>
@@ -348,14 +347,14 @@ int main(int argc, char const *argv[])
                         
     <h1>Archives</h1>
 
-    <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 07</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 06</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 05</a></li></ul>
+    <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 08</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 07</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 06</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 05</a></li></ul>
 
                     </section>
                     <section class="aside-section tag">
                         
     <h1>Tags</h1>
 
-    <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CMake/">CMake</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Matlab/">Matlab</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/PCB/">PCB</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/git/">git</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/二叉树/">二叉树</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/博客/">博客</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/堆栈/">堆栈</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/嵌入式/">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构/">数据结构</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/树/">树</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/算法/">算法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/蓝牙/">蓝牙</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/链表/">链表</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/错误记录/">错误记录</a></li></ul>
+    <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C++</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CMake/">CMake</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Matlab/">Matlab</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/PCB/">PCB</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/git/">git</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/二叉树/">二叉树</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/博客/">博客</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/堆栈/">堆栈</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/嵌入式/">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构/">数据结构</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/树/">树</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/算法/">算法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/蓝牙/">蓝牙</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/链表/">链表</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/错误记录/">错误记录</a></li></ul>
 
                     </section>
                 </aside>

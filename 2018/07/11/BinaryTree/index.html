@@ -86,584 +86,585 @@
                 </li>
             </ul>
             <div class="post-content">
-                <h1 id="二叉树"><a href="#二叉树" class="headerlink" title="二叉树"></a>二叉树</h1><p>今天写的一波二叉树的操作。。感觉自己还得多多练习啊！<br>依旧直接上代码了，8点了，得回去休息了T_T。</p>
-<h1 id="程序"><a href="#程序" class="headerlink" title="程序"></a>程序</h1><pre><code class="lang-c">/*
- * @Author: Zheng Qihang
- * @Date: 2018-07-10 09:38:39
- * @Last Modified by: Zheng Qihang
- * @Last Modified time: 2018-07-10 18:22:12
- */
-#include &lt;limits.h&gt;
-#include &lt;stdint.h&gt;
-#include &lt;stdio.h&gt;
-#include &lt;stdlib.h&gt;
-#include &lt;string.h&gt;
-#include &lt;time.h&gt;
+                <h1 id="二叉树">二叉树</h1>
+<p>今天写的一波二叉树的操作。。感觉自己还得多多练习啊！ 依旧直接上代码了，8点了，得回去休息了T_T。</p>
+<h1 id="程序">程序</h1>
+<div class="sourceCode"><pre class="sourceCode c"><code class="sourceCode c"><span class="co">/*</span>
+<span class="co"> * @Author: Zheng Qihang</span>
+<span class="co"> * @Date: 2018-07-10 09:38:39</span>
+<span class="co"> * @Last Modified by: Zheng Qihang</span>
+<span class="co"> * @Last Modified time: 2018-07-10 18:22:12</span>
+<span class="co"> */</span>
+<span class="pp">#include </span><span class="im">&lt;limits.h&gt;</span>
+<span class="pp">#include </span><span class="im">&lt;stdint.h&gt;</span>
+<span class="pp">#include </span><span class="im">&lt;stdio.h&gt;</span>
+<span class="pp">#include </span><span class="im">&lt;stdlib.h&gt;</span>
+<span class="pp">#include </span><span class="im">&lt;string.h&gt;</span>
+<span class="pp">#include </span><span class="im">&lt;time.h&gt;</span>
 
-/*
-        data
-       /    \
-      V      V
-    Left    Right
-*/
-typedef int ElementType;
-typedef struct TreeNode {
+<span class="co">/*</span>
+<span class="co">        data</span>
+<span class="co">       /    \</span>
+<span class="co">      V      V</span>
+<span class="co">    Left    Right</span>
+<span class="co">*/</span>
+<span class="kw">typedef</span> <span class="dt">int</span> ElementType;
+<span class="kw">typedef</span> <span class="kw">struct</span> TreeNode {
     ElementType Data;
-    struct TreeNode *Left;
-    struct TreeNode *Right;
+    <span class="kw">struct</span> TreeNode *Left;
+    <span class="kw">struct</span> TreeNode *Right;
 } * BinTree;
 
-/************************* Queue define! **************************/
-#define ElementQueueType BinTree
-typedef struct QueueNode {
+<span class="co">/************************* Queue define! **************************/</span>
+<span class="pp">#define ElementQueueType BinTree</span>
+<span class="kw">typedef</span> <span class="kw">struct</span> QueueNode {
     ElementQueueType data;
-    struct QueueNode *next;
+    <span class="kw">struct</span> QueueNode *next;
 } * QNode;
 
-typedef struct QueueHeader {
+<span class="kw">typedef</span> <span class="kw">struct</span> QueueHeader {
     QNode front;
     QNode rear;
 } * Queue;
 
-/**
- * description  Create the Queue!
- * @param[in]   void
- * @retval      no
- **/
-Queue CreateQueue(void) {
-    Queue Q = (Queue)malloc(sizeof(struct QueueHeader));
+<span class="co">/**</span>
+<span class="co"> * description  Create the Queue!</span>
+<span class="co"> * </span><span class="an">@param[in]</span><span class="co">   </span><span class="cv">void</span>
+<span class="co"> * </span><span class="an">@retval</span><span class="co">      </span><span class="cv">no</span>
+<span class="co"> **/</span>
+Queue CreateQueue(<span class="dt">void</span>) {
+    Queue Q = (Queue)malloc(<span class="kw">sizeof</span>(<span class="kw">struct</span> QueueHeader));
     Q-&gt;front = NULL;
     Q-&gt;rear = NULL;
-    return Q;
+    <span class="cf">return</span> Q;
 }
 
-/**
- * description  Add Queue Node !
- * @param[in]   Queue header and a item
- * @retval      void
- **/
-void AddQ(Queue Q, ElementQueueType item) {
-    if (!Q) {
-        return;
+<span class="co">/**</span>
+<span class="co"> * description  Add Queue Node !</span>
+<span class="co"> * </span><span class="an">@param[in]</span><span class="co">   </span><span class="cv">Queue</span><span class="co"> header and a item</span>
+<span class="co"> * </span><span class="an">@retval</span><span class="co">      </span><span class="cv">void</span>
+<span class="co"> **/</span>
+<span class="dt">void</span> AddQ(Queue Q, ElementQueueType item) {
+    <span class="cf">if</span> (!Q) {
+        <span class="cf">return</span>;
     }
-    if (!item) {
-        return;
+    <span class="cf">if</span> (!item) {
+        <span class="cf">return</span>;
     }
-    QNode temp = (QNode)malloc(sizeof(struct QueueNode));
+    QNode temp = (QNode)malloc(<span class="kw">sizeof</span>(<span class="kw">struct</span> QueueNode));
     temp-&gt;data = item;
     temp-&gt;next = NULL;
-    // when the Queue is null
-    if (!Q-&gt;front &amp;&amp; !Q-&gt;rear) {
+    <span class="co">// when the Queue is null</span>
+    <span class="cf">if</span> (!Q-&gt;front &amp;&amp; !Q-&gt;rear) {
         Q-&gt;front = temp;
         Q-&gt;rear = temp;
-    } else {
+    } <span class="cf">else</span> {
         Q-&gt;rear-&gt;next = temp;
         Q-&gt;rear = temp;
     }
 }
 
-/**
- * description  check the queue is empty
- * @param[in]   queue
- * @retval      int
- **/
-int IsEmptyQ(Queue Q) { return !Q-&gt;front; }
+<span class="co">/**</span>
+<span class="co"> * description  check the queue is empty</span>
+<span class="co"> * </span><span class="an">@param[in]</span><span class="co">   </span><span class="cv">queue</span>
+<span class="co"> * </span><span class="an">@retval</span><span class="co">      </span><span class="cv">int</span>
+<span class="co"> **/</span>
+<span class="dt">int</span> IsEmptyQ(Queue Q) { <span class="cf">return</span> !Q-&gt;front; }
 
-/**
- * description  Delete the Queue Node
- * @param[in]   Queue header
- * @retval      data
- **/
+<span class="co">/**</span>
+<span class="co"> * description  Delete the Queue Node</span>
+<span class="co"> * </span><span class="an">@param[in]</span><span class="co">   </span><span class="cv">Queue</span><span class="co"> header</span>
+<span class="co"> * </span><span class="an">@retval</span><span class="co">      </span><span class="cv">data</span>
+<span class="co"> **/</span>
 ElementQueueType DeleteQ(Queue Q) {
-    if (!Q) {
-        return NULL;
+    <span class="cf">if</span> (!Q) {
+        <span class="cf">return</span> NULL;
     }
-    if (IsEmptyQ(Q)) {
-        return NULL;
+    <span class="cf">if</span> (IsEmptyQ(Q)) {
+        <span class="cf">return</span> NULL;
     }
     QNode temp = Q-&gt;front;
     ElementQueueType tempdata;
-    if (Q-&gt;front == Q-&gt;rear) {
+    <span class="cf">if</span> (Q-&gt;front == Q-&gt;rear) {
         Q-&gt;front = NULL;
         Q-&gt;rear = NULL;
-    } else {
+    } <span class="cf">else</span> {
         Q-&gt;front = Q-&gt;front-&gt;next;
     }
     tempdata = temp-&gt;data;
     free(temp);
-    return tempdata;
+    <span class="cf">return</span> tempdata;
 }
 
-void PrintQueue(Queue Q) {
+<span class="dt">void</span> PrintQueue(Queue Q) {
 
-    if (IsEmptyQ(Q)) {
-        return;
+    <span class="cf">if</span> (IsEmptyQ(Q)) {
+        <span class="cf">return</span>;
     }
-    printf(&quot;打印队列数据元素：\n&quot;);
+    printf(<span class="st">&quot;打印队列数据元素：</span><span class="sc">\n</span><span class="st">&quot;</span>);
     QNode temp = Q-&gt;front;
 
-    for (; temp; temp = temp-&gt;next) {
-        printf(&quot;0x%3lX   &quot;, (unsigned long int)temp-&gt;data &amp; 0xFFF);
+    <span class="cf">for</span> (; temp; temp = temp-&gt;next) {
+        printf(<span class="st">&quot;0x%3lX   &quot;</span>, (<span class="dt">unsigned</span> <span class="dt">long</span> <span class="dt">int</span>)temp-&gt;data &amp; <span class="bn">0xFFF</span>);
     }
-    printf(&quot;\n&quot;);
+    printf(<span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>);
 }
 
-/************************* Queue define! **************************/
+<span class="co">/************************* Queue define! **************************/</span>
 
-/************************* Stack define! **************************/
+<span class="co">/************************* Stack define! **************************/</span>
 
-#define ElementStackType BinTree
-typedef struct StackNode // node defination
+<span class="pp">#define ElementStackType BinTree</span>
+<span class="kw">typedef</span> <span class="kw">struct</span> StackNode <span class="co">// node defination</span>
 {
     ElementStackType data;
-    struct StackNode *next;
-} * Stack; // Node is a pointer to _Node
+    <span class="kw">struct</span> StackNode *next;
+} * Stack; <span class="co">// Node is a pointer to _Node</span>
 
-int IsEmpty(Stack S) { return !S-&gt;next; }
+<span class="dt">int</span> IsEmpty(Stack S) { <span class="cf">return</span> !S-&gt;next; }
 
-Stack CreateStack(void) {
-    Stack S = (Stack)malloc(sizeof(struct StackNode));
+Stack CreateStack(<span class="dt">void</span>) {
+    Stack S = (Stack)malloc(<span class="kw">sizeof</span>(<span class="kw">struct</span> StackNode));
     S-&gt;next = NULL;
-    return S;
+    <span class="cf">return</span> S;
 }
 
 ElementStackType Pop(Stack S) {
     ElementStackType temp;
     Stack tmepNode = S-&gt;next;
-    if (tmepNode != NULL) {
+    <span class="cf">if</span> (tmepNode != NULL) {
         temp = tmepNode-&gt;data;
         S-&gt;next = tmepNode-&gt;next;
         free(tmepNode);
-        return temp;
-    } else {
-        return NULL;
+        <span class="cf">return</span> temp;
+    } <span class="cf">else</span> {
+        <span class="cf">return</span> NULL;
     }
 }
 
-void MakeEmpty(Stack S) {
-    while (S-&gt;next != NULL) {
+<span class="dt">void</span> MakeEmpty(Stack S) {
+    <span class="cf">while</span> (S-&gt;next != NULL) {
         Pop(S);
     }
 }
-void DisposeStack(Stack S) {
+<span class="dt">void</span> DisposeStack(Stack S) {
     MakeEmpty(S);
     free(S);
 }
 
-void Push(Stack S, ElementStackType X) {
+<span class="dt">void</span> Push(Stack S, ElementStackType X) {
     Stack tempNode = S-&gt;next;
-    Stack newNode = (Stack)malloc(sizeof(struct StackNode));
+    Stack newNode = (Stack)malloc(<span class="kw">sizeof</span>(<span class="kw">struct</span> StackNode));
     newNode-&gt;data = X;
-    // printf(&quot;S-&gt;next %p\n&quot;,S-&gt;next);
-    if (tempNode != NULL) {
+    <span class="co">// printf(&quot;S-&gt;next %p\n&quot;,S-&gt;next);</span>
+    <span class="cf">if</span> (tempNode != NULL) {
         newNode-&gt;next = tempNode;
-        // printf(&quot;%p = %p\n&quot;,newNode-&gt;next,tempNode);
-    } else {
+        <span class="co">// printf(&quot;%p = %p\n&quot;,newNode-&gt;next,tempNode);</span>
+    } <span class="cf">else</span> {
         newNode-&gt;next = NULL;
     }
     S-&gt;next = newNode;
-    // printf(&quot;S-&gt;next %p\n&quot;,S-&gt;next);
+    <span class="co">// printf(&quot;S-&gt;next %p\n&quot;,S-&gt;next);</span>
 }
 
 ElementStackType Top(Stack S) {
-    if (S-&gt;next != NULL) {
-        return S-&gt;next-&gt;data;
-    } else {
-        return NULL;
+    <span class="cf">if</span> (S-&gt;next != NULL) {
+        <span class="cf">return</span> S-&gt;next-&gt;data;
+    } <span class="cf">else</span> {
+        <span class="cf">return</span> NULL;
     }
 }
 
-void PrintStack(Stack S) {
+<span class="dt">void</span> PrintStack(Stack S) {
     Stack tep = S-&gt;next;
-    while (tep != NULL) {
-        printf(&quot;addr=0x%3lX  dataadd=0x%3lX  nextaddr=0x%3lX\n&quot;,
-               (unsigned long int)tep &amp; 0xFFF,
-               (unsigned long int)tep-&gt;data &amp; 0xFFF,
-               (unsigned long int)tep-&gt;next &amp; 0xFFF);
+    <span class="cf">while</span> (tep != NULL) {
+        printf(<span class="st">&quot;addr=0x%3lX  dataadd=0x%3lX  nextaddr=0x%3lX</span><span class="sc">\n</span><span class="st">&quot;</span>,
+               (<span class="dt">unsigned</span> <span class="dt">long</span> <span class="dt">int</span>)tep &amp; <span class="bn">0xFFF</span>,
+               (<span class="dt">unsigned</span> <span class="dt">long</span> <span class="dt">int</span>)tep-&gt;data &amp; <span class="bn">0xFFF</span>,
+               (<span class="dt">unsigned</span> <span class="dt">long</span> <span class="dt">int</span>)tep-&gt;next &amp; <span class="bn">0xFFF</span>);
         tep = tep-&gt;next;
     }
 }
 
-/************************* Stack define! **************************/
+<span class="co">/************************* Stack define! **************************/</span>
 
-/**
-* description  first root then left
-                child tree then right child tree
-* @param[in]   BinTree
-* @retval      void
-**/
-void PreOrderTraversal(BinTree BT) {
-    if (BT) {
-        printf(&quot;%d   &quot;, BT-&gt;Data);
-        PreOrderTraversal(BT-&gt;Left); // Recursion traversal
+<span class="co">/**</span>
+<span class="co">* description  first root then left</span>
+<span class="co">                child tree then right child tree</span>
+<span class="co">* </span><span class="an">@param[in]</span><span class="co">   </span><span class="cv">BinTree</span>
+<span class="co">* </span><span class="an">@retval</span><span class="co">      </span><span class="cv">void</span>
+<span class="co">**/</span>
+<span class="dt">void</span> PreOrderTraversal(BinTree BT) {
+    <span class="cf">if</span> (BT) {
+        printf(<span class="st">&quot;%d   &quot;</span>, BT-&gt;Data);
+        PreOrderTraversal(BT-&gt;Left); <span class="co">// Recursion traversal</span>
         PreOrderTraversal(BT-&gt;Right);
     }
 }
-/**
- * description  traversal the leaves
- * @param[in]   BinTree
- * @retval      void
- **/
-void PreOrderPrintLeaves(BinTree BT) {
-    if (BT) {
+<span class="co">/**</span>
+<span class="co"> * description  traversal the leaves</span>
+<span class="co"> * </span><span class="an">@param[in]</span><span class="co">   </span><span class="cv">BinTree</span>
+<span class="co"> * </span><span class="an">@retval</span><span class="co">      </span><span class="cv">void</span>
+<span class="co"> **/</span>
+<span class="dt">void</span> PreOrderPrintLeaves(BinTree BT) {
+    <span class="cf">if</span> (BT) {
 
-        if (!BT-&gt;Left &amp;&amp; !BT-&gt;Left) {
-            printf(&quot;%d   &quot;, BT-&gt;Data);
+        <span class="cf">if</span> (!BT-&gt;Left &amp;&amp; !BT-&gt;Left) {
+            printf(<span class="st">&quot;%d   &quot;</span>, BT-&gt;Data);
         }
-        PreOrderPrintLeaves(BT-&gt;Left); // Recursion traversal
+        PreOrderPrintLeaves(BT-&gt;Left); <span class="co">// Recursion traversal</span>
         PreOrderPrintLeaves(BT-&gt;Right);
     }
 }
 
-/**
- * description  find the Binary tree alone length
- *              Tag==0 find the right
- *              Tag!=0 find the left
- * @param[in]   bintree
- * @retval      height
- **/
-int FindTreeLength(BinTree BT, int tag) {
-    if (BT) {
+<span class="co">/**</span>
+<span class="co"> * description  find the Binary tree alone length</span>
+<span class="co"> *              Tag==0 find the right</span>
+<span class="co"> *              Tag!=0 find the left</span>
+<span class="co"> * </span><span class="an">@param[in]</span><span class="co">   </span><span class="cv">bintree</span>
+<span class="co"> * </span><span class="an">@retval</span><span class="co">      </span><span class="cv">height</span>
+<span class="co"> **/</span>
+<span class="dt">int</span> FindTreeLength(BinTree BT, <span class="dt">int</span> tag) {
+    <span class="cf">if</span> (BT) {
 
-        if (tag) {
-            return 1 + FindTreeLength(BT-&gt;Left, tag);
-        } else {
-            return 1 + FindTreeLength(BT-&gt;Right, tag);
+        <span class="cf">if</span> (tag) {
+            <span class="cf">return</span> <span class="dv">1</span> + FindTreeLength(BT-&gt;Left, tag);
+        } <span class="cf">else</span> {
+            <span class="cf">return</span> <span class="dv">1</span> + FindTreeLength(BT-&gt;Right, tag);
         }
-    } else {
-        return 0;
+    } <span class="cf">else</span> {
+        <span class="cf">return</span> <span class="dv">0</span>;
     }
 }
-/*
+<span class="co">/*</span>
 
-// /**
-//  * description  find the Binary tree height
-//  *              Tag==0 find the right
-//  *              Tag!=0 find the left
-//  * @param[in]   bintree
-//  * @retval      height
-//  **/
-// int FindTreeHeight(BinTree BT) {
-//     int rightlen = FindTreeLength(BT, 0);
-//     int leftlen = FindTreeLength(BT, 1);
-//     return rightlen &gt; leftlen ? rightlen : leftlen;
-// }
-/* the better implement */
-int FindTreeHeight(BinTree BT) {
-    int rightlen, leftlen, maxlen;
-    if (BT) {
+<span class="co">// /**</span>
+<span class="co">//  * description  find the Binary tree height</span>
+<span class="co">//  *              Tag==0 find the right</span>
+<span class="co">//  *              Tag!=0 find the left</span>
+<span class="co">//  * @param[in]   bintree</span>
+<span class="co">//  * @retval      height</span>
+<span class="co">//  **/</span>
+<span class="co">// int FindTreeHeight(BinTree BT) {</span>
+<span class="co">//     int rightlen = FindTreeLength(BT, 0);</span>
+<span class="co">//     int leftlen = FindTreeLength(BT, 1);</span>
+<span class="co">//     return rightlen &gt; leftlen ? rightlen : leftlen;</span>
+<span class="co">// }</span>
+<span class="co">/* the better implement */</span>
+<span class="dt">int</span> FindTreeHeight(BinTree BT) {
+    <span class="dt">int</span> rightlen, leftlen, maxlen;
+    <span class="cf">if</span> (BT) {
         rightlen = FindTreeHeight(BT-&gt;Right);
         leftlen = FindTreeHeight(BT-&gt;Left);
         maxlen = leftlen &gt; rightlen ? leftlen : rightlen;
-        return maxlen + 1;
-    } else {
-        return 0;
+        <span class="cf">return</span> maxlen + <span class="dv">1</span>;
+    } <span class="cf">else</span> {
+        <span class="cf">return</span> <span class="dv">0</span>;
     }
 }
 
-/**
-* description  first left child tree then
-            root then  then right child tree
-* @param[in]   BinTree
-* @retval      void
-**/
-void InOrderTraversal(BinTree BT) {
-    if (BT) {
-        PreOrderTraversal(BT-&gt;Left); // Recursion traversal
-        printf(&quot;%d   &quot;, BT-&gt;Data);
+<span class="co">/**</span>
+<span class="co">* description  first left child tree then</span>
+<span class="co">            root then  then right child tree</span>
+<span class="co">* </span><span class="an">@param[in]</span><span class="co">   </span><span class="cv">BinTree</span>
+<span class="co">* </span><span class="an">@retval</span><span class="co">      </span><span class="cv">void</span>
+<span class="co">**/</span>
+<span class="dt">void</span> InOrderTraversal(BinTree BT) {
+    <span class="cf">if</span> (BT) {
+        PreOrderTraversal(BT-&gt;Left); <span class="co">// Recursion traversal</span>
+        printf(<span class="st">&quot;%d   &quot;</span>, BT-&gt;Data);
         PreOrderTraversal(BT-&gt;Right);
     }
 }
-/**
-* description  first left child tree then
-             right child tree then root
-* @param[in]   BinTree
-* @retval      void
-**/
-void PostOrderTraversal(BinTree BT) {
-    if (BT) {
-        PreOrderTraversal(BT-&gt;Left); // Recursion traversal
+<span class="co">/**</span>
+<span class="co">* description  first left child tree then</span>
+<span class="co">             right child tree then root</span>
+<span class="co">* </span><span class="an">@param[in]</span><span class="co">   </span><span class="cv">BinTree</span>
+<span class="co">* </span><span class="an">@retval</span><span class="co">      </span><span class="cv">void</span>
+<span class="co">**/</span>
+<span class="dt">void</span> PostOrderTraversal(BinTree BT) {
+    <span class="cf">if</span> (BT) {
+        PreOrderTraversal(BT-&gt;Left); <span class="co">// Recursion traversal</span>
         PreOrderTraversal(BT-&gt;Right);
-        printf(&quot;%d   &quot;, BT-&gt;Data);
+        printf(<span class="st">&quot;%d   &quot;</span>, BT-&gt;Data);
     }
 }
 
-/*
-* description first root then left
-                child tree then right child tree
-* @param[in]   BinTree
-* @retval      void
-**/
-void PreStackTraversal(BinTree BT) {
+<span class="co">/*</span>
+<span class="co">* description first root then left</span>
+<span class="co">                child tree then right child tree</span>
+<span class="co">* @param[in]   BinTree</span>
+<span class="co">* @retval      void</span>
+<span class="co">**/</span>
+<span class="dt">void</span> PreStackTraversal(BinTree BT) {
     BinTree T = BT;
-    Stack S = (Stack)malloc(sizeof(struct StackNode));
-    // T!=null or stack is not empty
-    while (T || !IsEmpty(S)) {
-        while (T) { // push the left child tree in stack
+    Stack S = (Stack)malloc(<span class="kw">sizeof</span>(<span class="kw">struct</span> StackNode));
+    <span class="co">// T!=null or stack is not empty</span>
+    <span class="cf">while</span> (T || !IsEmpty(S)) {
+        <span class="cf">while</span> (T) { <span class="co">// push the left child tree in stack</span>
             Push(S, T);
-            printf(&quot;%d   &quot;, T-&gt;Data);
+            printf(<span class="st">&quot;%d   &quot;</span>, T-&gt;Data);
             T = T-&gt;Left;
         }
-        if (!IsEmpty(S)) {
+        <span class="cf">if</span> (!IsEmpty(S)) {
             T = Pop(S);
-            T = T-&gt;Right; // to the
+            T = T-&gt;Right; <span class="co">// to the</span>
         }
     }
     DisposeStack(S);
 }
-/*
-* description  first left child tree then
-            root then  then right child tree
-* @param[in]   BinTree
-* @retval      void
-**/
-void InStackTraversal(BinTree BT) {
+<span class="co">/*</span>
+<span class="co">* description  first left child tree then</span>
+<span class="co">            root then  then right child tree</span>
+<span class="co">* @param[in]   BinTree</span>
+<span class="co">* @retval      void</span>
+<span class="co">**/</span>
+<span class="dt">void</span> InStackTraversal(BinTree BT) {
     BinTree T = BT;
-    Stack S = (Stack)malloc(sizeof(struct StackNode));
-    // T!=null or stack is not empty
-    while (T || !IsEmpty(S)) {
-        while (T) { // push the left child tree in stack
+    Stack S = (Stack)malloc(<span class="kw">sizeof</span>(<span class="kw">struct</span> StackNode));
+    <span class="co">// T!=null or stack is not empty</span>
+    <span class="cf">while</span> (T || !IsEmpty(S)) {
+        <span class="cf">while</span> (T) { <span class="co">// push the left child tree in stack</span>
             Push(S, T);
             T = T-&gt;Left;
         }
-        if (!IsEmpty(S)) {
+        <span class="cf">if</span> (!IsEmpty(S)) {
             T = Pop(S);
-            printf(&quot;%d   &quot;, T-&gt;Data);
+            printf(<span class="st">&quot;%d   &quot;</span>, T-&gt;Data);
             T = T-&gt;Right;
         }
     }
     DisposeStack(S);
 }
-/*
-* description  first left child tree then
-             right child tree then  root
-* @param[in]   BinTree
-* @retval      void
-**/
-void PostStackTraversal(BinTree BT) {
+<span class="co">/*</span>
+<span class="co">* description  first left child tree then</span>
+<span class="co">             right child tree then  root</span>
+<span class="co">* @param[in]   BinTree</span>
+<span class="co">* @retval      void</span>
+<span class="co">**/</span>
+<span class="dt">void</span> PostStackTraversal(BinTree BT) {
     BinTree T = BT;
-    Stack S = (Stack)malloc(sizeof(struct StackNode));
-    // T!=null or stack is not empty
-    while (T || !IsEmpty(S)) {
-        while (T) { // push the left child tree in S
+    Stack S = (Stack)malloc(<span class="kw">sizeof</span>(<span class="kw">struct</span> StackNode));
+    <span class="co">// T!=null or stack is not empty</span>
+    <span class="cf">while</span> (T || !IsEmpty(S)) {
+        <span class="cf">while</span> (T) { <span class="co">// push the left child tree in S</span>
             Push(S, T);
             T = T-&gt;Left;
         }
-        if (!IsEmpty(S)) {
+        <span class="cf">if</span> (!IsEmpty(S)) {
             T = Pop(S);
-            if (T != BT) { // root don&#39;t print
-                printf(&quot;%d   &quot;, T-&gt;Data);
+            <span class="cf">if</span> (T != BT) { <span class="co">// root don&#39;t print</span>
+                printf(<span class="st">&quot;%d   &quot;</span>, T-&gt;Data);
             }
             T = T-&gt;Right;
         }
     }
-    printf(&quot;%d   &quot;, BT-&gt;Data); // print root
+    printf(<span class="st">&quot;%d   &quot;</span>, BT-&gt;Data); <span class="co">// print root</span>
     DisposeStack(S);
 }
 
-/* sequence traversal
-    Use queue
-    ----------------
-            A           =&gt;
-    ----------------
-    ----------------
-        B       C       =&gt;
-    ----------------
-    ----------------
-    D     F   G    I    =&gt;
-    ----------------
-    ----------------
-        E       H       =&gt;
-    ----------------
-*/
-void LevelOrderTraversal(BinTree BT) {
+<span class="co">/* sequence traversal</span>
+<span class="co">    Use queue</span>
+<span class="co">    ----------------</span>
+<span class="co">            A           =&gt;</span>
+<span class="co">    ----------------</span>
+<span class="co">    ----------------</span>
+<span class="co">        B       C       =&gt;</span>
+<span class="co">    ----------------</span>
+<span class="co">    ----------------</span>
+<span class="co">    D     F   G    I    =&gt;</span>
+<span class="co">    ----------------</span>
+<span class="co">    ----------------</span>
+<span class="co">        E       H       =&gt;</span>
+<span class="co">    ----------------</span>
+<span class="co">*/</span>
+<span class="dt">void</span> LevelOrderTraversal(BinTree BT) {
     Queue myqueue = CreateQueue();
     BinTree T = BT;
     BinTree temp = NULL;
-    AddQ(myqueue, T); // header add in queue
-    while (!IsEmptyQ(myqueue)) {
+    AddQ(myqueue, T); <span class="co">// header add in queue</span>
+    <span class="cf">while</span> (!IsEmptyQ(myqueue)) {
         temp = DeleteQ(myqueue);
-        printf(&quot;%d   &quot;, temp-&gt;Data);
+        printf(<span class="st">&quot;%d   &quot;</span>, temp-&gt;Data);
         AddQ(myqueue, temp-&gt;Left);
         AddQ(myqueue, temp-&gt;Right);
     }
 }
 
-/**
- * description  create the binary tree node
- * @param[in]   data
- * @retval      bintree
- **/
-BinTree CreateTreeNode(int dat) {
-    BinTree new = (BinTree)malloc(sizeof(struct TreeNode));
+<span class="co">/**</span>
+<span class="co"> * description  create the binary tree node</span>
+<span class="co"> * </span><span class="an">@param[in]</span><span class="co">   </span><span class="cv">data</span>
+<span class="co"> * </span><span class="an">@retval</span><span class="co">      </span><span class="cv">bintree</span>
+<span class="co"> **/</span>
+BinTree CreateTreeNode(<span class="dt">int</span> dat) {
+    BinTree new = (BinTree)malloc(<span class="kw">sizeof</span>(<span class="kw">struct</span> TreeNode));
     new-&gt;Data = dat;
     new-&gt;Left = NULL;
     new-&gt;Right = NULL;
-    return new;
+    <span class="cf">return</span> new;
 }
-void ConnectNode(BinTree root, BinTree left, BinTree right) {
+<span class="dt">void</span> ConnectNode(BinTree root, BinTree left, BinTree right) {
 
-    if (!root) {
-        printf(&quot;error in null\n&quot;);
-        return;
+    <span class="cf">if</span> (!root) {
+        printf(<span class="st">&quot;error in null</span><span class="sc">\n</span><span class="st">&quot;</span>);
+        <span class="cf">return</span>;
     }
     root-&gt;Left = left;
     root-&gt;Right = right;
 }
 
-/* create bin tree like this:
-                  1                           A
-            /          \                /          \
-           2            3              B            C
-         /   \        /   \          /   \        /   \
-       4      5      6     7       D      E      F     G
-      /        \    / \           /        \    / \
-     8          9  10  11        H          I  J   K
- */
-BinTree CreateBinTree(void) {
-    printf(&quot;Create Binary Tree like this:\n \
-                 1                           A\n \
-            /          \\                /          \\ \n \
-           2            3              B            C \n  \
-        /   \\        /   \\          /   \\        /   \\ \n \
-       4      5      6     7       D      E      F     G \n \
-      /        \\    / \\           /        \\    / \\ \n \
-     8          9  10  11        H          I  J   K \n \
-    &quot;);
-    BinTree A = CreateTreeNode(1);
-    BinTree B = CreateTreeNode(2);
-    BinTree C = CreateTreeNode(3);
-    BinTree D = CreateTreeNode(4);
-    BinTree E = CreateTreeNode(5);
-    BinTree F = CreateTreeNode(6);
-    BinTree G = CreateTreeNode(7);
-    BinTree H = CreateTreeNode(8);
-    BinTree I = CreateTreeNode(9);
-    BinTree J = CreateTreeNode(10);
-    BinTree K = CreateTreeNode(11);
+<span class="co">/* create bin tree like this:</span>
+<span class="co">                  1                           A</span>
+<span class="co">            /          \                /          \</span>
+<span class="co">           2            3              B            C</span>
+<span class="co">         /   \        /   \          /   \        /   \</span>
+<span class="co">       4      5      6     7       D      E      F     G</span>
+<span class="co">      /        \    / \           /        \    / \</span>
+<span class="co">     8          9  10  11        H          I  J   K</span>
+<span class="co"> */</span>
+BinTree CreateBinTree(<span class="dt">void</span>) {
+    printf(<span class="st">&quot;Create Binary Tree like this:</span><span class="sc">\n</span><span class="st"> \</span>
+<span class="st">                 1                           A</span><span class="sc">\n</span><span class="st"> \</span>
+<span class="st">            /          </span><span class="sc">\\</span><span class="st">                /          </span><span class="sc">\\</span><span class="st"> </span><span class="sc">\n</span><span class="st"> \</span>
+<span class="st">           2            3              B            C </span><span class="sc">\n</span><span class="st">  \</span>
+<span class="st">        /   </span><span class="sc">\\</span><span class="st">        /   </span><span class="sc">\\</span><span class="st">          /   </span><span class="sc">\\</span><span class="st">        /   </span><span class="sc">\\</span><span class="st"> </span><span class="sc">\n</span><span class="st"> \</span>
+<span class="st">       4      5      6     7       D      E      F     G </span><span class="sc">\n</span><span class="st"> \</span>
+<span class="st">      /        </span><span class="sc">\\</span><span class="st">    / </span><span class="sc">\\</span><span class="st">           /        </span><span class="sc">\\</span><span class="st">    / </span><span class="sc">\\</span><span class="st"> </span><span class="sc">\n</span><span class="st"> \</span>
+<span class="st">     8          9  10  11        H          I  J   K </span><span class="sc">\n</span><span class="st"> \</span>
+<span class="st">    &quot;</span>);
+    BinTree A = CreateTreeNode(<span class="dv">1</span>);
+    BinTree B = CreateTreeNode(<span class="dv">2</span>);
+    BinTree C = CreateTreeNode(<span class="dv">3</span>);
+    BinTree D = CreateTreeNode(<span class="dv">4</span>);
+    BinTree E = CreateTreeNode(<span class="dv">5</span>);
+    BinTree F = CreateTreeNode(<span class="dv">6</span>);
+    BinTree G = CreateTreeNode(<span class="dv">7</span>);
+    BinTree H = CreateTreeNode(<span class="dv">8</span>);
+    BinTree I = CreateTreeNode(<span class="dv">9</span>);
+    BinTree J = CreateTreeNode(<span class="dv">10</span>);
+    BinTree K = CreateTreeNode(<span class="dv">11</span>);
     ConnectNode(A, B, C);
     ConnectNode(B, D, E);
     ConnectNode(D, H, NULL);
     ConnectNode(E, NULL, I);
     ConnectNode(C, F, G);
     ConnectNode(F, J, K);
-    return A;
+    <span class="cf">return</span> A;
 }
 
 BinTree BinaryTree = NULL;
-int main(int argc, char const *argv[]) {
-    printf(&quot;\n \
-    Binary Tree Options\n \
-    (1).make new linked Binary Tree;\n \
-    (2).递归先序遍历;\n \
-    (3).递归中序遍历;\n \
-    (4).递归后序遍历;\n \
-    (5).循环先序遍历;\n \
-    (6).循环中序遍历;\n \
-    (7).循环后序遍历;\n \
-    (8).打印叶节点;\n \
-    (9).输出树高度;\n \
-    (a).层序遍历;\n \
-    (q).quit;\n \
-    &quot;);
-    while (1) {
-        switch (getchar()) {
-        case &#39;1&#39;:
+<span class="dt">int</span> main(<span class="dt">int</span> argc, <span class="dt">char</span> <span class="dt">const</span> *argv[]) {
+    printf(<span class="st">&quot;</span><span class="sc">\n</span><span class="st"> \</span>
+<span class="st">    Binary Tree Options</span><span class="sc">\n</span><span class="st"> \</span>
+<span class="st">    (1).make new linked Binary Tree;</span><span class="sc">\n</span><span class="st"> \</span>
+<span class="st">    (2).递归先序遍历;</span><span class="sc">\n</span><span class="st"> \</span>
+<span class="st">    (3).递归中序遍历;</span><span class="sc">\n</span><span class="st"> \</span>
+<span class="st">    (4).递归后序遍历;</span><span class="sc">\n</span><span class="st"> \</span>
+<span class="st">    (5).循环先序遍历;</span><span class="sc">\n</span><span class="st"> \</span>
+<span class="st">    (6).循环中序遍历;</span><span class="sc">\n</span><span class="st"> \</span>
+<span class="st">    (7).循环后序遍历;</span><span class="sc">\n</span><span class="st"> \</span>
+<span class="st">    (8).打印叶节点;</span><span class="sc">\n</span><span class="st"> \</span>
+<span class="st">    (9).输出树高度;</span><span class="sc">\n</span><span class="st"> \</span>
+<span class="st">    (a).层序遍历;</span><span class="sc">\n</span><span class="st"> \</span>
+<span class="st">    (q).quit;</span><span class="sc">\n</span><span class="st"> \</span>
+<span class="st">    &quot;</span>);
+    <span class="cf">while</span> (<span class="dv">1</span>) {
+        <span class="cf">switch</span> (getchar()) {
+        <span class="cf">case</span> &#39;<span class="dv">1</span>&#39;:
             BinaryTree = CreateBinTree();
-            printf(&quot;create success!\n&quot;);
-            break;
-        case &#39;2&#39;:
-            printf(&quot;递归先序遍历:&quot;);
+            printf(<span class="st">&quot;create success!</span><span class="sc">\n</span><span class="st">&quot;</span>);
+            <span class="cf">break</span>;
+        <span class="cf">case</span> &#39;<span class="dv">2</span>&#39;:
+            printf(<span class="st">&quot;递归先序遍历:&quot;</span>);
             PreOrderTraversal(BinaryTree);
-            printf(&quot;\n&quot;);
-            break;
-        case &#39;3&#39;:
-            printf(&quot;递归中序遍历:&quot;);
+            printf(<span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>);
+            <span class="cf">break</span>;
+        <span class="cf">case</span> &#39;<span class="dv">3</span>&#39;:
+            printf(<span class="st">&quot;递归中序遍历:&quot;</span>);
             InOrderTraversal(BinaryTree);
-            printf(&quot;\n&quot;);
-            break;
-        case &#39;4&#39;:
-            printf(&quot;递归后序遍历:&quot;);
+            printf(<span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>);
+            <span class="cf">break</span>;
+        <span class="cf">case</span> &#39;<span class="dv">4</span>&#39;:
+            printf(<span class="st">&quot;递归后序遍历:&quot;</span>);
             PostOrderTraversal(BinaryTree);
-            printf(&quot;\n&quot;);
-            break;
-        case &#39;5&#39;:
-            printf(&quot;循环先序遍历:&quot;);
+            printf(<span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>);
+            <span class="cf">break</span>;
+        <span class="cf">case</span> &#39;<span class="dv">5</span>&#39;:
+            printf(<span class="st">&quot;循环先序遍历:&quot;</span>);
             PreStackTraversal(BinaryTree);
-            printf(&quot;\n\n&quot;);
-            break;
-        case &#39;6&#39;:
-            printf(&quot;循环中序遍历:&quot;);
+            printf(<span class="st">&quot;</span><span class="sc">\n\n</span><span class="st">&quot;</span>);
+            <span class="cf">break</span>;
+        <span class="cf">case</span> &#39;<span class="dv">6</span>&#39;:
+            printf(<span class="st">&quot;循环中序遍历:&quot;</span>);
             InStackTraversal(BinaryTree);
-            printf(&quot;\n\n&quot;);
-            break;
-        case &#39;7&#39;:
-            printf(&quot;循环后序遍历:&quot;);
+            printf(<span class="st">&quot;</span><span class="sc">\n\n</span><span class="st">&quot;</span>);
+            <span class="cf">break</span>;
+        <span class="cf">case</span> &#39;<span class="dv">7</span>&#39;:
+            printf(<span class="st">&quot;循环后序遍历:&quot;</span>);
             PostStackTraversal(BinaryTree);
-            printf(&quot;\n\n&quot;);
-            break;
-        case &#39;8&#39;:
-            printf(&quot;打印叶节点:&quot;);
+            printf(<span class="st">&quot;</span><span class="sc">\n\n</span><span class="st">&quot;</span>);
+            <span class="cf">break</span>;
+        <span class="cf">case</span> &#39;<span class="dv">8</span>&#39;:
+            printf(<span class="st">&quot;打印叶节点:&quot;</span>);
             PreOrderPrintLeaves(BinaryTree);
-            printf(&quot;\n\n&quot;);
-            break;
-        case &#39;9&#39;:
-            printf(&quot;打印height:%d&quot;, FindTreeHeight(BinaryTree));
-            printf(&quot;\n\n&quot;);
-            break;
-        case &#39;a&#39;:
-            printf(&quot;层序遍历:&quot;);
+            printf(<span class="st">&quot;</span><span class="sc">\n\n</span><span class="st">&quot;</span>);
+            <span class="cf">break</span>;
+        <span class="cf">case</span> &#39;<span class="dv">9</span>&#39;:
+            printf(<span class="st">&quot;打印height:%d&quot;</span>, FindTreeHeight(BinaryTree));
+            printf(<span class="st">&quot;</span><span class="sc">\n\n</span><span class="st">&quot;</span>);
+            <span class="cf">break</span>;
+        <span class="cf">case</span> &#39;a&#39;:
+            printf(<span class="st">&quot;层序遍历:&quot;</span>);
             LevelOrderTraversal(BinaryTree);
-            printf(&quot;\n&quot;);
-            break;
-        case &#39;q&#39;:
-            exit(0);
-            break;
-        default:
-            break;
+            printf(<span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>);
+            <span class="cf">break</span>;
+        <span class="cf">case</span> &#39;q&#39;:
+            exit(<span class="dv">0</span>);
+            <span class="cf">break</span>;
+        <span class="cf">default</span>:
+            <span class="cf">break</span>;
         }
     }
-    return 0;
-}
-</code></pre>
-<h1 id="执行结果"><a href="#执行结果" class="headerlink" title="执行结果"></a>执行结果</h1><pre><code class="lang-sh">☁  binarytree  cat 1.txt | ./a.out
+    <span class="cf">return</span> <span class="dv">0</span>;
+}</code></pre></div>
+<h1 id="执行结果">执行结果</h1>
+<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash">☁  <span class="ex">binarytree</span>  cat 1.txt <span class="kw">|</span> <span class="ex">./a.out</span>
 
-     Binary Tree Options
-     (1).make new linked Binary Tree;
-     (2).递归先序遍历;
-     (3).递归中序遍历;
-     (4).递归后序遍历;
-     (5).循环先序遍历;
-     (6).循环中序遍历;
-     (7).循环后序遍历;
-     (8).打印叶节点;
-     (9).输出树高度;
-     (a).层序遍历;
-     (q).quit;
-     Create Binary Tree like this:
-                  1                           A
-             /          \                /          \
+     <span class="ex">Binary</span> Tree Options
+     <span class="kw">(</span><span class="ex">1</span><span class="kw">)</span><span class="ex">.make</span> new linked Binary Tree<span class="kw">;</span>
+     <span class="kw">(</span><span class="ex">2</span><span class="kw">)</span><span class="ex">.</span>递归先序遍历<span class="kw">;</span>
+     <span class="kw">(</span><span class="ex">3</span><span class="kw">)</span><span class="ex">.</span>递归中序遍历<span class="kw">;</span>
+     <span class="kw">(</span><span class="ex">4</span><span class="kw">)</span><span class="ex">.</span>递归后序遍历<span class="kw">;</span>
+     <span class="kw">(</span><span class="ex">5</span><span class="kw">)</span><span class="ex">.</span>循环先序遍历<span class="kw">;</span>
+     <span class="kw">(</span><span class="ex">6</span><span class="kw">)</span><span class="ex">.</span>循环中序遍历<span class="kw">;</span>
+     <span class="kw">(</span><span class="ex">7</span><span class="kw">)</span><span class="ex">.</span>循环后序遍历<span class="kw">;</span>
+     <span class="kw">(</span><span class="ex">8</span><span class="kw">)</span><span class="ex">.</span>打印叶节点<span class="kw">;</span>
+     <span class="kw">(</span><span class="ex">9</span><span class="kw">)</span><span class="ex">.</span>输出树高度<span class="kw">;</span>
+     <span class="kw">(</span><span class="ex">a</span><span class="kw">)</span><span class="ex">.</span>层序遍历<span class="kw">;</span>
+     <span class="kw">(</span><span class="ex">q</span><span class="kw">)</span><span class="ex">.quit</span><span class="kw">;</span>
+     <span class="ex">Create</span> Binary Tree like this:
+                  <span class="ex">1</span>                           A
+             <span class="ex">/</span>          <span class="dt">\ </span>               /          \
             2            3              B            C
-          /   \        /   \          /   \        /   \
+          <span class="ex">/</span>   <span class="dt">\ </span>       /   <span class="dt">\ </span>         /   <span class="dt">\ </span>       /   \
         4      5      6     7       D      E      F     G
-       /        \    / \           /        \    / \
+       <span class="ex">/</span>        <span class="dt">\ </span>   / <span class="dt">\ </span>          /        <span class="dt">\ </span>   / \
       8          9  10  11        H          I  J   K
-     create success!
-递归先序遍历:1   2   4   8   5   9   3   6   10   11   7
-循环先序遍历:1   2   4   8   5   9   3   6   10   11   7
+     <span class="ex">create</span> success!
+递归先序遍历:<span class="ex">1</span>   2   4   8   5   9   3   6   10   11   7
+循环先序遍历:<span class="ex">1</span>   2   4   8   5   9   3   6   10   11   7
 
-递归中序遍历:2   4   8   5   9   1   3   6   10   11   7
-循环中序遍历:8   4   2   5   9   1   10   6   11   3   7
+递归中序遍历:<span class="ex">2</span>   4   8   5   9   1   3   6   10   11   7
+循环中序遍历:<span class="ex">8</span>   4   2   5   9   1   10   6   11   3   7
 
-递归后序遍历:2   4   8   5   9   3   6   10   11   7   1
-循环后序遍历:8   4   2   5   9   10   6   11   3   7   1
+递归后序遍历:<span class="ex">2</span>   4   8   5   9   3   6   10   11   7   1
+循环后序遍历:<span class="ex">8</span>   4   2   5   9   10   6   11   3   7   1
 
-打印叶节点:8   5   9   10   11   7
+打印叶节点:<span class="ex">8</span>   5   9   10   11   7
 
-打印height:4
+打印<span class="ex">height</span>:4
 
-层序遍历:1   2   3   4   5   6   7   8   9   10   11
-</code></pre>
+层序遍历:<span class="ex">1</span>   2   3   4   5   6   7   8   9   10   11</code></pre></div>
 
             </div>
 </article>
@@ -680,14 +681,14 @@ int main(int argc, char const *argv[]) {
                         
     <h1>Archives</h1>
 
-    <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 07</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 06</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 05</a></li></ul>
+    <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 08</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 07</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 06</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 05</a></li></ul>
 
                     </section>
                     <section class="aside-section tag">
                         
     <h1>Tags</h1>
 
-    <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CMake/">CMake</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Matlab/">Matlab</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/PCB/">PCB</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/git/">git</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/二叉树/">二叉树</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/博客/">博客</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/堆栈/">堆栈</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/嵌入式/">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构/">数据结构</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/树/">树</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/算法/">算法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/蓝牙/">蓝牙</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/链表/">链表</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/错误记录/">错误记录</a></li></ul>
+    <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C++</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CMake/">CMake</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Matlab/">Matlab</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/PCB/">PCB</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/git/">git</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/二叉树/">二叉树</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/博客/">博客</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/堆栈/">堆栈</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/嵌入式/">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构/">数据结构</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/树/">树</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/算法/">算法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/蓝牙/">蓝牙</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/链表/">链表</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/错误记录/">错误记录</a></li></ul>
 
                     </section>
                 </aside>
