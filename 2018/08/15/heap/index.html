@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- hexo-inject:begin --><!-- hexo-inject:end --><meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport">
+    <meta name="keywords" content="hexo, autumn">
+    <title>
+        Practice
+    </title>
+    <!-- favicon -->
+    
+    <link rel="icon" href="/img/logo.png">
+    
+    <link rel="stylesheet" href="/css/style.css">
+
+    <!-- highlight -->
+    <link rel="stylesheet" href="https://cdn.bootcss.com/highlight.js/9.12.0/styles/foundation.min.css">
+    <script src="//cdn.bootcss.com/highlight.js/9.2.0/highlight.min.js"></script>
+    <script>
+        hljs.initHighlightingOnLoad()
+    </script>
+    <script src="https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="http://osly086qe.bkt.clouddn.com/hexo-infinite-scroll-v1.0.1.min.css">
+    <script src="http://osly086qe.bkt.clouddn.com/hexo-infinite-scroll-v1.0.3.min.js"></script>
+    <script>
+        infiniteScroll()
+
+        // for mobile menu
+        $(function() {
+            $('.social-button').click(function() {
+                if ($('.social-links').hasClass('hide-links')) {
+                    $('.social-links').removeClass('hide-links')
+                } else {
+                    $('.social-links').addClass('hide-links')
+                }
+            })
+        })
+    </script><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+</head>
+
+    <body style="background: url(/img/bg3.png) #f3f3f3">
+        <!-- hexo-inject:begin --><!-- hexo-inject:end --><div class="container">
+            <header class="header">
+    <h1 class="title">
+        <a href="/" class="logo">
+            Practice
+        </a>
+    </h1>
+    <h2 class="desc">
+        一个分享经验的地方
+    </h2>
+
+    <nav class="links">
+        <button class="social-button">
+            menu
+        </button>
+        <ul class="social-links hide-links">
+            
+                <li>
+                    <a href="https://github.com/zhen8838">
+                        Github
+                    </a>
+                </li>
+                
+        </ul>
+    </nav>
+</header>
+                <main class="main">
+                    <article class="post">
+    
+        <h4 class="post-cat">
+            <a href="/categories/学习/">
+                学习
+            </a>
+        </h4>
+        
+            <h2 class="post-title">
+                堆
+            </h2>
+            <ul class="post-date">
+                <li>
+                    2018-08-14
+                </li>
+                <li>
+                    NAke
+                </li>
+            </ul>
+            <div class="post-content">
+                <h1 id="堆">堆</h1>
+<p>堆其实是也是一种二叉树，不过他的排序方式更加舒服，对于需要升序或者降序排列的数据非常有用。</p>
+<h1 id="代码">代码</h1>
+<h2 id="binheap.cpp">binheap.cpp</h2>
+<div class="sourceCode"><pre class="sourceCode c"><code class="sourceCode c"><span class="pp">#include </span><span class="im">&quot;binheap.h&quot;</span>
+<span class="pp">#include </span><span class="im">&lt;cstdint&gt;</span>
+<span class="pp">#include </span><span class="im">&lt;cstdio&gt;</span>
+<span class="pp">#include </span><span class="im">&lt;cstdlib&gt;</span>
+<span class="pp">#include </span><span class="im">&lt;cstring&gt;</span>
+<span class="co">/**</span>
+<span class="co"> * </span><span class="an">@brief</span><span class="co"> 优先队列-堆的数组实现</span>
+<span class="co"> **/</span>
+PriorityQueue Initialize(<span class="dt">int</span> MaxElements) {
+    PriorityQueue H = nullptr;
+    <span class="cf">if</span> (MaxElements &lt; <span class="dv">0</span>) {
+        <span class="cf">return</span> nullptr;
+    }
+    <span class="co">/* 为队列结构体申请内存 */</span>
+    H = (PriorityQueue)malloc(<span class="kw">sizeof</span>(<span class="kw">struct</span> HeapStruct));
+
+    <span class="co">/* 为队列数组申请内存 */</span>
+    H-&gt;Elements =
+        (ElementType *)malloc((MaxElements + <span class="dv">1</span>) * <span class="kw">sizeof</span>(ElementType));
+
+    H-&gt;Capacity = MaxElements;
+    H-&gt;Size = <span class="dv">0</span>;
+    H-&gt;Elements[<span class="dv">0</span>] = <span class="dv">0</span>; <span class="co">/* scout element */</span>
+    <span class="cf">return</span> H;
+}
+<span class="dt">void</span> Destroy(PriorityQueue H) {}
+<span class="dt">void</span> MakeEmpty(PriorityQueue H) {}
+<span class="co">/**</span>
+<span class="co"> * </span><span class="an">@brief</span><span class="co"> 插入的元素都会塞满数组</span>
+<span class="co"> **/</span>
+<span class="dt">void</span> Insert(ElementType X, PriorityQueue H) {
+    <span class="dt">int</span> i;
+    <span class="cf">if</span> (IsFull(H)) {
+        <span class="cf">return</span>;
+    }
+    <span class="co">/*---&gt;1.指向数组的下一个元素</span>
+<span class="co">    |   | 2.判断当前元素是否小于其母节点</span>
+<span class="co">    |   | 3.小于:将母节点元素移动到此处 大于:X赋值到此处</span>
+<span class="co">    ----v 4.指向母节点的位置 */</span>
+    <span class="cf">for</span> (i = ++H-&gt;Size; H-&gt;Elements[i / <span class="dv">2</span>] &gt; X; i /= <span class="dv">2</span>) {
+        H-&gt;Elements[i] = H-&gt;Elements[i / <span class="dv">2</span>];
+    }
+    H-&gt;Elements[i] = X;
+}
+<span class="co">/**</span>
+<span class="co"> * </span><span class="an">@brief</span><span class="co"> 只需将较小的元素上移即可</span>
+<span class="co"> **/</span>
+ElementType DeleteMin(PriorityQueue H) {
+    <span class="dt">int</span> i, Child;
+    ElementType MinElement, LastElement;
+    <span class="cf">if</span> (IsEmpty(H)) {
+        <span class="cf">return</span> H-&gt;Elements[<span class="dv">0</span>];
+    }
+    <span class="co">/* 最小元素 */</span>
+    MinElement = H-&gt;Elements[<span class="dv">1</span>];
+    <span class="co">/* 倒数第二个元素 */</span>
+    LastElement = H-&gt;Elements[H-&gt;Size--];
+
+    <span class="cf">for</span> (i = <span class="dv">1</span>; i * <span class="dv">2</span> &lt; H-&gt;Size; i = Child) {
+        <span class="co">/* 子节点位置为当前节点的2倍 */</span>
+        Child = i * <span class="dv">2</span>;
+        <span class="co">/* 选择左右子节点中小的那个 */</span>
+        <span class="cf">if</span> (Child != H-&gt;Size &amp;&amp; (H-&gt;Elements[Child] &gt; H-&gt;Elements[Child + <span class="dv">1</span>])) {
+            Child++;
+        }
+        <span class="co">/* 没有到倒数第二个元素的右边 */</span>
+        <span class="cf">if</span> (LastElement &gt; H-&gt;Elements[Child]) {
+            <span class="co">/* 上浮 */</span>
+            H-&gt;Elements[i] = H-&gt;Elements[Child];
+        } <span class="cf">else</span> {
+            <span class="cf">break</span>;
+        }
+    }
+    <span class="co">/* 交换最后一个元素 */</span>
+    H-&gt;Elements[i] = LastElement;
+    <span class="co">/* 返回删去的元素 */</span>
+    <span class="cf">return</span> MinElement;
+}
+ElementType FindMin(PriorityQueue H) {
+    <span class="cf">if</span> (IsEmpty(H)) {
+        <span class="cf">return</span> <span class="dv">0</span>;
+    } <span class="cf">else</span> {
+        <span class="cf">return</span> H-&gt;Elements[<span class="dv">1</span>];
+    }
+}
+<span class="dt">int</span> IsEmpty(PriorityQueue H) {
+
+    <span class="cf">if</span> (H-&gt;Size == <span class="dv">0</span>) {
+        <span class="cf">return</span> true;
+    } <span class="cf">else</span> {
+        <span class="cf">return</span> false;
+    }
+}
+<span class="dt">int</span> IsFull(PriorityQueue H) {
+    <span class="cf">if</span> (H-&gt;Size == H-&gt;Capacity) {
+        <span class="cf">return</span> true;
+    } <span class="cf">else</span> {
+        <span class="cf">return</span> false;
+    }
+}
+
+<span class="dt">void</span> Traversal(PriorityQueue H) {
+
+    <span class="cf">if</span> (IsEmpty(H)) {
+        printf(<span class="st">&quot;Empty</span><span class="sc">\n</span><span class="st">&quot;</span>);
+    } <span class="cf">else</span> {
+        <span class="cf">for</span> (<span class="dt">int</span> i = <span class="dv">1</span>; i &lt;= H-&gt;Size; i++) {
+            printf(<span class="st">&quot;%d &quot;</span>, H-&gt;Elements[i]);
+        }
+        printf(<span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>);
+    }
+}</code></pre></div>
+<h2 id="binheap.h">binheap.h</h2>
+<div class="sourceCode"><pre class="sourceCode c"><code class="sourceCode c"><span class="pp">#ifndef _BinHeap_H</span>
+<span class="pp">#define _BinHeap_H</span>
+
+<span class="pp">#define ElementType int</span>
+
+<span class="kw">struct</span> HeapStruct;
+<span class="kw">typedef</span> <span class="kw">struct</span> HeapStruct *PriorityQueue;
+
+PriorityQueue Initialize(<span class="dt">int</span> MaxElements);
+<span class="dt">void</span> Destroy(PriorityQueue H);
+<span class="dt">void</span> MakeEmpty(PriorityQueue H);
+<span class="dt">void</span> Insert(ElementType X, PriorityQueue H);
+ElementType DeleteMin(PriorityQueue H);
+ElementType FindMin(PriorityQueue H);
+<span class="dt">int</span> IsEmpty(PriorityQueue H);
+<span class="dt">int</span> IsFull(PriorityQueue H);
+<span class="dt">void</span> Traversal(PriorityQueue H);
+<span class="kw">struct</span> HeapStruct {
+    <span class="dt">int</span> Capacity;
+    <span class="dt">int</span> Size;
+    ElementType *Elements;
+};
+
+<span class="pp">#endif</span></code></pre></div>
+<h2 id="main.cpp">main.cpp</h2>
+<div class="sourceCode"><pre class="sourceCode c"><code class="sourceCode c"><span class="pp">#include </span><span class="im">&quot;binheap.h&quot;</span>
+<span class="pp">#include </span><span class="im">&lt;cstdint&gt;</span>
+<span class="pp">#include </span><span class="im">&lt;cstdio&gt;</span>
+<span class="pp">#include </span><span class="im">&lt;cstdlib&gt;</span>
+<span class="pp">#include </span><span class="im">&lt;cstring&gt;</span>
+
+<span class="dt">void</span> printUseage(<span class="dt">void</span>) {
+    printf(<span class="st">&quot;\</span>
+<span class="st">    二叉堆操作：</span><span class="sc">\n</span><span class="st">\</span>
+<span class="st">    (1):初始化</span><span class="sc">\n</span><span class="st">\</span>
+<span class="st">    (2):插入元素</span><span class="sc">\n</span><span class="st">\</span>
+<span class="st">    (3):删除最小值</span><span class="sc">\n</span><span class="st">\</span>
+<span class="st">    (4):遍历元素</span><span class="sc">\n</span><span class="st">\</span>
+<span class="st">    (q):退出</span><span class="sc">\n</span><span class="st">\</span>
+<span class="st">    &quot;</span>);
+}
+
+<span class="dt">int</span> main(<span class="dt">int</span> argc, <span class="dt">char</span> <span class="dt">const</span> *argv[]) {
+    printUseage();
+    PriorityQueue heap;
+    ElementType tempint;
+    <span class="cf">while</span> (true) {
+        <span class="cf">switch</span> (getchar()) {
+        <span class="cf">case</span> &#39;<span class="dv">1</span>&#39;:
+            printf(<span class="st">&quot;初始化大小为10的堆&quot;</span>);
+            heap = Initialize(<span class="dv">10</span>);
+            printf(<span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>);
+            <span class="cf">break</span>;
+        <span class="cf">case</span> &#39;<span class="dv">2</span>&#39;:
+            printf(<span class="st">&quot;请输入插入元素:&quot;</span>);
+            scanf(<span class="st">&quot;%d&quot;</span>, &amp;tempint);
+            Insert(tempint, heap);
+            printf(<span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>);
+            <span class="cf">break</span>;
+        <span class="cf">case</span> &#39;<span class="dv">3</span>&#39;:
+            printf(<span class="st">&quot;删除:%d&quot;</span>, DeleteMin(heap));
+            printf(<span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>);
+            <span class="cf">break</span>;
+        <span class="cf">case</span> &#39;<span class="dv">4</span>&#39;:
+            printf(<span class="st">&quot;遍历堆:&quot;</span>);
+            Traversal(heap);
+            printf(<span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>);
+            <span class="cf">break</span>;
+        <span class="cf">case</span> &#39;q&#39;:
+            exit(EXIT_SUCCESS);
+            <span class="cf">break</span>;
+        <span class="cf">default</span>:
+            <span class="cf">break</span>;
+        }
+    }
+
+    <span class="cf">return</span> <span class="dv">0</span>;
+}</code></pre></div>
+<h2 id="makefile">Makefile</h2>
+<div class="sourceCode"><pre class="sourceCode makefile"><code class="sourceCode makefile"><span class="dt">CC </span><span class="ch">=</span><span class="st"> g++</span>
+<span class="dt">CFLAGS </span><span class="ch">=</span><span class="st"> #-g </span>
+<span class="dt">CLIBS </span><span class="ch">=</span><span class="st"> #-lpthread</span>
+ 
+<span class="dt">INCLUDE </span><span class="ch">=</span><span class="st"> </span><span class="ch">$(</span><span class="kw">wildcard</span><span class="st"> ./*.h</span><span class="ch">)</span><span class="st"> # INCLUDE = a.h b.h ... can&#39;t be defined like &quot;INCLUDE = ./*.h&quot;</span>
+<span class="dt">SOURCES </span><span class="ch">=</span><span class="st"> </span><span class="ch">$(</span><span class="kw">wildcard</span><span class="st"> ./*.cpp</span><span class="ch">)</span>
+ 
+<span class="dt">TARGET </span><span class="ch">=</span><span class="st"> BinHeap</span>
+<span class="dt">OBJECTS </span><span class="ch">=</span><span class="st"> </span><span class="ch">$(</span><span class="kw">patsubst</span><span class="st"> %.cpp</span><span class="kw">,</span><span class="st">%.o</span><span class="kw">,</span><span class="ch">$(</span><span class="dt">SOURCES</span><span class="ch">))</span>
+ 
+<span class="dv">$(TARGET) :</span><span class="dt"> </span><span class="ch">$(</span><span class="dt">OBJECTS</span><span class="ch">)</span>
+    <span class="ch">$(</span><span class="dt">CC</span><span class="ch">)</span> <span class="ch">$(</span><span class="dt">CFLAGS</span><span class="ch">)</span> <span class="ch">$^</span> -o <span class="ch">$@</span> <span class="ch">$(</span><span class="dt">CLIBS</span><span class="ch">)</span>
+    rm -rf *.o
+
+<span class="dv">$(OBJECTS) :</span><span class="dt"> %.o : %.cpp</span>
+    <span class="ch">$(</span><span class="dt">CC</span><span class="ch">)</span> -c <span class="ch">$(</span><span class="dt">CFLAGS</span><span class="ch">)</span> <span class="ch">$&lt;</span> -o <span class="ch">$@</span>
+ 
+<span class="ot">.PHONY :</span><span class="dt"> clean</span>
+<span class="dv">clean:</span>
+    rm -rf *.o <span class="ch">$(</span><span class="dt">TARGET</span><span class="ch">)</span>  </code></pre></div>
+<h2 id="test">test</h2>
+<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash"><span class="ex">1</span>
+<span class="ex">2</span>
+<span class="ex">10</span>
+<span class="ex">2</span>
+<span class="ex">8</span>
+<span class="ex">2</span>
+<span class="ex">7</span>
+<span class="ex">2</span>
+<span class="ex">5</span>
+<span class="ex">2</span>
+<span class="ex">3</span>
+<span class="ex">2</span>
+<span class="ex">11</span>
+<span class="ex">2</span>
+<span class="ex">13</span>
+<span class="ex">4</span>
+<span class="ex">3</span>
+<span class="ex">4</span>
+<span class="ex">3</span>
+<span class="ex">4</span>
+<span class="ex">3</span>
+<span class="ex">4</span>
+<span class="ex">q</span></code></pre></div>
+<h1 id="编译运行">编译运行</h1>
+<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash">➜  <span class="ex">heap</span> make <span class="kw">&amp;&amp;</span> <span class="fu">cat</span> test <span class="kw">|</span> <span class="ex">./BinHeap</span>
+<span class="ex">g++</span> -c  binheap.cpp -o binheap.o
+<span class="ex">g++</span> -c  main.cpp -o main.o
+<span class="ex">g++</span>  binheap.o main.o -o BinHeap
+<span class="fu">rm</span> -rf *.o
+    二叉堆操作：
+    <span class="kw">(</span><span class="ex">1</span><span class="kw">)</span>:初始化
+    <span class="kw">(</span><span class="ex">2</span><span class="kw">)</span>:插入元素
+    <span class="kw">(</span><span class="ex">3</span><span class="kw">)</span>:删除最小值
+    <span class="kw">(</span><span class="ex">4</span><span class="kw">)</span>:遍历元素
+    <span class="kw">(</span><span class="ex">q</span><span class="kw">)</span>:退出
+    初始化大小为<span class="ex">10</span>的堆
+请输入插入元素:
+请输入插入元素:
+请输入插入元素:
+请输入插入元素:
+请输入插入元素:
+请输入插入元素:
+请输入插入元素:
+遍历堆:<span class="ex">3</span> 5 8 10 7 11 13
+
+删除:<span class="ex">3</span>
+遍历堆:<span class="ex">5</span> 7 8 10 13 11
+
+删除:<span class="ex">5</span>
+遍历堆:<span class="ex">7</span> 10 8 11 13
+
+删除:<span class="ex">7</span>
+遍历堆:<span class="ex">8</span> 10 13 11</code></pre></div>
+
+            </div>
+</article>
+                </main>
+                <aside class="aside">
+                    <section class="aside-section">
+                        
+    <h1>Categories</h1>
+
+    <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/学习/">学习</a></li></ul>
+
+                    </section>
+                    <section class="aside-section">
+                        
+    <h1>Archives</h1>
+
+    <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 08</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 07</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 06</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 05</a></li></ul>
+
+                    </section>
+                    <section class="aside-section tag">
+                        
+    <h1>Tags</h1>
+
+    <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C++</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CMake/">CMake</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Matlab/">Matlab</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/PCB/">PCB</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/git/">git</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/stm32/">stm32</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/二叉树/">二叉树</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/博客/">博客</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/堆栈/">堆栈</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/嵌入式/">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构/">数据结构</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/树/">树</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/算法/">算法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/蓝牙/">蓝牙</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/链表/">链表</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/错误记录/">错误记录</a></li></ul>
+
+                    </section>
+                </aside>
+        </div>
+        <!-- 页面点击小红心 -->
+        <script type="text/javascript" src="/js/love.js"></script><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+    </body>
+
+</html>
