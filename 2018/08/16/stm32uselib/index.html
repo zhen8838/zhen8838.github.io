@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- hexo-inject:begin --><!-- hexo-inject:end --><meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport">
+    <meta name="keywords" content="hexo, autumn">
+    <title>
+        Practice
+    </title>
+    <!-- favicon -->
+    
+    <link rel="icon" href="/img/logo.png">
+    
+    <link rel="stylesheet" href="/css/style.css">
+
+    <!-- highlight -->
+    <link rel="stylesheet" href="https://cdn.bootcss.com/highlight.js/9.12.0/styles/foundation.min.css">
+    <script src="//cdn.bootcss.com/highlight.js/9.2.0/highlight.min.js"></script>
+    <script>
+        hljs.initHighlightingOnLoad()
+    </script>
+    <script src="https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="http://osly086qe.bkt.clouddn.com/hexo-infinite-scroll-v1.0.1.min.css">
+    <script src="http://osly086qe.bkt.clouddn.com/hexo-infinite-scroll-v1.0.3.min.js"></script>
+    <script>
+        infiniteScroll()
+
+        // for mobile menu
+        $(function() {
+            $('.social-button').click(function() {
+                if ($('.social-links').hasClass('hide-links')) {
+                    $('.social-links').removeClass('hide-links')
+                } else {
+                    $('.social-links').addClass('hide-links')
+                }
+            })
+        })
+    </script><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+</head>
+
+    <body style="background: url(/img/bg3.png) #f3f3f3">
+        <!-- hexo-inject:begin --><!-- hexo-inject:end --><div class="container">
+            <header class="header">
+    <h1 class="title">
+        <a href="/" class="logo">
+            Practice
+        </a>
+    </h1>
+    <h2 class="desc">
+        一个分享经验的地方
+    </h2>
+
+    <nav class="links">
+        <button class="social-button">
+            menu
+        </button>
+        <ul class="social-links hide-links">
+            
+                <li>
+                    <a href="https://github.com/zhen8838">
+                        Github
+                    </a>
+                </li>
+                
+        </ul>
+    </nav>
+</header>
+                <main class="main">
+                    <article class="post">
+    
+        <h4 class="post-cat">
+            <a href="/categories/学习/">
+                学习
+            </a>
+        </h4>
+        
+            <h2 class="post-title">
+                stm32使用静态库
+            </h2>
+            <ul class="post-date">
+                <li>
+                    2018-08-16
+                </li>
+                <li>
+                    NAke
+                </li>
+            </ul>
+            <div class="post-content">
+                <h1 id="前言">前言</h1>
+<p>我这两天写程序的时候，使用了大量的宏定义去开启和关闭代码块。但是我发现每次我切换一个宏定义的时候就会将所以的stm32工程中的所有文件进行重新编译，耗费太长时间，效率不如之前用注释代码块的方式。所以我仔细看了看。发现每次编译stm32hal库的时间是最长的，那么我就可以将所有的hal库文件生成一个静态库，让编译的时候连接即可。</p>
+<h1 id="生成静态库">生成静态库</h1>
+<p>我使用的是偷懒的方法。首先我的工程是stm32cubemx生成的，其中的makefile，直接可以进行make。编译之后，自动在工程的<code>build</code>目录下生成了一系列的.o .d文件。那么我的任务就是将这些.o文件合成一个静态库。</p>
+<p>首先查看那些是hal库的.o文件</p>
+<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash">➜  <span class="ex">build</span> ls stm32l4xx_hal*.o
+<span class="ex">stm32l4xx_hal_adc_ex.o</span>  stm32l4xx_hal_dma_ex.o    stm32l4xx_hal_flash.o          stm32l4xx_hal_i2c_ex.o  stm32l4xx_hal.o         stm32l4xx_hal_rcc_ex.o  stm32l4xx_hal_tim.o
+<span class="ex">stm32l4xx_hal_adc.o</span>     stm32l4xx_hal_dma.o       stm32l4xx_hal_flash_ramfunc.o  stm32l4xx_hal_i2c.o     stm32l4xx_hal_pwr_ex.o  stm32l4xx_hal_rcc.o     stm32l4xx_hal_uart_ex.o
+<span class="ex">stm32l4xx_hal_cortex.o</span>  stm32l4xx_hal_flash_ex.o  stm32l4xx_hal_gpio.o           stm32l4xx_hal_msp.o     stm32l4xx_hal_pwr.o     stm32l4xx_hal_tim_ex.o  stm32l4xx_hal_uart.o</code></pre></div>
+<p>要注意这里面<strong>stm32l4xx_hal_msp.o</strong>不能加入静态库！，因为这个文件是经常被修改的！所以我们先要删除这个文件</p>
+<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash">➜  <span class="ex">build</span> rm stm32l4xx_hal_msp.o</code></pre></div>
+<p>接下来生成静态库（多添加两个文件是因为我觉得这两个文件也不太会改变）：</p>
+<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash">➜  <span class="ex">build</span> arm-none-eabi-ar cr  libhal.a  stm32l4xx_hal*.o system_stm32l4xx.o startup_stm32l431xx.o
+➜  <span class="ex">build</span> mv libhal.a ../</code></pre></div>
+<p>移动到<code>libhal.a</code>到与<code>makefile</code>同级目录后修改makefile</p>
+<ul>
+<li>注释源文件</li>
+</ul>
+<p>将c源文件和asm源文件中的库文件注释掉。</p>
+<div class="sourceCode"><pre class="sourceCode makefile"><code class="sourceCode makefile">
+<span class="co">######################################</span>
+<span class="co"># source</span>
+<span class="co">######################################</span>
+<span class="co"># C sources</span>
+<span class="dt">C_SOURCES </span><span class="ch">=</span><span class="st">  </span><span class="ch">\</span>
+<span class="st">Src/main.c </span><span class="ch">\</span>
+<span class="st">Src/gpio.c </span><span class="ch">\</span>
+<span class="st">Src/adc.c </span><span class="ch">\</span>
+<span class="st">Src/tim.c </span><span class="ch">\</span>
+<span class="st">Src/usart.c </span><span class="ch">\</span>
+<span class="st">Src/delay.c </span><span class="ch">\</span>
+<span class="st">Hardware/BH1750/BH1750.c </span><span class="ch">\</span>
+<span class="st">Hardware/DHT11/DHT11_BUS.c </span><span class="ch">\</span>
+<span class="st">Hardware/GPS/gps.c </span><span class="ch">\</span>
+<span class="st">Hardware/OLED/oled.c </span><span class="ch">\</span>
+<span class="st">Src/stm32l4xx_it.c </span><span class="ch">\</span>
+<span class="st">Src/stm32l4xx_hal_msp.c </span><span class="ch">\</span>
+<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_adc.c </span><span class="ch">\</span>
+<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_adc_ex.c </span><span class="ch">\</span>
+<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_tim.c </span><span class="ch">\</span>
+<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_tim_ex.c </span><span class="ch">\</span>
+<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_uart.c </span><span class="ch">\</span>
+<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_uart_ex.c </span><span class="ch">\</span>
+<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal.c </span><span class="ch">\</span>
+<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_i2c.c </span><span class="ch">\</span>
+<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_i2c_ex.c </span><span class="ch">\</span>
+<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rcc.c </span><span class="ch">\</span>
+<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rcc_ex.c </span><span class="ch">\</span>
+<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_flash.c </span><span class="ch">\</span>
+<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_flash_ex.c </span><span class="ch">\</span>
+<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_flash_ramfunc.c </span><span class="ch">\</span>
+<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_gpio.c </span><span class="ch">\</span>
+<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_dma.c </span><span class="ch">\</span>
+<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_dma_ex.c </span><span class="ch">\</span>
+<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_pwr.c </span><span class="ch">\</span>
+<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_pwr_ex.c </span><span class="ch">\</span>
+<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_cortex.c </span><span class="ch">\</span>
+<span class="st"># Src/system_stm32l4xx.c  </span>
+
+<span class="co"># ASM sources</span>
+<span class="dt">ASM_SOURCES </span><span class="ch">=</span><span class="st">  </span><span class="ch">\</span>
+<span class="st"># startup_stm32l431xx.s</span></code></pre></div>
+<ul>
+<li>添加连接库</li>
+</ul>
+<p>在<code>LIBS</code>后面添加上静态库的名字，然后编译即可</p>
+<div class="sourceCode"><pre class="sourceCode makefile"><code class="sourceCode makefile"><span class="co">#######################################</span>
+<span class="co"># LDFLAGS</span>
+<span class="co">#######################################</span>
+<span class="co"># link script</span>
+<span class="dt">LDSCRIPT </span><span class="ch">=</span><span class="st"> STM32L431RBTx_FLASH.ld</span>
+
+<span class="co"># libraries</span>
+<span class="dt">LIBS </span><span class="ch">=</span><span class="st"> -lc -lm -lnosys libhal.a</span>
+<span class="dt">LIBDIR </span><span class="ch">=</span><span class="st"> </span>
+<span class="dt">LDFLAGS </span><span class="ch">=</span><span class="st"> </span><span class="ch">$(</span><span class="dt">MCU</span><span class="ch">)</span><span class="st"> -specs=nano.specs -T</span><span class="ch">$(</span><span class="dt">LDSCRIPT</span><span class="ch">)</span><span class="st"> </span><span class="ch">$(</span><span class="dt">LIBDIR</span><span class="ch">)</span><span class="st"> </span><span class="ch">$(</span><span class="dt">LIBS</span><span class="ch">)</span><span class="st"> -Wl,-Map=</span><span class="ch">$(</span><span class="dt">BUILD_DIR</span><span class="ch">)</span><span class="st">/</span><span class="ch">$(</span><span class="dt">TARGET</span><span class="ch">)</span><span class="st">.map,--cref -Wl,--gc-sections</span></code></pre></div>
+<h1 id="效果">效果</h1>
+<p>编译快了许多～～～</p>
+
+            </div>
+</article>
+                </main>
+                <aside class="aside">
+                    <section class="aside-section">
+                        
+    <h1>Categories</h1>
+
+    <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/学习/">学习</a></li></ul>
+
+                    </section>
+                    <section class="aside-section">
+                        
+    <h1>Archives</h1>
+
+    <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 08</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 07</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 06</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 05</a></li></ul>
+
+                    </section>
+                    <section class="aside-section tag">
+                        
+    <h1>Tags</h1>
+
+    <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C++</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CMake/">CMake</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Matlab/">Matlab</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/PCB/">PCB</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/git/">git</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/stm32/">stm32</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/二叉树/">二叉树</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/博客/">博客</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/堆栈/">堆栈</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/嵌入式/">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构/">数据结构</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/树/">树</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/算法/">算法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/蓝牙/">蓝牙</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/链表/">链表</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/错误记录/">错误记录</a></li></ul>
+
+                    </section>
+                </aside>
+        </div>
+        <!-- 页面点击小红心 -->
+        <script type="text/javascript" src="/js/love.js"></script><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+    </body>
+
+</html>
