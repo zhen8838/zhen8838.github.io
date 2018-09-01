@@ -92,70 +92,70 @@
 <p>上一篇<a href="https://zhen8838.github.io/2018/06/20/Linuxblue2/">文章</a>描述了如何使用编程的方式去搜索附近蓝牙，这一次记录我如何编程与HC-06串口蓝牙模块通信。</p>
 <h2 id="搜索以及配对">搜索以及配对</h2>
 <p>如果自己写程序进行搜索与配对，会十分麻烦，这里我就偷懒，使用bluez自带的方式进行蓝牙的配对。 使用bluetoothctl配对蓝牙设备，操作如下：</p>
-<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash"><span class="ex">bluetoothctl</span>
-<span class="ex">scan</span> on <span class="co">#开启搜索</span>
-<span class="ex">devices</span> <span class="co">#查看附近设备</span>
-<span class="ex">scan</span> off <span class="co">#关闭搜索</span>
-<span class="ex">agent</span> on <span class="co">#开启代理</span>
-<span class="ex">default-agent</span>
-<span class="ex">pair</span> 98:D3:37:91:00:DD <span class="co">#配对蓝牙，会提示输入ping码</span>
-<span class="ex">quit</span> <span class="co">#退出</span></code></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><a class="sourceLine" id="cb1-1" data-line-number="1"><span class="ex">bluetoothctl</span></a>
+<a class="sourceLine" id="cb1-2" data-line-number="2"><span class="ex">scan</span> on <span class="co">#开启搜索</span></a>
+<a class="sourceLine" id="cb1-3" data-line-number="3"><span class="ex">devices</span> <span class="co">#查看附近设备</span></a>
+<a class="sourceLine" id="cb1-4" data-line-number="4"><span class="ex">scan</span> off <span class="co">#关闭搜索</span></a>
+<a class="sourceLine" id="cb1-5" data-line-number="5"><span class="ex">agent</span> on <span class="co">#开启代理</span></a>
+<a class="sourceLine" id="cb1-6" data-line-number="6"><span class="ex">default-agent</span></a>
+<a class="sourceLine" id="cb1-7" data-line-number="7"><span class="ex">pair</span> 98:D3:37:91:00:DD <span class="co">#配对蓝牙，会提示输入ping码</span></a>
+<a class="sourceLine" id="cb1-8" data-line-number="8"><span class="ex">quit</span> <span class="co">#退出</span></a></code></pre></div>
 <h2 id="rfcomm通信">rfcomm通信</h2>
 <p>rfcomm是模拟串口的一种通信方式，与串口蓝牙也是以这个方式通信的。方式有两种。</p>
-<ol style="list-style-type: decimal">
+<ol type="1">
 <li><p>命令行操作</p>
-<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash"><span class="ex">rfcomm</span> connect hci0 98:D3:37:91:00:DD <span class="kw">&amp;</span> <span class="co">#放入后台执行</span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><a class="sourceLine" id="cb2-1" data-line-number="1"><span class="ex">rfcomm</span> connect hci0 98:D3:37:91:00:DD <span class="kw">&amp;</span> <span class="co">#放入后台执行</span></a></code></pre></div>
 <p>出现一下内容代表建立rfcomm成功。</p>
-<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash"><span class="ex">Connected</span> /dev/rfcomm0 to 98:D3:37:91:00:DD on channel 1</code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh"><code class="sourceCode bash"><a class="sourceLine" id="cb3-1" data-line-number="1"><span class="ex">Connected</span> /dev/rfcomm0 to 98:D3:37:91:00:DD on channel 1</a></code></pre></div>
 <p>现在我们可以通过对<code>/dev/rfcomm0</code>操作来发送数据，比如：</p>
-<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash"><span class="bu">echo</span> <span class="st">&quot;shell send hello!&quot;</span> <span class="op">&gt;</span> /dev/rfcomm0</code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><a class="sourceLine" id="cb4-1" data-line-number="1"><span class="bu">echo</span> <span class="st">&quot;shell send hello!&quot;</span> <span class="op">&gt;</span> /dev/rfcomm0</a></code></pre></div>
 <p>可以看到蓝牙接收到这条数据了：</p>
-<div align="center">
+<div data-align="center">
 <p><img src="./shell.png"></p>
 </div></li>
 <li><p>程序操作 编写程序如下（<strong>要先配对才可以</strong>）：</p>
-<div class="sourceCode"><pre class="sourceCode c"><code class="sourceCode c"><span class="pp">#include </span><span class="im">&lt;stdio.h&gt;</span>
-<span class="pp">#include </span><span class="im">&lt;unistd.h&gt;</span>
-<span class="pp">#include </span><span class="im">&lt;sys/socket.h&gt;</span>
-<span class="pp">#include </span><span class="im">&lt;bluetooth/bluetooth.h&gt;</span>
-<span class="pp">#include </span><span class="im">&lt;bluetooth/rfcomm.h&gt;</span>
-<span class="pp">#include </span><span class="im">&quot;tlpi_hdr.h&quot;</span>
-<span class="dt">int</span> main(<span class="dt">int</span> argc, <span class="dt">char</span> **argv)
-{
-    <span class="kw">struct</span> sockaddr_rc addr = { <span class="dv">0</span> };
-    <span class="dt">int</span> s, status;
-    <span class="dt">char</span> dest[<span class="dv">18</span>] = <span class="st">&quot;98:D3:37:91:00:DD&quot;</span>;
-
-    <span class="co">// allocate a socket</span>
-    s = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
-
-    <span class="co">// set the connection parameters (who to connect to)</span>
-    addr.rc_family = AF_BLUETOOTH;
-    addr.rc_channel = (<span class="dt">uint8_t</span>) <span class="dv">1</span>;
-    str2ba( dest, &amp;addr.rc_bdaddr );
-
-    <span class="co">// connect to server</span>
-    status = connect(s, (<span class="kw">struct</span> sockaddr *)&amp;addr, <span class="kw">sizeof</span>(addr));
-
-    <span class="co">// send a message</span>
-    <span class="cf">if</span>( status == <span class="dv">0</span> ) {
-        status = write(s, <span class="st">&quot;C send hello!</span><span class="sc">\n</span><span class="st">&quot;</span>, <span class="dv">16</span>);
-    }
-
-    <span class="cf">if</span>( status &lt; <span class="dv">0</span> ) 
-    {
-        errExit(<span class="st">&quot;connct error&quot;</span>);
-    }
-
-    close(s);
-    <span class="cf">return</span> <span class="dv">0</span>;
-}</code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode c"><code class="sourceCode c"><a class="sourceLine" id="cb5-1" data-line-number="1"><span class="pp">#include </span><span class="im">&lt;stdio.h&gt;</span></a>
+<a class="sourceLine" id="cb5-2" data-line-number="2"><span class="pp">#include </span><span class="im">&lt;unistd.h&gt;</span></a>
+<a class="sourceLine" id="cb5-3" data-line-number="3"><span class="pp">#include </span><span class="im">&lt;sys/socket.h&gt;</span></a>
+<a class="sourceLine" id="cb5-4" data-line-number="4"><span class="pp">#include </span><span class="im">&lt;bluetooth/bluetooth.h&gt;</span></a>
+<a class="sourceLine" id="cb5-5" data-line-number="5"><span class="pp">#include </span><span class="im">&lt;bluetooth/rfcomm.h&gt;</span></a>
+<a class="sourceLine" id="cb5-6" data-line-number="6"><span class="pp">#include </span><span class="im">&quot;tlpi_hdr.h&quot;</span></a>
+<a class="sourceLine" id="cb5-7" data-line-number="7"><span class="dt">int</span> main(<span class="dt">int</span> argc, <span class="dt">char</span> **argv)</a>
+<a class="sourceLine" id="cb5-8" data-line-number="8">{</a>
+<a class="sourceLine" id="cb5-9" data-line-number="9">    <span class="kw">struct</span> sockaddr_rc addr = { <span class="dv">0</span> };</a>
+<a class="sourceLine" id="cb5-10" data-line-number="10">    <span class="dt">int</span> s, status;</a>
+<a class="sourceLine" id="cb5-11" data-line-number="11">    <span class="dt">char</span> dest[<span class="dv">18</span>] = <span class="st">&quot;98:D3:37:91:00:DD&quot;</span>;</a>
+<a class="sourceLine" id="cb5-12" data-line-number="12"></a>
+<a class="sourceLine" id="cb5-13" data-line-number="13">    <span class="co">// allocate a socket</span></a>
+<a class="sourceLine" id="cb5-14" data-line-number="14">    s = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);</a>
+<a class="sourceLine" id="cb5-15" data-line-number="15"></a>
+<a class="sourceLine" id="cb5-16" data-line-number="16">    <span class="co">// set the connection parameters (who to connect to)</span></a>
+<a class="sourceLine" id="cb5-17" data-line-number="17">    addr.rc_family = AF_BLUETOOTH;</a>
+<a class="sourceLine" id="cb5-18" data-line-number="18">    addr.rc_channel = (<span class="dt">uint8_t</span>) <span class="dv">1</span>;</a>
+<a class="sourceLine" id="cb5-19" data-line-number="19">    str2ba( dest, &amp;addr.rc_bdaddr );</a>
+<a class="sourceLine" id="cb5-20" data-line-number="20"></a>
+<a class="sourceLine" id="cb5-21" data-line-number="21">    <span class="co">// connect to server</span></a>
+<a class="sourceLine" id="cb5-22" data-line-number="22">    status = connect(s, (<span class="kw">struct</span> sockaddr *)&amp;addr, <span class="kw">sizeof</span>(addr));</a>
+<a class="sourceLine" id="cb5-23" data-line-number="23"></a>
+<a class="sourceLine" id="cb5-24" data-line-number="24">    <span class="co">// send a message</span></a>
+<a class="sourceLine" id="cb5-25" data-line-number="25">    <span class="cf">if</span>( status == <span class="dv">0</span> ) {</a>
+<a class="sourceLine" id="cb5-26" data-line-number="26">        status = write(s, <span class="st">&quot;C send hello!</span><span class="sc">\n</span><span class="st">&quot;</span>, <span class="dv">16</span>);</a>
+<a class="sourceLine" id="cb5-27" data-line-number="27">    }</a>
+<a class="sourceLine" id="cb5-28" data-line-number="28"></a>
+<a class="sourceLine" id="cb5-29" data-line-number="29">    <span class="cf">if</span>( status &lt; <span class="dv">0</span> ) </a>
+<a class="sourceLine" id="cb5-30" data-line-number="30">    {</a>
+<a class="sourceLine" id="cb5-31" data-line-number="31">        errExit(<span class="st">&quot;connct error&quot;</span>);</a>
+<a class="sourceLine" id="cb5-32" data-line-number="32">    }</a>
+<a class="sourceLine" id="cb5-33" data-line-number="33"></a>
+<a class="sourceLine" id="cb5-34" data-line-number="34">    close(s);</a>
+<a class="sourceLine" id="cb5-35" data-line-number="35">    <span class="cf">return</span> <span class="dv">0</span>;</a>
+<a class="sourceLine" id="cb5-36" data-line-number="36">}</a></code></pre></div>
 <p>编译运行：</p>
-<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash"><span class="ex">root@H5</span>:~# gcc -o rfuart_client rfuart_client.c -lbluetooth
-<span class="ex">root@H5</span>:~# ./rfuart_client
-[<span class="ex">1</span>]+  Done                    rfcomm connect hci0 98:D3:37:91:00:DD</code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode sh"><code class="sourceCode bash"><a class="sourceLine" id="cb6-1" data-line-number="1"><span class="ex">root@H5</span>:~# gcc -o rfuart_client rfuart_client.c -lbluetooth</a>
+<a class="sourceLine" id="cb6-2" data-line-number="2"><span class="ex">root@H5</span>:~# ./rfuart_client</a>
+<a class="sourceLine" id="cb6-3" data-line-number="3">[<span class="ex">1</span>]+  Done                    rfcomm connect hci0 98:D3:37:91:00:DD</a></code></pre></div>
 <p>结果如下：</p>
-<div align="center">
+<div data-align="center">
 <p><img src="./c.png"></p>
 </div></li>
 </ol>
@@ -175,14 +175,14 @@
                         
     <h1>Archives</h1>
 
-    <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 08</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 07</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 06</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 05</a></li></ul>
+    <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 09</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 08</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 07</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 06</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 05</a></li></ul>
 
                     </section>
                     <section class="aside-section tag">
                         
     <h1>Tags</h1>
 
-    <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C++</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CMake/">CMake</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Matlab/">Matlab</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/PCB/">PCB</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/git/">git</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/stm32/">stm32</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/二叉树/">二叉树</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/博客/">博客</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/堆栈/">堆栈</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/嵌入式/">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构/">数据结构</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/树/">树</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/算法/">算法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/蓝牙/">蓝牙</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/链表/">链表</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/错误记录/">错误记录</a></li></ul>
+    <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C++</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CMake/">CMake</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Matlab/">Matlab</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/PCB/">PCB</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/git/">git</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/stm32/">stm32</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/二叉树/">二叉树</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/博客/">博客</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/堆栈/">堆栈</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/嵌入式/">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/排序/">排序</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构/">数据结构</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/树/">树</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/算法/">算法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/蓝牙/">蓝牙</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/链表/">链表</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/错误记录/">错误记录</a></li></ul>
 
                     </section>
                 </aside>

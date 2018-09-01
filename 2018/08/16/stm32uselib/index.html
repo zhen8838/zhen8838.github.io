@@ -91,77 +91,77 @@
 <h1 id="生成静态库">生成静态库</h1>
 <p>我使用的是偷懒的方法。首先我的工程是stm32cubemx生成的，其中的makefile，直接可以进行make。编译之后，自动在工程的<code>build</code>目录下生成了一系列的.o .d文件。那么我的任务就是将这些.o文件合成一个静态库。</p>
 <p>首先查看那些是hal库的.o文件</p>
-<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash">➜  <span class="ex">build</span> ls stm32l4xx_hal*.o
-<span class="ex">stm32l4xx_hal_adc_ex.o</span>  stm32l4xx_hal_dma_ex.o    stm32l4xx_hal_flash.o          stm32l4xx_hal_i2c_ex.o  stm32l4xx_hal.o         stm32l4xx_hal_rcc_ex.o  stm32l4xx_hal_tim.o
-<span class="ex">stm32l4xx_hal_adc.o</span>     stm32l4xx_hal_dma.o       stm32l4xx_hal_flash_ramfunc.o  stm32l4xx_hal_i2c.o     stm32l4xx_hal_pwr_ex.o  stm32l4xx_hal_rcc.o     stm32l4xx_hal_uart_ex.o
-<span class="ex">stm32l4xx_hal_cortex.o</span>  stm32l4xx_hal_flash_ex.o  stm32l4xx_hal_gpio.o           stm32l4xx_hal_msp.o     stm32l4xx_hal_pwr.o     stm32l4xx_hal_tim_ex.o  stm32l4xx_hal_uart.o</code></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><a class="sourceLine" id="cb1-1" data-line-number="1">➜  <span class="ex">build</span> ls stm32l4xx_hal*.o</a>
+<a class="sourceLine" id="cb1-2" data-line-number="2"><span class="ex">stm32l4xx_hal_adc_ex.o</span>  stm32l4xx_hal_dma_ex.o    stm32l4xx_hal_flash.o          stm32l4xx_hal_i2c_ex.o  stm32l4xx_hal.o         stm32l4xx_hal_rcc_ex.o  stm32l4xx_hal_tim.o</a>
+<a class="sourceLine" id="cb1-3" data-line-number="3"><span class="ex">stm32l4xx_hal_adc.o</span>     stm32l4xx_hal_dma.o       stm32l4xx_hal_flash_ramfunc.o  stm32l4xx_hal_i2c.o     stm32l4xx_hal_pwr_ex.o  stm32l4xx_hal_rcc.o     stm32l4xx_hal_uart_ex.o</a>
+<a class="sourceLine" id="cb1-4" data-line-number="4"><span class="ex">stm32l4xx_hal_cortex.o</span>  stm32l4xx_hal_flash_ex.o  stm32l4xx_hal_gpio.o           stm32l4xx_hal_msp.o     stm32l4xx_hal_pwr.o     stm32l4xx_hal_tim_ex.o  stm32l4xx_hal_uart.o</a></code></pre></div>
 <p>要注意这里面<strong>stm32l4xx_hal_msp.o</strong>不能加入静态库！，因为这个文件是经常被修改的！所以我们先要删除这个文件</p>
-<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash">➜  <span class="ex">build</span> rm stm32l4xx_hal_msp.o</code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><a class="sourceLine" id="cb2-1" data-line-number="1">➜  <span class="ex">build</span> rm stm32l4xx_hal_msp.o</a></code></pre></div>
 <p>接下来生成静态库（多添加两个文件是因为我觉得这两个文件也不太会改变）：</p>
-<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash">➜  <span class="ex">build</span> arm-none-eabi-ar cr  libhal.a  stm32l4xx_hal*.o system_stm32l4xx.o startup_stm32l431xx.o
-➜  <span class="ex">build</span> mv libhal.a ../</code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh"><code class="sourceCode bash"><a class="sourceLine" id="cb3-1" data-line-number="1">➜  <span class="ex">build</span> arm-none-eabi-ar cr  libhal.a  stm32l4xx_hal*.o system_stm32l4xx.o startup_stm32l431xx.o</a>
+<a class="sourceLine" id="cb3-2" data-line-number="2">➜  <span class="ex">build</span> mv libhal.a ../</a></code></pre></div>
 <p>移动到<code>libhal.a</code>到与<code>makefile</code>同级目录后修改makefile</p>
 <ul>
 <li>注释源文件</li>
 </ul>
 <p>将c源文件和asm源文件中的库文件注释掉。</p>
-<div class="sourceCode"><pre class="sourceCode makefile"><code class="sourceCode makefile">
-<span class="co">######################################</span>
-<span class="co"># source</span>
-<span class="co">######################################</span>
-<span class="co"># C sources</span>
-<span class="dt">C_SOURCES </span><span class="ch">=</span><span class="st">  </span><span class="ch">\</span>
-<span class="st">Src/main.c </span><span class="ch">\</span>
-<span class="st">Src/gpio.c </span><span class="ch">\</span>
-<span class="st">Src/adc.c </span><span class="ch">\</span>
-<span class="st">Src/tim.c </span><span class="ch">\</span>
-<span class="st">Src/usart.c </span><span class="ch">\</span>
-<span class="st">Src/delay.c </span><span class="ch">\</span>
-<span class="st">Hardware/BH1750/BH1750.c </span><span class="ch">\</span>
-<span class="st">Hardware/DHT11/DHT11_BUS.c </span><span class="ch">\</span>
-<span class="st">Hardware/GPS/gps.c </span><span class="ch">\</span>
-<span class="st">Hardware/OLED/oled.c </span><span class="ch">\</span>
-<span class="st">Src/stm32l4xx_it.c </span><span class="ch">\</span>
-<span class="st">Src/stm32l4xx_hal_msp.c </span><span class="ch">\</span>
-<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_adc.c </span><span class="ch">\</span>
-<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_adc_ex.c </span><span class="ch">\</span>
-<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_tim.c </span><span class="ch">\</span>
-<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_tim_ex.c </span><span class="ch">\</span>
-<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_uart.c </span><span class="ch">\</span>
-<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_uart_ex.c </span><span class="ch">\</span>
-<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal.c </span><span class="ch">\</span>
-<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_i2c.c </span><span class="ch">\</span>
-<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_i2c_ex.c </span><span class="ch">\</span>
-<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rcc.c </span><span class="ch">\</span>
-<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rcc_ex.c </span><span class="ch">\</span>
-<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_flash.c </span><span class="ch">\</span>
-<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_flash_ex.c </span><span class="ch">\</span>
-<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_flash_ramfunc.c </span><span class="ch">\</span>
-<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_gpio.c </span><span class="ch">\</span>
-<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_dma.c </span><span class="ch">\</span>
-<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_dma_ex.c </span><span class="ch">\</span>
-<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_pwr.c </span><span class="ch">\</span>
-<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_pwr_ex.c </span><span class="ch">\</span>
-<span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_cortex.c </span><span class="ch">\</span>
-<span class="st"># Src/system_stm32l4xx.c  </span>
-
-<span class="co"># ASM sources</span>
-<span class="dt">ASM_SOURCES </span><span class="ch">=</span><span class="st">  </span><span class="ch">\</span>
-<span class="st"># startup_stm32l431xx.s</span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode makefile"><code class="sourceCode makefile"><a class="sourceLine" id="cb4-1" data-line-number="1"></a>
+<a class="sourceLine" id="cb4-2" data-line-number="2"><span class="co">######################################</span></a>
+<a class="sourceLine" id="cb4-3" data-line-number="3"><span class="co"># source</span></a>
+<a class="sourceLine" id="cb4-4" data-line-number="4"><span class="co">######################################</span></a>
+<a class="sourceLine" id="cb4-5" data-line-number="5"><span class="co"># C sources</span></a>
+<a class="sourceLine" id="cb4-6" data-line-number="6"><span class="dt">C_SOURCES </span><span class="ch">=</span><span class="st">  </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-7" data-line-number="7"><span class="st">Src/main.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-8" data-line-number="8"><span class="st">Src/gpio.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-9" data-line-number="9"><span class="st">Src/adc.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-10" data-line-number="10"><span class="st">Src/tim.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-11" data-line-number="11"><span class="st">Src/usart.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-12" data-line-number="12"><span class="st">Src/delay.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-13" data-line-number="13"><span class="st">Hardware/BH1750/BH1750.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-14" data-line-number="14"><span class="st">Hardware/DHT11/DHT11_BUS.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-15" data-line-number="15"><span class="st">Hardware/GPS/gps.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-16" data-line-number="16"><span class="st">Hardware/OLED/oled.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-17" data-line-number="17"><span class="st">Src/stm32l4xx_it.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-18" data-line-number="18"><span class="st">Src/stm32l4xx_hal_msp.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-19" data-line-number="19"><span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_adc.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-20" data-line-number="20"><span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_adc_ex.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-21" data-line-number="21"><span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_tim.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-22" data-line-number="22"><span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_tim_ex.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-23" data-line-number="23"><span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_uart.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-24" data-line-number="24"><span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_uart_ex.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-25" data-line-number="25"><span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-26" data-line-number="26"><span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_i2c.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-27" data-line-number="27"><span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_i2c_ex.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-28" data-line-number="28"><span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rcc.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-29" data-line-number="29"><span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rcc_ex.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-30" data-line-number="30"><span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_flash.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-31" data-line-number="31"><span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_flash_ex.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-32" data-line-number="32"><span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_flash_ramfunc.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-33" data-line-number="33"><span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_gpio.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-34" data-line-number="34"><span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_dma.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-35" data-line-number="35"><span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_dma_ex.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-36" data-line-number="36"><span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_pwr.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-37" data-line-number="37"><span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_pwr_ex.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-38" data-line-number="38"><span class="st"># Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_cortex.c </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-39" data-line-number="39"><span class="st"># Src/system_stm32l4xx.c  </span></a>
+<a class="sourceLine" id="cb4-40" data-line-number="40"></a>
+<a class="sourceLine" id="cb4-41" data-line-number="41"><span class="co"># ASM sources</span></a>
+<a class="sourceLine" id="cb4-42" data-line-number="42"><span class="dt">ASM_SOURCES </span><span class="ch">=</span><span class="st">  </span><span class="ch">\</span></a>
+<a class="sourceLine" id="cb4-43" data-line-number="43"><span class="st"># startup_stm32l431xx.s</span></a></code></pre></div>
 <ul>
 <li>添加连接库</li>
 </ul>
 <p>在<code>LIBS</code>后面添加上静态库的名字，然后编译即可</p>
-<div class="sourceCode"><pre class="sourceCode makefile"><code class="sourceCode makefile"><span class="co">#######################################</span>
-<span class="co"># LDFLAGS</span>
-<span class="co">#######################################</span>
-<span class="co"># link script</span>
-<span class="dt">LDSCRIPT </span><span class="ch">=</span><span class="st"> STM32L431RBTx_FLASH.ld</span>
-
-<span class="co"># libraries</span>
-<span class="dt">LIBS </span><span class="ch">=</span><span class="st"> -lc -lm -lnosys libhal.a</span>
-<span class="dt">LIBDIR </span><span class="ch">=</span><span class="st"> </span>
-<span class="dt">LDFLAGS </span><span class="ch">=</span><span class="st"> </span><span class="ch">$(</span><span class="dt">MCU</span><span class="ch">)</span><span class="st"> -specs=nano.specs -T</span><span class="ch">$(</span><span class="dt">LDSCRIPT</span><span class="ch">)</span><span class="st"> </span><span class="ch">$(</span><span class="dt">LIBDIR</span><span class="ch">)</span><span class="st"> </span><span class="ch">$(</span><span class="dt">LIBS</span><span class="ch">)</span><span class="st"> -Wl,-Map=</span><span class="ch">$(</span><span class="dt">BUILD_DIR</span><span class="ch">)</span><span class="st">/</span><span class="ch">$(</span><span class="dt">TARGET</span><span class="ch">)</span><span class="st">.map,--cref -Wl,--gc-sections</span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode makefile"><code class="sourceCode makefile"><a class="sourceLine" id="cb5-1" data-line-number="1"><span class="co">#######################################</span></a>
+<a class="sourceLine" id="cb5-2" data-line-number="2"><span class="co"># LDFLAGS</span></a>
+<a class="sourceLine" id="cb5-3" data-line-number="3"><span class="co">#######################################</span></a>
+<a class="sourceLine" id="cb5-4" data-line-number="4"><span class="co"># link script</span></a>
+<a class="sourceLine" id="cb5-5" data-line-number="5"><span class="dt">LDSCRIPT </span><span class="ch">=</span><span class="st"> STM32L431RBTx_FLASH.ld</span></a>
+<a class="sourceLine" id="cb5-6" data-line-number="6"></a>
+<a class="sourceLine" id="cb5-7" data-line-number="7"><span class="co"># libraries</span></a>
+<a class="sourceLine" id="cb5-8" data-line-number="8"><span class="dt">LIBS </span><span class="ch">=</span><span class="st"> -lc -lm -lnosys libhal.a</span></a>
+<a class="sourceLine" id="cb5-9" data-line-number="9"><span class="dt">LIBDIR </span><span class="ch">=</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb5-10" data-line-number="10"><span class="dt">LDFLAGS </span><span class="ch">=</span><span class="st"> </span><span class="ch">$(</span><span class="dt">MCU</span><span class="ch">)</span><span class="st"> -specs=nano.specs -T</span><span class="ch">$(</span><span class="dt">LDSCRIPT</span><span class="ch">)</span><span class="st"> </span><span class="ch">$(</span><span class="dt">LIBDIR</span><span class="ch">)</span><span class="st"> </span><span class="ch">$(</span><span class="dt">LIBS</span><span class="ch">)</span><span class="st"> -Wl,-Map=</span><span class="ch">$(</span><span class="dt">BUILD_DIR</span><span class="ch">)</span><span class="st">/</span><span class="ch">$(</span><span class="dt">TARGET</span><span class="ch">)</span><span class="st">.map,--cref -Wl,--gc-sections</span></a></code></pre></div>
 <h1 id="效果">效果</h1>
 <p>编译快了许多～～～</p>
 
@@ -180,14 +180,14 @@
                         
     <h1>Archives</h1>
 
-    <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 08</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 07</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 06</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 05</a></li></ul>
+    <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 09</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 08</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 07</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 06</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/">2018 . 05</a></li></ul>
 
                     </section>
                     <section class="aside-section tag">
                         
     <h1>Tags</h1>
 
-    <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C++</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CMake/">CMake</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Matlab/">Matlab</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/PCB/">PCB</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/git/">git</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/stm32/">stm32</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/二叉树/">二叉树</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/博客/">博客</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/堆栈/">堆栈</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/嵌入式/">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构/">数据结构</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/树/">树</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/算法/">算法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/蓝牙/">蓝牙</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/链表/">链表</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/错误记录/">错误记录</a></li></ul>
+    <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C++</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CMake/">CMake</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Matlab/">Matlab</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/PCB/">PCB</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/git/">git</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/stm32/">stm32</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/二叉树/">二叉树</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/博客/">博客</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/堆栈/">堆栈</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/嵌入式/">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/排序/">排序</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构/">数据结构</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/树/">树</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/算法/">算法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/蓝牙/">蓝牙</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/链表/">链表</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/错误记录/">错误记录</a></li></ul>
 
                     </section>
                 </aside>
