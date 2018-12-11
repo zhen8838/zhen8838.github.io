@@ -15,7 +15,7 @@
 <meta property="og:site_name" content="Practice">
 <meta property="og:description" content="高速gpio拥有更快的反转能力，并且一共有32个io，足够我们使用。">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2018-11-14T06:36:18.606Z">
+<meta property="og:updated_time" content="2018-12-11T08:37:33.463Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="k210 高速gpio与中断">
 <meta name="twitter:description" content="高速gpio拥有更快的反转能力，并且一共有32个io，足够我们使用。">
@@ -100,7 +100,41 @@
 <h1 id="k210外部中断">K210外部中断</h1>
 <p>可以将任意的外部中断分配到cpu中。</p>
 <h1 id="代码">代码</h1>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">"fpioa.h"</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">"gpiohs.h"</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">"sysctl.h"</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;unistd.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">int</span> irq_flag= <span class="number">1</span>;</span><br><span class="line"><span class="comment">/* clang-format off */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> PIN_LED     12</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> PIN_KEY     14</span></span><br><span class="line"><span class="comment">/* clang-format on */</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">irq_gpiohs2</span><span class="params">(<span class="keyword">void</span> *gp)</span> </span>&#123;</span><br><span class="line">    irq_flag= gpiohs_get_pin(<span class="number">2</span>); <span class="comment">/* 进入中断后读取KEY值 */</span></span><br><span class="line"></span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">"IRQ The PIN is %d\n"</span>, irq_flag);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (irq_flag) <span class="comment">/* 设置LED状态 */</span></span><br><span class="line">        gpiohs_set_pin(<span class="number">3</span>, GPIO_PV_LOW);</span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">        gpiohs_set_pin(<span class="number">3</span>, GPIO_PV_HIGH);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">void</span>)</span> </span>&#123;</span><br><span class="line">    plic_init();         <span class="comment">/* 初始化中断 */</span></span><br><span class="line">    sysctl_enable_irq(); <span class="comment">/* 使能系统中断 */</span></span><br><span class="line"></span><br><span class="line">    fpioa_set_function(PIN_LED, FUNC_GPIOHS3); <span class="comment">/* LED映射高速GPIO3 */</span></span><br><span class="line">    gpiohs_set_drive_mode(<span class="number">3</span>, GPIO_DM_OUTPUT);  <span class="comment">/* 设置GPIOHS3 输出 */</span></span><br><span class="line">    <span class="keyword">gpio_pin_value_t</span> value= GPIO_PV_HIGH;      <span class="comment">/* 初始化GPIO状态 */</span></span><br><span class="line">    gpiohs_set_pin(<span class="number">3</span>, value);                  <span class="comment">/* GPIO状态设置 */</span></span><br><span class="line"></span><br><span class="line">    fpioa_set_function(PIN_KEY, FUNC_GPIOHS2); <span class="comment">/* KEY映射GPIOHS2 */</span></span><br><span class="line">    gpiohs_set_drive_mode(<span class="number">2</span>, GPIO_DM_INPUT);   <span class="comment">/* 设置GPIOHS2 输入 */</span></span><br><span class="line">    gpiohs_set_pin_edge(<span class="number">2</span>, GPIO_PE_BOTH);      <span class="comment">/* 设置双沿触发 */</span></span><br><span class="line">    gpiohs_set_irq(<span class="number">2</span>, <span class="number">1</span>, irq_gpiohs2); <span class="comment">/* 设置回调函数，优先级1 */</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span> (<span class="number">1</span>) &#123;</span><br><span class="line">        sleep(<span class="number">1</span>);</span><br><span class="line">        <span class="keyword">if</span> (irq_flag) &#123; gpiohs_set_pin(<span class="number">3</span>, value= !value); &#125;</span><br><span class="line">        <span class="keyword">int</span> val= gpiohs_get_pin(<span class="number">2</span>); <span class="comment">/* 正常状态读取KEY值 */</span></span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">"The PIN is %d\n"</span>, val);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
+<p>```c</p>
+<h1 id="include-“fpioa-h”"><a href="#include-“fpioa-h”" class="headerlink" title="include “fpioa.h”"></a>include “fpioa.h”</h1><h1 id="include-“gpiohs-h”"><a href="#include-“gpiohs-h”" class="headerlink" title="include “gpiohs.h”"></a>include “gpiohs.h”</h1><h1 id="include-“sysctl-h”"><a href="#include-“sysctl-h”" class="headerlink" title="include “sysctl.h”"></a>include “sysctl.h”</h1><h1 id="include"><a href="#include" class="headerlink" title="include "></a>include <stdio.h></stdio.h></h1><h1 id="include-1"><a href="#include-1" class="headerlink" title="include "></a>include <unistd.h></unistd.h></h1><p>int irq_flag= 1;<br>/<em> clang-format off </em>/</p>
+<h1 id="define-PIN-LED-12"><a href="#define-PIN-LED-12" class="headerlink" title="define PIN_LED     12"></a>define PIN_LED     12</h1><h1 id="define-PIN-KEY-14"><a href="#define-PIN-KEY-14" class="headerlink" title="define PIN_KEY     14"></a>define PIN_KEY     14</h1><p>/<em> clang-format on </em>/</p>
+<p>void irq_gpiohs2(void <em>gp) {<br>    irq_flag= gpiohs_get_pin(2); /</em> 进入中断后读取KEY值 */</p>
+<pre><code>printf(&quot;IRQ The PIN is %d\n&quot;, irq_flag);
+
+if (irq_flag) /* 设置LED状态 */
+    gpiohs_set_pin(3, GPIO_PV_LOW);
+else
+    gpiohs_set_pin(3, GPIO_PV_HIGH);
+</code></pre><p>}</p>
+<p>int main(void) {<br>    plic_init();         /<em> 初始化中断 </em>/<br>    sysctl_enable_irq(); /<em> 使能系统中断 </em>/</p>
+<pre><code>fpioa_set_function(PIN_LED, FUNC_GPIOHS3); /* LED映射高速GPIO3 */
+gpiohs_set_drive_mode(3, GPIO_DM_OUTPUT);  /* 设置GPIOHS3 输出 */
+gpio_pin_value_t value= GPIO_PV_HIGH;      /* 初始化GPIO状态 */
+gpiohs_set_pin(3, value);                  /* GPIO状态设置 */
+
+fpioa_set_function(PIN_KEY, FUNC_GPIOHS2); /* KEY映射GPIOHS2 */
+gpiohs_set_drive_mode(2, GPIO_DM_INPUT);   /* 设置GPIOHS2 输入 */
+gpiohs_set_pin_edge(2, GPIO_PE_BOTH);      /* 设置双沿触发 */
+gpiohs_set_irq(2, 1, irq_gpiohs2); /* 设置回调函数，优先级1 */
+
+while (1) {
+    sleep(1);
+    if (irq_flag) { gpiohs_set_pin(3, value= !value); }
+    int val= gpiohs_get_pin(2); /* 正常状态读取KEY值 */
+    printf(&quot;The PIN is %d\n&quot;, val);
+}
+return 0;
+</code></pre><p>}</p>
+<p>``</p>
+
+</div></div>
+<p>`</p>
 
       
     </div>
@@ -113,13 +147,47 @@
 <h1 id="k210外部中断">K210外部中断</h1>
 <p>可以将任意的外部中断分配到cpu中。</p>
 <h1 id="代码">代码</h1>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">"fpioa.h"</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">"gpiohs.h"</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">"sysctl.h"</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;unistd.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">int</span> irq_flag= <span class="number">1</span>;</span><br><span class="line"><span class="comment">/* clang-format off */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> PIN_LED     12</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> PIN_KEY     14</span></span><br><span class="line"><span class="comment">/* clang-format on */</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">irq_gpiohs2</span><span class="params">(<span class="keyword">void</span> *gp)</span> </span>&#123;</span><br><span class="line">    irq_flag= gpiohs_get_pin(<span class="number">2</span>); <span class="comment">/* 进入中断后读取KEY值 */</span></span><br><span class="line"></span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">"IRQ The PIN is %d\n"</span>, irq_flag);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (irq_flag) <span class="comment">/* 设置LED状态 */</span></span><br><span class="line">        gpiohs_set_pin(<span class="number">3</span>, GPIO_PV_LOW);</span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">        gpiohs_set_pin(<span class="number">3</span>, GPIO_PV_HIGH);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">void</span>)</span> </span>&#123;</span><br><span class="line">    plic_init();         <span class="comment">/* 初始化中断 */</span></span><br><span class="line">    sysctl_enable_irq(); <span class="comment">/* 使能系统中断 */</span></span><br><span class="line"></span><br><span class="line">    fpioa_set_function(PIN_LED, FUNC_GPIOHS3); <span class="comment">/* LED映射高速GPIO3 */</span></span><br><span class="line">    gpiohs_set_drive_mode(<span class="number">3</span>, GPIO_DM_OUTPUT);  <span class="comment">/* 设置GPIOHS3 输出 */</span></span><br><span class="line">    <span class="keyword">gpio_pin_value_t</span> value= GPIO_PV_HIGH;      <span class="comment">/* 初始化GPIO状态 */</span></span><br><span class="line">    gpiohs_set_pin(<span class="number">3</span>, value);                  <span class="comment">/* GPIO状态设置 */</span></span><br><span class="line"></span><br><span class="line">    fpioa_set_function(PIN_KEY, FUNC_GPIOHS2); <span class="comment">/* KEY映射GPIOHS2 */</span></span><br><span class="line">    gpiohs_set_drive_mode(<span class="number">2</span>, GPIO_DM_INPUT);   <span class="comment">/* 设置GPIOHS2 输入 */</span></span><br><span class="line">    gpiohs_set_pin_edge(<span class="number">2</span>, GPIO_PE_BOTH);      <span class="comment">/* 设置双沿触发 */</span></span><br><span class="line">    gpiohs_set_irq(<span class="number">2</span>, <span class="number">1</span>, irq_gpiohs2); <span class="comment">/* 设置回调函数，优先级1 */</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span> (<span class="number">1</span>) &#123;</span><br><span class="line">        sleep(<span class="number">1</span>);</span><br><span class="line">        <span class="keyword">if</span> (irq_flag) &#123; gpiohs_set_pin(<span class="number">3</span>, value= !value); &#125;</span><br><span class="line">        <span class="keyword">int</span> val= gpiohs_get_pin(<span class="number">2</span>); <span class="comment">/* 正常状态读取KEY值 */</span></span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">"The PIN is %d\n"</span>, val);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
+<p>```c</p>
+<h1 id="include-“fpioa-h”"><a href="#include-“fpioa-h”" class="headerlink" title="include “fpioa.h”"></a>include “fpioa.h”</h1><h1 id="include-“gpiohs-h”"><a href="#include-“gpiohs-h”" class="headerlink" title="include “gpiohs.h”"></a>include “gpiohs.h”</h1><h1 id="include-“sysctl-h”"><a href="#include-“sysctl-h”" class="headerlink" title="include “sysctl.h”"></a>include “sysctl.h”</h1><h1 id="include"><a href="#include" class="headerlink" title="include "></a>include <stdio.h></stdio.h></h1><h1 id="include-1"><a href="#include-1" class="headerlink" title="include "></a>include <unistd.h></unistd.h></h1><p>int irq_flag= 1;<br>/<em> clang-format off </em>/</p>
+<h1 id="define-PIN-LED-12"><a href="#define-PIN-LED-12" class="headerlink" title="define PIN_LED     12"></a>define PIN_LED     12</h1><h1 id="define-PIN-KEY-14"><a href="#define-PIN-KEY-14" class="headerlink" title="define PIN_KEY     14"></a>define PIN_KEY     14</h1><p>/<em> clang-format on </em>/</p>
+<p>void irq_gpiohs2(void <em>gp) {<br>    irq_flag= gpiohs_get_pin(2); /</em> 进入中断后读取KEY值 */</p>
+<pre><code>printf(&quot;IRQ The PIN is %d\n&quot;, irq_flag);
+
+if (irq_flag) /* 设置LED状态 */
+    gpiohs_set_pin(3, GPIO_PV_LOW);
+else
+    gpiohs_set_pin(3, GPIO_PV_HIGH);
+</code></pre><p>}</p>
+<p>int main(void) {<br>    plic_init();         /<em> 初始化中断 </em>/<br>    sysctl_enable_irq(); /<em> 使能系统中断 </em>/</p>
+<pre><code>fpioa_set_function(PIN_LED, FUNC_GPIOHS3); /* LED映射高速GPIO3 */
+gpiohs_set_drive_mode(3, GPIO_DM_OUTPUT);  /* 设置GPIOHS3 输出 */
+gpio_pin_value_t value= GPIO_PV_HIGH;      /* 初始化GPIO状态 */
+gpiohs_set_pin(3, value);                  /* GPIO状态设置 */
+
+fpioa_set_function(PIN_KEY, FUNC_GPIOHS2); /* KEY映射GPIOHS2 */
+gpiohs_set_drive_mode(2, GPIO_DM_INPUT);   /* 设置GPIOHS2 输入 */
+gpiohs_set_pin_edge(2, GPIO_PE_BOTH);      /* 设置双沿触发 */
+gpiohs_set_irq(2, 1, irq_gpiohs2); /* 设置回调函数，优先级1 */
+
+while (1) {
+    sleep(1);
+    if (irq_flag) { gpiohs_set_pin(3, value= !value); }
+    int val= gpiohs_get_pin(2); /* 正常状态读取KEY值 */
+    printf(&quot;The PIN is %d\n&quot;, val);
+}
+return 0;
+</code></pre><p>}</p>
+<p>``</p>
+
+</div></div>
+<p>`</p>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2018/11/03/k210-gpiohs-irq/" data-id="cjpgwxyli003n0b6xs94iobzq" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2018/11/03/k210-gpiohs-irq/" data-id="cjpji6v72003a8g6xjswa1nc9" class="article-share-link">Share</a>
       
       
       
@@ -180,7 +248,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">标签云</h3>
     <div class="widget tagcloud">
-      <a href="/tags/C/" style="font-size: 14px;">C</a> <a href="/tags/C/" style="font-size: 13px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/Eigen/" style="font-size: 10px;">Eigen</a> <a href="/tags/Linux/" style="font-size: 20px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 13px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 13px;">OJ</a> <a href="/tags/PCB/" style="font-size: 11px;">PCB</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 15px;">k210</a> <a href="/tags/python/" style="font-size: 16px;">python</a> <a href="/tags/stm32/" style="font-size: 12px;">stm32</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 14px;">作业</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/堆栈/" style="font-size: 11px;">堆栈</a> <a href="/tags/小工具/" style="font-size: 12px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 18px;">嵌入式</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 19px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 17px;">机器学习</a> <a href="/tags/树/" style="font-size: 13px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/神经网络/" style="font-size: 11px;">神经网络</a> <a href="/tags/算法/" style="font-size: 12px;">算法</a> <a href="/tags/聚类/" style="font-size: 13px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13px;">蓝牙</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/链表/" style="font-size: 12px;">链表</a> <a href="/tags/错误记录/" style="font-size: 17px;">错误记录</a>
+      <a href="/tags/C/" style="font-size: 13.64px;">C</a> <a href="/tags/C/" style="font-size: 12.73px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/Eigen/" style="font-size: 10px;">Eigen</a> <a href="/tags/Linux/" style="font-size: 20px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12.73px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12.73px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.91px;">PCB</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 15.45px;">k210</a> <a href="/tags/python/" style="font-size: 17.27px;">python</a> <a href="/tags/stm32/" style="font-size: 11.82px;">stm32</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 14.55px;">作业</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/堆栈/" style="font-size: 10.91px;">堆栈</a> <a href="/tags/小工具/" style="font-size: 12.73px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 18.18px;">嵌入式</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 19.09px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 17.27px;">机器学习</a> <a href="/tags/树/" style="font-size: 12.73px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/神经网络/" style="font-size: 10.91px;">神经网络</a> <a href="/tags/算法/" style="font-size: 11.82px;">算法</a> <a href="/tags/聚类/" style="font-size: 12.73px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 12.73px;">蓝牙</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/链表/" style="font-size: 11.82px;">链表</a> <a href="/tags/错误记录/" style="font-size: 16.36px;">错误记录</a>
     </div>
   </div>
 
@@ -202,6 +270,14 @@
       <ul>
         
           <li>
+            <a href="/2018/12/12/addfoldpy/">代码块自动添加折叠</a>
+          </li>
+        
+          <li>
+            <a href="/2018/12/11/bpnnfit/">BP神经网络回归</a>
+          </li>
+        
+          <li>
             <a href="/2018/12/10/wenda-week5/">机器学习作业第五周</a>
           </li>
         
@@ -211,14 +287,6 @@
         
           <li>
             <a href="/2018/12/05/wenda-week3/">机器学习作业第三周</a>
-          </li>
-        
-          <li>
-            <a href="/2018/12/03/numpyslice/">numpy切片中的坑</a>
-          </li>
-        
-          <li>
-            <a href="/2018/12/02/filebreak/">ntfs文件损坏</a>
           </li>
         
       </ul>
