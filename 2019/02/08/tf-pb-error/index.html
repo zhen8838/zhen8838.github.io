@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html>
+<head><meta name="generator" content="Hexo 3.8.0">
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><meta charset="utf-8">
+  
+
+  
+  <title>Tensorflow加载pb推理输出不正确 | Practice</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="我最近做网络测试的时候,我发现推理出的结果和我训练的时候结果完全不相同.我做了一番测试.">
+<meta name="keywords" content="错误记录,tensorflow">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Tensorflow加载pb推理输出不正确">
+<meta property="og:url" content="https://zhen8838.github.io/2019/02/08/tf-pb-error/index.html">
+<meta property="og:site_name" content="Practice">
+<meta property="og:description" content="我最近做网络测试的时候,我发现推理出的结果和我训练的时候结果完全不相同.我做了一番测试.">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://zhen8838.github.io/2019/02/08/tf-pb-error/p1.png">
+<meta property="og:image" content="https://zhen8838.github.io/2019/02/08/tf-pb-error/p2.png">
+<meta property="og:updated_time" content="2019-02-07T13:08:42.507Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Tensorflow加载pb推理输出不正确">
+<meta name="twitter:description" content="我最近做网络测试的时候,我发现推理出的结果和我训练的时候结果完全不相同.我做了一番测试.">
+<meta name="twitter:image" content="https://zhen8838.github.io/2019/02/08/tf-pb-error/p1.png">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.lug.ustc.edu.cn/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+    <!-- <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css"> -->
+    <!-- <link href="//fonts.useso.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css"> -->
+  
+  <link rel="stylesheet" href="/css/style.css"><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+</head>
+</html>
+<body>
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Practice</a>
+      </h1>
+      
+        <h2 id="subtitle-wrap">
+          <a href="/" id="subtitle">一个分享经验的地方</a>
+        </h2>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+          <a class="main-nav-link" href="/about">about</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+        <a id="nav-search-btn" class="nav-icon" title="搜索"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="https://zhen8838.github.io"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-tf-pb-error" class="article article-type-post" itemscope="" itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2019/02/08/tf-pb-error/" class="article-date">
+  <time datetime="2019-02-07T20:39:08.000Z" itemprop="datePublished">2019-02-07</time>
+</a>
+    
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/学习/">学习</a>
+  </div>
+
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      Tensorflow加载pb推理输出不正确
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>我最近做网络测试的时候,我发现推理出的结果和我训练的时候结果完全不相同.我做了一番测试.</p>
+<a id="more"></a>
+<h1 id="测试">测试</h1>
+<p>首先我的原始的测试流程如下: <img src="/2019/02/08/tf-pb-error/p1.png"></p>
+<p>以上构建新图原因是因为要把网络输入修改成<code>Batch Size=1</code>.</p>
+<p>之后的测试流程我直接训练结束保存pb文件: <img src="/2019/02/08/tf-pb-error/p2.png"></p>
+<h2 id="测试代码">测试代码</h2>
+<div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> models.yolonet <span class="keyword">import</span> yoloconv</span><br><span class="line"><span class="keyword">import</span> tensorflow <span class="keyword">as</span> tf</span><br><span class="line"><span class="keyword">from</span> tools.utils <span class="keyword">import</span> helper</span><br><span class="line"><span class="keyword">import</span> skimage</span><br><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line"><span class="keyword">from</span> scipy.special <span class="keyword">import</span> expit</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">"__main__"</span>:</span><br><span class="line">    tf.enable_eager_execution()</span><br><span class="line">    fddb = helper(<span class="string">'/home/zqh/Documents/faces/data/train.list'</span>, (<span class="number">224</span>, <span class="number">320</span>), (<span class="number">7</span>, <span class="number">10</span>))</span><br><span class="line">    gen = fddb.generator()</span><br><span class="line">    tf.reset_default_graph()</span><br><span class="line">    g = tf.Graph()</span><br><span class="line">    g1 = tf.Graph()</span><br><span class="line">    <span class="keyword">with</span> g.as_default():</span><br><span class="line">        <span class="keyword">with</span> tf.gfile.GFile(<span class="string">'/home/zqh/Documents/faces/Training_save.pb'</span>, <span class="string">'rb'</span>) <span class="keyword">as</span> f:</span><br><span class="line">            Training_save = tf.GraphDef()</span><br><span class="line">            Training_save.ParseFromString(f.read())</span><br><span class="line">        tf.import_graph_def(Training_save, name=<span class="string">''</span>)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">with</span> g1.as_default():</span><br><span class="line">        <span class="keyword">with</span> tf.gfile.GFile(<span class="string">'/home/zqh/Documents/faces/Freeze_save.pb.pb'</span>, <span class="string">'rb'</span>) <span class="keyword">as</span> f:</span><br><span class="line">            Freeze_save = tf.GraphDef()</span><br><span class="line">            Freeze_save.ParseFromString(f.read())</span><br><span class="line">        tf.import_graph_def(Freeze_save, name=<span class="string">''</span>)</span><br><span class="line"></span><br><span class="line">    train_weights = [opt <span class="keyword">for</span> opt <span class="keyword">in</span> g.get_operations() <span class="keyword">if</span> <span class="string">'read'</span> <span class="keyword">in</span> opt.name]</span><br><span class="line">    train_weights = [g.get_tensor_by_name(opt.name+<span class="string">':0'</span>) <span class="keyword">for</span> opt <span class="keyword">in</span> train_weights]</span><br><span class="line"></span><br><span class="line">    freeze_weights = [opt <span class="keyword">for</span> opt <span class="keyword">in</span> g1.get_operations() <span class="keyword">if</span> <span class="string">'read'</span> <span class="keyword">in</span> opt.name]</span><br><span class="line">    freeze_weights = [g1.get_tensor_by_name(opt.name+<span class="string">':0'</span>) <span class="keyword">for</span> opt <span class="keyword">in</span> freeze_weights]</span><br><span class="line"></span><br><span class="line">    <span class="string">""" start compare weights """</span></span><br><span class="line">    <span class="keyword">with</span> tf.Session(graph=g) <span class="keyword">as</span> t_sess:</span><br><span class="line">        t_var_dict = &#123;&#125;</span><br><span class="line">        <span class="keyword">for</span> var <span class="keyword">in</span> train_weights:</span><br><span class="line">            t_var_dict[var.name] = t_sess.run(var)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">with</span> tf.Session(graph=g1) <span class="keyword">as</span> f_sess:</span><br><span class="line">        f_var_dict = &#123;&#125;</span><br><span class="line">        <span class="keyword">for</span> var <span class="keyword">in</span> freeze_weights:</span><br><span class="line">            f_var_dict[var.name] = f_sess.run(var)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> name, value <span class="keyword">in</span> t_var_dict.items():</span><br><span class="line">        <span class="comment"># ! all weights are equal</span></span><br><span class="line">        <span class="keyword">assert</span> np.array_equal(t_var_dict[name], f_var_dict[name])</span><br><span class="line"></span><br><span class="line">    <span class="string">""" start test output """</span></span><br><span class="line">    img, label = next(gen)</span><br><span class="line">    img = img[np.newaxis, :, :, :]</span><br><span class="line">    <span class="keyword">with</span> tf.Session(graph=g) <span class="keyword">as</span> t_sess:</span><br><span class="line">        t_output = t_sess.run(g.get_tensor_by_name(<span class="string">'predict:0'</span>), feed_dict=&#123;g.get_tensor_by_name(<span class="string">'Input_image:0'</span>): img&#125;)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">with</span> tf.Session(graph=g1) <span class="keyword">as</span> f_sess:</span><br><span class="line">        f_output = f_sess.run(g1.get_tensor_by_name(<span class="string">'predict:0'</span>), feed_dict=&#123;g1.get_tensor_by_name(<span class="string">'Input_image:0'</span>): img&#125;)</span><br><span class="line"></span><br><span class="line">    t_output = expit(t_output)</span><br><span class="line">    f_output = expit(f_output)</span><br><span class="line">    <span class="comment"># ! array not equal    Why ??</span></span><br><span class="line">    <span class="keyword">if</span> np.array_equal(t_output, f_output):</span><br><span class="line">        print(<span class="string">'test success!'</span>)</span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        print(<span class="string">'results not equal. Why ??'</span>)</span><br></pre></td></tr></table></figure>
+
+</div></div>
+<h2 id="运行结果">运行结果</h2>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">results not equal. Why ??</span><br></pre></td></tr></table></figure>
+<p>以上代码中,我加载了两种不同保存方式的权重,然后一一对比了<strong>所有权重</strong>,权重<strong>完全相同</strong>,证明了保存pb的方式都没有问题.但是同一张图像,两个网络的输出结果确实不相同的.这个就十分诡异.</p>
+<h1 id="解决方案">解决方案</h1>
+<p>我暂时也没用找到问题的原因,所以暂时还是直接训练完之后保存成pb文件.</p>
+
+      
+    </div>
+    <!-- <div class="article-entry" itemprop="articleBody">
+      
+        
+        
+          <p>我最近做网络测试的时候,我发现推理出的结果和我训练的时候结果完全不相同.我做了一番测试.</p>
+<a id="more"></a>
+<h1 id="测试">测试</h1>
+<p>首先我的原始的测试流程如下: <img src="/2019/02/08/tf-pb-error/p1.png"></p>
+<p>以上构建新图原因是因为要把网络输入修改成<code>Batch Size=1</code>.</p>
+<p>之后的测试流程我直接训练结束保存pb文件: <img src="/2019/02/08/tf-pb-error/p2.png"></p>
+<h2 id="测试代码">测试代码</h2>
+<div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> models.yolonet <span class="keyword">import</span> yoloconv</span><br><span class="line"><span class="keyword">import</span> tensorflow <span class="keyword">as</span> tf</span><br><span class="line"><span class="keyword">from</span> tools.utils <span class="keyword">import</span> helper</span><br><span class="line"><span class="keyword">import</span> skimage</span><br><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line"><span class="keyword">from</span> scipy.special <span class="keyword">import</span> expit</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">"__main__"</span>:</span><br><span class="line">    tf.enable_eager_execution()</span><br><span class="line">    fddb = helper(<span class="string">'/home/zqh/Documents/faces/data/train.list'</span>, (<span class="number">224</span>, <span class="number">320</span>), (<span class="number">7</span>, <span class="number">10</span>))</span><br><span class="line">    gen = fddb.generator()</span><br><span class="line">    tf.reset_default_graph()</span><br><span class="line">    g = tf.Graph()</span><br><span class="line">    g1 = tf.Graph()</span><br><span class="line">    <span class="keyword">with</span> g.as_default():</span><br><span class="line">        <span class="keyword">with</span> tf.gfile.GFile(<span class="string">'/home/zqh/Documents/faces/Training_save.pb'</span>, <span class="string">'rb'</span>) <span class="keyword">as</span> f:</span><br><span class="line">            Training_save = tf.GraphDef()</span><br><span class="line">            Training_save.ParseFromString(f.read())</span><br><span class="line">        tf.import_graph_def(Training_save, name=<span class="string">''</span>)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">with</span> g1.as_default():</span><br><span class="line">        <span class="keyword">with</span> tf.gfile.GFile(<span class="string">'/home/zqh/Documents/faces/Freeze_save.pb.pb'</span>, <span class="string">'rb'</span>) <span class="keyword">as</span> f:</span><br><span class="line">            Freeze_save = tf.GraphDef()</span><br><span class="line">            Freeze_save.ParseFromString(f.read())</span><br><span class="line">        tf.import_graph_def(Freeze_save, name=<span class="string">''</span>)</span><br><span class="line"></span><br><span class="line">    train_weights = [opt <span class="keyword">for</span> opt <span class="keyword">in</span> g.get_operations() <span class="keyword">if</span> <span class="string">'read'</span> <span class="keyword">in</span> opt.name]</span><br><span class="line">    train_weights = [g.get_tensor_by_name(opt.name+<span class="string">':0'</span>) <span class="keyword">for</span> opt <span class="keyword">in</span> train_weights]</span><br><span class="line"></span><br><span class="line">    freeze_weights = [opt <span class="keyword">for</span> opt <span class="keyword">in</span> g1.get_operations() <span class="keyword">if</span> <span class="string">'read'</span> <span class="keyword">in</span> opt.name]</span><br><span class="line">    freeze_weights = [g1.get_tensor_by_name(opt.name+<span class="string">':0'</span>) <span class="keyword">for</span> opt <span class="keyword">in</span> freeze_weights]</span><br><span class="line"></span><br><span class="line">    <span class="string">""" start compare weights """</span></span><br><span class="line">    <span class="keyword">with</span> tf.Session(graph=g) <span class="keyword">as</span> t_sess:</span><br><span class="line">        t_var_dict = &#123;&#125;</span><br><span class="line">        <span class="keyword">for</span> var <span class="keyword">in</span> train_weights:</span><br><span class="line">            t_var_dict[var.name] = t_sess.run(var)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">with</span> tf.Session(graph=g1) <span class="keyword">as</span> f_sess:</span><br><span class="line">        f_var_dict = &#123;&#125;</span><br><span class="line">        <span class="keyword">for</span> var <span class="keyword">in</span> freeze_weights:</span><br><span class="line">            f_var_dict[var.name] = f_sess.run(var)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> name, value <span class="keyword">in</span> t_var_dict.items():</span><br><span class="line">        <span class="comment"># ! all weights are equal</span></span><br><span class="line">        <span class="keyword">assert</span> np.array_equal(t_var_dict[name], f_var_dict[name])</span><br><span class="line"></span><br><span class="line">    <span class="string">""" start test output """</span></span><br><span class="line">    img, label = next(gen)</span><br><span class="line">    img = img[np.newaxis, :, :, :]</span><br><span class="line">    <span class="keyword">with</span> tf.Session(graph=g) <span class="keyword">as</span> t_sess:</span><br><span class="line">        t_output = t_sess.run(g.get_tensor_by_name(<span class="string">'predict:0'</span>), feed_dict=&#123;g.get_tensor_by_name(<span class="string">'Input_image:0'</span>): img&#125;)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">with</span> tf.Session(graph=g1) <span class="keyword">as</span> f_sess:</span><br><span class="line">        f_output = f_sess.run(g1.get_tensor_by_name(<span class="string">'predict:0'</span>), feed_dict=&#123;g1.get_tensor_by_name(<span class="string">'Input_image:0'</span>): img&#125;)</span><br><span class="line"></span><br><span class="line">    t_output = expit(t_output)</span><br><span class="line">    f_output = expit(f_output)</span><br><span class="line">    <span class="comment"># ! array not equal    Why ??</span></span><br><span class="line">    <span class="keyword">if</span> np.array_equal(t_output, f_output):</span><br><span class="line">        print(<span class="string">'test success!'</span>)</span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        print(<span class="string">'results not equal. Why ??'</span>)</span><br></pre></td></tr></table></figure>
+
+</div></div>
+<h2 id="运行结果">运行结果</h2>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">results not equal. Why ??</span><br></pre></td></tr></table></figure>
+<p>以上代码中,我加载了两种不同保存方式的权重,然后一一对比了<strong>所有权重</strong>,权重<strong>完全相同</strong>,证明了保存pb的方式都没有问题.但是同一张图像,两个网络的输出结果确实不相同的.这个就十分诡异.</p>
+<h1 id="解决方案">解决方案</h1>
+<p>我暂时也没用找到问题的原因,所以暂时还是直接训练完之后保存成pb文件.</p>
+
+        
+      
+    </div> -->
+    <footer class="article-footer">
+      <a data-url="https://zhen8838.github.io/2019/02/08/tf-pb-error/" data-id="cjrun1mpw004th66x80b2bpoj" class="article-share-link">Share</a>
+      
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/tensorflow/">tensorflow</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/错误记录/">错误记录</a></li></ul>
+
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+  
+    <a href="/2019/01/30/k210conv/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">使k210支持Tensorflow卷积</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">分类</h3>
+    <div class="widget">
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/学习/">学习</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">标签云</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/C/" style="font-size: 13.64px;">C</a> <a href="/tags/C/" style="font-size: 12.73px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10px;">CNN</a> <a href="/tags/Eigen/" style="font-size: 10px;">Eigen</a> <a href="/tags/Linux/" style="font-size: 20px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12.73px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12.73px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.91px;">PCB</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 14.55px;">k210</a> <a href="/tags/python/" style="font-size: 19.09px;">python</a> <a href="/tags/stm32/" style="font-size: 11.82px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 10px;">tensorflow</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 15.45px;">作业</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/堆栈/" style="font-size: 10.91px;">堆栈</a> <a href="/tags/小工具/" style="font-size: 12.73px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 17.27px;">嵌入式</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 19.09px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 18.18px;">机器学习</a> <a href="/tags/树/" style="font-size: 12.73px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/深度学习/" style="font-size: 12.73px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 10.91px;">神经网络</a> <a href="/tags/算法/" style="font-size: 11.82px;">算法</a> <a href="/tags/聚类/" style="font-size: 12.73px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 12.73px;">蓝牙</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/链表/" style="font-size: 11.82px;">链表</a> <a href="/tags/错误记录/" style="font-size: 16.36px;">错误记录</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">归档</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">最新文章</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2019/02/08/tf-pb-error/">Tensorflow加载pb推理输出不正确</a>
+          </li>
+        
+          <li>
+            <a href="/2019/01/30/k210conv/">使k210支持Tensorflow卷积</a>
+          </li>
+        
+          <li>
+            <a href="/2019/01/28/pb-to-pkl/">Tensorflow加载pb文件继续训练</a>
+          </li>
+        
+          <li>
+            <a href="/2019/01/27/tf-learn-err/">Tensorflow中动态学习率无效</a>
+          </li>
+        
+          <li>
+            <a href="/2019/01/25/tqdm-fmt/">tqdm中后缀的添加</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2019 NAke<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+    <a href="/about" class="mobile-nav-link">about</a>
+  
+</nav>
+    
+
+<script src="//cdn.staticfile.org/jquery/2.0.3/jquery.min.js"></script>
+
+
+  <link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
+  <script src="/fancybox/jquery.fancybox.pack.js"></script>
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+  </div>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+</script>
+<!-- <script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script> -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+
+</body>
+</html>
