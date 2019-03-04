@@ -7,18 +7,18 @@
   
   <title>pulseaudio交叉编译 | Practice</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta name="description" content="交叉编译pulseaudio到树莓派中并调用相应api.">
+  <meta name="description" content="交叉编译pulseaudio到树莓派中并调用相应api.但是要交叉编译一个pulseaudio需要先交叉编译十几个依赖,这个是非常麻烦的事情.所以我找了一个简单的方法.">
 <meta name="keywords" content="蓝牙">
 <meta property="og:type" content="article">
 <meta property="og:title" content="pulseaudio交叉编译">
 <meta property="og:url" content="https://zhen8838.github.io/2019/03/02/pulseaudio-compile/index.html">
 <meta property="og:site_name" content="Practice">
-<meta property="og:description" content="交叉编译pulseaudio到树莓派中并调用相应api.">
+<meta property="og:description" content="交叉编译pulseaudio到树莓派中并调用相应api.但是要交叉编译一个pulseaudio需要先交叉编译十几个依赖,这个是非常麻烦的事情.所以我找了一个简单的方法.">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2019-03-02T11:49:28.735Z">
+<meta property="og:updated_time" content="2019-03-04T05:31:23.468Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="pulseaudio交叉编译">
-<meta name="twitter:description" content="交叉编译pulseaudio到树莓派中并调用相应api.">
+<meta name="twitter:description" content="交叉编译pulseaudio到树莓派中并调用相应api.但是要交叉编译一个pulseaudio需要先交叉编译十几个依赖,这个是非常麻烦的事情.所以我找了一个简单的方法.">
   
   
     <link rel="icon" href="/favicon.png">
@@ -95,14 +95,26 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <p>交叉编译<code>pulseaudio</code>到树莓派中并调用相应<code>api</code>.</p>
+        <p>交叉编译<code>pulseaudio</code>到树莓派中并调用相应<code>api</code>.但是要交叉编译一个<code>pulseaudio</code>需要先交叉编译十几个依赖,这个是非常麻烦的事情.所以我找了一个简单的方法.</p>
 <a id="more"></a>
-<h1 id="下载pulseaudio">1.下载pulseaudio</h1>
-<p>直接在树莓派中执行<code>sudo apt-get install pulseaudio pulseaudio-module-bluetooth</code>安装对应的<code>lib</code></p>
-<h1 id="配置">2.配置</h1>
-<p>直接将树莓派中的头文件与动态链接库拷贝到交叉编译器中.头文件我就不说了,拷贝动态链接库的时候是把树莓派<code>/usr/lib/arm-linux-gnueabihf</code>下的<code>libpulse.so.0.20.1</code>,<code>libpulse-simple.so.0.1.0</code>,<code>libpulse-mainloop-glib.so.0.0.5</code>拷贝到交叉编译器<code>tools/arm-bcm2708/arm-rpi-4.9.3-linux-gnueabihf/arm-linux-gnueabihf/sysroot/lib</code>中, 然后建立软连接: <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">sudo ln -s libpulse.so.0.20.1 libpulse.so</span><br><span class="line">sudo ln -s libpulse.so.0.20.1 libpulse.so.0</span><br><span class="line">sudo ln -s libpulse-simple.so.0.1.0 libpulse-simple.so</span><br><span class="line">sudo ln -s libpulse-simple.so.0.1.0 libpulse-simple.so.0</span><br><span class="line">sudo ln -s libpulse-mainloop-glib.so.0.0.5 libpulse-mainloop-glib.so</span><br><span class="line">sudo ln -s libpulse-mainloop-glib.so.0.0.5 libpulse-mainloop-glib.so.0</span><br></pre></td></tr></table></figure></p>
-<p>再把<code>usr/lib</code>下面的<code>pulse-10.0</code>放到<code>arm-linux-gnueabihf/sysroot/lib</code>中.</p>
-<h1 id="section">3.</h1>
+<h1 id="编译">编译</h1>
+<ol type="1">
+<li>下载<code>buildroot</code></li>
+</ol>
+<p>我下载的是<a href="https://buildroot.org/downloads/buildroot-2018.11.3.tar.gz" target="_blank" rel="noopener">最新的稳定版</a></p>
+<ol start="2" type="1">
+<li>配置</li>
+</ol>
+<p>为树莓派配置: <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> buildroot-2018.11.3</span><br><span class="line">make raspberrypi3_defconfig</span><br></pre></td></tr></table></figure></p>
+<p>然后配置外部交叉编译链,参考<code>https://blog.csdn.net/flfihpv259/article/details/51970370</code> <code>Toolchain path</code>不需要是<code>bin</code>目录的上一层. 记得<code>Toolchain prefix</code>改成<code>${ARCH}-linux-gnueabihf</code></p>
+<p>然后<code>sudo make</code></p>
+<ol start="3" type="1">
+<li>编译</li>
+</ol>
+<p>当<code>buildroot</code>编译完成之后,在<code>output</code>目录下面的<code>host</code>文件中即包含一整套的交叉编译链,这个真的太好了~</p>
+<p>我将<code>/home/zqh/Documents/buildroot-2018.11.3/output/host/bin</code>添加到<code>path</code>,然后使用如下命令去编译<code>pulseaudio</code>的例子即可:</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">arm-linux-gnueabihf-gcc testrecord.c -lpulse -lpulse-simple</span><br></pre></td></tr></table></figure>
+<p>大功告成~</p>
 
       
     </div>
@@ -110,20 +122,32 @@
       
         
         
-          <p>交叉编译<code>pulseaudio</code>到树莓派中并调用相应<code>api</code>.</p>
+          <p>交叉编译<code>pulseaudio</code>到树莓派中并调用相应<code>api</code>.但是要交叉编译一个<code>pulseaudio</code>需要先交叉编译十几个依赖,这个是非常麻烦的事情.所以我找了一个简单的方法.</p>
 <a id="more"></a>
-<h1 id="下载pulseaudio">1.下载pulseaudio</h1>
-<p>直接在树莓派中执行<code>sudo apt-get install pulseaudio pulseaudio-module-bluetooth</code>安装对应的<code>lib</code></p>
-<h1 id="配置">2.配置</h1>
-<p>直接将树莓派中的头文件与动态链接库拷贝到交叉编译器中.头文件我就不说了,拷贝动态链接库的时候是把树莓派<code>/usr/lib/arm-linux-gnueabihf</code>下的<code>libpulse.so.0.20.1</code>,<code>libpulse-simple.so.0.1.0</code>,<code>libpulse-mainloop-glib.so.0.0.5</code>拷贝到交叉编译器<code>tools/arm-bcm2708/arm-rpi-4.9.3-linux-gnueabihf/arm-linux-gnueabihf/sysroot/lib</code>中, 然后建立软连接: <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">sudo ln -s libpulse.so.0.20.1 libpulse.so</span><br><span class="line">sudo ln -s libpulse.so.0.20.1 libpulse.so.0</span><br><span class="line">sudo ln -s libpulse-simple.so.0.1.0 libpulse-simple.so</span><br><span class="line">sudo ln -s libpulse-simple.so.0.1.0 libpulse-simple.so.0</span><br><span class="line">sudo ln -s libpulse-mainloop-glib.so.0.0.5 libpulse-mainloop-glib.so</span><br><span class="line">sudo ln -s libpulse-mainloop-glib.so.0.0.5 libpulse-mainloop-glib.so.0</span><br></pre></td></tr></table></figure></p>
-<p>再把<code>usr/lib</code>下面的<code>pulse-10.0</code>放到<code>arm-linux-gnueabihf/sysroot/lib</code>中.</p>
-<h1 id="section">3.</h1>
+<h1 id="编译">编译</h1>
+<ol type="1">
+<li>下载<code>buildroot</code></li>
+</ol>
+<p>我下载的是<a href="https://buildroot.org/downloads/buildroot-2018.11.3.tar.gz" target="_blank" rel="noopener">最新的稳定版</a></p>
+<ol start="2" type="1">
+<li>配置</li>
+</ol>
+<p>为树莓派配置: <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> buildroot-2018.11.3</span><br><span class="line">make raspberrypi3_defconfig</span><br></pre></td></tr></table></figure></p>
+<p>然后配置外部交叉编译链,参考<code>https://blog.csdn.net/flfihpv259/article/details/51970370</code> <code>Toolchain path</code>不需要是<code>bin</code>目录的上一层. 记得<code>Toolchain prefix</code>改成<code>${ARCH}-linux-gnueabihf</code></p>
+<p>然后<code>sudo make</code></p>
+<ol start="3" type="1">
+<li>编译</li>
+</ol>
+<p>当<code>buildroot</code>编译完成之后,在<code>output</code>目录下面的<code>host</code>文件中即包含一整套的交叉编译链,这个真的太好了~</p>
+<p>我将<code>/home/zqh/Documents/buildroot-2018.11.3/output/host/bin</code>添加到<code>path</code>,然后使用如下命令去编译<code>pulseaudio</code>的例子即可:</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">arm-linux-gnueabihf-gcc testrecord.c -lpulse -lpulse-simple</span><br></pre></td></tr></table></figure>
+<p>大功告成~</p>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2019/03/02/pulseaudio-compile/" data-id="cjssf64il004pbf6xrnd4e9sk" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2019/03/02/pulseaudio-compile/" data-id="cjstwpraa006dvs6xeht79sh3" class="article-share-link">Share</a>
       
       
       
