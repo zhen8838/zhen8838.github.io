@@ -5,15 +5,20 @@
   
 
   
-  <title>归档 | Practice</title>
+  <title>Raspi蓝牙:编程实现录音 | Practice</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta property="og:type" content="website">
-<meta property="og:title" content="Practice">
-<meta property="og:url" content="https://zhen8838.github.io/archives/page/7/index.html">
+  <meta name="description" content="经过之前一系列复杂的配置,我搭建好了交叉编译pulseaudio的环境,现在我们可以调用相应的api去进行录音.">
+<meta name="keywords" content="蓝牙,linux">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Raspi蓝牙:编程实现录音">
+<meta property="og:url" content="https://zhen8838.github.io/2019/03/05/linuxblue6/index.html">
 <meta property="og:site_name" content="Practice">
+<meta property="og:description" content="经过之前一系列复杂的配置,我搭建好了交叉编译pulseaudio的环境,现在我们可以调用相应的api去进行录音.">
 <meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2019-03-04T11:55:31.445Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Practice">
+<meta name="twitter:title" content="Raspi蓝牙:编程实现录音">
+<meta name="twitter:description" content="经过之前一系列复杂的配置,我搭建好了交叉编译pulseaudio的环境,现在我们可以调用相应的api去进行录音.">
   
   
     <link rel="icon" href="/favicon.png">
@@ -64,216 +69,95 @@
   </div>
 </header>
       <div class="outer">
-        <section id="main">
-  
-  
-    
-    
-      
-      
-      <section class="archives-wrap">
-        <div class="archive-year-wrap">
-          <a href="/archives/2018" class="archive-year">2018</a>
-        </div>
-        <div class="archives">
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/08/04/ads1118/" class="archive-article-date">
-  <time datetime="2018-08-04T15:22:38.000Z" itemprop="datePublished">8月 4</time>
+        <section id="main"><article id="post-linuxblue6" class="article article-type-post" itemscope="" itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2019/03/05/linuxblue6/" class="article-date">
+  <time datetime="2019-03-04T19:33:42.000Z" itemprop="datePublished">2019-03-04</time>
 </a>
-      
+    
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/学习/">学习</a>
+  </div>
+
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
   
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/08/04/ads1118/">Orangpi使用ads1118</a>
+    <h1 class="article-title" itemprop="name">
+      Raspi蓝牙:编程实现录音
     </h1>
   
 
-    </header>
-  </div>
-</article>
-  
+      </header>
     
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/08/01/spidev/" class="archive-article-date">
-  <time datetime="2018-07-31T21:08:02.000Z" itemprop="datePublished">7月 31</time>
-</a>
+    <div class="article-entry" itemprop="articleBody">
       
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/08/01/spidev/">OrangPi开启spi-dev</a>
-    </h1>
-  
+        <p>经过之前一系列<a href="https://zhen8838.github.io/2019/03/02/pulseaudio-compile/">复杂的配置</a>,我搭建好了交叉编译<code>pulseaudio</code>的环境,现在我们可以调用相应的<code>api</code>去进行录音.</p>
+<a id="more"></a>
+<h1 id="使用">使用</h1>
+<p>我这里使用的例程为<a href="https://freedesktop.org/software/pulseaudio/doxygen/parec-simple_8c-example.html" target="_blank" rel="noopener">parec-simple.c</a></p>
+<p>当配置好交叉编译环境之后直接执行<code>arm-linux-gnueabihf-gcc parec-simple.c -lpulse -lpulse-simple -o record</code>即可.</p>
+<p>在树莓派中执行,并通过<code>ctrl+c</code>退出录制,接着开始播放~: <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">pi@raspberrypi:~ $ ./record &gt; <span class="built_in">test</span></span><br><span class="line">^C</span><br><span class="line">pi@raspberrypi:~ $ pacat -pv <span class="built_in">test</span> --format=s16le</span><br><span class="line">Opening a playback stream with sample specification <span class="string">'s16le 2ch 44100Hz'</span> and channel map <span class="string">'front-left,front-right'</span>.</span><br><span class="line">Connection established.</span><br><span class="line">Stream successfully created.</span><br><span class="line">Buffer metrics: maxlength=4194304, tlength=352800, prebuf=349276, minreq=3528</span><br><span class="line">Using sample spec <span class="string">'s16le 2ch 44100Hz'</span>, channel map <span class="string">'front-left,front-right'</span>.</span><br><span class="line">Connected to device bluez_sink.E8_07_BF_E1_1B_02.headset_head_unit (index: 5, suspended: no).</span><br><span class="line">Got EOF.</span><br><span class="line">Stream started.</span><br><span class="line">Playback stream drained.: 55360 usec.          </span><br><span class="line">Draining connection to server.</span><br></pre></td></tr></table></figure></p>
+<h1 id="解析">解析</h1>
+<p>程序的基本结构如下:</p>
+<ol type="1">
+<li><p>创建一个新的采样流(pa_simple_new)</p></li>
+<li><p>读取音频流(pa_simple_read)</p></li>
+<li><p>写出输出(write)</p></li>
+<li><p>释放流资源(pa_simple_free)</p></li>
+</ol>
 
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/08/01/avltree/" class="archive-article-date">
-  <time datetime="2018-07-31T20:57:45.000Z" itemprop="datePublished">7月 31</time>
-</a>
       
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/08/01/avltree/">平衡二叉树</a>
-    </h1>
-  
-
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/07/25/i2candspi/" class="archive-article-date">
-  <time datetime="2018-07-25T10:37:52.000Z" itemprop="datePublished">7月 25</time>
-</a>
+    </div>
+    <!-- <div class="article-entry" itemprop="articleBody">
       
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/07/25/i2candspi/">i2c之总结</a>
-    </h1>
-  
+        
+        
+          <p>经过之前一系列<a href="https://zhen8838.github.io/2019/03/02/pulseaudio-compile/">复杂的配置</a>,我搭建好了交叉编译<code>pulseaudio</code>的环境,现在我们可以调用相应的<code>api</code>去进行录音.</p>
+<a id="more"></a>
+<h1 id="使用">使用</h1>
+<p>我这里使用的例程为<a href="https://freedesktop.org/software/pulseaudio/doxygen/parec-simple_8c-example.html" target="_blank" rel="noopener">parec-simple.c</a></p>
+<p>当配置好交叉编译环境之后直接执行<code>arm-linux-gnueabihf-gcc parec-simple.c -lpulse -lpulse-simple -o record</code>即可.</p>
+<p>在树莓派中执行,并通过<code>ctrl+c</code>退出录制,接着开始播放~: <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">pi@raspberrypi:~ $ ./record &gt; <span class="built_in">test</span></span><br><span class="line">^C</span><br><span class="line">pi@raspberrypi:~ $ pacat -pv <span class="built_in">test</span> --format=s16le</span><br><span class="line">Opening a playback stream with sample specification <span class="string">'s16le 2ch 44100Hz'</span> and channel map <span class="string">'front-left,front-right'</span>.</span><br><span class="line">Connection established.</span><br><span class="line">Stream successfully created.</span><br><span class="line">Buffer metrics: maxlength=4194304, tlength=352800, prebuf=349276, minreq=3528</span><br><span class="line">Using sample spec <span class="string">'s16le 2ch 44100Hz'</span>, channel map <span class="string">'front-left,front-right'</span>.</span><br><span class="line">Connected to device bluez_sink.E8_07_BF_E1_1B_02.headset_head_unit (index: 5, suspended: no).</span><br><span class="line">Got EOF.</span><br><span class="line">Stream started.</span><br><span class="line">Playback stream drained.: 55360 usec.          </span><br><span class="line">Draining connection to server.</span><br></pre></td></tr></table></figure></p>
+<h1 id="解析">解析</h1>
+<p>程序的基本结构如下:</p>
+<ol type="1">
+<li><p>创建一个新的采样流(pa_simple_new)</p></li>
+<li><p>读取音频流(pa_simple_read)</p></li>
+<li><p>写出输出(write)</p></li>
+<li><p>释放流资源(pa_simple_free)</p></li>
+</ol>
 
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/07/18/oledfix/" class="archive-article-date">
-  <time datetime="2018-07-18T15:46:36.000Z" itemprop="datePublished">7月 18</time>
-</a>
+        
       
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/07/18/oledfix/">OLED错误修复</a>
-    </h1>
-  
-
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/07/15/searchtree/" class="archive-article-date">
-  <time datetime="2018-07-14T22:18:20.000Z" itemprop="datePublished">7月 14</time>
-</a>
+    </div> -->
+    <footer class="article-footer">
+      <a data-url="https://zhen8838.github.io/2019/03/05/linuxblue6/" data-id="cjsuafvex005oe86xssuym6s6" class="article-share-link">Share</a>
       
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/07/15/searchtree/">二叉搜索树</a>
-    </h1>
-  
-
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/07/11/BinaryTree/" class="archive-article-date">
-  <time datetime="2018-07-10T16:56:15.000Z" itemprop="datePublished">7月 10</time>
-</a>
       
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/07/11/BinaryTree/">二叉树</a>
-    </h1>
-  
-
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/07/10/Polyadd/" class="archive-article-date">
-  <time datetime="2018-07-09T20:10:52.000Z" itemprop="datePublished">7月 9</time>
-</a>
       
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/07/10/Polyadd/">多项式相加</a>
-    </h1>
-  
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/linux/">linux</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/蓝牙/">蓝牙</a></li></ul>
 
-    </header>
+    </footer>
   </div>
+  
+    
+<nav id="article-nav">
+  
+  
+    <a href="/2019/03/03/precision-analysis/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">yolo中precision降低的原因分析</div>
+    </a>
+  
+</nav>
+
+  
 </article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/07/07/infixtoendfix/" class="archive-article-date">
-  <time datetime="2018-07-06T20:59:47.000Z" itemprop="datePublished">7月 6</time>
-</a>
-      
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/07/07/infixtoendfix/">中缀表达式转后缀表达式</a>
-    </h1>
-  
 
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/07/06/stack/" class="archive-article-date">
-  <time datetime="2018-07-05T21:18:04.000Z" itemprop="datePublished">7月 5</time>
-</a>
-      
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/07/06/stack/">栈</a>
-    </h1>
-  
-
-    </header>
-  </div>
-</article>
-  
-  
-    </div></section>
-  
-
-
-  <nav id="page-nav">
-    
-    <a class="extend prev" rel="prev" href="/archives/page/6/">&laquo; 上一页</a><a class="page-number" href="/archives/">1</a><span class="space">&hellip;</span><a class="page-number" href="/archives/page/5/">5</a><a class="page-number" href="/archives/page/6/">6</a><span class="page-number current">7</span><a class="page-number" href="/archives/page/8/">8</a><a class="page-number" href="/archives/page/9/">9</a><a class="page-number" href="/archives/page/10/">10</a><a class="extend next" rel="next" href="/archives/page/8/">下一页 &raquo;</a>
-  </nav>
 
 </section>
         
