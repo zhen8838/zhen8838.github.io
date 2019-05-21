@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html>
+<head><meta name="generator" content="Hexo 3.8.0">
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><meta charset="utf-8">
+  
+
+  
+  <title>变分自编码器(VAE)学习 | Practice</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="我看了VAE之后忽然对神经网络的非监督学习以及概率模型很感兴趣,但是无奈概率模型真的好难懂啊. 今天尝试一边描述VAE一边真正的理解他. 参考总结自:https://spaces.ac.cn/archives/5253">
+<meta name="keywords" content="深度学习">
+<meta property="og:type" content="article">
+<meta property="og:title" content="变分自编码器(VAE)学习">
+<meta property="og:url" content="https://zhen8838.github.io/2019/05/13/vae/index.html">
+<meta property="og:site_name" content="Practice">
+<meta property="og:description" content="我看了VAE之后忽然对神经网络的非监督学习以及概率模型很感兴趣,但是无奈概率模型真的好难懂啊. 今天尝试一边描述VAE一边真正的理解他. 参考总结自:https://spaces.ac.cn/archives/5253">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://zhen8838.github.io/2019/05/13/vae/encoder-decoder.png">
+<meta property="og:image" content="https://zhen8838.github.io/2019/05/13/vae/vae.png">
+<meta property="og:updated_time" content="2019-05-13T06:27:50.802Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="变分自编码器(VAE)学习">
+<meta name="twitter:description" content="我看了VAE之后忽然对神经网络的非监督学习以及概率模型很感兴趣,但是无奈概率模型真的好难懂啊. 今天尝试一边描述VAE一边真正的理解他. 参考总结自:https://spaces.ac.cn/archives/5253">
+<meta name="twitter:image" content="https://zhen8838.github.io/2019/05/13/vae/encoder-decoder.png">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.lug.ustc.edu.cn/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+    <!-- <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css"> -->
+    <!-- <link href="//fonts.useso.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css"> -->
+  
+  <link rel="stylesheet" href="/css/style.css"><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+</head>
+</html>
+<body>
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Practice</a>
+      </h1>
+      
+        <h2 id="subtitle-wrap">
+          <a href="/" id="subtitle">一个分享经验的地方</a>
+        </h2>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+          <a class="main-nav-link" href="/about">about</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+        <a id="nav-search-btn" class="nav-icon" title="搜索"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="https://zhen8838.github.io"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-vae" class="article article-type-post" itemscope="" itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2019/05/13/vae/" class="article-date">
+  <time datetime="2019-05-13T12:51:31.000Z" itemprop="datePublished">2019-05-13</time>
+</a>
+    
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/学习/">学习</a>
+  </div>
+
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      变分自编码器(VAE)学习
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>我看了<code>VAE</code>之后忽然对神经网络的非监督学习以及概率模型很感兴趣,但是无奈概率模型真的好难懂啊. 今天尝试一边描述<code>VAE</code>一边真正的理解他. 参考总结自:https://spaces.ac.cn/archives/5253</p>
+<a id="more"></a>
+<h1 id="介绍">介绍</h1>
+<p>变分自编码器是传统编码器的一个变体,从深度学习的角度来说就是改变了<code>loss</code>函数使生成器可以 生成与原样本不相同但又属于相同分布的样本.</p>
+<p><img src="/2019/05/13/vae/encoder-decoder.png"></p>
+<h2 id="术语表">术语表:</h2>
+<ul>
+<li><p>编码器:</p>
+<p>在概率模型中,编码器称为推理网络,他将参数化潜在特征的后验近似<span class="math inline">\(z\)</span>,然后将参数输出到分布<span class="math inline">\(q(z|x)\)</span>,也可以说<span class="math inline">\(q(z|x)\)</span>是<span class="math inline">\(x\)</span>的后验分布.</p></li>
+<li><p>解码器:</p>
+<p>解码器是根据<span class="math inline">\(z\)</span>重构<span class="math inline">\(x\)</span>的,分布为<span class="math inline">\(p(x|z)\)</span>.</p></li>
+</ul>
+<h2 id="推导">推导</h2>
+<p>在传统的编码器中,解码器<span class="math inline">\(p(x|z)\)</span>是易于训练的,但是<span class="math inline">\(q(z|x)\)</span>是难以学习的.根据贝叶斯定理,我们可以把后验分布转写成另一种形式,但是<span class="math inline">\(p(x)\)</span>也并不知道,所以利用联合概率分布近似代替<span class="math inline">\(p(x)\)</span>: <span class="math display">\[ \begin{aligned}
+    q(z|x)=\frac{p(x|z)p(z)}{p(x)}=\frac{p(x|z)p(z)}{\sum_zp(x|z)p(z)}
+\end{aligned} \]</span></p>
+<p>为了近似求出后验分布,我们还需要一种方法将估计出的分布与真实分布进行比较,所以使用<code>KL分歧</code>来衡量两个概率分布的相似程度.如果相同,则分歧为0,如果大于0,则分布不同. 因此使用如下方式使用<code>KL分歧</code>: 由于我们考虑的是各分量独立的多元正态分布，因此只需要推导一元正态分布的情形即可: <span class="math display">\[ \begin{aligned}&amp;KL\Big(N(\mu,\sigma^2)\Big\Vert N(0,1)\Big)\\ 
+=&amp;\int \frac{1}{\sqrt{2\pi\sigma^2}}e^{-(x-\mu)^2/2\sigma^2} \left(\log \frac{e^{-(x-\mu)^2/2\sigma^2}/\sqrt{2\pi\sigma^2}}{e^{-x^2/2}/\sqrt{2\pi}}\right)dx\\ 
+=&amp;\int \frac{1}{\sqrt{2\pi\sigma^2}}e^{-(x-\mu)^2/2\sigma^2} \log \left\{\frac{1}{\sqrt{\sigma^2}}\exp\left\{\frac{1}{2}\big[x^2-(x-\mu)^2/\sigma^2\big]\right\} \right\}dx\\ 
+=&amp;\frac{1}{2}\int \frac{1}{\sqrt{2\pi\sigma^2}}e^{-(x-\mu)^2/2\sigma^2} \Big[-\log \sigma^2+x^2-(x-\mu)^2/\sigma^2 \Big] dx \\
+=&amp;\frac{1}{2}[-log\sigma^2+\mu^2+\sigma^2-1]
+\end{aligned}\]</span></p>
+<h2 id="重参数">重参数</h2>
+<p><code>VAE</code>可以生成新的<span class="math inline">\(X\)</span>就是因为他从隐空间取<span class="math inline">\(z\)</span>的时候是随机选取的,但是随机选取<span class="math inline">\(z\)</span>会导致无法反向求导,所以就使用一个重参数技巧.</p>
+<p>从<span class="math inline">\(N(\mu,\sigma^2)\)</span>中采样一个<span class="math inline">\(z\)</span>,就相当于从<span class="math inline">\(N(0,1)\)</span>中采样一个<span class="math inline">\(\epsilon\)</span>,然后令<span class="math inline">\(z=\mu+\epsilon*\sigma\)</span>.</p>
+<h2 id="本质结构">本质结构</h2>
+<p><img src="/2019/05/13/vae/vae.png"></p>
+<p>本质上<code>VAE</code>就是训练出一个后验分布<span class="math inline">\(q(Z|X)\)</span>,然后生成器从后验分布中随机取元素(相当于加噪声)并解码出对应的<span class="math inline">\(\bar{X}\)</span>.代码上实现起来相当简单,但是背后的数学思想是非常难理解的,现在我还是一知半解.</p>
+
+      
+    </div>
+    <!-- <div class="article-entry" itemprop="articleBody">
+      
+        
+        
+          <p>我看了<code>VAE</code>之后忽然对神经网络的非监督学习以及概率模型很感兴趣,但是无奈概率模型真的好难懂啊. 今天尝试一边描述<code>VAE</code>一边真正的理解他. 参考总结自:https://spaces.ac.cn/archives/5253</p>
+<a id="more"></a>
+<h1 id="介绍">介绍</h1>
+<p>变分自编码器是传统编码器的一个变体,从深度学习的角度来说就是改变了<code>loss</code>函数使生成器可以 生成与原样本不相同但又属于相同分布的样本.</p>
+<p><img src="/2019/05/13/vae/encoder-decoder.png"></p>
+<h2 id="术语表">术语表:</h2>
+<ul>
+<li><p>编码器:</p>
+<p>在概率模型中,编码器称为推理网络,他将参数化潜在特征的后验近似<span class="math inline">\(z\)</span>,然后将参数输出到分布<span class="math inline">\(q(z|x)\)</span>,也可以说<span class="math inline">\(q(z|x)\)</span>是<span class="math inline">\(x\)</span>的后验分布.</p></li>
+<li><p>解码器:</p>
+<p>解码器是根据<span class="math inline">\(z\)</span>重构<span class="math inline">\(x\)</span>的,分布为<span class="math inline">\(p(x|z)\)</span>.</p></li>
+</ul>
+<h2 id="推导">推导</h2>
+<p>在传统的编码器中,解码器<span class="math inline">\(p(x|z)\)</span>是易于训练的,但是<span class="math inline">\(q(z|x)\)</span>是难以学习的.根据贝叶斯定理,我们可以把后验分布转写成另一种形式,但是<span class="math inline">\(p(x)\)</span>也并不知道,所以利用联合概率分布近似代替<span class="math inline">\(p(x)\)</span>: <span class="math display">\[ \begin{aligned}
+    q(z|x)=\frac{p(x|z)p(z)}{p(x)}=\frac{p(x|z)p(z)}{\sum_zp(x|z)p(z)}
+\end{aligned} \]</span></p>
+<p>为了近似求出后验分布,我们还需要一种方法将估计出的分布与真实分布进行比较,所以使用<code>KL分歧</code>来衡量两个概率分布的相似程度.如果相同,则分歧为0,如果大于0,则分布不同. 因此使用如下方式使用<code>KL分歧</code>: 由于我们考虑的是各分量独立的多元正态分布，因此只需要推导一元正态分布的情形即可: <span class="math display">\[ \begin{aligned}&amp;KL\Big(N(\mu,\sigma^2)\Big\Vert N(0,1)\Big)\\ 
+=&amp;\int \frac{1}{\sqrt{2\pi\sigma^2}}e^{-(x-\mu)^2/2\sigma^2} \left(\log \frac{e^{-(x-\mu)^2/2\sigma^2}/\sqrt{2\pi\sigma^2}}{e^{-x^2/2}/\sqrt{2\pi}}\right)dx\\ 
+=&amp;\int \frac{1}{\sqrt{2\pi\sigma^2}}e^{-(x-\mu)^2/2\sigma^2} \log \left\{\frac{1}{\sqrt{\sigma^2}}\exp\left\{\frac{1}{2}\big[x^2-(x-\mu)^2/\sigma^2\big]\right\} \right\}dx\\ 
+=&amp;\frac{1}{2}\int \frac{1}{\sqrt{2\pi\sigma^2}}e^{-(x-\mu)^2/2\sigma^2} \Big[-\log \sigma^2+x^2-(x-\mu)^2/\sigma^2 \Big] dx \\
+=&amp;\frac{1}{2}[-log\sigma^2+\mu^2+\sigma^2-1]
+\end{aligned}\]</span></p>
+<h2 id="重参数">重参数</h2>
+<p><code>VAE</code>可以生成新的<span class="math inline">\(X\)</span>就是因为他从隐空间取<span class="math inline">\(z\)</span>的时候是随机选取的,但是随机选取<span class="math inline">\(z\)</span>会导致无法反向求导,所以就使用一个重参数技巧.</p>
+<p>从<span class="math inline">\(N(\mu,\sigma^2)\)</span>中采样一个<span class="math inline">\(z\)</span>,就相当于从<span class="math inline">\(N(0,1)\)</span>中采样一个<span class="math inline">\(\epsilon\)</span>,然后令<span class="math inline">\(z=\mu+\epsilon*\sigma\)</span>.</p>
+<h2 id="本质结构">本质结构</h2>
+<p><img src="/2019/05/13/vae/vae.png"></p>
+<p>本质上<code>VAE</code>就是训练出一个后验分布<span class="math inline">\(q(Z|X)\)</span>,然后生成器从后验分布中随机取元素(相当于加噪声)并解码出对应的<span class="math inline">\(\bar{X}\)</span>.代码上实现起来相当简单,但是背后的数学思想是非常难理解的,现在我还是一知半解.</p>
+
+        
+      
+    </div> -->
+    <footer class="article-footer">
+      <a data-url="https://zhen8838.github.io/2019/05/13/vae/" data-id="cjvxjugns0073s06xf1t69h9j" class="article-share-link">Share</a>
+      
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/深度学习/">深度学习</a></li></ul>
+
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2019/05/22/tf-data-in-keras/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          tf.Keras完美使用tf.data API
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2019/05/09/python-unpack/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">python返回值进行unpack</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">分类</h3>
+    <div class="widget">
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/学习/">学习</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">标签云</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/C/" style="font-size: 13.08px;">C</a> <a href="/tags/C/" style="font-size: 12.31px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10.77px;">CNN</a> <a href="/tags/Eigen/" style="font-size: 10px;">Eigen</a> <a href="/tags/Linux/" style="font-size: 20px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12.31px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12.31px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.77px;">PCB</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 15.38px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 10px;">linux</a> <a href="/tags/python/" style="font-size: 18.46px;">python</a> <a href="/tags/stm32/" style="font-size: 11.54px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 14.62px;">tensorflow</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 14.62px;">作业</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/图像处理/" style="font-size: 10px;">图像处理</a> <a href="/tags/堆栈/" style="font-size: 10.77px;">堆栈</a> <a href="/tags/声音信号处理/" style="font-size: 12.31px;">声音信号处理</a> <a href="/tags/小工具/" style="font-size: 12.31px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 16.15px;">嵌入式</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 17.69px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 16.92px;">机器学习</a> <a href="/tags/树/" style="font-size: 12.31px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/深度学习/" style="font-size: 13.85px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 11.54px;">神经网络</a> <a href="/tags/算法/" style="font-size: 11.54px;">算法</a> <a href="/tags/聚类/" style="font-size: 12.31px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13.85px;">蓝牙</a> <a href="/tags/调参/" style="font-size: 10px;">调参</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/链表/" style="font-size: 11.54px;">链表</a> <a href="/tags/错误记录/" style="font-size: 19.23px;">错误记录</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">归档</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/05/">五月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">三月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">最新文章</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2019/05/22/tf-data-in-keras/">tf.Keras完美使用tf.data API</a>
+          </li>
+        
+          <li>
+            <a href="/2019/05/13/vae/">变分自编码器(VAE)学习</a>
+          </li>
+        
+          <li>
+            <a href="/2019/05/09/python-unpack/">python返回值进行unpack</a>
+          </li>
+        
+          <li>
+            <a href="/2019/05/06/tf2-global-step/">Tensorflow 2.0中使用global steps</a>
+          </li>
+        
+          <li>
+            <a href="/2019/04/25/stft-1/">python实现stft</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2019 NAke<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+    <a href="/about" class="mobile-nav-link">about</a>
+  
+</nav>
+    
+
+<script src="//cdn.staticfile.org/jquery/2.0.3/jquery.min.js"></script>
+
+
+  <link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
+  <script src="/fancybox/jquery.fancybox.pack.js"></script>
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+  </div>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+</body>
+</html>
