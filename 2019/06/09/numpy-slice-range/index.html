@@ -5,15 +5,20 @@
   
 
   
-  <title>Tag: 蓝牙 | Practice</title>
+  <title>numpy中动态范围切片 | Practice</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta property="og:type" content="website">
-<meta property="og:title" content="Practice">
-<meta property="og:url" content="https://zhen8838.github.io/tags/蓝牙/index.html">
+  <meta name="description" content="今天想把两个不同的形状的数组进行赋值,因为数组形状是动态的,所以要想一个办法进行动态的范围切片.">
+<meta name="keywords" content="python">
+<meta property="og:type" content="article">
+<meta property="og:title" content="numpy中动态范围切片">
+<meta property="og:url" content="https://zhen8838.github.io/2019/06/09/numpy-slice-range/index.html">
 <meta property="og:site_name" content="Practice">
+<meta property="og:description" content="今天想把两个不同的形状的数组进行赋值,因为数组形状是动态的,所以要想一个办法进行动态的范围切片.">
 <meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2019-06-08T12:24:59.334Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Practice">
+<meta name="twitter:title" content="numpy中动态范围切片">
+<meta name="twitter:description" content="今天想把两个不同的形状的数组进行赋值,因为数组形状是动态的,所以要想一个办法进行动态的范围切片.">
   
   
     <link rel="icon" href="/favicon.png">
@@ -64,163 +69,82 @@
   </div>
 </header>
       <div class="outer">
-        <section id="main">
-  
-  
-    
-    
-      
-      
-      <section class="archives-wrap">
-        <div class="archive-year-wrap">
-          <a href="/archives/2019" class="archive-year">2019</a>
-        </div>
-        <div class="archives">
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2019/03/05/linuxblue6/" class="archive-article-date">
-  <time datetime="2019-03-04T19:33:42.000Z" itemprop="datePublished">3月 4</time>
+        <section id="main"><article id="post-numpy-slice-range" class="article article-type-post" itemscope="" itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2019/06/09/numpy-slice-range/" class="article-date">
+  <time datetime="2019-06-08T20:11:51.000Z" itemprop="datePublished">2019-06-08</time>
 </a>
-      
+    
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/学习/">学习</a>
+  </div>
+
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
   
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2019/03/05/linuxblue6/">Raspi蓝牙:编程实现录音</a>
+    <h1 class="article-title" itemprop="name">
+      numpy中动态范围切片
     </h1>
   
 
-    </header>
-  </div>
-</article>
-  
+      </header>
     
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2019/03/02/pulseaudio-compile/" class="archive-article-date">
-  <time datetime="2019-03-01T19:54:17.000Z" itemprop="datePublished">3月 1</time>
-</a>
+    <div class="article-entry" itemprop="articleBody">
       
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2019/03/02/pulseaudio-compile/">pulseaudio交叉编译</a>
-    </h1>
-  
+        <p>今天想把两个不同的形状的数组进行赋值,因为数组形状是动态的,所以要想一个办法进行动态的范围切片.</p>
+<a id="more"></a>
+<h1 id="解决方案">解决方案</h1>
+<p>两个数组:</p>
+<pre><code>A = [[3,3,32,3],[32]]
+B = [[3,3,64,3],[64]]
+赋值 B -&gt; A</code></pre>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line">A = np.array([np.random.rand(<span class="number">3</span>, <span class="number">3</span>, <span class="number">32</span>, <span class="number">3</span>), np.random.rand(<span class="number">32</span>)])</span><br><span class="line">B = np.array([np.random.rand(<span class="number">3</span>, <span class="number">3</span>, <span class="number">64</span>, <span class="number">3</span>), np.random.rand(<span class="number">64</span>)])</span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> range(len(A)):</span><br><span class="line">    A[i] = B[i][[slice(<span class="number">0</span>, s) <span class="keyword">for</span> s <span class="keyword">in</span> A[i].shape]]</span><br><span class="line"></span><br><span class="line"><span class="keyword">assert</span> np.array_equal(A[<span class="number">0</span>], B[<span class="number">0</span>][:, :, :<span class="number">32</span>, :])</span><br><span class="line"><span class="keyword">assert</span> np.array_equal(A[<span class="number">1</span>], B[<span class="number">1</span>][:<span class="number">32</span>])</span><br></pre></td></tr></table></figure>
 
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2019/02/27/linuxblue5/" class="archive-article-date">
-  <time datetime="2019-02-27T10:11:40.000Z" itemprop="datePublished">2月 27</time>
-</a>
       
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2019/02/27/linuxblue5/">Raspi蓝牙:播放与录音</a>
-    </h1>
-  
+    </div>
+    <!-- <div class="article-entry" itemprop="articleBody">
+      
+        
+        
+          <p>今天想把两个不同的形状的数组进行赋值,因为数组形状是动态的,所以要想一个办法进行动态的范围切片.</p>
+<a id="more"></a>
+<h1 id="解决方案">解决方案</h1>
+<p>两个数组:</p>
+<pre><code>A = [[3,3,32,3],[32]]
+B = [[3,3,64,3],[64]]
+赋值 B -&gt; A</code></pre>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line">A = np.array([np.random.rand(<span class="number">3</span>, <span class="number">3</span>, <span class="number">32</span>, <span class="number">3</span>), np.random.rand(<span class="number">32</span>)])</span><br><span class="line">B = np.array([np.random.rand(<span class="number">3</span>, <span class="number">3</span>, <span class="number">64</span>, <span class="number">3</span>), np.random.rand(<span class="number">64</span>)])</span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> range(len(A)):</span><br><span class="line">    A[i] = B[i][[slice(<span class="number">0</span>, s) <span class="keyword">for</span> s <span class="keyword">in</span> A[i].shape]]</span><br><span class="line"></span><br><span class="line"><span class="keyword">assert</span> np.array_equal(A[<span class="number">0</span>], B[<span class="number">0</span>][:, :, :<span class="number">32</span>, :])</span><br><span class="line"><span class="keyword">assert</span> np.array_equal(A[<span class="number">1</span>], B[<span class="number">1</span>][:<span class="number">32</span>])</span><br></pre></td></tr></table></figure>
 
-    </header>
-  </div>
-</article>
-  
-    
-    
+        
       
-        </div></section>
+    </div> -->
+    <footer class="article-footer">
+      <a data-url="https://zhen8838.github.io/2019/06/09/numpy-slice-range/" data-id="cjwnhq72g006uci6x81g7z770" class="article-share-link">Share</a>
       
       
-      <section class="archives-wrap">
-        <div class="archive-year-wrap">
-          <a href="/archives/2018" class="archive-year">2018</a>
-        </div>
-        <div class="archives">
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/06/23/linuxblue4/" class="archive-article-date">
-  <time datetime="2018-06-22T17:58:16.000Z" itemprop="datePublished">6月 22</time>
-</a>
       
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/06/23/linuxblue4/">OrangePI蓝牙：蓝牙耳机</a>
-    </h1>
-  
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/python/">python</a></li></ul>
 
-    </header>
+    </footer>
   </div>
-</article>
   
     
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/06/20/Linuxblue3/" class="archive-article-date">
-  <time datetime="2018-06-19T20:42:46.000Z" itemprop="datePublished">6月 19</time>
-</a>
-      
+<nav id="article-nav">
   
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/06/20/Linuxblue3/">OrangePI蓝牙：串口通信</a>
-    </h1>
   
+    <a href="/2019/06/03/l-softmax/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">L softmx -&gt; A softmx -&gt; AM softmax</div>
+    </a>
+  
+</nav>
 
-    </header>
-  </div>
+  
 </article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/06/20/Linuxblue2/" class="archive-article-date">
-  <time datetime="2018-06-19T20:35:09.000Z" itemprop="datePublished">6月 19</time>
-</a>
-      
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/06/20/Linuxblue2/">OrangePI蓝牙：搜索设备</a>
-    </h1>
-  
-
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/05/30/Linuxblue1/" class="archive-article-date">
-  <time datetime="2018-05-29T16:53:42.000Z" itemprop="datePublished">5月 29</time>
-</a>
-      
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/05/30/Linuxblue1/">OrangePI蓝牙：开启蓝牙</a>
-    </h1>
-  
-
-    </header>
-  </div>
-</article>
-  
-  
-    </div></section>
-  
 
 
 </section>
