@@ -5,15 +5,20 @@
   
 
   
-  <title>归档: 2018 | Practice</title>
+  <title>tf.dataset无法推断shape导致错误 | Practice</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta property="og:type" content="website">
-<meta property="og:title" content="Practice">
-<meta property="og:url" content="https://zhen8838.github.io/archives/2018/page/8/index.html">
+  <meta name="description" content="使用tensorflow.keras的时候，tf.dataset在执行model.fit的时候报错： ValueError: Cannot take the length of shape with unknown rank. 这里大概率是因为tf.dataset中使用了tf.py_function导致无法自动推导出张 良的形状，所以需要自己手动设置形状。">
+<meta name="keywords" content="tensorflow">
+<meta property="og:type" content="article">
+<meta property="og:title" content="tf.dataset无法推断shape导致错误">
+<meta property="og:url" content="https://zhen8838.github.io/2019/06/11/tf-keras-shape-error/index.html">
 <meta property="og:site_name" content="Practice">
+<meta property="og:description" content="使用tensorflow.keras的时候，tf.dataset在执行model.fit的时候报错： ValueError: Cannot take the length of shape with unknown rank. 这里大概率是因为tf.dataset中使用了tf.py_function导致无法自动推导出张 良的形状，所以需要自己手动设置形状。">
 <meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2019-06-10T13:28:52.832Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Practice">
+<meta name="twitter:title" content="tf.dataset无法推断shape导致错误">
+<meta name="twitter:description" content="使用tensorflow.keras的时候，tf.dataset在执行model.fit的时候报错： ValueError: Cannot take the length of shape with unknown rank. 这里大概率是因为tf.dataset中使用了tf.py_function导致无法自动推导出张 良的形状，所以需要自己手动设置形状。">
   
   
     <link rel="icon" href="/favicon.png">
@@ -64,216 +69,81 @@
   </div>
 </header>
       <div class="outer">
-        <section id="main">
-  
-  
-    
-    
-      
-      
-      <section class="archives-wrap">
-        <div class="archive-year-wrap">
-          <a href="/archives/2018" class="archive-year">2018</a>
-        </div>
-        <div class="archives">
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/05/30/linuxWpa使用/" class="archive-article-date">
-  <time datetime="2018-05-29T16:53:42.000Z" itemprop="datePublished">5月 29</time>
+        <section id="main"><article id="post-tf-keras-shape-error" class="article article-type-post" itemscope="" itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2019/06/11/tf-keras-shape-error/" class="article-date">
+  <time datetime="2019-06-10T21:22:43.000Z" itemprop="datePublished">2019-06-10</time>
 </a>
-      
+    
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/学习/">学习</a>
+  </div>
+
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
   
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/05/30/linuxWpa使用/">linux wpa wifi自动连接</a>
+    <h1 class="article-title" itemprop="name">
+      tf.dataset无法推断shape导致错误
     </h1>
   
 
-    </header>
-  </div>
-</article>
-  
+      </header>
     
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/05/23/6-3/" class="archive-article-date">
-  <time datetime="2018-05-23T13:27:42.000Z" itemprop="datePublished">5月 23</time>
-</a>
+    <div class="article-entry" itemprop="articleBody">
       
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/05/23/6-3/">实现一个setenv函数</a>
-    </h1>
-  
+        <p>使用<code>tensorflow.keras</code>的时候，<code>tf.dataset</code>在执行<code>model.fit</code>的时候报错：</p>
+<pre><code>ValueError: Cannot take the length of shape with unknown rank.</code></pre>
+<p>这里大概率是因为<code>tf.dataset</code>中使用了<code>tf.py_function</code>导致无法自动推导出张 良的形状，所以需要自己手动设置形状。</p>
+<a id="more"></a>
+<h1 id="解决方案">解决方案</h1>
+<p>这里一定要使用<code>tensorflow</code> 1.x版本，2.0中我也没找到解决方案😓,使用<code>tf.contrib.data.assert_element_shape</code> 函数直接指定形状即可。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> tensorflow <span class="keyword">as</span> tf</span><br><span class="line"><span class="keyword">from</span> tensorflow.python <span class="keyword">import</span> keras</span><br><span class="line"></span><br><span class="line">yolo_model = keras_yolo_mobilev2((<span class="number">240</span>, <span class="number">320</span>, <span class="number">3</span>), <span class="number">3</span>, <span class="number">20</span>, <span class="number">1.</span>, <span class="keyword">True</span>)</span><br><span class="line"></span><br><span class="line">shapes = (yolo_model.input.shape, tuple(out.shape <span class="keyword">for</span> out <span class="keyword">in</span> yolo_model.output))</span><br><span class="line">h.train_dataset = h.train_dataset.apply(tf.contrib.data.assert_element_shape(shapes))</span><br><span class="line"></span><br><span class="line">yolo_model.fit(h.train_dataset, epochs=max_nrof_epochs, </span><br><span class="line">                steps_per_epoch=h.train_epoch_step,callbacks=[tbcall])</span><br></pre></td></tr></table></figure>
 
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/05/19/5-3/" class="archive-article-date">
-  <time datetime="2018-05-19T13:27:42.000Z" itemprop="datePublished">5月 19</time>
-</a>
       
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/05/19/5-3/">理解原子操作</a>
-    </h1>
-  
-
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/05/17/Matlab_svm/" class="archive-article-date">
-  <time datetime="2018-05-16T16:53:42.000Z" itemprop="datePublished">5月 16</time>
-</a>
+    </div>
+    <!-- <div class="article-entry" itemprop="articleBody">
       
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/05/17/Matlab_svm/">Matlab Classification Learner</a>
-    </h1>
-  
+        
+        
+          <p>使用<code>tensorflow.keras</code>的时候，<code>tf.dataset</code>在执行<code>model.fit</code>的时候报错：</p>
+<pre><code>ValueError: Cannot take the length of shape with unknown rank.</code></pre>
+<p>这里大概率是因为<code>tf.dataset</code>中使用了<code>tf.py_function</code>导致无法自动推导出张 良的形状，所以需要自己手动设置形状。</p>
+<a id="more"></a>
+<h1 id="解决方案">解决方案</h1>
+<p>这里一定要使用<code>tensorflow</code> 1.x版本，2.0中我也没找到解决方案😓,使用<code>tf.contrib.data.assert_element_shape</code> 函数直接指定形状即可。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> tensorflow <span class="keyword">as</span> tf</span><br><span class="line"><span class="keyword">from</span> tensorflow.python <span class="keyword">import</span> keras</span><br><span class="line"></span><br><span class="line">yolo_model = keras_yolo_mobilev2((<span class="number">240</span>, <span class="number">320</span>, <span class="number">3</span>), <span class="number">3</span>, <span class="number">20</span>, <span class="number">1.</span>, <span class="keyword">True</span>)</span><br><span class="line"></span><br><span class="line">shapes = (yolo_model.input.shape, tuple(out.shape <span class="keyword">for</span> out <span class="keyword">in</span> yolo_model.output))</span><br><span class="line">h.train_dataset = h.train_dataset.apply(tf.contrib.data.assert_element_shape(shapes))</span><br><span class="line"></span><br><span class="line">yolo_model.fit(h.train_dataset, epochs=max_nrof_epochs, </span><br><span class="line">                steps_per_epoch=h.train_epoch_step,callbacks=[tbcall])</span><br></pre></td></tr></table></figure>
 
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/05/09/13-5/" class="archive-article-date">
-  <time datetime="2018-05-09T13:27:42.000Z" itemprop="datePublished">5月 9</time>
-</a>
+        
       
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/05/09/13-5/">自己实现tail命令</a>
-    </h1>
-  
-
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/05/09/4-1/" class="archive-article-date">
-  <time datetime="2018-05-08T16:53:42.000Z" itemprop="datePublished">5月 8</time>
-</a>
+    </div> -->
+    <footer class="article-footer">
+      <a data-url="https://zhen8838.github.io/2019/06/11/tf-keras-shape-error/" data-id="cjwqexbwg006o0q6x3xwa5h0m" class="article-share-link">Share</a>
       
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/05/09/4-1/">自己实现的tee命令</a>
-    </h1>
-  
-
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/05/08/4-2/" class="archive-article-date">
-  <time datetime="2018-05-08T13:27:42.000Z" itemprop="datePublished">5月 8</time>
-</a>
       
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/05/08/4-2/">自己实现cp的程序</a>
-    </h1>
-  
-
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/05/08/资源整理/" class="archive-article-date">
-  <time datetime="2018-05-08T10:53:42.000Z" itemprop="datePublished">5月 8</time>
-</a>
       
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/05/08/资源整理/">资源整理</a>
-    </h1>
-  
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/tensorflow/">tensorflow</a></li></ul>
 
-    </header>
+    </footer>
   </div>
+  
+    
+<nav id="article-nav">
+  
+  
+    <a href="/2019/06/10/tf-keras-mult-out/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">tf.keras多输出模型自定义loss</div>
+    </a>
+  
+</nav>
+
+  
 </article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/05/08/编译静态库/" class="archive-article-date">
-  <time datetime="2018-05-08T10:53:42.000Z" itemprop="datePublished">5月 8</time>
-</a>
-      
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/05/08/编译静态库/">CMake编译静态库</a>
-    </h1>
-  
 
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/05/07/姿态解算/" class="archive-article-date">
-  <time datetime="2018-05-07T13:27:42.000Z" itemprop="datePublished">5月 7</time>
-</a>
-      
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/05/07/姿态解算/">四轴飞行器姿态解算介绍</a>
-    </h1>
-  
-
-    </header>
-  </div>
-</article>
-  
-  
-    </div></section>
-  
-
-
-  <nav id="page-nav">
-    
-    <a class="extend prev" rel="prev" href="/archives/2018/page/7/">&laquo; 上一页</a><a class="page-number" href="/archives/2018/">1</a><span class="space">&hellip;</span><a class="page-number" href="/archives/2018/page/6/">6</a><a class="page-number" href="/archives/2018/page/7/">7</a><span class="page-number current">8</span>
-  </nav>
 
 </section>
         
