@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+<head><meta name="generator" content="Hexo 3.8.0">
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><meta charset="utf-8">
+  
+
+  
+  <title>tf.keras自定义loss报错shape mismatch | Practice</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="在上次的文章中我写了如何自定义loss，但是我真正想要的使用的场景比那些还要复杂一些。">
+<meta name="keywords" content="tensorflow">
+<meta property="og:type" content="article">
+<meta property="og:title" content="tf.keras自定义loss报错shape mismatch">
+<meta property="og:url" content="https://zhen8838.github.io/2019/06/11/tf-custom-loss-error/index.html">
+<meta property="og:site_name" content="Practice">
+<meta property="og:description" content="在上次的文章中我写了如何自定义loss，但是我真正想要的使用的场景比那些还要复杂一些。">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2019-06-11T07:34:48.670Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="tf.keras自定义loss报错shape mismatch">
+<meta name="twitter:description" content="在上次的文章中我写了如何自定义loss，但是我真正想要的使用的场景比那些还要复杂一些。">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.lug.ustc.edu.cn/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+    <!-- <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css"> -->
+    <!-- <link href="//fonts.useso.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css"> -->
+  
+  <link rel="stylesheet" href="/css/style.css"><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+</head>
+</html>
+<body>
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Practice</a>
+      </h1>
+      
+        <h2 id="subtitle-wrap">
+          <a href="/" id="subtitle">一个分享经验的地方</a>
+        </h2>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+          <a class="main-nav-link" href="/about">about</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+        <a id="nav-search-btn" class="nav-icon" title="搜索"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="https://zhen8838.github.io"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-tf-custom-loss-error" class="article article-type-post" itemscope="" itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2019/06/11/tf-custom-loss-error/" class="article-date">
+  <time datetime="2019-06-11T15:13:44.000Z" itemprop="datePublished">2019-06-11</time>
+</a>
+    
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/学习/">学习</a>
+  </div>
+
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      tf.keras自定义loss报错shape mismatch
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>在上次的<a href="https://zhen8838.github.io/2019/06/10/tf-keras-mult-out/">文章</a>中我写了如何自定义<code>loss</code>，但是我真正想要的使用的场景比那些还要复杂一些。</p>
+<a id="more"></a>
+<h1 id="问题出现">问题出现</h1>
+<p>是想在自定义<code>loss</code>函数中对<code>y_pred</code>进行<code>reshape</code>然后进行<code>sigmoid_cross_entropy_with_logits</code>，但是<code>keras</code>他是将<code>loss</code>构建成一个<code>graph</code>，并且<code>loss</code>中的<code>y_true</code>并不是占位符，他的<code>shape</code>是根据模型最终的输出维度来确定的<strong>虚占位符</strong>，如果模型最后输出的维度和真正的<code>y_true</code>维度不匹配，那么是肯定报错的。</p>
+<p>看下面这个例子：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> tensorflow <span class="keyword">as</span> tf</span><br><span class="line"><span class="keyword">from</span> tensorflow.python <span class="keyword">import</span> keras</span><br><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line">keras.backend.clear_session()</span><br><span class="line">x = keras.Input(shape=(<span class="number">10</span>))</span><br><span class="line">x_1 = keras.layers.Dense(<span class="number">35</span>)(x)</span><br><span class="line">x_2 = keras.layers.Dense(<span class="number">70</span>)(x)</span><br><span class="line">model = keras.Model(inputs=x, outputs=[x_1, x_2])</span><br><span class="line">model.summary()</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">l_1</span><span class="params">(true, pred)</span>:</span></span><br><span class="line">    pred = tf.reshape(pred, (<span class="number">-1</span>, <span class="number">5</span>, <span class="number">7</span>))</span><br><span class="line">    print(true.shape, pred.shape)</span><br><span class="line">    <span class="comment"># NOTE reshape之后 shape是匹配的，但是检查维度时候会报错</span></span><br><span class="line">    <span class="keyword">return</span> tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(labels=true, logits=pred))</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">l_2</span><span class="params">(true, pred)</span>:</span></span><br><span class="line">    pred = tf.reshape(pred, (<span class="number">-1</span>, <span class="number">10</span>, <span class="number">7</span>))</span><br><span class="line">    print(true.shape, pred.shape)</span><br><span class="line">    <span class="comment"># NOTE reshape之后 shape是匹配的，但是检查维度时候会报错</span></span><br><span class="line">    <span class="keyword">return</span> tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(labels=true, logits=pred))</span><br><span class="line"></span><br><span class="line">train_set = tf.data.Dataset.from_tensor_slices((np.random.rand(<span class="number">100</span>, <span class="number">10</span>), np.random.rand(<span class="number">100</span>, <span class="number">5</span>, <span class="number">7</span>),</span><br><span class="line">                                                np.random.rand(<span class="number">100</span>, <span class="number">10</span>, <span class="number">7</span>))).repeat()  <span class="comment"># type: tf.data.Dataset</span></span><br><span class="line">train_set = train_set.map(<span class="keyword">lambda</span> x, y, z: (x, (y, z))).batch(<span class="number">32</span>)</span><br><span class="line"></span><br><span class="line">model.compile(<span class="string">'adam'</span>, loss=[l_1, l_2])</span><br><span class="line">model.fit(train_set, steps_per_epoch=<span class="number">30</span>)  <span class="comment"># NOTE 不可训练</span></span><br></pre></td></tr></table></figure>
+<p>输出：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">(?, ?) (?, 5, 7)</span><br><span class="line">ValueError: logits and labels must have the same shape ((?, 5, 7) vs (?, ?))</span><br></pre></td></tr></table></figure>
+<p>可以看到我打印出<code>y_true</code>的<code>shape</code>就是和网络输出尺寸相同的，但实际上<code>y_true</code>输入是正确的，这个实在是让人蛋疼。</p>
+<h1 id="错误解决">错误解决</h1>
+<p>因为<code>y_true</code>的<code>shape</code>就是和网络输出尺寸相同，所以就从网络上面下手，构建一个<code>model_warrper</code>用于训练。等待训练完成之后直接保存<code>model</code>即可。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> tensorflow <span class="keyword">as</span> tf</span><br><span class="line"><span class="keyword">from</span> tensorflow.python <span class="keyword">import</span> keras</span><br><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line">keras.backend.clear_session()</span><br><span class="line">x = keras.Input(shape=(<span class="number">10</span>))</span><br><span class="line">x_1 = keras.layers.Dense(<span class="number">35</span>)(x)</span><br><span class="line">x_2 = keras.layers.Dense(<span class="number">70</span>)(x)</span><br><span class="line">model = keras.Model(inputs=x, outputs=[x_1, x_2])</span><br><span class="line">model.summary()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">l_1</span><span class="params">(true, pred)</span>:</span></span><br><span class="line">    pred = tf.reshape(pred, (<span class="number">-1</span>, <span class="number">5</span>, <span class="number">7</span>))</span><br><span class="line">    print(true.shape, pred.shape)</span><br><span class="line">    <span class="comment"># NOTE reshape之后 shape是匹配的，但是检查维度时候会报错</span></span><br><span class="line">    <span class="keyword">return</span> tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(labels=true, logits=pred))</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">l_2</span><span class="params">(true, pred)</span>:</span></span><br><span class="line">    pred = tf.reshape(pred, (<span class="number">-1</span>, <span class="number">10</span>, <span class="number">7</span>))</span><br><span class="line">    print(true.shape, pred.shape)</span><br><span class="line">    <span class="comment"># NOTE reshape之后 shape是匹配的，但是检查维度时候会报错</span></span><br><span class="line">    <span class="keyword">return</span> tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(labels=true, logits=pred))</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">train_set = tf.data.Dataset.from_tensor_slices((np.random.rand(<span class="number">100</span>, <span class="number">10</span>), np.random.rand(<span class="number">100</span>, <span class="number">5</span>, <span class="number">7</span>),</span><br><span class="line">                                                np.random.rand(<span class="number">100</span>, <span class="number">10</span>, <span class="number">7</span>))).repeat()  <span class="comment"># type: tf.data.Dataset</span></span><br><span class="line">train_set = train_set.map(<span class="keyword">lambda</span> x, y, z: (x, (y, z))).batch(<span class="number">32</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># model.compile('adam', loss=[l_1, l_2])</span></span><br><span class="line"><span class="comment"># model.fit(train_set, steps_per_epoch=30)  # NOTE 不可训练</span></span><br><span class="line"></span><br><span class="line">x_1 = keras.layers.Reshape((<span class="number">5</span>, <span class="number">7</span>))(x_1)</span><br><span class="line">x_2 = keras.layers.Reshape((<span class="number">10</span>, <span class="number">7</span>))(x_2)</span><br><span class="line">model_warpper = keras.Model(inputs=x, outputs=[x_1, x_2])</span><br><span class="line">model_warpper.summary()</span><br><span class="line">model_warpper.compile(<span class="string">'adam'</span>, loss=[l_1, l_2])</span><br><span class="line">model_warpper.fit(train_set, steps_per_epoch=<span class="number">30</span>)  <span class="comment"># NOTE 可训练</span></span><br></pre></td></tr></table></figure>
+
+      
+    </div>
+    <!-- <div class="article-entry" itemprop="articleBody">
+      
+        
+        
+          <p>在上次的<a href="https://zhen8838.github.io/2019/06/10/tf-keras-mult-out/">文章</a>中我写了如何自定义<code>loss</code>，但是我真正想要的使用的场景比那些还要复杂一些。</p>
+<a id="more"></a>
+<h1 id="问题出现">问题出现</h1>
+<p>是想在自定义<code>loss</code>函数中对<code>y_pred</code>进行<code>reshape</code>然后进行<code>sigmoid_cross_entropy_with_logits</code>，但是<code>keras</code>他是将<code>loss</code>构建成一个<code>graph</code>，并且<code>loss</code>中的<code>y_true</code>并不是占位符，他的<code>shape</code>是根据模型最终的输出维度来确定的<strong>虚占位符</strong>，如果模型最后输出的维度和真正的<code>y_true</code>维度不匹配，那么是肯定报错的。</p>
+<p>看下面这个例子：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> tensorflow <span class="keyword">as</span> tf</span><br><span class="line"><span class="keyword">from</span> tensorflow.python <span class="keyword">import</span> keras</span><br><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line">keras.backend.clear_session()</span><br><span class="line">x = keras.Input(shape=(<span class="number">10</span>))</span><br><span class="line">x_1 = keras.layers.Dense(<span class="number">35</span>)(x)</span><br><span class="line">x_2 = keras.layers.Dense(<span class="number">70</span>)(x)</span><br><span class="line">model = keras.Model(inputs=x, outputs=[x_1, x_2])</span><br><span class="line">model.summary()</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">l_1</span><span class="params">(true, pred)</span>:</span></span><br><span class="line">    pred = tf.reshape(pred, (<span class="number">-1</span>, <span class="number">5</span>, <span class="number">7</span>))</span><br><span class="line">    print(true.shape, pred.shape)</span><br><span class="line">    <span class="comment"># NOTE reshape之后 shape是匹配的，但是检查维度时候会报错</span></span><br><span class="line">    <span class="keyword">return</span> tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(labels=true, logits=pred))</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">l_2</span><span class="params">(true, pred)</span>:</span></span><br><span class="line">    pred = tf.reshape(pred, (<span class="number">-1</span>, <span class="number">10</span>, <span class="number">7</span>))</span><br><span class="line">    print(true.shape, pred.shape)</span><br><span class="line">    <span class="comment"># NOTE reshape之后 shape是匹配的，但是检查维度时候会报错</span></span><br><span class="line">    <span class="keyword">return</span> tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(labels=true, logits=pred))</span><br><span class="line"></span><br><span class="line">train_set = tf.data.Dataset.from_tensor_slices((np.random.rand(<span class="number">100</span>, <span class="number">10</span>), np.random.rand(<span class="number">100</span>, <span class="number">5</span>, <span class="number">7</span>),</span><br><span class="line">                                                np.random.rand(<span class="number">100</span>, <span class="number">10</span>, <span class="number">7</span>))).repeat()  <span class="comment"># type: tf.data.Dataset</span></span><br><span class="line">train_set = train_set.map(<span class="keyword">lambda</span> x, y, z: (x, (y, z))).batch(<span class="number">32</span>)</span><br><span class="line"></span><br><span class="line">model.compile(<span class="string">'adam'</span>, loss=[l_1, l_2])</span><br><span class="line">model.fit(train_set, steps_per_epoch=<span class="number">30</span>)  <span class="comment"># NOTE 不可训练</span></span><br></pre></td></tr></table></figure>
+<p>输出：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">(?, ?) (?, 5, 7)</span><br><span class="line">ValueError: logits and labels must have the same shape ((?, 5, 7) vs (?, ?))</span><br></pre></td></tr></table></figure>
+<p>可以看到我打印出<code>y_true</code>的<code>shape</code>就是和网络输出尺寸相同的，但实际上<code>y_true</code>输入是正确的，这个实在是让人蛋疼。</p>
+<h1 id="错误解决">错误解决</h1>
+<p>因为<code>y_true</code>的<code>shape</code>就是和网络输出尺寸相同，所以就从网络上面下手，构建一个<code>model_warrper</code>用于训练。等待训练完成之后直接保存<code>model</code>即可。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> tensorflow <span class="keyword">as</span> tf</span><br><span class="line"><span class="keyword">from</span> tensorflow.python <span class="keyword">import</span> keras</span><br><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line">keras.backend.clear_session()</span><br><span class="line">x = keras.Input(shape=(<span class="number">10</span>))</span><br><span class="line">x_1 = keras.layers.Dense(<span class="number">35</span>)(x)</span><br><span class="line">x_2 = keras.layers.Dense(<span class="number">70</span>)(x)</span><br><span class="line">model = keras.Model(inputs=x, outputs=[x_1, x_2])</span><br><span class="line">model.summary()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">l_1</span><span class="params">(true, pred)</span>:</span></span><br><span class="line">    pred = tf.reshape(pred, (<span class="number">-1</span>, <span class="number">5</span>, <span class="number">7</span>))</span><br><span class="line">    print(true.shape, pred.shape)</span><br><span class="line">    <span class="comment"># NOTE reshape之后 shape是匹配的，但是检查维度时候会报错</span></span><br><span class="line">    <span class="keyword">return</span> tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(labels=true, logits=pred))</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">l_2</span><span class="params">(true, pred)</span>:</span></span><br><span class="line">    pred = tf.reshape(pred, (<span class="number">-1</span>, <span class="number">10</span>, <span class="number">7</span>))</span><br><span class="line">    print(true.shape, pred.shape)</span><br><span class="line">    <span class="comment"># NOTE reshape之后 shape是匹配的，但是检查维度时候会报错</span></span><br><span class="line">    <span class="keyword">return</span> tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(labels=true, logits=pred))</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">train_set = tf.data.Dataset.from_tensor_slices((np.random.rand(<span class="number">100</span>, <span class="number">10</span>), np.random.rand(<span class="number">100</span>, <span class="number">5</span>, <span class="number">7</span>),</span><br><span class="line">                                                np.random.rand(<span class="number">100</span>, <span class="number">10</span>, <span class="number">7</span>))).repeat()  <span class="comment"># type: tf.data.Dataset</span></span><br><span class="line">train_set = train_set.map(<span class="keyword">lambda</span> x, y, z: (x, (y, z))).batch(<span class="number">32</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># model.compile('adam', loss=[l_1, l_2])</span></span><br><span class="line"><span class="comment"># model.fit(train_set, steps_per_epoch=30)  # NOTE 不可训练</span></span><br><span class="line"></span><br><span class="line">x_1 = keras.layers.Reshape((<span class="number">5</span>, <span class="number">7</span>))(x_1)</span><br><span class="line">x_2 = keras.layers.Reshape((<span class="number">10</span>, <span class="number">7</span>))(x_2)</span><br><span class="line">model_warpper = keras.Model(inputs=x, outputs=[x_1, x_2])</span><br><span class="line">model_warpper.summary()</span><br><span class="line">model_warpper.compile(<span class="string">'adam'</span>, loss=[l_1, l_2])</span><br><span class="line">model_warpper.fit(train_set, steps_per_epoch=<span class="number">30</span>)  <span class="comment"># NOTE 可训练</span></span><br></pre></td></tr></table></figure>
+
+        
+      
+    </div> -->
+    <footer class="article-footer">
+      <a data-url="https://zhen8838.github.io/2019/06/11/tf-custom-loss-error/" data-id="cjwrhmc1h006kxm6x3b48owdb" class="article-share-link">Share</a>
+      
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/tensorflow/">tensorflow</a></li></ul>
+
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+  
+    <a href="/2019/06/11/tf-keras-shape-error/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">tf.dataset无法推断shape导致错误</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">分类</h3>
+    <div class="widget">
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/学习/">学习</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">标签云</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/C/" style="font-size: 13.08px;">C</a> <a href="/tags/C/" style="font-size: 12.31px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10.77px;">CNN</a> <a href="/tags/Eigen/" style="font-size: 10px;">Eigen</a> <a href="/tags/Linux/" style="font-size: 20px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12.31px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12.31px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.77px;">PCB</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 15.38px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 10px;">linux</a> <a href="/tags/python/" style="font-size: 18.46px;">python</a> <a href="/tags/stm32/" style="font-size: 11.54px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 16.15px;">tensorflow</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 14.62px;">作业</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/图像处理/" style="font-size: 10px;">图像处理</a> <a href="/tags/堆栈/" style="font-size: 10.77px;">堆栈</a> <a href="/tags/声音信号处理/" style="font-size: 12.31px;">声音信号处理</a> <a href="/tags/小工具/" style="font-size: 12.31px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 16.15px;">嵌入式</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 17.69px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 16.92px;">机器学习</a> <a href="/tags/树/" style="font-size: 12.31px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/深度学习/" style="font-size: 14.62px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 11.54px;">神经网络</a> <a href="/tags/算法/" style="font-size: 11.54px;">算法</a> <a href="/tags/聚类/" style="font-size: 12.31px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13.85px;">蓝牙</a> <a href="/tags/调参/" style="font-size: 10px;">调参</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/链表/" style="font-size: 11.54px;">链表</a> <a href="/tags/错误记录/" style="font-size: 19.23px;">错误记录</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">归档</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/06/">六月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/05/">五月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">三月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">最新文章</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2019/06/11/tf-custom-loss-error/">tf.keras自定义loss报错shape mismatch</a>
+          </li>
+        
+          <li>
+            <a href="/2019/06/11/tf-keras-shape-error/">tf.dataset无法推断shape导致错误</a>
+          </li>
+        
+          <li>
+            <a href="/2019/06/10/tf-keras-mult-out/">tf.keras多输出模型自定义loss</a>
+          </li>
+        
+          <li>
+            <a href="/2019/06/09/numpy-slice-range/">numpy中动态范围切片</a>
+          </li>
+        
+          <li>
+            <a href="/2019/06/03/l-softmax/">L softmx -&gt; A softmx -&gt; AM softmax</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2019 NAke<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+    <a href="/about" class="mobile-nav-link">about</a>
+  
+</nav>
+    
+
+<script src="//cdn.staticfile.org/jquery/2.0.3/jquery.min.js"></script>
+
+
+  <link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
+  <script src="/fancybox/jquery.fancybox.pack.js"></script>
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+  </div>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+</body>
+</html>
