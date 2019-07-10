@@ -5,15 +5,20 @@
   
 
   
-  <title>Tag: 机器学习 | Practice</title>
+  <title>实现yolo时踩过的坑！ | Practice</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta property="og:type" content="website">
-<meta property="og:title" content="Practice">
-<meta property="og:url" content="https://zhen8838.github.io/tags/机器学习/index.html">
+  <meta name="description" content="终于把yolo v3框架写好了。支持多模型、多数据集、任意输出层数量、任意anchor数量、模型剪枝还适配k210.不要太好用～ 这里记录一下我之前的实现的问题出在哪里。">
+<meta name="keywords" content="tensorflow">
+<meta property="og:type" content="article">
+<meta property="og:title" content="实现yolo时踩过的坑！">
+<meta property="og:url" content="https://zhen8838.github.io/2019/07/10/yolo-error/index.html">
 <meta property="og:site_name" content="Practice">
+<meta property="og:description" content="终于把yolo v3框架写好了。支持多模型、多数据集、任意输出层数量、任意anchor数量、模型剪枝还适配k210.不要太好用～ 这里记录一下我之前的实现的问题出在哪里。">
 <meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2019-07-10T07:42:59.162Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Practice">
+<meta name="twitter:title" content="实现yolo时踩过的坑！">
+<meta name="twitter:description" content="终于把yolo v3框架写好了。支持多模型、多数据集、任意输出层数量、任意anchor数量、模型剪枝还适配k210.不要太好用～ 这里记录一下我之前的实现的问题出在哪里。">
   
   
     <link rel="icon" href="/favicon.png">
@@ -64,226 +69,85 @@
   </div>
 </header>
       <div class="outer">
-        <section id="main">
-  
-  
-    
-    
-      
-      
-      <section class="archives-wrap">
-        <div class="archive-year-wrap">
-          <a href="/archives/2019" class="archive-year">2019</a>
-        </div>
-        <div class="archives">
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2019/01/25/tqdm-fmt/" class="archive-article-date">
-  <time datetime="2019-01-24T20:06:56.000Z" itemprop="datePublished">1月 24</time>
+        <section id="main"><article id="post-yolo-error" class="article article-type-post" itemscope="" itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2019/07/10/yolo-error/" class="article-date">
+  <time datetime="2019-07-10T15:15:58.000Z" itemprop="datePublished">2019-07-10</time>
 </a>
-      
+    
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/学习/">学习</a>
+  </div>
+
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
   
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2019/01/25/tqdm-fmt/">tqdm中后缀的添加</a>
+    <h1 class="article-title" itemprop="name">
+      实现yolo时踩过的坑！
     </h1>
   
 
-    </header>
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>终于把<a href="https://github.com/zhen8838/K210_Yolo_framework" target="_blank" rel="noopener">yolo v3框架</a>写好了。支持多模型、多数据集、任意输出层数量、任意anchor数量、模型剪枝还适配k210.不要太好用～</p>
+<p>这里记录一下我之前的实现的问题出在哪里。 <a id="more"></a></p>
+<h1 id="错误地计算了ignore-mask">错误地计算了ignore mask</h1>
+<p>从<code>yolo v2</code>开始就会计算正确<code>box</code>与预测<code>box</code>直接<code>iou</code>关系，如果<code>iou score</code>大于阈值，那么说明这个预测<code>box</code>是成功预测到了这个对象的，极大的提高了模型的<code>recall</code>。 但是我在开源的<code>yolo v2</code>中使用<code>Boolean mask</code>函数时忽略了一点，比如<code>batch</code>为16，那么输出<code>label</code>的尺寸为<span class="math inline">\([16,7,10,3,25]\)</span>,直接使用<code>Boolean mask</code>会得到正确<code>box</code>尺寸为<span class="math inline">\([?,4]\)</span>。然后我把这个<span class="math inline">\([?,4]\)</span>与预测出来的<code>box</code><span class="math inline">\([16,7,10,3,4]\)</span>计算<code>iou score</code>。</p>
+<p>乍一看还以为没什么毛病，其实这里最大的毛病就是整个<code>batch</code>的正确<code>box</code>都与整个<code>batch</code>的预测<code>box</code>都做了<code>iou score</code>，如果这时候计算最优<code>iou score</code>，很有可能这个最优的预测<code>box</code>不属于这张图片！数据直接出现了混合，这就是根源问题。</p>
+<p>在新的写的代码中，我用了<code>map</code>的方式处理每张图片，既提高了效率，又避免了错误。</p>
+<p>题外话一句。。我现在都惊讶我之前的<code>yolo v2</code>为啥效果还行，很有可能误打误撞搞了个数据集<code>mix</code>的效果。。。</p>
+<h1 id="anchor的尺度">anchor的尺度</h1>
+<p>前面我有个文章也写了，<code>anchor</code>的作用就是让预测<code>wh</code>与真实<code>wh</code>直接的比例接近与1，那么细细想来，<code>anchor</code>的尺度是对应图片尺度<span class="math inline">\([224,320]\)</span>还是对应栅格的尺度，还是对应全局的<code>0-1</code>都没有什么关系，只不过<code>anchor</code>的尺度就代表做标签的时候<code>label</code>要转换的尺度。所以为了方便起见，直接把<code>anchor</code>尺度设置为全局的<code>0-1</code>就完事了，还减少运算量。</p>
+
+      
+    </div>
+    <!-- <div class="article-entry" itemprop="articleBody">
+      
+        
+        
+          <p>终于把<a href="https://github.com/zhen8838/K210_Yolo_framework" target="_blank" rel="noopener">yolo v3框架</a>写好了。支持多模型、多数据集、任意输出层数量、任意anchor数量、模型剪枝还适配k210.不要太好用～</p>
+<p>这里记录一下我之前的实现的问题出在哪里。 <a id="more"></a></p>
+<h1 id="错误地计算了ignore-mask">错误地计算了ignore mask</h1>
+<p>从<code>yolo v2</code>开始就会计算正确<code>box</code>与预测<code>box</code>直接<code>iou</code>关系，如果<code>iou score</code>大于阈值，那么说明这个预测<code>box</code>是成功预测到了这个对象的，极大的提高了模型的<code>recall</code>。 但是我在开源的<code>yolo v2</code>中使用<code>Boolean mask</code>函数时忽略了一点，比如<code>batch</code>为16，那么输出<code>label</code>的尺寸为<span class="math inline">\([16,7,10,3,25]\)</span>,直接使用<code>Boolean mask</code>会得到正确<code>box</code>尺寸为<span class="math inline">\([?,4]\)</span>。然后我把这个<span class="math inline">\([?,4]\)</span>与预测出来的<code>box</code><span class="math inline">\([16,7,10,3,4]\)</span>计算<code>iou score</code>。</p>
+<p>乍一看还以为没什么毛病，其实这里最大的毛病就是整个<code>batch</code>的正确<code>box</code>都与整个<code>batch</code>的预测<code>box</code>都做了<code>iou score</code>，如果这时候计算最优<code>iou score</code>，很有可能这个最优的预测<code>box</code>不属于这张图片！数据直接出现了混合，这就是根源问题。</p>
+<p>在新的写的代码中，我用了<code>map</code>的方式处理每张图片，既提高了效率，又避免了错误。</p>
+<p>题外话一句。。我现在都惊讶我之前的<code>yolo v2</code>为啥效果还行，很有可能误打误撞搞了个数据集<code>mix</code>的效果。。。</p>
+<h1 id="anchor的尺度">anchor的尺度</h1>
+<p>前面我有个文章也写了，<code>anchor</code>的作用就是让预测<code>wh</code>与真实<code>wh</code>直接的比例接近与1，那么细细想来，<code>anchor</code>的尺度是对应图片尺度<span class="math inline">\([224,320]\)</span>还是对应栅格的尺度，还是对应全局的<code>0-1</code>都没有什么关系，只不过<code>anchor</code>的尺度就代表做标签的时候<code>label</code>要转换的尺度。所以为了方便起见，直接把<code>anchor</code>尺度设置为全局的<code>0-1</code>就完事了，还减少运算量。</p>
+
+        
+      
+    </div> -->
+    <footer class="article-footer">
+      <a data-url="https://zhen8838.github.io/2019/07/10/yolo-error/" data-id="cjxwxuzes009m4s6x4omuvy7x" class="article-share-link">Share</a>
+      
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/tensorflow/">tensorflow</a></li></ul>
+
+    </footer>
   </div>
+  
+    
+<nav id="article-nav">
+  
+  
+    <a href="/2019/07/07/tflite-kmodel/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">比较kmdoel和tflite推理输出</div>
+    </a>
+  
+</nav>
+
+  
 </article>
-  
-    
-    
-      
-        </div></section>
-      
-      
-      <section class="archives-wrap">
-        <div class="archive-year-wrap">
-          <a href="/archives/2018" class="archive-year">2018</a>
-        </div>
-        <div class="archives">
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/12/18/wenda-week8/" class="archive-article-date">
-  <time datetime="2018-12-17T22:46:01.000Z" itemprop="datePublished">12月 17</time>
-</a>
-      
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/12/18/wenda-week8/">机器学习作业第八周</a>
-    </h1>
-  
 
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/12/16/wenda-week7/" class="archive-article-date">
-  <time datetime="2018-12-15T18:28:23.000Z" itemprop="datePublished">12月 15</time>
-</a>
-      
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/12/16/wenda-week7/">机器学习作业第七周</a>
-    </h1>
-  
-
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/12/14/wenda-week6/" class="archive-article-date">
-  <time datetime="2018-12-13T18:51:40.000Z" itemprop="datePublished">12月 13</time>
-</a>
-      
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/12/14/wenda-week6/">机器学习作业第六周</a>
-    </h1>
-  
-
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/12/11/bpnnfit/" class="archive-article-date">
-  <time datetime="2018-12-11T13:34:42.000Z" itemprop="datePublished">12月 11</time>
-</a>
-      
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/12/11/bpnnfit/">BP神经网络回归</a>
-    </h1>
-  
-
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/12/10/wenda-week5/" class="archive-article-date">
-  <time datetime="2018-12-09T21:05:22.000Z" itemprop="datePublished">12月 9</time>
-</a>
-      
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/12/10/wenda-week5/">机器学习作业第五周</a>
-    </h1>
-  
-
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/12/09/wenda-week4/" class="archive-article-date">
-  <time datetime="2018-12-08T19:43:51.000Z" itemprop="datePublished">12月 8</time>
-</a>
-      
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/12/09/wenda-week4/">机器学习作业第四周</a>
-    </h1>
-  
-
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/12/05/wenda-week3/" class="archive-article-date">
-  <time datetime="2018-12-04T21:43:14.000Z" itemprop="datePublished">12月 4</time>
-</a>
-      
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/12/05/wenda-week3/">机器学习作业第三周</a>
-    </h1>
-  
-
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/11/29/wenda-week2/" class="archive-article-date">
-  <time datetime="2018-11-29T13:25:23.000Z" itemprop="datePublished">11月 29</time>
-</a>
-      
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/11/29/wenda-week2/">机器学习作业第二周</a>
-    </h1>
-  
-
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2018/11/25/wenda-week1/" class="archive-article-date">
-  <time datetime="2018-11-25T13:25:23.000Z" itemprop="datePublished">11月 25</time>
-</a>
-      
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2018/11/25/wenda-week1/">机器学习作业第一周</a>
-    </h1>
-  
-
-    </header>
-  </div>
-</article>
-  
-  
-    </div></section>
-  
-
-
-  <nav id="page-nav">
-    
-    <span class="page-number current">1</span><a class="page-number" href="/tags/机器学习/page/2/">2</a><a class="extend next" rel="next" href="/tags/机器学习/page/2/">下一页 &raquo;</a>
-  </nav>
 
 </section>
         
