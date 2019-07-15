@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html>
+<head><meta name="generator" content="Hexo 3.8.0">
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><meta charset="utf-8">
+  
+
+  
+  <title>EM算法与EM路由 | Practice</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="搞定了yolo，终于可以学习点新的东西了。今天就学习一波胶囊网络中的EM路由。 先推荐一个课程资料，杜克大学的统计学课程，从python讲到c++，从矩阵计算讲到概率统计，从jit讲到cuda编程。看看人家本科生学的东西。。。">
+<meta name="keywords" content="算法,机器学习">
+<meta property="og:type" content="article">
+<meta property="og:title" content="EM算法与EM路由">
+<meta property="og:url" content="https://zhen8838.github.io/2019/07/11/em-algm/index.html">
+<meta property="og:site_name" content="Practice">
+<meta property="og:description" content="搞定了yolo，终于可以学习点新的东西了。今天就学习一波胶囊网络中的EM路由。 先推荐一个课程资料，杜克大学的统计学课程，从python讲到c++，从矩阵计算讲到概率统计，从jit讲到cuda编程。看看人家本科生学的东西。。。">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://zhen8838.github.io/2019/07/11/em-algm/EMAlgorithm_5_0.png">
+<meta property="og:image" content="https://zhen8838.github.io/2019/07/11/em-algm/14_ExpectationMaximization_21_0.png">
+<meta property="og:image" content="https://zhen8838.github.io/2019/07/11/em-algm/kmeans.png">
+<meta property="og:image" content="https://zhen8838.github.io/2019/07/11/em-algm/mxiguass.png">
+<meta property="og:image" content="https://zhen8838.github.io/2019/07/11/em-algm/capp.png">
+<meta property="og:image" content="https://zhen8838.github.io/2019/07/11/em-algm/c2.jpg">
+<meta property="og:updated_time" content="2019-07-15T12:49:50.819Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="EM算法与EM路由">
+<meta name="twitter:description" content="搞定了yolo，终于可以学习点新的东西了。今天就学习一波胶囊网络中的EM路由。 先推荐一个课程资料，杜克大学的统计学课程，从python讲到c++，从矩阵计算讲到概率统计，从jit讲到cuda编程。看看人家本科生学的东西。。。">
+<meta name="twitter:image" content="https://zhen8838.github.io/2019/07/11/em-algm/EMAlgorithm_5_0.png">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.lug.ustc.edu.cn/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+    <!-- <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css"> -->
+    <!-- <link href="//fonts.useso.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css"> -->
+  
+  <link rel="stylesheet" href="/css/style.css"><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+</head>
+</html>
+<body>
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Practice</a>
+      </h1>
+      
+        <h2 id="subtitle-wrap">
+          <a href="/" id="subtitle">一个分享经验的地方</a>
+        </h2>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+          <a class="main-nav-link" href="/about">about</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+        <a id="nav-search-btn" class="nav-icon" title="搜索"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="https://zhen8838.github.io"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-em-algm" class="article article-type-post" itemscope="" itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2019/07/11/em-algm/" class="article-date">
+  <time datetime="2019-07-11T09:48:22.000Z" itemprop="datePublished">2019-07-11</time>
+</a>
+    
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/学习/">学习</a>
+  </div>
+
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      EM算法与EM路由
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>搞定了yolo，终于可以学习点新的东西了。今天就学习一波胶囊网络中的EM路由。 先推荐一个课程资料，杜克大学的<a href="https://people.duke.edu/~ccc14/sta-663" target="_blank" rel="noopener">统计学课程</a>，从python讲到c++，从矩阵计算讲到概率统计，从jit讲到cuda编程。看看人家本科生学的东西。。。</p>
+<a id="more"></a>
+<h1 id="em算法">EM算法</h1>
+<h2 id="詹森不等式">詹森不等式</h2>
+<p>对于一个凸函数<span class="math inline">\(f\)</span>,<span class="math inline">\(E[f(x)]\geq f(E[x])\)</span>,将其反转获得一个凹函数。 如果一个函数<span class="math inline">\(f(x)\)</span>在区间内都有<span class="math inline">\(f&#39;&#39;(x)\geq 0\)</span>，那么它是一个凸函数。例如<span class="math inline">\(f(x)=log\ x\)</span>,<span class="math inline">\(f&#39;&#39;(x)=-\frac{1}{x^2}\)</span>,说明他在<span class="math inline">\(x\in (0,+ \infty]\)</span>是一个凸函数，詹森不等式的直观说明如下。</p>
+<p><img src="/2019/07/11/em-algm/EMAlgorithm_5_0.png"></p>
+<p>其实只有当<span class="math inline">\(f(x)\)</span>为常数时，詹森不等式才会相等。</p>
+<p>这里使用概率论表述的<span class="math inline">\(E\)</span>，其实际就是积分。也就是说先经过凸函数的期望值必然大于等于期望的凸函数值。</p>
+<h2 id="完整信息的最大似然">完整信息的最大似然</h2>
+<p>设置一个实验，硬币A向上的概率为<span class="math inline">\(\theta_A\)</span>的，硬币B向上的概率为<span class="math inline">\(\theta_B\)</span>,接着一共做m此实验，每次实验随机选择一个硬币，投掷n次，并记录向下和向下的次数。如果我们记录了每个样本所使用的硬币，那我们就有完整的信息可以估计<span class="math inline">\(\theta_A\)</span>和<span class="math inline">\(\theta_B\)</span>。</p>
+<p>假设我们做了5次实验，每次向上的次数记录成向量<span class="math inline">\(x\)</span>，并且使用的硬币顺序为<span class="math inline">\(A,A,B,A,B\)</span>。他的似然函数为： <span class="math display">\[
+\begin{aligned}
+    L(\theta_A,\theta_B)&amp;= p(x_1; \theta_A)\cdot p(x_2; \theta_A)\cdot p(x_3; \theta_B) \cdot  p(x_4; \theta_A) \cdot p(x_5; \theta_B) \\
+    &amp;=B(n,\theta_A).pmf(x_1)\cdot B(n,\theta_A).pmf(x_2)\cdot B(n,\theta_B).pmf(x_3)\cdot B(n,\theta_A).pmf(x_4)\cdot B(n,\theta_B).pmf(x_5)
+\end{aligned}
+\]</span> 其中二项分布的概率计算方式为： <span class="math display">\[
+\begin{aligned}
+    \because X &amp; \sim B(n,p)\\
+    \therefore  P(X=k) &amp;= \binom{n}{k} p^k (1-p)^{n-k} \\
+        &amp;=  C_n^k p^{k}(1-p)^{n-k}
+\end{aligned}
+\]</span></p>
+<p>将似然函数对数化：</p>
+<p><span class="math display">\[
+\begin{aligned}
+    L(\theta_A,\theta_B)=\log p(x_1; \theta_A) + \log p(x_2; \theta_A) +\log p(x_3; \theta_B) + \log p(x_4; \theta_A) +\log p(x_5; \theta_B)
+\end{aligned}
+\]</span></p>
+<p><span class="math inline">\(p(x_i; \theta)\)</span>是二项式分布的概率质量函数，其中<span class="math inline">\(n=m,p=\theta\)</span>。我们会使用<span class="math inline">\(z_i\)</span>来表示第<span class="math inline">\(i\)</span>个硬币的标签。</p>
+<h3 id="使用最小化函数求解似然">使用最小化函数求解似然</h3>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> numpy.core.umath_tests <span class="keyword">import</span> matrix_multiply <span class="keyword">as</span> mm</span><br><span class="line"><span class="keyword">from</span> scipy.optimize <span class="keyword">import</span> minimize</span><br><span class="line"><span class="keyword">from</span> scipy.stats <span class="keyword">import</span> bernoulli, binom</span><br><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line"><span class="keyword">import</span> matplotlib.pyplot <span class="keyword">as</span> plt</span><br><span class="line">np.random.seed(<span class="number">1234</span>)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="string">""" 做五次实验 """</span></span><br><span class="line">n = <span class="number">10</span>  <span class="comment"># 每次实验投掷10次</span></span><br><span class="line">theta_A = <span class="number">0.8</span></span><br><span class="line">theta_B = <span class="number">0.3</span></span><br><span class="line">theta_0 = [theta_A, theta_B]</span><br><span class="line"><span class="comment"># 两个硬币对应两个不同thta的二项分布</span></span><br><span class="line">coin_A = bernoulli(theta_A)</span><br><span class="line">coin_B = bernoulli(theta_B)</span><br><span class="line"></span><br><span class="line">zs = [<span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>, <span class="number">0</span>, <span class="number">1</span>]  <span class="comment"># 代表使用的硬币为哪个</span></span><br><span class="line"><span class="comment"># 得到实验结果</span></span><br><span class="line">xs = np.array([np.sum(coin.rvs(n)) <span class="keyword">for</span> coin <span class="keyword">in</span> [coin_A, coin_A, coin_B, coin_A, coin_B]])</span><br><span class="line">print(xs) <span class="comment"># [7 9 2 6 0]</span></span><br><span class="line"></span><br><span class="line"><span class="string">""" 精确求解 """</span></span><br><span class="line"><span class="comment"># 计算所有的硬币A朝上的比例作为概率</span></span><br><span class="line">ml_A = np.sum(xs[[<span class="number">0</span>, <span class="number">1</span>, <span class="number">3</span>]]) / (<span class="number">3.0</span> * n)</span><br><span class="line"><span class="comment"># 计算所有的硬币B朝上的比例作为概率</span></span><br><span class="line">ml_B = np.sum(xs[[<span class="number">2</span>, <span class="number">4</span>]]) / (<span class="number">2.0</span> * n)</span><br><span class="line"></span><br><span class="line">print(ml_A, ml_B)  <span class="comment"># 0.7333333333333333 0.1</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="string">""" 数值估计 """</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">neg_loglik</span><span class="params">(thetas, n, xs, zs)</span>:</span></span><br><span class="line">    <span class="string">""" 对数似然计算函数 </span></span><br><span class="line"><span class="string">        这里的的二项分布是次数为n，概率可能为 theta_A 或 theta_B。</span></span><br><span class="line"><span class="string">        将每个二项分布对应x的对数概率密度函数求和后取相反数，接下来就是最小化此函数即可。</span></span><br><span class="line"><span class="string">    """</span></span><br><span class="line"></span><br><span class="line">    logpmf = -np.sum([binom(n, thetas[z]).logpmf(x) <span class="keyword">for</span> (x, z) <span class="keyword">in</span> zip(xs, zs)])</span><br><span class="line">    <span class="keyword">return</span> logpmf</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">bnds = [(<span class="number">0</span>, <span class="number">1</span>), (<span class="number">0</span>, <span class="number">1</span>)]</span><br><span class="line"><span class="comment"># 使用优化策略进行最小化求解</span></span><br><span class="line">res = minimize(neg_loglik, [<span class="number">0.5</span>, <span class="number">0.5</span>], args=(n, xs, zs),</span><br><span class="line">               bounds=bnds, method=<span class="string">'tnc'</span>, options=&#123;<span class="string">'maxiter'</span>: <span class="number">100</span>&#125;)</span><br><span class="line">print(res)</span><br><span class="line"><span class="string">""" fun: 7.655267754139319</span></span><br><span class="line"><span class="string">     jac: array([-7.31859018e-05, -7.58504370e-05])</span></span><br><span class="line"><span class="string"> message: 'Converged (|f_n-f_(n-1)| ~= 0)'</span></span><br><span class="line"><span class="string">    nfev: 17</span></span><br><span class="line"><span class="string">     nit: 6</span></span><br><span class="line"><span class="string">  status: 1</span></span><br><span class="line"><span class="string"> success: True</span></span><br><span class="line"><span class="string">       x: array([0.73333285, 0.09999965]) """</span></span><br></pre></td></tr></table></figure>
+<p>可以发现似然估计的估计值相当近似与精确计算所得到的结论。</p>
+<h2 id="当信息缺失时的最大似然">当信息缺失时的最大似然</h2>
+<p>当我们没有记录实验所使用的硬币种类时，这个问题的解决就开始困难起来了。有一种解决问题的方式就是我们根据这个样本是由<span class="math inline">\(A\)</span>或<span class="math inline">\(B\)</span>产生的来给每个样本假设权重<span class="math inline">\(\boldsymbol{w}_i\)</span>。直觉上来想，权重应该是<span class="math inline">\(\boldsymbol{z}_i\)</span>的后验分布： <span class="math display">\[
+\begin{aligned}
+    w_i = p(z_i \ | \ x_i; \theta)
+\end{aligned}
+\]</span></p>
+<p>假设我们有<span class="math inline">\(\theta\)</span>的一些估计值，如果我们知道<span class="math inline">\(z_i\)</span>，那我们就可以估计出<span class="math inline">\(\theta\)</span>，因为我们相当于拥有了全部的似然信息。EM算法的基本思想就是先猜测<span class="math inline">\(\theta\)</span>，然后计算出<span class="math inline">\(z_i\)</span>，接着继续更新<span class="math inline">\(\theta\)</span>再计算<span class="math inline">\(z_i\)</span>，重复数次直到收敛。</p>
+<p>非书面的表述：首先考虑一个对数似然函数作为曲线(曲面)，他的<span class="math inline">\(x\)</span>轴表示<span class="math inline">\(\theta\)</span>。找到另一个<span class="math inline">\(\theta\)</span>的函数<span class="math inline">\(\boldsymbol{Q}\)</span>，他是对数似然函数的下界，在特定的<span class="math inline">\(\theta\)</span>值时对数似然函数与函数<span class="math inline">\(\boldsymbol{Q}\)</span>接触。接下来找到这个<span class="math inline">\(\theta\)</span>的值，并且使函数<span class="math inline">\(\boldsymbol{Q}\)</span>最大化，重复这个过程，是下界函数<span class="math inline">\(\boldsymbol{Q}\)</span>和对数似然函数的最大值相同，那么我们就得到了最大对数似然～</p>
+<p>从下图可以理解，每次迭代都能找到新的下界函数<span class="math inline">\(\boldsymbol{Q}\)</span>和当前最大的对数似然，等到迭代到一定程度时，就找到了全局的最大的对数似然。</p>
+<p><img src="/2019/07/11/em-algm/14_ExpectationMaximization_21_0.png"></p>
+<p>当然，还有个问题就是如何找到这个对数似然函数的下界函数<span class="math inline">\(\boldsymbol{Q}\)</span>，这就需要使用詹森不等式来进行数学推理。</p>
+<h3 id="推导">推导</h3>
+<p>在EM算法的<code>E-step</code>中，我们确定一个函数，他是对数似然的下界。 <span class="math display">\[
+\begin{align}
+l &amp;= \sum_i{\log p(x_i; \theta)} &amp;&amp; \text{定义对数似然函数} \\
+&amp;= \sum_i \log \sum_{z_i}{p(x_i, z_i; \theta)} &amp;&amp; \text{在函数中加入隐变量$z$} \\
+&amp;= \sum_i \log \sum_{z_i} Q_i(z_i) \frac{p(x_i, z_i; \theta)}{Q_i(z_i)} &amp;&amp; \text{贝叶斯定理得$Q_i$为$z_i$分布} \\
+&amp;= \sum_i \log E_{z_i}[\frac{p(x_i, z_i; \theta)}{Q_i(z_i)}] &amp;&amp; \text{得到期望 - 就是EM中的E} \\
+&amp;\geq \sum E_{z_i}[\log \frac{p(x_i, z_i; \theta)}{Q_i(z_i)}] &amp;&amp; \text{使用詹森不等式计算凹的对数似然函数} \\
+&amp;\geq \sum_i \sum_{z_i} Q_i(z_i) \log \frac{p(x_i, z_i; \theta)}{Q_i(z_i)} &amp;&amp; \text{得到期望的定义}
+\end{align}
+\]</span></p>
+<p>我们如何确定分布<span class="math inline">\(\boldsymbol{Q_i}\)</span>？我们想要<span class="math inline">\(\boldsymbol{Q}\)</span>函数与对数似然函数进行接触，并且也知道了詹森不等式相等的充要条件就是这个函数为常数，因此：</p>
+<p><span class="math display">\[
+\begin{align}
+\frac{p(x_i, z_i; \theta)}{Q_i(z_i)} =&amp; c \\
+\implies Q_i(z_i) &amp;\propto p(x_i, z_i; \theta)\\
+\implies Q_i(z_i) &amp;= \frac{p(x_i, z_i; \theta) }{\sum_{z_i}{p(x_i, z_i; \theta) } } &amp;&amp;\text{因为 $\boldsymbol{Q}$ 是个分布且和为1} \\
+\implies Q_i(z_i) &amp;= \frac{p(x_i, z_i; \theta) }{ {p(x_i, \theta) } } &amp;&amp; \text{边缘化 $z_i$}\\
+\implies Q_i(z_i) &amp;= p(z_i | x_i; \theta) &amp;&amp; \text{根据条件概率定义}
+\end{align}
+\]</span></p>
+<p>因此得到<span class="math inline">\(\boldsymbol{Q_i}\)</span>就是<span class="math inline">\(z_i\)</span>的后验概率，这就完成了<code>E-step</code>。</p>
+<p>在<code>M-step</code>中，我找到最大化对数似然函数下界时的<span class="math inline">\(\theta\)</span>值，然后我们迭代<code>E</code>和<code>M</code>即可。</p>
+<p>所以EM算法是在缺少信息的情况下最大化似然的优化算法，或者说他可以很方便的添加隐变量来简化最大似然计算。</p>
+<h3 id="例子">例子</h3>
+<p>现在如果我们忘记记录了投掷硬币的顺序，那我们来求解一波A、B硬币向上的概率。 对于<code>E-step</code>,我们：</p>
+<p><span class="math display">\[
+\begin{align}
+w_j &amp;= Q_i(z_i = j) \\
+&amp;= p(z_i = j \mid x_i; \theta) \\
+&amp;= \frac{p(x_i \mid z_i = j; \theta) p(z_i = j; \phi)}  {\sum_{l=1}^k{p(x_i \mid z_i = l; \theta) p(z_i = l; \phi) } }  &amp;&amp; \text{贝叶斯准则} \\
+&amp;= \frac{\theta_j^h(1-\theta_j)^{n-h} \phi_j}{\sum_{l=1}^k \theta_l^h(1-\theta_l)^{n-h} \phi_l} &amp;&amp; \text{代入二项分布公式} \\
+&amp;= \frac{\theta_j^h(1-\theta_j)^{n-h} }{\sum_{l=1}^k \theta_l^h(1-\theta_l)^{n-h} } &amp;&amp; \text{为了简单起见使 $\phi$ 为常数}
+\end{align}
+\]</span></p>
+<p>对于<code>M-step</code>,我们需要找到最大时的<span class="math inline">\(\theta\)</span>值。</p>
+<p><span class="math display">\[
+\begin{align}
+&amp; \sum_i \sum_{z_i} Q_i(z_i) \log \frac{p(x_i, z_i; \theta)}{Q_i(z_i)} \\
+&amp;= \sum_{i=1}^m \sum_{j=1}^k w_j \log \frac{p(x_i \mid z_i=j; \theta) \, p(z_i = j; \phi)}{w_j} \\
+&amp;= \sum_{i=1}^m \sum_{j=1}^k w_j \log \frac{\theta_j^h(1-\theta_j)^{n-h} \phi_j}{w_j} \\
+&amp;= \sum_{i=1}^m \sum_{j=1}^k w_j \left( h \log \theta_j + (n-h) \log (1-\theta_j) + \log \phi_j - \log w_j \right)
+\end{align}
+\]</span></p>
+<p>我们使用区间的方式解决<span class="math inline">\(\theta_s\)</span>导数消失的问题： <span class="math display">\[
+\begin{align}
+\sum_{i=1}^m w_s \left( \frac{h}{\theta_s} - \frac{n-h}{1-\theta_s} \right) &amp;= 0  \\
+\implies \theta_s &amp;= \frac {\sum_{i=1}^m w_s h}{\sum_{i=1}^m w_s n}
+\end{align}
+\]</span></p>
+<h3 id="第一种直接的代码">第一种直接的代码</h3>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line">xs = np.array([(<span class="number">5</span>, <span class="number">5</span>), (<span class="number">9</span>, <span class="number">1</span>), (<span class="number">8</span>, <span class="number">2</span>), (<span class="number">4</span>, <span class="number">6</span>), (<span class="number">7</span>, <span class="number">3</span>)])</span><br><span class="line">thetas = np.array([[<span class="number">0.6</span>, <span class="number">0.4</span>], [<span class="number">0.5</span>, <span class="number">0.5</span>]])  <span class="comment"># 初始化参数A B (向上概率，向下概率)</span></span><br><span class="line"></span><br><span class="line">tol = <span class="number">0.01</span>  <span class="comment"># 变化容忍度</span></span><br><span class="line">max_iter = <span class="number">100</span>  <span class="comment"># 迭代次数</span></span><br><span class="line"></span><br><span class="line">ll_old = <span class="number">0</span></span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> range(max_iter):</span><br><span class="line">    exp_A = []</span><br><span class="line">    exp_B = []</span><br><span class="line"></span><br><span class="line">    ll_new = <span class="number">0</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># ! E-step: 计算可能的概率分布</span></span><br><span class="line">    <span class="keyword">for</span> x <span class="keyword">in</span> xs:</span><br><span class="line">        <span class="comment"># 求解当前theta下两个分布的对数似然</span></span><br><span class="line">        ll_A = np.sum(x * np.log(thetas[<span class="number">0</span>]))  <span class="comment"># 多项式分布的对数似然函数 (忽略常数).</span></span><br><span class="line">        ll_B = np.sum(x * np.log(thetas[<span class="number">1</span>]))</span><br><span class="line"></span><br><span class="line">        w_A = np.exp(ll_A) / (np.exp(ll_A) + np.exp(ll_B))  <span class="comment"># 求出概率A的权重</span></span><br><span class="line">        w_B = np.exp(ll_B) / (np.exp(ll_A) + np.exp(ll_B))  <span class="comment"># 求出概率B的权重</span></span><br><span class="line"></span><br><span class="line">        exp_A.append(w_A * x)  <span class="comment"># 概率A权重乘上样本</span></span><br><span class="line">        exp_B.append(w_B * x)  <span class="comment"># 概率B权重乘上样本</span></span><br><span class="line"></span><br><span class="line">        ll_new += w_A * ll_A + w_B * ll_B  <span class="comment"># 计算当前的theta值对应的似然值</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># ! M-step: 为给定的分布更新当前参数</span></span><br><span class="line">    thetas[<span class="number">0</span>] = np.sum(exp_A, <span class="number">0</span>) / np.sum(exp_A)  <span class="comment"># 利用更新之后的样本值计算出当前A的theta值</span></span><br><span class="line">    thetas[<span class="number">1</span>] = np.sum(exp_B, <span class="number">0</span>) / np.sum(exp_B)  <span class="comment"># 利用更新之后的样本值计算出当前B的theta值</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># 输出每个x和当前参数估计z的分布</span></span><br><span class="line">    print(<span class="string">"Iteration: %d"</span> % (i + <span class="number">1</span>))</span><br><span class="line">    print(<span class="string">"theta_A = %.2f, theta_B = %.2f, ll = %.2f"</span> % (thetas[<span class="number">0</span>, <span class="number">0</span>], thetas[<span class="number">1</span>, <span class="number">0</span>], ll_new))</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> np.abs(ll_new - ll_old) &lt; tol:</span><br><span class="line">        <span class="keyword">break</span></span><br><span class="line">    ll_old = ll_new</span><br></pre></td></tr></table></figure>
+<h3 id="结果">结果</h3>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">Iteration: 1</span><br><span class="line">theta_A = 0.71, theta_B = 0.58, ll = -32.69</span><br><span class="line">Iteration: 2</span><br><span class="line">theta_A = 0.75, theta_B = 0.57, ll = -31.26</span><br><span class="line">Iteration: 3</span><br><span class="line">theta_A = 0.77, theta_B = 0.55, ll = -30.76</span><br><span class="line">Iteration: 4</span><br><span class="line">theta_A = 0.78, theta_B = 0.53, ll = -30.33</span><br><span class="line">Iteration: 5</span><br><span class="line">theta_A = 0.79, theta_B = 0.53, ll = -30.07</span><br><span class="line">Iteration: 6</span><br><span class="line">theta_A = 0.79, theta_B = 0.52, ll = -29.95</span><br><span class="line">Iteration: 7</span><br><span class="line">theta_A = 0.80, theta_B = 0.52, ll = -29.90</span><br><span class="line">Iteration: 8</span><br><span class="line">theta_A = 0.80, theta_B = 0.52, ll = -29.88</span><br><span class="line">Iteration: 9</span><br><span class="line">theta_A = 0.80, theta_B = 0.52, ll = -29.87</span><br></pre></td></tr></table></figure>
+<p><strong>NOTE：</strong> 他这里的对数似然函数是根据上面的公式推导之后简化而来的，所以直接对<span class="math inline">\(\theta\)</span>做对数即可，下面我按最基本的思路来写了一个例程。</p>
+<h3 id="我的代码">我的代码</h3>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line">n = <span class="number">10</span>  <span class="comment"># 实验次数</span></span><br><span class="line">m_xs = np.array([<span class="number">5</span>, <span class="number">9</span>, <span class="number">8</span>, <span class="number">4</span>, <span class="number">7</span>])  <span class="comment"># 向上次数</span></span><br><span class="line">theta_A = <span class="number">0.6</span></span><br><span class="line">theta_B = <span class="number">0.5</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">tol = <span class="number">0.01</span>  <span class="comment"># 变化容忍度</span></span><br><span class="line">max_iter = <span class="number">100</span>  <span class="comment"># 迭代次数</span></span><br><span class="line">loglike_old = <span class="number">0</span>  <span class="comment"># 初始对数似然值</span></span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> range(max_iter):</span><br><span class="line">    cnt_A = []</span><br><span class="line">    cnt_B = []</span><br><span class="line">    loglike_new = <span class="number">0</span>  <span class="comment"># 新的对数似然值</span></span><br><span class="line">    <span class="comment"># ! E-step</span></span><br><span class="line">    <span class="keyword">for</span> x <span class="keyword">in</span> m_xs:</span><br><span class="line">        pmf_A = binom(n, theta_A).pmf(x)  <span class="comment"># 当前theta下 A的概率</span></span><br><span class="line">        pmf_B = binom(n, theta_B).pmf(x)  <span class="comment"># 当前theta下 B的概率</span></span><br><span class="line"></span><br><span class="line">        logpmf_A = binom(n, theta_A).logpmf(x)  <span class="comment"># 当前theta下 A的对数概率</span></span><br><span class="line">        logpmf_B = binom(n, theta_B).logpmf(x)  <span class="comment"># 当前theta下 B的对数概率</span></span><br><span class="line"></span><br><span class="line">        weight_A = pmf_A / (pmf_A + pmf_B)  <span class="comment"># 求得权重</span></span><br><span class="line">        weight_B = pmf_B / (pmf_A + pmf_B)  <span class="comment"># 求得权重</span></span><br><span class="line"></span><br><span class="line">        cnt_A.append(weight_A * np.array([x, n - x]))  <span class="comment"># 概率A权重乘上样本，得到新的硬币次数统计</span></span><br><span class="line">        cnt_B.append(weight_B * np.array([x, n - x]))  <span class="comment"># 概率B权重乘上样本，得到新的硬币次数统计</span></span><br><span class="line"></span><br><span class="line">        loglike_new += weight_A * logpmf_A + weight_B * logpmf_B  <span class="comment"># 计算当前的theta值对应的似然值</span></span><br><span class="line">    <span class="comment"># ! M-step</span></span><br><span class="line">    theta_A = np.sum(cnt_A, <span class="number">0</span>)[<span class="number">0</span>] / np.sum(cnt_A)  <span class="comment"># 硬币A向上的次数除以总次数即为theta_A</span></span><br><span class="line">    theta_B = np.sum(cnt_B, <span class="number">0</span>)[<span class="number">0</span>] / np.sum(cnt_B)  <span class="comment"># 硬币B向上的次数除以总次数即为theta_B</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># 输出每个x和当前参数估计z的分布</span></span><br><span class="line">    print(<span class="string">"Iteration: %d"</span> % (i + <span class="number">1</span>))</span><br><span class="line">    print(<span class="string">"theta_A = %.2f, theta_B = %.2f, ll = %.2f"</span> % (theta_A, theta_B, loglike_new))</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> np.abs(loglike_new - loglike_old) &lt; tol:</span><br><span class="line">        <span class="keyword">break</span></span><br><span class="line">    loglike_old = loglike_new</span><br></pre></td></tr></table></figure>
+<h3 id="结果-1">结果</h3>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">Iteration: 1</span><br><span class="line">theta_A = 0.71, theta_B = 0.58, ll = -10.91</span><br><span class="line">Iteration: 2</span><br><span class="line">theta_A = 0.75, theta_B = 0.57, ll = -9.49</span><br><span class="line">Iteration: 3</span><br><span class="line">theta_A = 0.77, theta_B = 0.55, ll = -8.99</span><br><span class="line">Iteration: 4</span><br><span class="line">theta_A = 0.78, theta_B = 0.53, ll = -8.56</span><br><span class="line">Iteration: 5</span><br><span class="line">theta_A = 0.79, theta_B = 0.53, ll = -8.30</span><br><span class="line">Iteration: 6</span><br><span class="line">theta_A = 0.79, theta_B = 0.52, ll = -8.18</span><br><span class="line">Iteration: 7</span><br><span class="line">theta_A = 0.80, theta_B = 0.52, ll = -8.13</span><br><span class="line">Iteration: 8</span><br><span class="line">theta_A = 0.80, theta_B = 0.52, ll = -8.11</span><br><span class="line">Iteration: 9</span><br><span class="line">theta_A = 0.80, theta_B = 0.52, ll = -8.10</span><br></pre></td></tr></table></figure>
+<p><strong>NOTE：</strong> 就是对数似然值和例程计算的不一样。。</p>
+<h2 id="混合模型">混合模型</h2>
+<p>从一个简单的混合模型开始，即<code>k-means</code>，<code>k-means</code>不使用<code>EM</code>算法，但是可以结合<code>EM</code>算法帮助理解<code>EM</code>算法如何用于高斯混合模型。</p>
+<h3 id="k-means">K-means</h3>
+<p>这个算法比较简单，初始化选择<span class="math inline">\(k\)</span>个中心点，然后做如下：</p>
+<ol type="1">
+<li>找到每个点与中心点的距离</li>
+<li>给每个点分配最近的中心点</li>
+<li>根据所分配的点来更新中心点位置</li>
+</ol>
+<p>下面给出一段程序示例：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> numpy.core.umath_tests <span class="keyword">import</span> inner1d</span><br><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line"><span class="keyword">import</span> seaborn <span class="keyword">as</span> sns</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">kmeans</span><span class="params">(xs, k, max_iter=<span class="number">10</span>)</span>:</span></span><br><span class="line">    <span class="string">"""K-means 算法."""</span></span><br><span class="line">    idx = np.random.choice(len(xs), k, replace=<span class="keyword">False</span>)</span><br><span class="line">    cs = xs[idx]</span><br><span class="line">    <span class="keyword">for</span> n <span class="keyword">in</span> range(max_iter):</span><br><span class="line">        ds = np.array([inner1d(xs - c, xs - c) <span class="keyword">for</span> c <span class="keyword">in</span> cs])</span><br><span class="line">        zs = np.argmin(ds, axis=<span class="number">0</span>)</span><br><span class="line">        cs = np.array([xs[zs == i].mean(axis=<span class="number">0</span>) <span class="keyword">for</span> i <span class="keyword">in</span> range(k)])</span><br><span class="line">    <span class="keyword">return</span> (cs, zs)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">iris = sns.load_dataset(<span class="string">'iris'</span>)</span><br><span class="line">data = iris.iloc[:, :<span class="number">4</span>].values</span><br><span class="line">cs, zs = kmeans(data, <span class="number">3</span>)</span><br><span class="line">iris[<span class="string">'cluster'</span>] = zs</span><br><span class="line">sns.pairplot(iris, hue=<span class="string">'cluster'</span>, diag_kind=<span class="string">'kde'</span>, vars=iris.columns[:<span class="number">4</span>])</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
+<h3 id="结果-2">结果</h3>
+<p><img src="/2019/07/11/em-algm/kmeans.png"></p>
+<h2 id="高斯混合模型">高斯混合模型</h2>
+<p><span class="math inline">\(k\)</span>个高斯分布混合具有以下的概率密度函数： <span class="math display">\[
+\begin{align}
+p(x) = \sum_{j=1}^k \pi_j \phi(x; \mu_j, \sigma_j)
+\end{align}
+\]</span></p>
+<p><span class="math inline">\(\pi_j\)</span>是第<span class="math inline">\(j\)</span>个高斯分布的权重，且：</p>
+<p><span class="math display">\[
+\begin{align}
+\phi(x; \mu, \sigma) = \frac{1}{(2 \pi)^{d/2}|\sigma|^{1/2 } } \exp \left( -\frac{1}{2}(x-\mu)^T\sigma^{-1}(x-\mu) \right)
+\end{align}
+\]</span></p>
+<p>假设我们观察<span class="math inline">\(y_1, y2, \ldots, y_n\)</span>作为来自高斯混合模型的样本，那么对数似然为： <span class="math display">\[
+\begin{align}
+l(\theta) = \sum_{i=1}^n \log \left( \sum_{j=1}^k \pi_j \phi(y_i; \mu_j, \sigma_j) \right)
+\end{align}
+\]</span></p>
+<p>其中<span class="math inline">\(\theta = (\pi, \mu, \sigma)\)</span>，很难拟合这种对数似然最大值的参数，因为他们要在对数函数中求和。</p>
+<h3 id="使用em算法">使用EM算法</h3>
+<p>假设我们增加潜在变量<span class="math inline">\(z\)</span>，它表明我们观察到的<span class="math inline">\(y\)</span>来自于第<span class="math inline">\(k\)</span>个高斯分布。其中<code>E-step</code>和<code>M-step</code>的推导与之前的例子类似，只是变量更多。</p>
+<p>在<code>E-step</code>我们想要计算样本<span class="math inline">\(x_i\)</span>输入第<span class="math inline">\(j\)</span>个类别的后验概率<span class="math inline">\(，给定参数\)</span>= (, , )$</p>
+<p><strong>NOTE：</strong> 这里后验概率有的地方使用公式<span class="math inline">\(p(j|x_i)\)</span>,这里使用<span class="math inline">\(w_j^i\)</span>来表示。</p>
+<p><span class="math display">\[
+\begin{align}
+w_j^i &amp;= Q_i(z^i = j) \\
+&amp;= p(z^i = j \mid y^i; \theta) \\
+&amp;= \frac{p(x^i \mid z^i = j; \mu, \sigma) p(z^i = j; \pi)}  {\sum_{l=1}^k{p(y^i \mid z^i = l; \mu, \sigma) p(z^i = l; \pi) } }  &amp;&amp; \text{贝叶斯定理} \\
+&amp;= \frac{\phi(x^i; \mu_j, \sigma_j) \pi_j}{\sum_{l=1}^k \phi(x^i; \mu_l, \sigma_l) \pi_l}
+\end{align}
+\]</span></p>
+<p>在<code>M-step</code>中，我们要找到<span class="math inline">\(\theta = (w, \mu, \sigma)\)</span>来最大化<span class="math inline">\(\boldsymbol{Q}\)</span>函数，对应与真实对数似然函数的下界。</p>
+<p><span class="math display">\[
+\begin{align}
+\sum_{i=1}^{m}\sum_{j=1}^{k} Q(z^i=j) \log \frac{p(x^i \mid z^i= j; \mu, \sigma) p(z^i=j; \pi)}{Q(z^i=j)}
+\end{align}
+\]</span></p>
+<p>通过分别取<span class="math inline">\((w, \mu, \sigma)\)</span>的导数并求解（使用拉格朗日乘数构造约束<span class="math inline">\(\sum_{j=1}^k w_j = 1\)</span>来求解），我们得到：</p>
+<p><span class="math display">\[
+\begin{align}
+\pi_j &amp;= \frac{1}{m} \sum_{i=1}^{m} w_j^i \\
+\mu_j &amp;= \frac{\sum_{i=1}^{m} w_j^i x^i}{\sum_{i=1}^{m} w_j^i} \\
+\sigma_j &amp;= \frac{\sum_{i=1}^{m} w_j^i (x^i - \mu)(x^i - \mu)^T}{\sum_{i1}^{m} w_j^i}
+\end{align}
+\]</span></p>
+<h3 id="代码">代码</h3>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> scipy.stats <span class="keyword">import</span> multivariate_normal</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">normalize</span><span class="params">(xs, axis=None)</span>:</span></span><br><span class="line">    <span class="string">"""Return normalized marirx so that sum of row or column (default) entries = 1."""</span></span><br><span class="line">    <span class="keyword">if</span> axis <span class="keyword">is</span> <span class="keyword">None</span>:</span><br><span class="line">        <span class="keyword">return</span> xs / xs.sum()</span><br><span class="line">    <span class="keyword">elif</span> axis == <span class="number">0</span>:</span><br><span class="line">        <span class="keyword">return</span> xs / xs.sum(<span class="number">0</span>)</span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        <span class="keyword">return</span> xs / xs.sum(<span class="number">1</span>)[:, <span class="keyword">None</span>]</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">mix_mvn_pdf</span><span class="params">(xs, pis, mus, sigmas)</span>:</span></span><br><span class="line">    <span class="keyword">return</span> np.array([pi * multivariate_normal(mu, sigma).pdf(xs) <span class="keyword">for</span> (pi, mu, sigma) <span class="keyword">in</span> zip(pis, mus, sigmas)])</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">em_gmm_orig</span><span class="params">(xs, pis, mus, sigmas, tol=<span class="number">0.01</span>, max_iter=<span class="number">100</span>)</span>:</span></span><br><span class="line"></span><br><span class="line">    n, p = xs.shape</span><br><span class="line">    k = len(pis)</span><br><span class="line"></span><br><span class="line">    ll_old = <span class="number">0</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> range(max_iter):</span><br><span class="line">        exp_A = []</span><br><span class="line">        exp_B = []</span><br><span class="line">        ll_new = <span class="number">0</span></span><br><span class="line"></span><br><span class="line">        <span class="comment"># ！ E-step</span></span><br><span class="line">        ws = np.zeros((k, n))</span><br><span class="line">        <span class="keyword">for</span> j <span class="keyword">in</span> range(len(mus)):</span><br><span class="line">            <span class="keyword">for</span> i <span class="keyword">in</span> range(n):</span><br><span class="line">                <span class="comment"># 遍历所有的 mu，sigma，pi 来计算概率密度</span></span><br><span class="line">                ws[j, i] = pis[j] * multivariate_normal(mus[j], sigmas[j]).pdf(xs[i])</span><br><span class="line">        ws /= ws.sum(<span class="number">0</span>)  <span class="comment"># 根据概率密度求权值</span></span><br><span class="line"></span><br><span class="line">        <span class="comment"># M-step</span></span><br><span class="line">        <span class="comment"># NOTE 下面的更新过程是根据公式来计算的！</span></span><br><span class="line">        pis = np.zeros(k)</span><br><span class="line">        <span class="keyword">for</span> j <span class="keyword">in</span> range(len(mus)):</span><br><span class="line">            <span class="keyword">for</span> i <span class="keyword">in</span> range(n):</span><br><span class="line">                pis[j] += ws[j, i]  <span class="comment"># 使用权值更新pi</span></span><br><span class="line">        pis /= n</span><br><span class="line"></span><br><span class="line">        mus = np.zeros((k, p))</span><br><span class="line">        <span class="keyword">for</span> j <span class="keyword">in</span> range(k):</span><br><span class="line">            <span class="keyword">for</span> i <span class="keyword">in</span> range(n):</span><br><span class="line">                mus[j] += ws[j, i] * xs[i]  <span class="comment"># 使用权值更新mu</span></span><br><span class="line">            mus[j] /= ws[j, :].sum()</span><br><span class="line"></span><br><span class="line">        sigmas = np.zeros((k, p, p))</span><br><span class="line">        <span class="keyword">for</span> j <span class="keyword">in</span> range(k):</span><br><span class="line">            <span class="keyword">for</span> i <span class="keyword">in</span> range(n):</span><br><span class="line">                ys = np.reshape(xs[i] - mus[j], (<span class="number">2</span>, <span class="number">1</span>))</span><br><span class="line">                sigmas[j] += ws[j, i] * np.dot(ys, ys.T)  <span class="comment"># 使用权值更新sigma</span></span><br><span class="line">            sigmas[j] /= ws[j, :].sum()</span><br><span class="line"></span><br><span class="line">        <span class="comment"># 更新对数似然函数</span></span><br><span class="line">        ll_new = <span class="number">0.0</span></span><br><span class="line">        <span class="keyword">for</span> i <span class="keyword">in</span> range(n):</span><br><span class="line">            s = <span class="number">0</span></span><br><span class="line">            <span class="keyword">for</span> j <span class="keyword">in</span> range(k):</span><br><span class="line">                s += pis[j] * multivariate_normal(mus[j], sigmas[j]).pdf(xs[i])</span><br><span class="line">            ll_new += np.log(s)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> np.abs(ll_new - ll_old) &lt; tol:</span><br><span class="line">            <span class="keyword">break</span></span><br><span class="line">        ll_old = ll_new</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> ll_new, pis, mus, sigmas</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># 构建数据集</span></span><br><span class="line">n = <span class="number">1000</span></span><br><span class="line">_mus = np.array([[<span class="number">0</span>, <span class="number">4</span>], [<span class="number">-2</span>, <span class="number">0</span>]])</span><br><span class="line">_sigmas = np.array([[[<span class="number">3</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0.5</span>]], [[<span class="number">1</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">2</span>]]])</span><br><span class="line">_pis = np.array([<span class="number">0.6</span>, <span class="number">0.4</span>])</span><br><span class="line">xs = np.concatenate([np.random.multivariate_normal(mu, sigma, int(pi * n))</span><br><span class="line">                     <span class="keyword">for</span> pi, mu, sigma <span class="keyword">in</span> zip(_pis, _mus, _sigmas)])</span><br><span class="line"></span><br><span class="line"><span class="comment"># 初始化预测值</span></span><br><span class="line">pis = normalize(np.random.random(<span class="number">2</span>))  <span class="comment"># pi 要经过归一化</span></span><br><span class="line">mus = np.random.random((<span class="number">2</span>, <span class="number">2</span>))</span><br><span class="line">sigmas = np.array([np.eye(<span class="number">2</span>)] * <span class="number">2</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用EM算法拟合</span></span><br><span class="line">ll1, pis1, mus1, sigmas1 = em_gmm_orig(xs, pis, mus, sigmas)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 绘图</span></span><br><span class="line">intervals = <span class="number">101</span></span><br><span class="line">ys = np.linspace(<span class="number">-8</span>, <span class="number">8</span>, intervals)</span><br><span class="line">X, Y = np.meshgrid(ys, ys)</span><br><span class="line">_ys = np.vstack([X.ravel(), Y.ravel()]).T</span><br><span class="line"></span><br><span class="line">z = np.zeros(len(_ys))</span><br><span class="line"><span class="keyword">for</span> pi, mu, sigma <span class="keyword">in</span> zip(pis1, mus1, sigmas1):</span><br><span class="line">    z += pi * multivariate_normal(mu, sigma).pdf(_ys)</span><br><span class="line">z = z.reshape((intervals, intervals))</span><br><span class="line"></span><br><span class="line">ax = plt.subplot(<span class="number">111</span>)</span><br><span class="line">plt.scatter(xs[:, <span class="number">0</span>], xs[:, <span class="number">1</span>], alpha=<span class="number">0.2</span>)</span><br><span class="line">plt.contour(X, Y, z, N=<span class="number">10</span>)</span><br><span class="line">plt.axis([<span class="number">-8</span>, <span class="number">6</span>, <span class="number">-6</span>, <span class="number">8</span>])</span><br><span class="line">ax.axes.set_aspect(<span class="string">'equal'</span>)</span><br><span class="line">plt.tight_layout()</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
+<h3 id="结果-3">结果</h3>
+<p><img src="/2019/07/11/em-algm/mxiguass.png"></p>
+<h1 id="胶囊网络">胶囊网络</h1>
+<h2 id="矩阵胶囊">矩阵胶囊</h2>
+<p>现在的矩阵胶囊与之前的胶囊不是很一样了，因为胶囊是矩阵，就不能把模长作为激活了。所以多加一个标量<span class="math inline">\(a\)</span>来表示激活值。</p>
+<p>矩阵胶囊的主体，名字也变了一下，叫做姿态矩阵，这里是<span class="math inline">\(4\times4\)</span>的矩阵。</p>
+<p><img src="/2019/07/11/em-algm/capp.png"></p>
+<h2 id="胶囊投票机制">胶囊投票机制</h2>
+<p>在胶囊网络中，通过寻找底层胶囊投票之间的一致性来检测一个高层特征(比如一张脸)，对于来自胶囊<span class="math inline">\(i\)</span>对父胶囊<span class="math inline">\(j\)</span>的投票<span class="math inline">\(v_{ij}\)</span>，通过将胶囊<span class="math inline">\(i\)</span>的姿态矩阵<span class="math inline">\(M_i\)</span>和视角不变矩阵<span class="math inline">\(W_{ij}\)</span>相乘得到。</p>
+<p><span class="math display">\[
+\begin{split}
+&amp;v_{ij} = M_iW_{ij} \quad 
+\end{split}
+\]</span></p>
+<p>基于投票<span class="math inline">\(v_{ij}\)</span>和其他投票<span class="math inline">\((v_{o_{1}j} \ldots v_{o_{k}j})\)</span>相似度来计算胶囊<span class="math inline">\(i\)</span>被分组到胶囊<span class="math inline">\(j\)</span>中的概率。</p>
+<h2 id="胶囊分配">胶囊分配</h2>
+<p>EM算法对低层的胶囊进行聚类，也计算底层胶囊与上层胶囊间分配概率<span class="math inline">\(r_{ij}\)</span>。例如一个表示手的胶囊不属于脸的胶囊，他们的分配概率就被抑止到0，<span class="math inline">\(r_{ij}\)</span>也受到胶囊激活的影响。</p>
+<p><img src="/2019/07/11/em-algm/c2.jpg"></p>
+<h2 id="计算胶囊激活和姿态矩阵">计算胶囊激活和姿态矩阵</h2>
+<p>在EM聚类中，我们将数据使用正态分布来表现。在EM路由中，我们也对父胶囊使用正态分布来建模，姿态矩阵<span class="math inline">\(M\)</span>是<span class="math inline">\(4\times4\)</span>的矩阵，即16个分量。我们对姿态矩阵建立16个<span class="math inline">\(\mu\)</span>,16个<span class="math inline">\(\sigma\)</span>的高斯分布，每个<span class="math inline">\(\mu\)</span>就表征了姿态矩阵的每个分量。注意为了避免在概率密度函数中求逆，胶囊网络中的<span class="math inline">\(\sigma\)</span>是被固定成一个对角矩阵的。</p>
+<p>让<span class="math inline">\(v_{ij}\)</span>作为底层胶囊<span class="math inline">\(i\)</span>对父胶囊<span class="math inline">\(j\)</span>的投票，<span class="math inline">\(v^{h}_{ij}\)</span>代表着第<code>h</code>个分量。我们使用高斯概率密度函数</p>
+<p><span class="math display">\[
+\begin{split}
+P(x) &amp; = \frac{1}{\sigma \sqrt{2\pi } }e^{-(x - \mu)^{2}/2\sigma^{2} } \\
+\end{split}
+\]</span></p>
+<p>来计算属于胶囊<span class="math inline">\(j\)</span>正态分布的投票<span class="math inline">\(v^{h}_{ij}\)</span>概率。 <span class="math display">\[
+\begin{split}
+p^h_{i \vert j} &amp; = \frac{1}{\sqrt{2 \pi ({\sigma^h_j})^2 } } \exp{(- \frac{(v^h_{ij}-\mu^h_j)^2}{2 ({\sigma^h_j})^2})} \\
+\end{split} 
+\]</span></p>
+<p>取其对数：</p>
+<p><span class="math display">\[
+\begin{split}
+\ln(p^h_{i \vert j}) &amp;= \ln \frac{1}{\sqrt{2 \pi ({\sigma^h_j})^2 } } \exp{(- \frac{(v^h_{ij}-\mu^h_j)^2}{2 ({\sigma^h_j})^2})} \\
+\\
+&amp;= - \ln(\sigma^h_j) - \frac{\ln(2 \pi)}{2} - \frac{(v^h_{ij}-\mu^h_j)^2}{2 ({\sigma^h_j})^2}\\
+\end{split}
+\]</span></p>
+<p>接下来估计胶囊激活的损失值，越低的损失值，代表胶囊越有可能被激活。如果损失值较大，就代表投票与父胶囊的高斯分布不匹配，因此激活概率较小。</p>
+<p>让<span class="math inline">\(cost_{ij}\)</span>作为胶囊<span class="math inline">\(i\)</span>激活胶囊<span class="math inline">\(j\)</span>的损失，是负的对数似然也可以称之为<strong>熵</strong>(熵越小，那就意味<strong>似然估计越准</strong>)： <span class="math display">\[
+cost^h_{ij} = - \ln(P^h_{i \vert j})
+\]</span></p>
+<p>由于胶囊<span class="math inline">\(i\)</span>与胶囊<span class="math inline">\(j\)</span>之间的联系并不相同，因此我们将在运行时按比例<span class="math inline">\(r_{ij}\)</span>来分配<span class="math inline">\(cost\)</span>，那下层胶囊的<span class="math inline">\(cost\)</span>计算为：</p>
+<p><span class="math display">\[
+\begin{split}
+cost^h_j &amp;= \sum_i  r_{ij} cost^h_{ij} \\
+&amp;= \sum_i - r_{ij} \ln(p^h_{i \vert j}) \\
+&amp;= \sum_i r_{ij}  \big( \frac{(v^h_{ij}-\mu^h_j)^2}{2 ({\sigma^h_j})^2} + \ln(\sigma^h_j) + \frac{\ln(2 \pi)}{2} \big)\\
+&amp;= \frac{\sum_i r_{ij} (\sigma^h_j)^2}{2 (\sigma^h_j)^2} + (\ln(\sigma^h_j) + \frac{\ln(2 \pi)}{2}) \sum_i r_{ij} \\
+&amp;= \big(\ln(\sigma^h_j) + k \big) \sum_i r_{ij}  \quad \text{k是不变的}
+\end{split}
+\]</span></p>
+<p>有了<span class="math inline">\(cost\)</span>值，使用<span class="math inline">\(a_j\)</span>来决定胶囊<span class="math inline">\(j\)</span>是否被激活： <span class="math display">\[
+a_j = sigmoid(\lambda(b_j - \sum_h cost^h_j))
+\]</span></p>
+<p>这里面的<span class="math inline">\(b_j\)</span>是根据反向传播进行优化的，所以并不需要直接计算。</p>
+<p>其中的<span class="math inline">\(r_{ij},\mu,\sigma,a_j\)</span>是根据EM路由来计算的。<span class="math inline">\(\lambda\)</span>是根据温度参数<span class="math inline">\(\frac{1}{temperature}\)</span>来计算(退火策略)，随着<span class="math inline">\(r_{ij}\)</span>越来越好，就降低<code>temperature</code>以获得更大的<span class="math inline">\(\lambda\)</span>，也就是增加<span class="math inline">\(sigmoid\)</span>的陡度，这样就更加在更加小的范围内微调<span class="math inline">\(r_{ij}\)</span>。</p>
+<h2 id="em路由">EM路由</h2>
+<p>这一块是重点，所以我要仔细看每个公式细节。并且要一步一步的渐进的看。</p>
+<h3 id="新动态路由1">新动态路由1</h3>
+<p>首先用一个矩阵<span class="math inline">\(\boldsymbol{P}_{i}， i=1,\ldots,n\)</span>来表示第<span class="math inline">\(l\)</span>层的胶囊，用矩阵<span class="math inline">\(\boldsymbol{M}_j， j=1,\ldots,k\)</span>来表示第<span class="math inline">\(l+1\)</span>层的胶囊。在做EM路由的过程中，他将<span class="math inline">\(P_i\)</span>变成长16的向量，且协方差矩阵为对角阵。</p>
+<p><span class="math display">\[
+\text{新动态路由1}:\left\{
+\begin{aligned} 
+    &amp;p_{ij} \leftarrow N(\boldsymbol{P}_i;\boldsymbol{\mu}_j,\boldsymbol{\sigma}^2_j) &amp;&amp; \text{计算概率密度} \\  
+    &amp;R_{ij} \leftarrow \frac{\pi_j p_{ij} }{\sum\limits_{j=1}^k\pi_j p_{ij} } &amp;&amp; \text{计算后验概率} \\
+    &amp;r_{ij}\leftarrow \frac{R_{ij } }{\sum\limits_{i=1}^n R_{ij } } &amp;&amp; \text{计算归一化后验概率} \\ 
+    &amp;\boldsymbol{M}_j \leftarrow \sum\limits_{i=1}^n r_{ij}\boldsymbol{P}_i &amp;&amp; \text{计算新样本} \\ 
+    &amp;\boldsymbol{\sigma}^2_j \leftarrow \sum\limits_{i=1}^n r_{ij}(\boldsymbol{P}_i-\boldsymbol{M}_j)^2 &amp;&amp; \text{更新}\sigma \\ 
+    &amp;\pi_j \leftarrow \frac{1}{n}\sum\limits_{i=1}^n R_{ij} &amp;&amp; \text{更新聚类中心}\pi
+\end{aligned}\right.
+\]</span></p>
+<p>这里的<span class="math inline">\(R_{ij}\)</span>就是后验概率，也就是在<code>EM</code>算法中使用的<span class="math inline">\(w_j\)</span>。</p>
+<h3 id="新动态路由2">新动态路由2</h3>
+<p>前面讲道理有一个激活标量<span class="math inline">\(a_j\)</span>来衡量胶囊单元的显著程度，根据EM算法计算我们可以得到<span class="math inline">\(\pi_j\)</span>为第<span class="math inline">\(l+1\)</span>层胶囊的聚类中心，但我们不能选择<span class="math inline">\(\pi\)</span>因为：</p>
+<ol type="1">
+<li><span class="math inline">\(\pi_j\)</span>是归一化的，就是我们只想得到他的显著程度，而不是显著程度的概率。</li>
+<li><span class="math inline">\(\pi_j\)</span>不能反映出类内的元素特征是否相似。</li>
+</ol>
+<p>现在再看前面所使用的激活标量<span class="math inline">\(a_j\)</span>，他既考虑了似然估计值<span class="math inline">\(cost_j^h\)</span>,又考虑了显著程度<span class="math inline">\(\pi_j\)</span>。所以作者直接将<span class="math inline">\(a_j\)</span>替换了<span class="math inline">\(\pi_j\)</span>，这样虽然不完全与原始EM算法相同，但是也能收敛，得到新的动态路由：</p>
+<p><span class="math display">\[
+\text{新动态路由2}:\left\{
+\begin{aligned} 
+    &amp;p_{ij} \leftarrow N(\boldsymbol{P}_i;\boldsymbol{\mu}_j,\boldsymbol{\sigma}^2_j) &amp;&amp; \text{计算概率密度} \\  
+    &amp;R_{ij} \leftarrow \frac{a_j p_{ij} }{\sum\limits_{j=1}^k a_j p_{ij} } &amp;&amp; \text{计算后验概率} \\
+    &amp;r_{ij}\leftarrow \frac{R_{ij } }{\sum\limits_{i=1}^n R_{ij } } &amp;&amp; \text{归一化后验概率} \\ 
+    &amp;\boldsymbol{M}_j \leftarrow \sum\limits_{i=1}^n r_{ij}\boldsymbol{P}_i &amp;&amp; \text{计算新样本} \\ 
+    &amp;\boldsymbol{\sigma}^2_j \leftarrow \sum\limits_{i=1}^n r_{ij}(\boldsymbol{P}_i-\boldsymbol{M}_j)^2 &amp;&amp; \text{更新}\sigma \\ 
+   &amp; cost_j \leftarrow \left(\beta_u+\sum\limits_{l=1}^d \ln \boldsymbol{\sigma}_j^l \right)\sum\limits_i r_{ij} &amp;&amp; \text{计算熵} \\ 
+   &amp; a_j \leftarrow sigmoid(\lambda(b_j - \sum_h cost^h_j)) &amp;&amp; \text{更新}a_j
+\end{aligned}\right.
+\]</span></p>
+<h3 id="新动态路由3">新动态路由3</h3>
+<p>上面好像没什么问题。但是没有使用底层胶囊的激活值<span class="math inline">\(a^{last}_i\)</span>，作者在计算归一化后验概率<span class="math inline">\(r_{ij}\leftarrow \frac{R_{ij } }{\sum\limits_{i=1}^n R_{ij } }\)</span>的时候加入：</p>
+<p><span class="math display">\[
+\text{新动态路由3}:\left\{
+\begin{aligned} 
+    &amp;p_{ij} \leftarrow N(\boldsymbol{P}_i;\boldsymbol{\mu}_j,\boldsymbol{\sigma}^2_j) &amp;&amp; \text{计算概率密度} \\  
+    &amp;R_{ij} \leftarrow \frac{a_j p_{ij} }{\sum\limits_{j=1}^k a_j p_{ij} } &amp;&amp; \text{计算后验概率} \\
+    &amp;r_{ij}\leftarrow \frac{a_i^{last}R_{ij } }{\sum\limits_{i=1}^n a_i^{last} R_{ij } } &amp;&amp; \text{计算归一化后验概率} \\ 
+    &amp;\boldsymbol{M}_j \leftarrow \sum\limits_{i=1}^n r_{ij}\boldsymbol{P}_i &amp;&amp; \text{计算新样本} \\ 
+    &amp;\boldsymbol{\sigma}^2_j \leftarrow \sum\limits_{i=1}^n r_{ij}(\boldsymbol{P}_i-\boldsymbol{M}_j)^2 &amp;&amp; \text{更新}\sigma \\ 
+   &amp; cost_j \leftarrow \left(\beta_u+\sum\limits_{l=1}^d \ln \boldsymbol{\sigma}_j^l \right)\sum\limits_i r_{ij} &amp;&amp; \text{计算熵} \\ 
+   &amp; a_j \leftarrow sigmoid(\lambda(b_j - \sum_h cost^h_j)) &amp;&amp; \text{更新}a_j
+\end{aligned}\right.
+\]</span></p>
+<h2 id="新动态路由4">新动态路由4</h2>
+<p>因为<span class="math inline">\(\sum\limits_i r_{ij}=1\)</span>，所以下面还可以化简。</p>
+<p><span class="math display">\[
+\text{新动态路由4}:\left\{
+\begin{aligned} 
+    &amp;p_{ij} \leftarrow N(\boldsymbol{P}_i;\boldsymbol{\mu}_j,\boldsymbol{\sigma}^2_j) &amp;&amp; \text{计算概率密度} \\  
+    &amp;R_{ij} \leftarrow \frac{a_j p_{ij} }{\sum\limits_{j=1}^k a_j p_{ij} } &amp;&amp; \text{计算后验概率} \\
+    &amp;r_{ij}\leftarrow \frac{a_i^{last}R_{ij } }{\sum\limits_{i=1}^n a_i^{last} R_{ij } } &amp;&amp; \text{计算归一化后验概率} \\ 
+    &amp;\boldsymbol{M}_j \leftarrow \sum\limits_{i=1}^n r_{ij}\boldsymbol{P}_i &amp;&amp; \text{计算新样本} \\ 
+    &amp;\boldsymbol{\sigma}^2_j \leftarrow \sum\limits_{i=1}^n r_{ij}(\boldsymbol{P}_i-\boldsymbol{M}_j)^2 &amp;&amp; \text{更新}\sigma \\ 
+   &amp; cost_j \leftarrow \left(\beta_u+\sum\limits_{l=1}^d \ln \boldsymbol{\sigma}_j^l \right)\sum\limits_i a_i^{last} R_{ij} &amp;&amp; \text{计算熵} \\ 
+   &amp; a_j \leftarrow sigmoid(\lambda(b_j - \sum_h cost^h_j)) &amp;&amp; \text{更新}a_j
+\end{aligned}\right.
+\]</span></p>
+<h2 id="最终的动态路由">最终的动态路由</h2>
+<p>现在再把投票机制与视角不变矩阵加入进来,投票矩阵与上面描述一样<span class="math inline">\(\boldsymbol{V}_{ij}=\boldsymbol{P}_{i}\boldsymbol{W}_{ij}\)</span>。</p>
+<p><span class="math display">\[
+\text{新动态路由}:\left\{
+\begin{aligned} 
+    &amp;p_{ij} \leftarrow N(\boldsymbol{V}_{ij};\boldsymbol{\mu}_j,\boldsymbol{\sigma}^2_j) &amp;&amp; \text{计算概率密度} \\  
+    &amp;R_{ij} \leftarrow \frac{a_j p_{ij} }{\sum\limits_{j=1}^k a_j p_{ij} } &amp;&amp; \text{计算后验概率} \\
+    &amp;r_{ij}\leftarrow \frac{a_i^{last}R_{ij } }{\sum\limits_{i=1}^n a_i^{last} R_{ij } } &amp;&amp; \text{计算归一化后验概率} \\ 
+    &amp;\boldsymbol{M}_j \leftarrow \sum\limits_{i=1}^n r_{ij}\boldsymbol{V}_{ij} &amp;&amp; \text{计算新样本} \\ 
+    &amp;\boldsymbol{\sigma}^2_j \leftarrow \sum\limits_{i=1}^n r_{ij}(\boldsymbol{V}_{ij}-\boldsymbol{M}_j)^2 &amp;&amp; \text{更新}\sigma \\ 
+   &amp; cost_j \leftarrow \left(\beta_u+\sum\limits_{l=1}^d \ln \boldsymbol{\sigma}_j^l \right)\sum\limits_i a_i^{last} R_{ij} &amp;&amp; \text{计算熵} \\ 
+   &amp; a_j \leftarrow sigmoid(\lambda(b_j - \sum_h cost^h_j)) &amp;&amp; \text{更新}a_j
+\end{aligned}\right.
+\]</span></p>
+<h2 id="代码-1">代码</h2>
+<p>等我写好补充。。</p>
+<h1 id="参考">参考</h1>
+<ol type="1">
+<li><p><a href="https://kexue.fm/archives/5155" target="_blank" rel="noopener">苏建林的博客</a></p></li>
+<li><p><a href="https://jhui.github.io/2017/11/14/Matrix-Capsules-with-EM-routing-Capsule-Network/" target="_blank" rel="noopener">理解胶囊网络</a></p></li>
+</ol>
+
+      
+    </div>
+    <!-- <div class="article-entry" itemprop="articleBody">
+      
+        
+        
+          <p>搞定了yolo，终于可以学习点新的东西了。今天就学习一波胶囊网络中的EM路由。 先推荐一个课程资料，杜克大学的<a href="https://people.duke.edu/~ccc14/sta-663" target="_blank" rel="noopener">统计学课程</a>，从python讲到c++，从矩阵计算讲到概率统计，从jit讲到cuda编程。看看人家本科生学的东西。。。</p>
+<a id="more"></a>
+<h1 id="em算法">EM算法</h1>
+<h2 id="詹森不等式">詹森不等式</h2>
+<p>对于一个凸函数<span class="math inline">\(f\)</span>,<span class="math inline">\(E[f(x)]\geq f(E[x])\)</span>,将其反转获得一个凹函数。 如果一个函数<span class="math inline">\(f(x)\)</span>在区间内都有<span class="math inline">\(f&#39;&#39;(x)\geq 0\)</span>，那么它是一个凸函数。例如<span class="math inline">\(f(x)=log\ x\)</span>,<span class="math inline">\(f&#39;&#39;(x)=-\frac{1}{x^2}\)</span>,说明他在<span class="math inline">\(x\in (0,+ \infty]\)</span>是一个凸函数，詹森不等式的直观说明如下。</p>
+<p><img src="/2019/07/11/em-algm/EMAlgorithm_5_0.png"></p>
+<p>其实只有当<span class="math inline">\(f(x)\)</span>为常数时，詹森不等式才会相等。</p>
+<p>这里使用概率论表述的<span class="math inline">\(E\)</span>，其实际就是积分。也就是说先经过凸函数的期望值必然大于等于期望的凸函数值。</p>
+<h2 id="完整信息的最大似然">完整信息的最大似然</h2>
+<p>设置一个实验，硬币A向上的概率为<span class="math inline">\(\theta_A\)</span>的，硬币B向上的概率为<span class="math inline">\(\theta_B\)</span>,接着一共做m此实验，每次实验随机选择一个硬币，投掷n次，并记录向下和向下的次数。如果我们记录了每个样本所使用的硬币，那我们就有完整的信息可以估计<span class="math inline">\(\theta_A\)</span>和<span class="math inline">\(\theta_B\)</span>。</p>
+<p>假设我们做了5次实验，每次向上的次数记录成向量<span class="math inline">\(x\)</span>，并且使用的硬币顺序为<span class="math inline">\(A,A,B,A,B\)</span>。他的似然函数为： <span class="math display">\[
+\begin{aligned}
+    L(\theta_A,\theta_B)&amp;= p(x_1; \theta_A)\cdot p(x_2; \theta_A)\cdot p(x_3; \theta_B) \cdot  p(x_4; \theta_A) \cdot p(x_5; \theta_B) \\
+    &amp;=B(n,\theta_A).pmf(x_1)\cdot B(n,\theta_A).pmf(x_2)\cdot B(n,\theta_B).pmf(x_3)\cdot B(n,\theta_A).pmf(x_4)\cdot B(n,\theta_B).pmf(x_5)
+\end{aligned}
+\]</span> 其中二项分布的概率计算方式为： <span class="math display">\[
+\begin{aligned}
+    \because X &amp; \sim B(n,p)\\
+    \therefore  P(X=k) &amp;= \binom{n}{k} p^k (1-p)^{n-k} \\
+        &amp;=  C_n^k p^{k}(1-p)^{n-k}
+\end{aligned}
+\]</span></p>
+<p>将似然函数对数化：</p>
+<p><span class="math display">\[
+\begin{aligned}
+    L(\theta_A,\theta_B)=\log p(x_1; \theta_A) + \log p(x_2; \theta_A) +\log p(x_3; \theta_B) + \log p(x_4; \theta_A) +\log p(x_5; \theta_B)
+\end{aligned}
+\]</span></p>
+<p><span class="math inline">\(p(x_i; \theta)\)</span>是二项式分布的概率质量函数，其中<span class="math inline">\(n=m,p=\theta\)</span>。我们会使用<span class="math inline">\(z_i\)</span>来表示第<span class="math inline">\(i\)</span>个硬币的标签。</p>
+<h3 id="使用最小化函数求解似然">使用最小化函数求解似然</h3>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> numpy.core.umath_tests <span class="keyword">import</span> matrix_multiply <span class="keyword">as</span> mm</span><br><span class="line"><span class="keyword">from</span> scipy.optimize <span class="keyword">import</span> minimize</span><br><span class="line"><span class="keyword">from</span> scipy.stats <span class="keyword">import</span> bernoulli, binom</span><br><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line"><span class="keyword">import</span> matplotlib.pyplot <span class="keyword">as</span> plt</span><br><span class="line">np.random.seed(<span class="number">1234</span>)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="string">""" 做五次实验 """</span></span><br><span class="line">n = <span class="number">10</span>  <span class="comment"># 每次实验投掷10次</span></span><br><span class="line">theta_A = <span class="number">0.8</span></span><br><span class="line">theta_B = <span class="number">0.3</span></span><br><span class="line">theta_0 = [theta_A, theta_B]</span><br><span class="line"><span class="comment"># 两个硬币对应两个不同thta的二项分布</span></span><br><span class="line">coin_A = bernoulli(theta_A)</span><br><span class="line">coin_B = bernoulli(theta_B)</span><br><span class="line"></span><br><span class="line">zs = [<span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>, <span class="number">0</span>, <span class="number">1</span>]  <span class="comment"># 代表使用的硬币为哪个</span></span><br><span class="line"><span class="comment"># 得到实验结果</span></span><br><span class="line">xs = np.array([np.sum(coin.rvs(n)) <span class="keyword">for</span> coin <span class="keyword">in</span> [coin_A, coin_A, coin_B, coin_A, coin_B]])</span><br><span class="line">print(xs) <span class="comment"># [7 9 2 6 0]</span></span><br><span class="line"></span><br><span class="line"><span class="string">""" 精确求解 """</span></span><br><span class="line"><span class="comment"># 计算所有的硬币A朝上的比例作为概率</span></span><br><span class="line">ml_A = np.sum(xs[[<span class="number">0</span>, <span class="number">1</span>, <span class="number">3</span>]]) / (<span class="number">3.0</span> * n)</span><br><span class="line"><span class="comment"># 计算所有的硬币B朝上的比例作为概率</span></span><br><span class="line">ml_B = np.sum(xs[[<span class="number">2</span>, <span class="number">4</span>]]) / (<span class="number">2.0</span> * n)</span><br><span class="line"></span><br><span class="line">print(ml_A, ml_B)  <span class="comment"># 0.7333333333333333 0.1</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="string">""" 数值估计 """</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">neg_loglik</span><span class="params">(thetas, n, xs, zs)</span>:</span></span><br><span class="line">    <span class="string">""" 对数似然计算函数 </span></span><br><span class="line"><span class="string">        这里的的二项分布是次数为n，概率可能为 theta_A 或 theta_B。</span></span><br><span class="line"><span class="string">        将每个二项分布对应x的对数概率密度函数求和后取相反数，接下来就是最小化此函数即可。</span></span><br><span class="line"><span class="string">    """</span></span><br><span class="line"></span><br><span class="line">    logpmf = -np.sum([binom(n, thetas[z]).logpmf(x) <span class="keyword">for</span> (x, z) <span class="keyword">in</span> zip(xs, zs)])</span><br><span class="line">    <span class="keyword">return</span> logpmf</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">bnds = [(<span class="number">0</span>, <span class="number">1</span>), (<span class="number">0</span>, <span class="number">1</span>)]</span><br><span class="line"><span class="comment"># 使用优化策略进行最小化求解</span></span><br><span class="line">res = minimize(neg_loglik, [<span class="number">0.5</span>, <span class="number">0.5</span>], args=(n, xs, zs),</span><br><span class="line">               bounds=bnds, method=<span class="string">'tnc'</span>, options=&#123;<span class="string">'maxiter'</span>: <span class="number">100</span>&#125;)</span><br><span class="line">print(res)</span><br><span class="line"><span class="string">""" fun: 7.655267754139319</span></span><br><span class="line"><span class="string">     jac: array([-7.31859018e-05, -7.58504370e-05])</span></span><br><span class="line"><span class="string"> message: 'Converged (|f_n-f_(n-1)| ~= 0)'</span></span><br><span class="line"><span class="string">    nfev: 17</span></span><br><span class="line"><span class="string">     nit: 6</span></span><br><span class="line"><span class="string">  status: 1</span></span><br><span class="line"><span class="string"> success: True</span></span><br><span class="line"><span class="string">       x: array([0.73333285, 0.09999965]) """</span></span><br></pre></td></tr></table></figure>
+<p>可以发现似然估计的估计值相当近似与精确计算所得到的结论。</p>
+<h2 id="当信息缺失时的最大似然">当信息缺失时的最大似然</h2>
+<p>当我们没有记录实验所使用的硬币种类时，这个问题的解决就开始困难起来了。有一种解决问题的方式就是我们根据这个样本是由<span class="math inline">\(A\)</span>或<span class="math inline">\(B\)</span>产生的来给每个样本假设权重<span class="math inline">\(\boldsymbol{w}_i\)</span>。直觉上来想，权重应该是<span class="math inline">\(\boldsymbol{z}_i\)</span>的后验分布： <span class="math display">\[
+\begin{aligned}
+    w_i = p(z_i \ | \ x_i; \theta)
+\end{aligned}
+\]</span></p>
+<p>假设我们有<span class="math inline">\(\theta\)</span>的一些估计值，如果我们知道<span class="math inline">\(z_i\)</span>，那我们就可以估计出<span class="math inline">\(\theta\)</span>，因为我们相当于拥有了全部的似然信息。EM算法的基本思想就是先猜测<span class="math inline">\(\theta\)</span>，然后计算出<span class="math inline">\(z_i\)</span>，接着继续更新<span class="math inline">\(\theta\)</span>再计算<span class="math inline">\(z_i\)</span>，重复数次直到收敛。</p>
+<p>非书面的表述：首先考虑一个对数似然函数作为曲线(曲面)，他的<span class="math inline">\(x\)</span>轴表示<span class="math inline">\(\theta\)</span>。找到另一个<span class="math inline">\(\theta\)</span>的函数<span class="math inline">\(\boldsymbol{Q}\)</span>，他是对数似然函数的下界，在特定的<span class="math inline">\(\theta\)</span>值时对数似然函数与函数<span class="math inline">\(\boldsymbol{Q}\)</span>接触。接下来找到这个<span class="math inline">\(\theta\)</span>的值，并且使函数<span class="math inline">\(\boldsymbol{Q}\)</span>最大化，重复这个过程，是下界函数<span class="math inline">\(\boldsymbol{Q}\)</span>和对数似然函数的最大值相同，那么我们就得到了最大对数似然～</p>
+<p>从下图可以理解，每次迭代都能找到新的下界函数<span class="math inline">\(\boldsymbol{Q}\)</span>和当前最大的对数似然，等到迭代到一定程度时，就找到了全局的最大的对数似然。</p>
+<p><img src="/2019/07/11/em-algm/14_ExpectationMaximization_21_0.png"></p>
+<p>当然，还有个问题就是如何找到这个对数似然函数的下界函数<span class="math inline">\(\boldsymbol{Q}\)</span>，这就需要使用詹森不等式来进行数学推理。</p>
+<h3 id="推导">推导</h3>
+<p>在EM算法的<code>E-step</code>中，我们确定一个函数，他是对数似然的下界。 <span class="math display">\[
+\begin{align}
+l &amp;= \sum_i{\log p(x_i; \theta)} &amp;&amp; \text{定义对数似然函数} \\
+&amp;= \sum_i \log \sum_{z_i}{p(x_i, z_i; \theta)} &amp;&amp; \text{在函数中加入隐变量$z$} \\
+&amp;= \sum_i \log \sum_{z_i} Q_i(z_i) \frac{p(x_i, z_i; \theta)}{Q_i(z_i)} &amp;&amp; \text{贝叶斯定理得$Q_i$为$z_i$分布} \\
+&amp;= \sum_i \log E_{z_i}[\frac{p(x_i, z_i; \theta)}{Q_i(z_i)}] &amp;&amp; \text{得到期望 - 就是EM中的E} \\
+&amp;\geq \sum E_{z_i}[\log \frac{p(x_i, z_i; \theta)}{Q_i(z_i)}] &amp;&amp; \text{使用詹森不等式计算凹的对数似然函数} \\
+&amp;\geq \sum_i \sum_{z_i} Q_i(z_i) \log \frac{p(x_i, z_i; \theta)}{Q_i(z_i)} &amp;&amp; \text{得到期望的定义}
+\end{align}
+\]</span></p>
+<p>我们如何确定分布<span class="math inline">\(\boldsymbol{Q_i}\)</span>？我们想要<span class="math inline">\(\boldsymbol{Q}\)</span>函数与对数似然函数进行接触，并且也知道了詹森不等式相等的充要条件就是这个函数为常数，因此：</p>
+<p><span class="math display">\[
+\begin{align}
+\frac{p(x_i, z_i; \theta)}{Q_i(z_i)} =&amp; c \\
+\implies Q_i(z_i) &amp;\propto p(x_i, z_i; \theta)\\
+\implies Q_i(z_i) &amp;= \frac{p(x_i, z_i; \theta) }{\sum_{z_i}{p(x_i, z_i; \theta) } } &amp;&amp;\text{因为 $\boldsymbol{Q}$ 是个分布且和为1} \\
+\implies Q_i(z_i) &amp;= \frac{p(x_i, z_i; \theta) }{ {p(x_i, \theta) } } &amp;&amp; \text{边缘化 $z_i$}\\
+\implies Q_i(z_i) &amp;= p(z_i | x_i; \theta) &amp;&amp; \text{根据条件概率定义}
+\end{align}
+\]</span></p>
+<p>因此得到<span class="math inline">\(\boldsymbol{Q_i}\)</span>就是<span class="math inline">\(z_i\)</span>的后验概率，这就完成了<code>E-step</code>。</p>
+<p>在<code>M-step</code>中，我找到最大化对数似然函数下界时的<span class="math inline">\(\theta\)</span>值，然后我们迭代<code>E</code>和<code>M</code>即可。</p>
+<p>所以EM算法是在缺少信息的情况下最大化似然的优化算法，或者说他可以很方便的添加隐变量来简化最大似然计算。</p>
+<h3 id="例子">例子</h3>
+<p>现在如果我们忘记记录了投掷硬币的顺序，那我们来求解一波A、B硬币向上的概率。 对于<code>E-step</code>,我们：</p>
+<p><span class="math display">\[
+\begin{align}
+w_j &amp;= Q_i(z_i = j) \\
+&amp;= p(z_i = j \mid x_i; \theta) \\
+&amp;= \frac{p(x_i \mid z_i = j; \theta) p(z_i = j; \phi)}  {\sum_{l=1}^k{p(x_i \mid z_i = l; \theta) p(z_i = l; \phi) } }  &amp;&amp; \text{贝叶斯准则} \\
+&amp;= \frac{\theta_j^h(1-\theta_j)^{n-h} \phi_j}{\sum_{l=1}^k \theta_l^h(1-\theta_l)^{n-h} \phi_l} &amp;&amp; \text{代入二项分布公式} \\
+&amp;= \frac{\theta_j^h(1-\theta_j)^{n-h} }{\sum_{l=1}^k \theta_l^h(1-\theta_l)^{n-h} } &amp;&amp; \text{为了简单起见使 $\phi$ 为常数}
+\end{align}
+\]</span></p>
+<p>对于<code>M-step</code>,我们需要找到最大时的<span class="math inline">\(\theta\)</span>值。</p>
+<p><span class="math display">\[
+\begin{align}
+&amp; \sum_i \sum_{z_i} Q_i(z_i) \log \frac{p(x_i, z_i; \theta)}{Q_i(z_i)} \\
+&amp;= \sum_{i=1}^m \sum_{j=1}^k w_j \log \frac{p(x_i \mid z_i=j; \theta) \, p(z_i = j; \phi)}{w_j} \\
+&amp;= \sum_{i=1}^m \sum_{j=1}^k w_j \log \frac{\theta_j^h(1-\theta_j)^{n-h} \phi_j}{w_j} \\
+&amp;= \sum_{i=1}^m \sum_{j=1}^k w_j \left( h \log \theta_j + (n-h) \log (1-\theta_j) + \log \phi_j - \log w_j \right)
+\end{align}
+\]</span></p>
+<p>我们使用区间的方式解决<span class="math inline">\(\theta_s\)</span>导数消失的问题： <span class="math display">\[
+\begin{align}
+\sum_{i=1}^m w_s \left( \frac{h}{\theta_s} - \frac{n-h}{1-\theta_s} \right) &amp;= 0  \\
+\implies \theta_s &amp;= \frac {\sum_{i=1}^m w_s h}{\sum_{i=1}^m w_s n}
+\end{align}
+\]</span></p>
+<h3 id="第一种直接的代码">第一种直接的代码</h3>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line">xs = np.array([(<span class="number">5</span>, <span class="number">5</span>), (<span class="number">9</span>, <span class="number">1</span>), (<span class="number">8</span>, <span class="number">2</span>), (<span class="number">4</span>, <span class="number">6</span>), (<span class="number">7</span>, <span class="number">3</span>)])</span><br><span class="line">thetas = np.array([[<span class="number">0.6</span>, <span class="number">0.4</span>], [<span class="number">0.5</span>, <span class="number">0.5</span>]])  <span class="comment"># 初始化参数A B (向上概率，向下概率)</span></span><br><span class="line"></span><br><span class="line">tol = <span class="number">0.01</span>  <span class="comment"># 变化容忍度</span></span><br><span class="line">max_iter = <span class="number">100</span>  <span class="comment"># 迭代次数</span></span><br><span class="line"></span><br><span class="line">ll_old = <span class="number">0</span></span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> range(max_iter):</span><br><span class="line">    exp_A = []</span><br><span class="line">    exp_B = []</span><br><span class="line"></span><br><span class="line">    ll_new = <span class="number">0</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># ! E-step: 计算可能的概率分布</span></span><br><span class="line">    <span class="keyword">for</span> x <span class="keyword">in</span> xs:</span><br><span class="line">        <span class="comment"># 求解当前theta下两个分布的对数似然</span></span><br><span class="line">        ll_A = np.sum(x * np.log(thetas[<span class="number">0</span>]))  <span class="comment"># 多项式分布的对数似然函数 (忽略常数).</span></span><br><span class="line">        ll_B = np.sum(x * np.log(thetas[<span class="number">1</span>]))</span><br><span class="line"></span><br><span class="line">        w_A = np.exp(ll_A) / (np.exp(ll_A) + np.exp(ll_B))  <span class="comment"># 求出概率A的权重</span></span><br><span class="line">        w_B = np.exp(ll_B) / (np.exp(ll_A) + np.exp(ll_B))  <span class="comment"># 求出概率B的权重</span></span><br><span class="line"></span><br><span class="line">        exp_A.append(w_A * x)  <span class="comment"># 概率A权重乘上样本</span></span><br><span class="line">        exp_B.append(w_B * x)  <span class="comment"># 概率B权重乘上样本</span></span><br><span class="line"></span><br><span class="line">        ll_new += w_A * ll_A + w_B * ll_B  <span class="comment"># 计算当前的theta值对应的似然值</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># ! M-step: 为给定的分布更新当前参数</span></span><br><span class="line">    thetas[<span class="number">0</span>] = np.sum(exp_A, <span class="number">0</span>) / np.sum(exp_A)  <span class="comment"># 利用更新之后的样本值计算出当前A的theta值</span></span><br><span class="line">    thetas[<span class="number">1</span>] = np.sum(exp_B, <span class="number">0</span>) / np.sum(exp_B)  <span class="comment"># 利用更新之后的样本值计算出当前B的theta值</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># 输出每个x和当前参数估计z的分布</span></span><br><span class="line">    print(<span class="string">"Iteration: %d"</span> % (i + <span class="number">1</span>))</span><br><span class="line">    print(<span class="string">"theta_A = %.2f, theta_B = %.2f, ll = %.2f"</span> % (thetas[<span class="number">0</span>, <span class="number">0</span>], thetas[<span class="number">1</span>, <span class="number">0</span>], ll_new))</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> np.abs(ll_new - ll_old) &lt; tol:</span><br><span class="line">        <span class="keyword">break</span></span><br><span class="line">    ll_old = ll_new</span><br></pre></td></tr></table></figure>
+<h3 id="结果">结果</h3>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">Iteration: 1</span><br><span class="line">theta_A = 0.71, theta_B = 0.58, ll = -32.69</span><br><span class="line">Iteration: 2</span><br><span class="line">theta_A = 0.75, theta_B = 0.57, ll = -31.26</span><br><span class="line">Iteration: 3</span><br><span class="line">theta_A = 0.77, theta_B = 0.55, ll = -30.76</span><br><span class="line">Iteration: 4</span><br><span class="line">theta_A = 0.78, theta_B = 0.53, ll = -30.33</span><br><span class="line">Iteration: 5</span><br><span class="line">theta_A = 0.79, theta_B = 0.53, ll = -30.07</span><br><span class="line">Iteration: 6</span><br><span class="line">theta_A = 0.79, theta_B = 0.52, ll = -29.95</span><br><span class="line">Iteration: 7</span><br><span class="line">theta_A = 0.80, theta_B = 0.52, ll = -29.90</span><br><span class="line">Iteration: 8</span><br><span class="line">theta_A = 0.80, theta_B = 0.52, ll = -29.88</span><br><span class="line">Iteration: 9</span><br><span class="line">theta_A = 0.80, theta_B = 0.52, ll = -29.87</span><br></pre></td></tr></table></figure>
+<p><strong>NOTE：</strong> 他这里的对数似然函数是根据上面的公式推导之后简化而来的，所以直接对<span class="math inline">\(\theta\)</span>做对数即可，下面我按最基本的思路来写了一个例程。</p>
+<h3 id="我的代码">我的代码</h3>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line">n = <span class="number">10</span>  <span class="comment"># 实验次数</span></span><br><span class="line">m_xs = np.array([<span class="number">5</span>, <span class="number">9</span>, <span class="number">8</span>, <span class="number">4</span>, <span class="number">7</span>])  <span class="comment"># 向上次数</span></span><br><span class="line">theta_A = <span class="number">0.6</span></span><br><span class="line">theta_B = <span class="number">0.5</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">tol = <span class="number">0.01</span>  <span class="comment"># 变化容忍度</span></span><br><span class="line">max_iter = <span class="number">100</span>  <span class="comment"># 迭代次数</span></span><br><span class="line">loglike_old = <span class="number">0</span>  <span class="comment"># 初始对数似然值</span></span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> range(max_iter):</span><br><span class="line">    cnt_A = []</span><br><span class="line">    cnt_B = []</span><br><span class="line">    loglike_new = <span class="number">0</span>  <span class="comment"># 新的对数似然值</span></span><br><span class="line">    <span class="comment"># ! E-step</span></span><br><span class="line">    <span class="keyword">for</span> x <span class="keyword">in</span> m_xs:</span><br><span class="line">        pmf_A = binom(n, theta_A).pmf(x)  <span class="comment"># 当前theta下 A的概率</span></span><br><span class="line">        pmf_B = binom(n, theta_B).pmf(x)  <span class="comment"># 当前theta下 B的概率</span></span><br><span class="line"></span><br><span class="line">        logpmf_A = binom(n, theta_A).logpmf(x)  <span class="comment"># 当前theta下 A的对数概率</span></span><br><span class="line">        logpmf_B = binom(n, theta_B).logpmf(x)  <span class="comment"># 当前theta下 B的对数概率</span></span><br><span class="line"></span><br><span class="line">        weight_A = pmf_A / (pmf_A + pmf_B)  <span class="comment"># 求得权重</span></span><br><span class="line">        weight_B = pmf_B / (pmf_A + pmf_B)  <span class="comment"># 求得权重</span></span><br><span class="line"></span><br><span class="line">        cnt_A.append(weight_A * np.array([x, n - x]))  <span class="comment"># 概率A权重乘上样本，得到新的硬币次数统计</span></span><br><span class="line">        cnt_B.append(weight_B * np.array([x, n - x]))  <span class="comment"># 概率B权重乘上样本，得到新的硬币次数统计</span></span><br><span class="line"></span><br><span class="line">        loglike_new += weight_A * logpmf_A + weight_B * logpmf_B  <span class="comment"># 计算当前的theta值对应的似然值</span></span><br><span class="line">    <span class="comment"># ! M-step</span></span><br><span class="line">    theta_A = np.sum(cnt_A, <span class="number">0</span>)[<span class="number">0</span>] / np.sum(cnt_A)  <span class="comment"># 硬币A向上的次数除以总次数即为theta_A</span></span><br><span class="line">    theta_B = np.sum(cnt_B, <span class="number">0</span>)[<span class="number">0</span>] / np.sum(cnt_B)  <span class="comment"># 硬币B向上的次数除以总次数即为theta_B</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># 输出每个x和当前参数估计z的分布</span></span><br><span class="line">    print(<span class="string">"Iteration: %d"</span> % (i + <span class="number">1</span>))</span><br><span class="line">    print(<span class="string">"theta_A = %.2f, theta_B = %.2f, ll = %.2f"</span> % (theta_A, theta_B, loglike_new))</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> np.abs(loglike_new - loglike_old) &lt; tol:</span><br><span class="line">        <span class="keyword">break</span></span><br><span class="line">    loglike_old = loglike_new</span><br></pre></td></tr></table></figure>
+<h3 id="结果-1">结果</h3>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">Iteration: 1</span><br><span class="line">theta_A = 0.71, theta_B = 0.58, ll = -10.91</span><br><span class="line">Iteration: 2</span><br><span class="line">theta_A = 0.75, theta_B = 0.57, ll = -9.49</span><br><span class="line">Iteration: 3</span><br><span class="line">theta_A = 0.77, theta_B = 0.55, ll = -8.99</span><br><span class="line">Iteration: 4</span><br><span class="line">theta_A = 0.78, theta_B = 0.53, ll = -8.56</span><br><span class="line">Iteration: 5</span><br><span class="line">theta_A = 0.79, theta_B = 0.53, ll = -8.30</span><br><span class="line">Iteration: 6</span><br><span class="line">theta_A = 0.79, theta_B = 0.52, ll = -8.18</span><br><span class="line">Iteration: 7</span><br><span class="line">theta_A = 0.80, theta_B = 0.52, ll = -8.13</span><br><span class="line">Iteration: 8</span><br><span class="line">theta_A = 0.80, theta_B = 0.52, ll = -8.11</span><br><span class="line">Iteration: 9</span><br><span class="line">theta_A = 0.80, theta_B = 0.52, ll = -8.10</span><br></pre></td></tr></table></figure>
+<p><strong>NOTE：</strong> 就是对数似然值和例程计算的不一样。。</p>
+<h2 id="混合模型">混合模型</h2>
+<p>从一个简单的混合模型开始，即<code>k-means</code>，<code>k-means</code>不使用<code>EM</code>算法，但是可以结合<code>EM</code>算法帮助理解<code>EM</code>算法如何用于高斯混合模型。</p>
+<h3 id="k-means">K-means</h3>
+<p>这个算法比较简单，初始化选择<span class="math inline">\(k\)</span>个中心点，然后做如下：</p>
+<ol type="1">
+<li>找到每个点与中心点的距离</li>
+<li>给每个点分配最近的中心点</li>
+<li>根据所分配的点来更新中心点位置</li>
+</ol>
+<p>下面给出一段程序示例：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> numpy.core.umath_tests <span class="keyword">import</span> inner1d</span><br><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line"><span class="keyword">import</span> seaborn <span class="keyword">as</span> sns</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">kmeans</span><span class="params">(xs, k, max_iter=<span class="number">10</span>)</span>:</span></span><br><span class="line">    <span class="string">"""K-means 算法."""</span></span><br><span class="line">    idx = np.random.choice(len(xs), k, replace=<span class="keyword">False</span>)</span><br><span class="line">    cs = xs[idx]</span><br><span class="line">    <span class="keyword">for</span> n <span class="keyword">in</span> range(max_iter):</span><br><span class="line">        ds = np.array([inner1d(xs - c, xs - c) <span class="keyword">for</span> c <span class="keyword">in</span> cs])</span><br><span class="line">        zs = np.argmin(ds, axis=<span class="number">0</span>)</span><br><span class="line">        cs = np.array([xs[zs == i].mean(axis=<span class="number">0</span>) <span class="keyword">for</span> i <span class="keyword">in</span> range(k)])</span><br><span class="line">    <span class="keyword">return</span> (cs, zs)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">iris = sns.load_dataset(<span class="string">'iris'</span>)</span><br><span class="line">data = iris.iloc[:, :<span class="number">4</span>].values</span><br><span class="line">cs, zs = kmeans(data, <span class="number">3</span>)</span><br><span class="line">iris[<span class="string">'cluster'</span>] = zs</span><br><span class="line">sns.pairplot(iris, hue=<span class="string">'cluster'</span>, diag_kind=<span class="string">'kde'</span>, vars=iris.columns[:<span class="number">4</span>])</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
+<h3 id="结果-2">结果</h3>
+<p><img src="/2019/07/11/em-algm/kmeans.png"></p>
+<h2 id="高斯混合模型">高斯混合模型</h2>
+<p><span class="math inline">\(k\)</span>个高斯分布混合具有以下的概率密度函数： <span class="math display">\[
+\begin{align}
+p(x) = \sum_{j=1}^k \pi_j \phi(x; \mu_j, \sigma_j)
+\end{align}
+\]</span></p>
+<p><span class="math inline">\(\pi_j\)</span>是第<span class="math inline">\(j\)</span>个高斯分布的权重，且：</p>
+<p><span class="math display">\[
+\begin{align}
+\phi(x; \mu, \sigma) = \frac{1}{(2 \pi)^{d/2}|\sigma|^{1/2 } } \exp \left( -\frac{1}{2}(x-\mu)^T\sigma^{-1}(x-\mu) \right)
+\end{align}
+\]</span></p>
+<p>假设我们观察<span class="math inline">\(y_1, y2, \ldots, y_n\)</span>作为来自高斯混合模型的样本，那么对数似然为： <span class="math display">\[
+\begin{align}
+l(\theta) = \sum_{i=1}^n \log \left( \sum_{j=1}^k \pi_j \phi(y_i; \mu_j, \sigma_j) \right)
+\end{align}
+\]</span></p>
+<p>其中<span class="math inline">\(\theta = (\pi, \mu, \sigma)\)</span>，很难拟合这种对数似然最大值的参数，因为他们要在对数函数中求和。</p>
+<h3 id="使用em算法">使用EM算法</h3>
+<p>假设我们增加潜在变量<span class="math inline">\(z\)</span>，它表明我们观察到的<span class="math inline">\(y\)</span>来自于第<span class="math inline">\(k\)</span>个高斯分布。其中<code>E-step</code>和<code>M-step</code>的推导与之前的例子类似，只是变量更多。</p>
+<p>在<code>E-step</code>我们想要计算样本<span class="math inline">\(x_i\)</span>输入第<span class="math inline">\(j\)</span>个类别的后验概率<span class="math inline">\(，给定参数\)</span>= (, , )$</p>
+<p><strong>NOTE：</strong> 这里后验概率有的地方使用公式<span class="math inline">\(p(j|x_i)\)</span>,这里使用<span class="math inline">\(w_j^i\)</span>来表示。</p>
+<p><span class="math display">\[
+\begin{align}
+w_j^i &amp;= Q_i(z^i = j) \\
+&amp;= p(z^i = j \mid y^i; \theta) \\
+&amp;= \frac{p(x^i \mid z^i = j; \mu, \sigma) p(z^i = j; \pi)}  {\sum_{l=1}^k{p(y^i \mid z^i = l; \mu, \sigma) p(z^i = l; \pi) } }  &amp;&amp; \text{贝叶斯定理} \\
+&amp;= \frac{\phi(x^i; \mu_j, \sigma_j) \pi_j}{\sum_{l=1}^k \phi(x^i; \mu_l, \sigma_l) \pi_l}
+\end{align}
+\]</span></p>
+<p>在<code>M-step</code>中，我们要找到<span class="math inline">\(\theta = (w, \mu, \sigma)\)</span>来最大化<span class="math inline">\(\boldsymbol{Q}\)</span>函数，对应与真实对数似然函数的下界。</p>
+<p><span class="math display">\[
+\begin{align}
+\sum_{i=1}^{m}\sum_{j=1}^{k} Q(z^i=j) \log \frac{p(x^i \mid z^i= j; \mu, \sigma) p(z^i=j; \pi)}{Q(z^i=j)}
+\end{align}
+\]</span></p>
+<p>通过分别取<span class="math inline">\((w, \mu, \sigma)\)</span>的导数并求解（使用拉格朗日乘数构造约束<span class="math inline">\(\sum_{j=1}^k w_j = 1\)</span>来求解），我们得到：</p>
+<p><span class="math display">\[
+\begin{align}
+\pi_j &amp;= \frac{1}{m} \sum_{i=1}^{m} w_j^i \\
+\mu_j &amp;= \frac{\sum_{i=1}^{m} w_j^i x^i}{\sum_{i=1}^{m} w_j^i} \\
+\sigma_j &amp;= \frac{\sum_{i=1}^{m} w_j^i (x^i - \mu)(x^i - \mu)^T}{\sum_{i1}^{m} w_j^i}
+\end{align}
+\]</span></p>
+<h3 id="代码">代码</h3>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> scipy.stats <span class="keyword">import</span> multivariate_normal</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">normalize</span><span class="params">(xs, axis=None)</span>:</span></span><br><span class="line">    <span class="string">"""Return normalized marirx so that sum of row or column (default) entries = 1."""</span></span><br><span class="line">    <span class="keyword">if</span> axis <span class="keyword">is</span> <span class="keyword">None</span>:</span><br><span class="line">        <span class="keyword">return</span> xs / xs.sum()</span><br><span class="line">    <span class="keyword">elif</span> axis == <span class="number">0</span>:</span><br><span class="line">        <span class="keyword">return</span> xs / xs.sum(<span class="number">0</span>)</span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        <span class="keyword">return</span> xs / xs.sum(<span class="number">1</span>)[:, <span class="keyword">None</span>]</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">mix_mvn_pdf</span><span class="params">(xs, pis, mus, sigmas)</span>:</span></span><br><span class="line">    <span class="keyword">return</span> np.array([pi * multivariate_normal(mu, sigma).pdf(xs) <span class="keyword">for</span> (pi, mu, sigma) <span class="keyword">in</span> zip(pis, mus, sigmas)])</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">em_gmm_orig</span><span class="params">(xs, pis, mus, sigmas, tol=<span class="number">0.01</span>, max_iter=<span class="number">100</span>)</span>:</span></span><br><span class="line"></span><br><span class="line">    n, p = xs.shape</span><br><span class="line">    k = len(pis)</span><br><span class="line"></span><br><span class="line">    ll_old = <span class="number">0</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> range(max_iter):</span><br><span class="line">        exp_A = []</span><br><span class="line">        exp_B = []</span><br><span class="line">        ll_new = <span class="number">0</span></span><br><span class="line"></span><br><span class="line">        <span class="comment"># ！ E-step</span></span><br><span class="line">        ws = np.zeros((k, n))</span><br><span class="line">        <span class="keyword">for</span> j <span class="keyword">in</span> range(len(mus)):</span><br><span class="line">            <span class="keyword">for</span> i <span class="keyword">in</span> range(n):</span><br><span class="line">                <span class="comment"># 遍历所有的 mu，sigma，pi 来计算概率密度</span></span><br><span class="line">                ws[j, i] = pis[j] * multivariate_normal(mus[j], sigmas[j]).pdf(xs[i])</span><br><span class="line">        ws /= ws.sum(<span class="number">0</span>)  <span class="comment"># 根据概率密度求权值</span></span><br><span class="line"></span><br><span class="line">        <span class="comment"># M-step</span></span><br><span class="line">        <span class="comment"># NOTE 下面的更新过程是根据公式来计算的！</span></span><br><span class="line">        pis = np.zeros(k)</span><br><span class="line">        <span class="keyword">for</span> j <span class="keyword">in</span> range(len(mus)):</span><br><span class="line">            <span class="keyword">for</span> i <span class="keyword">in</span> range(n):</span><br><span class="line">                pis[j] += ws[j, i]  <span class="comment"># 使用权值更新pi</span></span><br><span class="line">        pis /= n</span><br><span class="line"></span><br><span class="line">        mus = np.zeros((k, p))</span><br><span class="line">        <span class="keyword">for</span> j <span class="keyword">in</span> range(k):</span><br><span class="line">            <span class="keyword">for</span> i <span class="keyword">in</span> range(n):</span><br><span class="line">                mus[j] += ws[j, i] * xs[i]  <span class="comment"># 使用权值更新mu</span></span><br><span class="line">            mus[j] /= ws[j, :].sum()</span><br><span class="line"></span><br><span class="line">        sigmas = np.zeros((k, p, p))</span><br><span class="line">        <span class="keyword">for</span> j <span class="keyword">in</span> range(k):</span><br><span class="line">            <span class="keyword">for</span> i <span class="keyword">in</span> range(n):</span><br><span class="line">                ys = np.reshape(xs[i] - mus[j], (<span class="number">2</span>, <span class="number">1</span>))</span><br><span class="line">                sigmas[j] += ws[j, i] * np.dot(ys, ys.T)  <span class="comment"># 使用权值更新sigma</span></span><br><span class="line">            sigmas[j] /= ws[j, :].sum()</span><br><span class="line"></span><br><span class="line">        <span class="comment"># 更新对数似然函数</span></span><br><span class="line">        ll_new = <span class="number">0.0</span></span><br><span class="line">        <span class="keyword">for</span> i <span class="keyword">in</span> range(n):</span><br><span class="line">            s = <span class="number">0</span></span><br><span class="line">            <span class="keyword">for</span> j <span class="keyword">in</span> range(k):</span><br><span class="line">                s += pis[j] * multivariate_normal(mus[j], sigmas[j]).pdf(xs[i])</span><br><span class="line">            ll_new += np.log(s)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> np.abs(ll_new - ll_old) &lt; tol:</span><br><span class="line">            <span class="keyword">break</span></span><br><span class="line">        ll_old = ll_new</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> ll_new, pis, mus, sigmas</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># 构建数据集</span></span><br><span class="line">n = <span class="number">1000</span></span><br><span class="line">_mus = np.array([[<span class="number">0</span>, <span class="number">4</span>], [<span class="number">-2</span>, <span class="number">0</span>]])</span><br><span class="line">_sigmas = np.array([[[<span class="number">3</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0.5</span>]], [[<span class="number">1</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">2</span>]]])</span><br><span class="line">_pis = np.array([<span class="number">0.6</span>, <span class="number">0.4</span>])</span><br><span class="line">xs = np.concatenate([np.random.multivariate_normal(mu, sigma, int(pi * n))</span><br><span class="line">                     <span class="keyword">for</span> pi, mu, sigma <span class="keyword">in</span> zip(_pis, _mus, _sigmas)])</span><br><span class="line"></span><br><span class="line"><span class="comment"># 初始化预测值</span></span><br><span class="line">pis = normalize(np.random.random(<span class="number">2</span>))  <span class="comment"># pi 要经过归一化</span></span><br><span class="line">mus = np.random.random((<span class="number">2</span>, <span class="number">2</span>))</span><br><span class="line">sigmas = np.array([np.eye(<span class="number">2</span>)] * <span class="number">2</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用EM算法拟合</span></span><br><span class="line">ll1, pis1, mus1, sigmas1 = em_gmm_orig(xs, pis, mus, sigmas)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 绘图</span></span><br><span class="line">intervals = <span class="number">101</span></span><br><span class="line">ys = np.linspace(<span class="number">-8</span>, <span class="number">8</span>, intervals)</span><br><span class="line">X, Y = np.meshgrid(ys, ys)</span><br><span class="line">_ys = np.vstack([X.ravel(), Y.ravel()]).T</span><br><span class="line"></span><br><span class="line">z = np.zeros(len(_ys))</span><br><span class="line"><span class="keyword">for</span> pi, mu, sigma <span class="keyword">in</span> zip(pis1, mus1, sigmas1):</span><br><span class="line">    z += pi * multivariate_normal(mu, sigma).pdf(_ys)</span><br><span class="line">z = z.reshape((intervals, intervals))</span><br><span class="line"></span><br><span class="line">ax = plt.subplot(<span class="number">111</span>)</span><br><span class="line">plt.scatter(xs[:, <span class="number">0</span>], xs[:, <span class="number">1</span>], alpha=<span class="number">0.2</span>)</span><br><span class="line">plt.contour(X, Y, z, N=<span class="number">10</span>)</span><br><span class="line">plt.axis([<span class="number">-8</span>, <span class="number">6</span>, <span class="number">-6</span>, <span class="number">8</span>])</span><br><span class="line">ax.axes.set_aspect(<span class="string">'equal'</span>)</span><br><span class="line">plt.tight_layout()</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
+<h3 id="结果-3">结果</h3>
+<p><img src="/2019/07/11/em-algm/mxiguass.png"></p>
+<h1 id="胶囊网络">胶囊网络</h1>
+<h2 id="矩阵胶囊">矩阵胶囊</h2>
+<p>现在的矩阵胶囊与之前的胶囊不是很一样了，因为胶囊是矩阵，就不能把模长作为激活了。所以多加一个标量<span class="math inline">\(a\)</span>来表示激活值。</p>
+<p>矩阵胶囊的主体，名字也变了一下，叫做姿态矩阵，这里是<span class="math inline">\(4\times4\)</span>的矩阵。</p>
+<p><img src="/2019/07/11/em-algm/capp.png"></p>
+<h2 id="胶囊投票机制">胶囊投票机制</h2>
+<p>在胶囊网络中，通过寻找底层胶囊投票之间的一致性来检测一个高层特征(比如一张脸)，对于来自胶囊<span class="math inline">\(i\)</span>对父胶囊<span class="math inline">\(j\)</span>的投票<span class="math inline">\(v_{ij}\)</span>，通过将胶囊<span class="math inline">\(i\)</span>的姿态矩阵<span class="math inline">\(M_i\)</span>和视角不变矩阵<span class="math inline">\(W_{ij}\)</span>相乘得到。</p>
+<p><span class="math display">\[
+\begin{split}
+&amp;v_{ij} = M_iW_{ij} \quad 
+\end{split}
+\]</span></p>
+<p>基于投票<span class="math inline">\(v_{ij}\)</span>和其他投票<span class="math inline">\((v_{o_{1}j} \ldots v_{o_{k}j})\)</span>相似度来计算胶囊<span class="math inline">\(i\)</span>被分组到胶囊<span class="math inline">\(j\)</span>中的概率。</p>
+<h2 id="胶囊分配">胶囊分配</h2>
+<p>EM算法对低层的胶囊进行聚类，也计算底层胶囊与上层胶囊间分配概率<span class="math inline">\(r_{ij}\)</span>。例如一个表示手的胶囊不属于脸的胶囊，他们的分配概率就被抑止到0，<span class="math inline">\(r_{ij}\)</span>也受到胶囊激活的影响。</p>
+<p><img src="/2019/07/11/em-algm/c2.jpg"></p>
+<h2 id="计算胶囊激活和姿态矩阵">计算胶囊激活和姿态矩阵</h2>
+<p>在EM聚类中，我们将数据使用正态分布来表现。在EM路由中，我们也对父胶囊使用正态分布来建模，姿态矩阵<span class="math inline">\(M\)</span>是<span class="math inline">\(4\times4\)</span>的矩阵，即16个分量。我们对姿态矩阵建立16个<span class="math inline">\(\mu\)</span>,16个<span class="math inline">\(\sigma\)</span>的高斯分布，每个<span class="math inline">\(\mu\)</span>就表征了姿态矩阵的每个分量。注意为了避免在概率密度函数中求逆，胶囊网络中的<span class="math inline">\(\sigma\)</span>是被固定成一个对角矩阵的。</p>
+<p>让<span class="math inline">\(v_{ij}\)</span>作为底层胶囊<span class="math inline">\(i\)</span>对父胶囊<span class="math inline">\(j\)</span>的投票，<span class="math inline">\(v^{h}_{ij}\)</span>代表着第<code>h</code>个分量。我们使用高斯概率密度函数</p>
+<p><span class="math display">\[
+\begin{split}
+P(x) &amp; = \frac{1}{\sigma \sqrt{2\pi } }e^{-(x - \mu)^{2}/2\sigma^{2} } \\
+\end{split}
+\]</span></p>
+<p>来计算属于胶囊<span class="math inline">\(j\)</span>正态分布的投票<span class="math inline">\(v^{h}_{ij}\)</span>概率。 <span class="math display">\[
+\begin{split}
+p^h_{i \vert j} &amp; = \frac{1}{\sqrt{2 \pi ({\sigma^h_j})^2 } } \exp{(- \frac{(v^h_{ij}-\mu^h_j)^2}{2 ({\sigma^h_j})^2})} \\
+\end{split} 
+\]</span></p>
+<p>取其对数：</p>
+<p><span class="math display">\[
+\begin{split}
+\ln(p^h_{i \vert j}) &amp;= \ln \frac{1}{\sqrt{2 \pi ({\sigma^h_j})^2 } } \exp{(- \frac{(v^h_{ij}-\mu^h_j)^2}{2 ({\sigma^h_j})^2})} \\
+\\
+&amp;= - \ln(\sigma^h_j) - \frac{\ln(2 \pi)}{2} - \frac{(v^h_{ij}-\mu^h_j)^2}{2 ({\sigma^h_j})^2}\\
+\end{split}
+\]</span></p>
+<p>接下来估计胶囊激活的损失值，越低的损失值，代表胶囊越有可能被激活。如果损失值较大，就代表投票与父胶囊的高斯分布不匹配，因此激活概率较小。</p>
+<p>让<span class="math inline">\(cost_{ij}\)</span>作为胶囊<span class="math inline">\(i\)</span>激活胶囊<span class="math inline">\(j\)</span>的损失，是负的对数似然也可以称之为<strong>熵</strong>(熵越小，那就意味<strong>似然估计越准</strong>)： <span class="math display">\[
+cost^h_{ij} = - \ln(P^h_{i \vert j})
+\]</span></p>
+<p>由于胶囊<span class="math inline">\(i\)</span>与胶囊<span class="math inline">\(j\)</span>之间的联系并不相同，因此我们将在运行时按比例<span class="math inline">\(r_{ij}\)</span>来分配<span class="math inline">\(cost\)</span>，那下层胶囊的<span class="math inline">\(cost\)</span>计算为：</p>
+<p><span class="math display">\[
+\begin{split}
+cost^h_j &amp;= \sum_i  r_{ij} cost^h_{ij} \\
+&amp;= \sum_i - r_{ij} \ln(p^h_{i \vert j}) \\
+&amp;= \sum_i r_{ij}  \big( \frac{(v^h_{ij}-\mu^h_j)^2}{2 ({\sigma^h_j})^2} + \ln(\sigma^h_j) + \frac{\ln(2 \pi)}{2} \big)\\
+&amp;= \frac{\sum_i r_{ij} (\sigma^h_j)^2}{2 (\sigma^h_j)^2} + (\ln(\sigma^h_j) + \frac{\ln(2 \pi)}{2}) \sum_i r_{ij} \\
+&amp;= \big(\ln(\sigma^h_j) + k \big) \sum_i r_{ij}  \quad \text{k是不变的}
+\end{split}
+\]</span></p>
+<p>有了<span class="math inline">\(cost\)</span>值，使用<span class="math inline">\(a_j\)</span>来决定胶囊<span class="math inline">\(j\)</span>是否被激活： <span class="math display">\[
+a_j = sigmoid(\lambda(b_j - \sum_h cost^h_j))
+\]</span></p>
+<p>这里面的<span class="math inline">\(b_j\)</span>是根据反向传播进行优化的，所以并不需要直接计算。</p>
+<p>其中的<span class="math inline">\(r_{ij},\mu,\sigma,a_j\)</span>是根据EM路由来计算的。<span class="math inline">\(\lambda\)</span>是根据温度参数<span class="math inline">\(\frac{1}{temperature}\)</span>来计算(退火策略)，随着<span class="math inline">\(r_{ij}\)</span>越来越好，就降低<code>temperature</code>以获得更大的<span class="math inline">\(\lambda\)</span>，也就是增加<span class="math inline">\(sigmoid\)</span>的陡度，这样就更加在更加小的范围内微调<span class="math inline">\(r_{ij}\)</span>。</p>
+<h2 id="em路由">EM路由</h2>
+<p>这一块是重点，所以我要仔细看每个公式细节。并且要一步一步的渐进的看。</p>
+<h3 id="新动态路由1">新动态路由1</h3>
+<p>首先用一个矩阵<span class="math inline">\(\boldsymbol{P}_{i}， i=1,\ldots,n\)</span>来表示第<span class="math inline">\(l\)</span>层的胶囊，用矩阵<span class="math inline">\(\boldsymbol{M}_j， j=1,\ldots,k\)</span>来表示第<span class="math inline">\(l+1\)</span>层的胶囊。在做EM路由的过程中，他将<span class="math inline">\(P_i\)</span>变成长16的向量，且协方差矩阵为对角阵。</p>
+<p><span class="math display">\[
+\text{新动态路由1}:\left\{
+\begin{aligned} 
+    &amp;p_{ij} \leftarrow N(\boldsymbol{P}_i;\boldsymbol{\mu}_j,\boldsymbol{\sigma}^2_j) &amp;&amp; \text{计算概率密度} \\  
+    &amp;R_{ij} \leftarrow \frac{\pi_j p_{ij} }{\sum\limits_{j=1}^k\pi_j p_{ij} } &amp;&amp; \text{计算后验概率} \\
+    &amp;r_{ij}\leftarrow \frac{R_{ij } }{\sum\limits_{i=1}^n R_{ij } } &amp;&amp; \text{计算归一化后验概率} \\ 
+    &amp;\boldsymbol{M}_j \leftarrow \sum\limits_{i=1}^n r_{ij}\boldsymbol{P}_i &amp;&amp; \text{计算新样本} \\ 
+    &amp;\boldsymbol{\sigma}^2_j \leftarrow \sum\limits_{i=1}^n r_{ij}(\boldsymbol{P}_i-\boldsymbol{M}_j)^2 &amp;&amp; \text{更新}\sigma \\ 
+    &amp;\pi_j \leftarrow \frac{1}{n}\sum\limits_{i=1}^n R_{ij} &amp;&amp; \text{更新聚类中心}\pi
+\end{aligned}\right.
+\]</span></p>
+<p>这里的<span class="math inline">\(R_{ij}\)</span>就是后验概率，也就是在<code>EM</code>算法中使用的<span class="math inline">\(w_j\)</span>。</p>
+<h3 id="新动态路由2">新动态路由2</h3>
+<p>前面讲道理有一个激活标量<span class="math inline">\(a_j\)</span>来衡量胶囊单元的显著程度，根据EM算法计算我们可以得到<span class="math inline">\(\pi_j\)</span>为第<span class="math inline">\(l+1\)</span>层胶囊的聚类中心，但我们不能选择<span class="math inline">\(\pi\)</span>因为：</p>
+<ol type="1">
+<li><span class="math inline">\(\pi_j\)</span>是归一化的，就是我们只想得到他的显著程度，而不是显著程度的概率。</li>
+<li><span class="math inline">\(\pi_j\)</span>不能反映出类内的元素特征是否相似。</li>
+</ol>
+<p>现在再看前面所使用的激活标量<span class="math inline">\(a_j\)</span>，他既考虑了似然估计值<span class="math inline">\(cost_j^h\)</span>,又考虑了显著程度<span class="math inline">\(\pi_j\)</span>。所以作者直接将<span class="math inline">\(a_j\)</span>替换了<span class="math inline">\(\pi_j\)</span>，这样虽然不完全与原始EM算法相同，但是也能收敛，得到新的动态路由：</p>
+<p><span class="math display">\[
+\text{新动态路由2}:\left\{
+\begin{aligned} 
+    &amp;p_{ij} \leftarrow N(\boldsymbol{P}_i;\boldsymbol{\mu}_j,\boldsymbol{\sigma}^2_j) &amp;&amp; \text{计算概率密度} \\  
+    &amp;R_{ij} \leftarrow \frac{a_j p_{ij} }{\sum\limits_{j=1}^k a_j p_{ij} } &amp;&amp; \text{计算后验概率} \\
+    &amp;r_{ij}\leftarrow \frac{R_{ij } }{\sum\limits_{i=1}^n R_{ij } } &amp;&amp; \text{归一化后验概率} \\ 
+    &amp;\boldsymbol{M}_j \leftarrow \sum\limits_{i=1}^n r_{ij}\boldsymbol{P}_i &amp;&amp; \text{计算新样本} \\ 
+    &amp;\boldsymbol{\sigma}^2_j \leftarrow \sum\limits_{i=1}^n r_{ij}(\boldsymbol{P}_i-\boldsymbol{M}_j)^2 &amp;&amp; \text{更新}\sigma \\ 
+   &amp; cost_j \leftarrow \left(\beta_u+\sum\limits_{l=1}^d \ln \boldsymbol{\sigma}_j^l \right)\sum\limits_i r_{ij} &amp;&amp; \text{计算熵} \\ 
+   &amp; a_j \leftarrow sigmoid(\lambda(b_j - \sum_h cost^h_j)) &amp;&amp; \text{更新}a_j
+\end{aligned}\right.
+\]</span></p>
+<h3 id="新动态路由3">新动态路由3</h3>
+<p>上面好像没什么问题。但是没有使用底层胶囊的激活值<span class="math inline">\(a^{last}_i\)</span>，作者在计算归一化后验概率<span class="math inline">\(r_{ij}\leftarrow \frac{R_{ij } }{\sum\limits_{i=1}^n R_{ij } }\)</span>的时候加入：</p>
+<p><span class="math display">\[
+\text{新动态路由3}:\left\{
+\begin{aligned} 
+    &amp;p_{ij} \leftarrow N(\boldsymbol{P}_i;\boldsymbol{\mu}_j,\boldsymbol{\sigma}^2_j) &amp;&amp; \text{计算概率密度} \\  
+    &amp;R_{ij} \leftarrow \frac{a_j p_{ij} }{\sum\limits_{j=1}^k a_j p_{ij} } &amp;&amp; \text{计算后验概率} \\
+    &amp;r_{ij}\leftarrow \frac{a_i^{last}R_{ij } }{\sum\limits_{i=1}^n a_i^{last} R_{ij } } &amp;&amp; \text{计算归一化后验概率} \\ 
+    &amp;\boldsymbol{M}_j \leftarrow \sum\limits_{i=1}^n r_{ij}\boldsymbol{P}_i &amp;&amp; \text{计算新样本} \\ 
+    &amp;\boldsymbol{\sigma}^2_j \leftarrow \sum\limits_{i=1}^n r_{ij}(\boldsymbol{P}_i-\boldsymbol{M}_j)^2 &amp;&amp; \text{更新}\sigma \\ 
+   &amp; cost_j \leftarrow \left(\beta_u+\sum\limits_{l=1}^d \ln \boldsymbol{\sigma}_j^l \right)\sum\limits_i r_{ij} &amp;&amp; \text{计算熵} \\ 
+   &amp; a_j \leftarrow sigmoid(\lambda(b_j - \sum_h cost^h_j)) &amp;&amp; \text{更新}a_j
+\end{aligned}\right.
+\]</span></p>
+<h2 id="新动态路由4">新动态路由4</h2>
+<p>因为<span class="math inline">\(\sum\limits_i r_{ij}=1\)</span>，所以下面还可以化简。</p>
+<p><span class="math display">\[
+\text{新动态路由4}:\left\{
+\begin{aligned} 
+    &amp;p_{ij} \leftarrow N(\boldsymbol{P}_i;\boldsymbol{\mu}_j,\boldsymbol{\sigma}^2_j) &amp;&amp; \text{计算概率密度} \\  
+    &amp;R_{ij} \leftarrow \frac{a_j p_{ij} }{\sum\limits_{j=1}^k a_j p_{ij} } &amp;&amp; \text{计算后验概率} \\
+    &amp;r_{ij}\leftarrow \frac{a_i^{last}R_{ij } }{\sum\limits_{i=1}^n a_i^{last} R_{ij } } &amp;&amp; \text{计算归一化后验概率} \\ 
+    &amp;\boldsymbol{M}_j \leftarrow \sum\limits_{i=1}^n r_{ij}\boldsymbol{P}_i &amp;&amp; \text{计算新样本} \\ 
+    &amp;\boldsymbol{\sigma}^2_j \leftarrow \sum\limits_{i=1}^n r_{ij}(\boldsymbol{P}_i-\boldsymbol{M}_j)^2 &amp;&amp; \text{更新}\sigma \\ 
+   &amp; cost_j \leftarrow \left(\beta_u+\sum\limits_{l=1}^d \ln \boldsymbol{\sigma}_j^l \right)\sum\limits_i a_i^{last} R_{ij} &amp;&amp; \text{计算熵} \\ 
+   &amp; a_j \leftarrow sigmoid(\lambda(b_j - \sum_h cost^h_j)) &amp;&amp; \text{更新}a_j
+\end{aligned}\right.
+\]</span></p>
+<h2 id="最终的动态路由">最终的动态路由</h2>
+<p>现在再把投票机制与视角不变矩阵加入进来,投票矩阵与上面描述一样<span class="math inline">\(\boldsymbol{V}_{ij}=\boldsymbol{P}_{i}\boldsymbol{W}_{ij}\)</span>。</p>
+<p><span class="math display">\[
+\text{新动态路由}:\left\{
+\begin{aligned} 
+    &amp;p_{ij} \leftarrow N(\boldsymbol{V}_{ij};\boldsymbol{\mu}_j,\boldsymbol{\sigma}^2_j) &amp;&amp; \text{计算概率密度} \\  
+    &amp;R_{ij} \leftarrow \frac{a_j p_{ij} }{\sum\limits_{j=1}^k a_j p_{ij} } &amp;&amp; \text{计算后验概率} \\
+    &amp;r_{ij}\leftarrow \frac{a_i^{last}R_{ij } }{\sum\limits_{i=1}^n a_i^{last} R_{ij } } &amp;&amp; \text{计算归一化后验概率} \\ 
+    &amp;\boldsymbol{M}_j \leftarrow \sum\limits_{i=1}^n r_{ij}\boldsymbol{V}_{ij} &amp;&amp; \text{计算新样本} \\ 
+    &amp;\boldsymbol{\sigma}^2_j \leftarrow \sum\limits_{i=1}^n r_{ij}(\boldsymbol{V}_{ij}-\boldsymbol{M}_j)^2 &amp;&amp; \text{更新}\sigma \\ 
+   &amp; cost_j \leftarrow \left(\beta_u+\sum\limits_{l=1}^d \ln \boldsymbol{\sigma}_j^l \right)\sum\limits_i a_i^{last} R_{ij} &amp;&amp; \text{计算熵} \\ 
+   &amp; a_j \leftarrow sigmoid(\lambda(b_j - \sum_h cost^h_j)) &amp;&amp; \text{更新}a_j
+\end{aligned}\right.
+\]</span></p>
+<h2 id="代码-1">代码</h2>
+<p>等我写好补充。。</p>
+<h1 id="参考">参考</h1>
+<ol type="1">
+<li><p><a href="https://kexue.fm/archives/5155" target="_blank" rel="noopener">苏建林的博客</a></p></li>
+<li><p><a href="https://jhui.github.io/2017/11/14/Matrix-Capsules-with-EM-routing-Capsule-Network/" target="_blank" rel="noopener">理解胶囊网络</a></p></li>
+</ol>
+
+        
+      
+    </div> -->
+    <footer class="article-footer">
+      <a data-url="https://zhen8838.github.io/2019/07/11/em-algm/" data-id="cjy4dsxar0000xz6x6xa8qfk1" class="article-share-link">Share</a>
+      
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/机器学习/">机器学习</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/算法/">算法</a></li></ul>
+
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+  
+    <a href="/2019/07/10/yolo-error/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">实现yolo时踩过的坑！</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">分类</h3>
+    <div class="widget">
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/学习/">学习</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">标签云</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/C/" style="font-size: 13.08px;">C</a> <a href="/tags/C/" style="font-size: 12.31px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10.77px;">CNN</a> <a href="/tags/Eigen/" style="font-size: 10px;">Eigen</a> <a href="/tags/Linux/" style="font-size: 20px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12.31px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12.31px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.77px;">PCB</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 15.38px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 10px;">linux</a> <a href="/tags/python/" style="font-size: 18.46px;">python</a> <a href="/tags/stm32/" style="font-size: 11.54px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 16.92px;">tensorflow</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 14.62px;">作业</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/图像处理/" style="font-size: 10px;">图像处理</a> <a href="/tags/堆栈/" style="font-size: 10.77px;">堆栈</a> <a href="/tags/声音信号处理/" style="font-size: 12.31px;">声音信号处理</a> <a href="/tags/小工具/" style="font-size: 12.31px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 16.15px;">嵌入式</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 17.69px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 17.69px;">机器学习</a> <a href="/tags/树/" style="font-size: 12.31px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/深度学习/" style="font-size: 14.62px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 11.54px;">神经网络</a> <a href="/tags/算法/" style="font-size: 12.31px;">算法</a> <a href="/tags/聚类/" style="font-size: 12.31px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13.85px;">蓝牙</a> <a href="/tags/调参/" style="font-size: 10px;">调参</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/链表/" style="font-size: 11.54px;">链表</a> <a href="/tags/错误记录/" style="font-size: 19.23px;">错误记录</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">归档</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/07/">七月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/06/">六月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/05/">五月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">三月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">最新文章</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2019/07/11/em-algm/">EM算法与EM路由</a>
+          </li>
+        
+          <li>
+            <a href="/2019/07/10/yolo-error/">实现yolo时踩过的坑！</a>
+          </li>
+        
+          <li>
+            <a href="/2019/07/07/tflite-kmodel/">比较kmdoel和tflite推理输出</a>
+          </li>
+        
+          <li>
+            <a href="/2019/06/11/tf-custom-loss-error/">tf.keras自定义loss报错shape mismatch</a>
+          </li>
+        
+          <li>
+            <a href="/2019/06/11/tf-keras-shape-error/">tf.dataset无法推断shape导致错误</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2019 NAke<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+    <a href="/about" class="mobile-nav-link">about</a>
+  
+</nav>
+    
+
+<script src="//cdn.staticfile.org/jquery/2.0.3/jquery.min.js"></script>
+
+
+  <link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
+  <script src="/fancybox/jquery.fancybox.pack.js"></script>
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+  </div>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+</body>
+</html>
