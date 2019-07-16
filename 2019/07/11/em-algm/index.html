@@ -21,7 +21,7 @@
 <meta property="og:image" content="https://zhen8838.github.io/2019/07/11/em-algm/mxiguass.png">
 <meta property="og:image" content="https://zhen8838.github.io/2019/07/11/em-algm/capp.png">
 <meta property="og:image" content="https://zhen8838.github.io/2019/07/11/em-algm/c2.jpg">
-<meta property="og:updated_time" content="2019-07-16T06:45:25.004Z">
+<meta property="og:updated_time" content="2019-07-16T13:57:41.762Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="EM算法与EM路由">
 <meta name="twitter:description" content="搞定了yolo，终于可以学习点新的东西了。今天就学习一波胶囊网络中的EM路由。 先推荐一个课程资料，杜克大学的统计学课程，从python讲到c++，从矩阵计算讲到概率统计，从jit讲到cuda编程。看看人家本科生学的东西。。。">
@@ -284,43 +284,43 @@ w_j^i &amp;= Q_i(z^i = j) \\
 <p><img src="/2019/07/11/em-algm/c2.jpg"></p>
 <h2 id="计算胶囊激活和姿态矩阵">计算胶囊激活和姿态矩阵</h2>
 <p>在EM聚类中，我们将数据使用正态分布来表现。在EM路由中，我们也对父胶囊使用正态分布来建模，姿态矩阵<span class="math inline">\(M\)</span>是<span class="math inline">\(4\times4\)</span>的矩阵，即16个分量。我们对姿态矩阵建立16个<span class="math inline">\(\mu\)</span>,16个<span class="math inline">\(\sigma\)</span>的高斯分布，每个<span class="math inline">\(\mu\)</span>就表征了姿态矩阵的每个分量。注意为了避免在概率密度函数中求逆，胶囊网络中的<span class="math inline">\(\sigma\)</span>是被固定成一个对角矩阵的。</p>
-<p>让<span class="math inline">\(v_{ij}\)</span>作为底层胶囊<span class="math inline">\(i\)</span>对父胶囊<span class="math inline">\(j\)</span>的投票，<span class="math inline">\(v^{h}_{ij}\)</span>代表着第<code>h</code>个分量。我们使用高斯概率密度函数</p>
+<p>让<span class="math inline">\(v_{ij}\)</span>作为底层胶囊<span class="math inline">\(i\)</span>对父胶囊<span class="math inline">\(j\)</span>的投票，<span class="math inline">\(v^{h}_{ij}\)</span>代表着第<code>n</code>个分量。我们使用高斯概率密度函数</p>
 <p><span class="math display">\[
 \begin{split}
 P(x) &amp; = \frac{1}{\sigma \sqrt{2\pi } }e^{-(x - \mu)^{2}/2\sigma^{2} } \\
 \end{split}
 \]</span></p>
-<p>来计算属于胶囊<span class="math inline">\(j\)</span>正态分布的投票<span class="math inline">\(v^{h}_{ij}\)</span>概率。 <span class="math display">\[
+<p>来计算属于胶囊<span class="math inline">\(j\)</span>正态分布的投票<span class="math inline">\(v^{n}_{ij}\)</span>概率。 <span class="math display">\[
 \begin{split}
-p^h_{i \vert j} &amp; = \frac{1}{\sqrt{2 \pi ({\sigma^h_j})^2 } } \exp{(- \frac{(v^h_{ij}-\mu^h_j)^2}{2 ({\sigma^h_j})^2})} \\
+p^n_{i \vert j} &amp; = \frac{1}{\sqrt{2 \pi ({\sigma^n_j})^2 } } \exp{(- \frac{(v^n_{ij}-\mu^n_j)^2}{2 ({\sigma^n_j})^2})} \\
 \end{split} 
 \]</span></p>
 <p>取其对数：</p>
 <p><span class="math display">\[
 \begin{split}
-\ln(p^h_{i \vert j}) &amp;= \ln \frac{1}{\sqrt{2 \pi ({\sigma^h_j})^2 } } \exp{(- \frac{(v^h_{ij}-\mu^h_j)^2}{2 ({\sigma^h_j})^2})} \\
+\ln(p^n_{i \vert j}) &amp;= \ln \frac{1}{\sqrt{2 \pi ({\sigma^n_j})^2 } } \exp{(- \frac{(v^n_{ij}-\mu^n_j)^2}{2 ({\sigma^n_j})^2})} \\
 \\
-&amp;= - \ln(\sigma^h_j) - \frac{\ln(2 \pi)}{2} - \frac{(v^h_{ij}-\mu^h_j)^2}{2 ({\sigma^h_j})^2}\\
+&amp;= - \ln(\sigma^n_j) - \frac{\ln(2 \pi)}{2} - \frac{(v^n_{ij}-\mu^n_j)^2}{2 ({\sigma^n_j})^2}\\
 \end{split}
 \]</span></p>
 <p>接下来估计胶囊激活的损失值，越低的损失值，代表胶囊越有可能被激活。如果损失值较大，就代表投票与父胶囊的高斯分布不匹配，因此激活概率较小。</p>
 <p>让<span class="math inline">\(cost_{ij}\)</span>作为胶囊<span class="math inline">\(i\)</span>激活胶囊<span class="math inline">\(j\)</span>的损失，是负的对数似然也可以称之为<strong>熵</strong>(熵越小，那就意味<strong>似然估计越准</strong>)： <span class="math display">\[
-cost^h_{ij} = - \ln(P^h_{i \vert j})
+cost^n_{ij} = - \ln(P^n_{i \vert j})
 \]</span></p>
 <p>由于胶囊<span class="math inline">\(i\)</span>与胶囊<span class="math inline">\(j\)</span>之间的联系并不相同，因此我们将在运行时按比例<span class="math inline">\(r_{ij}\)</span>来分配<span class="math inline">\(cost\)</span>，那下层胶囊的<span class="math inline">\(cost\)</span>计算为：</p>
 <p><span class="math display">\[
 \begin{split}
-cost^h_j &amp;= \sum_i  r_{ij} cost^h_{ij} \\
-&amp;= \sum_i - r_{ij} \ln(p^h_{i \vert j}) \\
-&amp;= \sum_i r_{ij}  \big( \frac{(v^h_{ij}-\mu^h_j)^2}{2 ({\sigma^h_j})^2} + \ln(\sigma^h_j) + \frac{\ln(2 \pi)}{2} \big)\\
-&amp;= \frac{\sum_i r_{ij} (\sigma^h_j)^2}{2 (\sigma^h_j)^2} + (\ln(\sigma^h_j) + \frac{\ln(2 \pi)}{2}) \sum_i r_{ij} \\
-&amp;= \big(\ln(\sigma^h_j) + k \big) \sum_i r_{ij}  \quad \text{k是不变的}
+cost^n_j &amp;= \sum_i  r_{ij} cost^n_{ij} \\
+&amp;= \sum_i - r_{ij} \ln(p^n_{i \vert j}) \\
+&amp;= \sum_i r_{ij}  \big( \frac{(v^n_{ij}-\mu^n_j)^2}{2 ({\sigma^n_j})^2} + \ln(\sigma^n_j) + \frac{\ln(2 \pi)}{2} \big)\\
+&amp;= \frac{\sum_i r_{ij} (\sigma^n_j)^2}{2 (\sigma^n_j)^2} + (\ln(\sigma^n_j) + \frac{\ln(2 \pi)}{2}) \sum_i r_{ij} \\
+&amp;= \big(\ln(\sigma^n_j) + \beta_v \big) \sum_i r_{ij}  \quad \beta_v\text{是待优化参数}
 \end{split}
 \]</span></p>
 <p>有了<span class="math inline">\(cost\)</span>值，使用<span class="math inline">\(a_j\)</span>来决定胶囊<span class="math inline">\(j\)</span>是否被激活： <span class="math display">\[
-a_j = sigmoid(\lambda(b_j - \sum_h cost^h_j))
+a_j = sigmoid(\lambda(\beta_a - \sum_h cost^n_j))
 \]</span></p>
-<p>这里面的<span class="math inline">\(b_j\)</span>是根据反向传播进行优化的，所以并不需要直接计算。</p>
+<p>这里面的<span class="math inline">\(\beta_a，\beta_v\)</span>是根据反向传播进行优化的，所以并不需要直接计算。</p>
 <p>其中的<span class="math inline">\(r_{ij},\mu,\sigma,a_j\)</span>是根据EM路由来计算的。<span class="math inline">\(\lambda\)</span>是根据温度参数<span class="math inline">\(\frac{1}{temperature}\)</span>来计算(退火策略)，随着<span class="math inline">\(r_{ij}\)</span>越来越好，就降低<code>temperature</code>以获得更大的<span class="math inline">\(\lambda\)</span>，也就是增加<span class="math inline">\(sigmoid\)</span>的陡度，这样就更加在更加小的范围内微调<span class="math inline">\(r_{ij}\)</span>。</p>
 <h2 id="em路由">EM路由</h2>
 <p>这一块是重点，所以我要仔细看每个公式细节。并且要一步一步的渐进的看。</p>
@@ -595,43 +595,43 @@ w_j^i &amp;= Q_i(z^i = j) \\
 <p><img src="/2019/07/11/em-algm/c2.jpg"></p>
 <h2 id="计算胶囊激活和姿态矩阵">计算胶囊激活和姿态矩阵</h2>
 <p>在EM聚类中，我们将数据使用正态分布来表现。在EM路由中，我们也对父胶囊使用正态分布来建模，姿态矩阵<span class="math inline">\(M\)</span>是<span class="math inline">\(4\times4\)</span>的矩阵，即16个分量。我们对姿态矩阵建立16个<span class="math inline">\(\mu\)</span>,16个<span class="math inline">\(\sigma\)</span>的高斯分布，每个<span class="math inline">\(\mu\)</span>就表征了姿态矩阵的每个分量。注意为了避免在概率密度函数中求逆，胶囊网络中的<span class="math inline">\(\sigma\)</span>是被固定成一个对角矩阵的。</p>
-<p>让<span class="math inline">\(v_{ij}\)</span>作为底层胶囊<span class="math inline">\(i\)</span>对父胶囊<span class="math inline">\(j\)</span>的投票，<span class="math inline">\(v^{h}_{ij}\)</span>代表着第<code>h</code>个分量。我们使用高斯概率密度函数</p>
+<p>让<span class="math inline">\(v_{ij}\)</span>作为底层胶囊<span class="math inline">\(i\)</span>对父胶囊<span class="math inline">\(j\)</span>的投票，<span class="math inline">\(v^{h}_{ij}\)</span>代表着第<code>n</code>个分量。我们使用高斯概率密度函数</p>
 <p><span class="math display">\[
 \begin{split}
 P(x) &amp; = \frac{1}{\sigma \sqrt{2\pi } }e^{-(x - \mu)^{2}/2\sigma^{2} } \\
 \end{split}
 \]</span></p>
-<p>来计算属于胶囊<span class="math inline">\(j\)</span>正态分布的投票<span class="math inline">\(v^{h}_{ij}\)</span>概率。 <span class="math display">\[
+<p>来计算属于胶囊<span class="math inline">\(j\)</span>正态分布的投票<span class="math inline">\(v^{n}_{ij}\)</span>概率。 <span class="math display">\[
 \begin{split}
-p^h_{i \vert j} &amp; = \frac{1}{\sqrt{2 \pi ({\sigma^h_j})^2 } } \exp{(- \frac{(v^h_{ij}-\mu^h_j)^2}{2 ({\sigma^h_j})^2})} \\
+p^n_{i \vert j} &amp; = \frac{1}{\sqrt{2 \pi ({\sigma^n_j})^2 } } \exp{(- \frac{(v^n_{ij}-\mu^n_j)^2}{2 ({\sigma^n_j})^2})} \\
 \end{split} 
 \]</span></p>
 <p>取其对数：</p>
 <p><span class="math display">\[
 \begin{split}
-\ln(p^h_{i \vert j}) &amp;= \ln \frac{1}{\sqrt{2 \pi ({\sigma^h_j})^2 } } \exp{(- \frac{(v^h_{ij}-\mu^h_j)^2}{2 ({\sigma^h_j})^2})} \\
+\ln(p^n_{i \vert j}) &amp;= \ln \frac{1}{\sqrt{2 \pi ({\sigma^n_j})^2 } } \exp{(- \frac{(v^n_{ij}-\mu^n_j)^2}{2 ({\sigma^n_j})^2})} \\
 \\
-&amp;= - \ln(\sigma^h_j) - \frac{\ln(2 \pi)}{2} - \frac{(v^h_{ij}-\mu^h_j)^2}{2 ({\sigma^h_j})^2}\\
+&amp;= - \ln(\sigma^n_j) - \frac{\ln(2 \pi)}{2} - \frac{(v^n_{ij}-\mu^n_j)^2}{2 ({\sigma^n_j})^2}\\
 \end{split}
 \]</span></p>
 <p>接下来估计胶囊激活的损失值，越低的损失值，代表胶囊越有可能被激活。如果损失值较大，就代表投票与父胶囊的高斯分布不匹配，因此激活概率较小。</p>
 <p>让<span class="math inline">\(cost_{ij}\)</span>作为胶囊<span class="math inline">\(i\)</span>激活胶囊<span class="math inline">\(j\)</span>的损失，是负的对数似然也可以称之为<strong>熵</strong>(熵越小，那就意味<strong>似然估计越准</strong>)： <span class="math display">\[
-cost^h_{ij} = - \ln(P^h_{i \vert j})
+cost^n_{ij} = - \ln(P^n_{i \vert j})
 \]</span></p>
 <p>由于胶囊<span class="math inline">\(i\)</span>与胶囊<span class="math inline">\(j\)</span>之间的联系并不相同，因此我们将在运行时按比例<span class="math inline">\(r_{ij}\)</span>来分配<span class="math inline">\(cost\)</span>，那下层胶囊的<span class="math inline">\(cost\)</span>计算为：</p>
 <p><span class="math display">\[
 \begin{split}
-cost^h_j &amp;= \sum_i  r_{ij} cost^h_{ij} \\
-&amp;= \sum_i - r_{ij} \ln(p^h_{i \vert j}) \\
-&amp;= \sum_i r_{ij}  \big( \frac{(v^h_{ij}-\mu^h_j)^2}{2 ({\sigma^h_j})^2} + \ln(\sigma^h_j) + \frac{\ln(2 \pi)}{2} \big)\\
-&amp;= \frac{\sum_i r_{ij} (\sigma^h_j)^2}{2 (\sigma^h_j)^2} + (\ln(\sigma^h_j) + \frac{\ln(2 \pi)}{2}) \sum_i r_{ij} \\
-&amp;= \big(\ln(\sigma^h_j) + k \big) \sum_i r_{ij}  \quad \text{k是不变的}
+cost^n_j &amp;= \sum_i  r_{ij} cost^n_{ij} \\
+&amp;= \sum_i - r_{ij} \ln(p^n_{i \vert j}) \\
+&amp;= \sum_i r_{ij}  \big( \frac{(v^n_{ij}-\mu^n_j)^2}{2 ({\sigma^n_j})^2} + \ln(\sigma^n_j) + \frac{\ln(2 \pi)}{2} \big)\\
+&amp;= \frac{\sum_i r_{ij} (\sigma^n_j)^2}{2 (\sigma^n_j)^2} + (\ln(\sigma^n_j) + \frac{\ln(2 \pi)}{2}) \sum_i r_{ij} \\
+&amp;= \big(\ln(\sigma^n_j) + \beta_v \big) \sum_i r_{ij}  \quad \beta_v\text{是待优化参数}
 \end{split}
 \]</span></p>
 <p>有了<span class="math inline">\(cost\)</span>值，使用<span class="math inline">\(a_j\)</span>来决定胶囊<span class="math inline">\(j\)</span>是否被激活： <span class="math display">\[
-a_j = sigmoid(\lambda(b_j - \sum_h cost^h_j))
+a_j = sigmoid(\lambda(\beta_a - \sum_h cost^n_j))
 \]</span></p>
-<p>这里面的<span class="math inline">\(b_j\)</span>是根据反向传播进行优化的，所以并不需要直接计算。</p>
+<p>这里面的<span class="math inline">\(\beta_a，\beta_v\)</span>是根据反向传播进行优化的，所以并不需要直接计算。</p>
 <p>其中的<span class="math inline">\(r_{ij},\mu,\sigma,a_j\)</span>是根据EM路由来计算的。<span class="math inline">\(\lambda\)</span>是根据温度参数<span class="math inline">\(\frac{1}{temperature}\)</span>来计算(退火策略)，随着<span class="math inline">\(r_{ij}\)</span>越来越好，就降低<code>temperature</code>以获得更大的<span class="math inline">\(\lambda\)</span>，也就是增加<span class="math inline">\(sigmoid\)</span>的陡度，这样就更加在更加小的范围内微调<span class="math inline">\(r_{ij}\)</span>。</p>
 <h2 id="em路由">EM路由</h2>
 <p>这一块是重点，所以我要仔细看每个公式细节。并且要一步一步的渐进的看。</p>
@@ -722,7 +722,7 @@ a_j = sigmoid(\lambda(b_j - \sum_h cost^h_j))
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2019/07/11/em-algm/" data-id="cjy5gdf6500enyo6x48pa9g2h" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2019/07/11/em-algm/" data-id="cjy5vtw9d00drkm6x6wuanosa" class="article-share-link">Share</a>
       
       
       
