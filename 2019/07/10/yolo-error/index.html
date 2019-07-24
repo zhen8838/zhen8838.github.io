@@ -92,12 +92,14 @@
     <div class="article-entry" itemprop="articleBody">
       
         <p>终于把<a href="https://github.com/zhen8838/K210_Yolo_framework" target="_blank" rel="noopener">yolo v3框架</a>写好了。支持多模型、多数据集、任意输出层数量、任意anchor数量、模型剪枝还适配k210.不要太好用～</p>
-<p>这里记录一下我之前的实现的问题出在哪里。<br><a id="more"></a></p>
-<h1 id="错误地计算了ignore-mask"><a href="#错误地计算了ignore-mask" class="headerlink" title="错误地计算了ignore mask"></a>错误地计算了ignore mask</h1><p>从<code>yolo v2</code>开始就会计算正确<code>box</code>与预测<code>box</code>直接<code>iou</code>关系，如果<code>iou score</code>大于阈值，那么说明这个预测<code>box</code>是成功预测到了这个对象的，极大的提高了模型的<code>recall</code>。<br>但是我在开源的<code>yolo v2</code>中使用<code>Boolean mask</code>函数时忽略了一点，比如<code>batch</code>为16，那么输出<code>label</code>的尺寸为$[16,7,10,3,25]$,直接使用<code>Boolean mask</code>会得到正确<code>box</code>尺寸为$[?,4]$。然后我把这个$[?,4]$与预测出来的<code>box</code>$[16,7,10,3,4]$计算<code>iou score</code>。</p>
+<p>这里记录一下我之前的实现的问题出在哪里。 <a id="more"></a></p>
+<h1 id="错误地计算了ignore-mask">错误地计算了ignore mask</h1>
+<p>从<code>yolo v2</code>开始就会计算正确<code>box</code>与预测<code>box</code>直接<code>iou</code>关系，如果<code>iou score</code>大于阈值，那么说明这个预测<code>box</code>是成功预测到了这个对象的，极大的提高了模型的<code>recall</code>。 但是我在开源的<code>yolo v2</code>中使用<code>Boolean mask</code>函数时忽略了一点，比如<code>batch</code>为16，那么输出<code>label</code>的尺寸为<span class="math inline">\([16,7,10,3,25]\)</span>,直接使用<code>Boolean mask</code>会得到正确<code>box</code>尺寸为<span class="math inline">\([?,4]\)</span>。然后我把这个<span class="math inline">\([?,4]\)</span>与预测出来的<code>box</code><span class="math inline">\([16,7,10,3,4]\)</span>计算<code>iou score</code>。</p>
 <p>乍一看还以为没什么毛病，其实这里最大的毛病就是整个<code>batch</code>的正确<code>box</code>都与整个<code>batch</code>的预测<code>box</code>都做了<code>iou score</code>，如果这时候计算最优<code>iou score</code>，很有可能这个最优的预测<code>box</code>不属于这张图片！数据直接出现了混合，这就是根源问题。</p>
 <p>在新的写的代码中，我用了<code>map</code>的方式处理每张图片，既提高了效率，又避免了错误。</p>
 <p>题外话一句。。我现在都惊讶我之前的<code>yolo v2</code>为啥效果还行，很有可能误打误撞搞了个数据集<code>mix</code>的效果。。。</p>
-<h1 id="anchor的尺度"><a href="#anchor的尺度" class="headerlink" title="anchor的尺度"></a>anchor的尺度</h1><p>前面我有个文章也写了，<code>anchor</code>的作用就是让预测<code>wh</code>与真实<code>wh</code>直接的比例接近与1，那么细细想来，<code>anchor</code>的尺度是对应图片尺度$[224,320]$还是对应栅格的尺度，还是对应全局的<code>0-1</code>都没有什么关系，只不过<code>anchor</code>的尺度就代表做标签的时候<code>label</code>要转换的尺度。所以为了方便起见，直接把<code>anchor</code>尺度设置为全局的<code>0-1</code>就完事了，还减少运算量。</p>
+<h1 id="anchor的尺度">anchor的尺度</h1>
+<p>前面我有个文章也写了，<code>anchor</code>的作用就是让预测<code>wh</code>与真实<code>wh</code>直接的比例接近与1，那么细细想来，<code>anchor</code>的尺度是对应图片尺度<span class="math inline">\([224,320]\)</span>还是对应栅格的尺度，还是对应全局的<code>0-1</code>都没有什么关系，只不过<code>anchor</code>的尺度就代表做标签的时候<code>label</code>要转换的尺度。所以为了方便起见，直接把<code>anchor</code>尺度设置为全局的<code>0-1</code>就完事了，还减少运算量。</p>
 
       
     </div>
@@ -106,18 +108,20 @@
         
         
           <p>终于把<a href="https://github.com/zhen8838/K210_Yolo_framework" target="_blank" rel="noopener">yolo v3框架</a>写好了。支持多模型、多数据集、任意输出层数量、任意anchor数量、模型剪枝还适配k210.不要太好用～</p>
-<p>这里记录一下我之前的实现的问题出在哪里。<br><a id="more"></a></p>
-<h1 id="错误地计算了ignore-mask"><a href="#错误地计算了ignore-mask" class="headerlink" title="错误地计算了ignore mask"></a>错误地计算了ignore mask</h1><p>从<code>yolo v2</code>开始就会计算正确<code>box</code>与预测<code>box</code>直接<code>iou</code>关系，如果<code>iou score</code>大于阈值，那么说明这个预测<code>box</code>是成功预测到了这个对象的，极大的提高了模型的<code>recall</code>。<br>但是我在开源的<code>yolo v2</code>中使用<code>Boolean mask</code>函数时忽略了一点，比如<code>batch</code>为16，那么输出<code>label</code>的尺寸为$[16,7,10,3,25]$,直接使用<code>Boolean mask</code>会得到正确<code>box</code>尺寸为$[?,4]$。然后我把这个$[?,4]$与预测出来的<code>box</code>$[16,7,10,3,4]$计算<code>iou score</code>。</p>
+<p>这里记录一下我之前的实现的问题出在哪里。 <a id="more"></a></p>
+<h1 id="错误地计算了ignore-mask">错误地计算了ignore mask</h1>
+<p>从<code>yolo v2</code>开始就会计算正确<code>box</code>与预测<code>box</code>直接<code>iou</code>关系，如果<code>iou score</code>大于阈值，那么说明这个预测<code>box</code>是成功预测到了这个对象的，极大的提高了模型的<code>recall</code>。 但是我在开源的<code>yolo v2</code>中使用<code>Boolean mask</code>函数时忽略了一点，比如<code>batch</code>为16，那么输出<code>label</code>的尺寸为<span class="math inline">\([16,7,10,3,25]\)</span>,直接使用<code>Boolean mask</code>会得到正确<code>box</code>尺寸为<span class="math inline">\([?,4]\)</span>。然后我把这个<span class="math inline">\([?,4]\)</span>与预测出来的<code>box</code><span class="math inline">\([16,7,10,3,4]\)</span>计算<code>iou score</code>。</p>
 <p>乍一看还以为没什么毛病，其实这里最大的毛病就是整个<code>batch</code>的正确<code>box</code>都与整个<code>batch</code>的预测<code>box</code>都做了<code>iou score</code>，如果这时候计算最优<code>iou score</code>，很有可能这个最优的预测<code>box</code>不属于这张图片！数据直接出现了混合，这就是根源问题。</p>
 <p>在新的写的代码中，我用了<code>map</code>的方式处理每张图片，既提高了效率，又避免了错误。</p>
 <p>题外话一句。。我现在都惊讶我之前的<code>yolo v2</code>为啥效果还行，很有可能误打误撞搞了个数据集<code>mix</code>的效果。。。</p>
-<h1 id="anchor的尺度"><a href="#anchor的尺度" class="headerlink" title="anchor的尺度"></a>anchor的尺度</h1><p>前面我有个文章也写了，<code>anchor</code>的作用就是让预测<code>wh</code>与真实<code>wh</code>直接的比例接近与1，那么细细想来，<code>anchor</code>的尺度是对应图片尺度$[224,320]$还是对应栅格的尺度，还是对应全局的<code>0-1</code>都没有什么关系，只不过<code>anchor</code>的尺度就代表做标签的时候<code>label</code>要转换的尺度。所以为了方便起见，直接把<code>anchor</code>尺度设置为全局的<code>0-1</code>就完事了，还减少运算量。</p>
+<h1 id="anchor的尺度">anchor的尺度</h1>
+<p>前面我有个文章也写了，<code>anchor</code>的作用就是让预测<code>wh</code>与真实<code>wh</code>直接的比例接近与1，那么细细想来，<code>anchor</code>的尺度是对应图片尺度<span class="math inline">\([224,320]\)</span>还是对应栅格的尺度，还是对应全局的<code>0-1</code>都没有什么关系，只不过<code>anchor</code>的尺度就代表做标签的时候<code>label</code>要转换的尺度。所以为了方便起见，直接把<code>anchor</code>尺度设置为全局的<code>0-1</code>就完事了，还减少运算量。</p>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2019/07/10/yolo-error/" data-id="cjyha4l9b0081676xm6a73mtb" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2019/07/10/yolo-error/" data-id="cjyhajwj600br956xnmjthzwc" class="article-share-link">Share</a>
       
       
       
