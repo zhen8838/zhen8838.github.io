@@ -7,18 +7,18 @@
   
   <title>C函数指针的使用 | </title>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta name="description" content="今天发现有本C陷阱与缺陷，就打开看看，发现其中有个非常有意思的东西：(*(void(*)())0()).作者介绍到，这一语句的作用是调用首地址为0的地址的程序。我对他进行了一些学习。">
+  <meta name="description" content="今天发现有本C陷阱与缺陷，就打开看看，发现其中有个非常有意思的东西： (*(void(*)())0()).作者介绍到，这一语句的作用是调用首地址为0的地址的程序。我对他进行了一些学习。">
 <meta name="keywords" content="C">
 <meta property="og:type" content="article">
 <meta property="og:title" content="C函数指针的使用">
 <meta property="og:url" content="https://zhen8838.github.io/2018/06/28/Cfuncpointer/index.html">
 <meta property="og:site_name">
-<meta property="og:description" content="今天发现有本C陷阱与缺陷，就打开看看，发现其中有个非常有意思的东西：(*(void(*)())0()).作者介绍到，这一语句的作用是调用首地址为0的地址的程序。我对他进行了一些学习。">
+<meta property="og:description" content="今天发现有本C陷阱与缺陷，就打开看看，发现其中有个非常有意思的东西： (*(void(*)())0()).作者介绍到，这一语句的作用是调用首地址为0的地址的程序。我对他进行了一些学习。">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:updated_time" content="2019-08-05T03:23:11.752Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="C函数指针的使用">
-<meta name="twitter:description" content="今天发现有本C陷阱与缺陷，就打开看看，发现其中有个非常有意思的东西：(*(void(*)())0()).作者介绍到，这一语句的作用是调用首地址为0的地址的程序。我对他进行了一些学习。">
+<meta name="twitter:description" content="今天发现有本C陷阱与缺陷，就打开看看，发现其中有个非常有意思的东西： (*(void(*)())0()).作者介绍到，这一语句的作用是调用首地址为0的地址的程序。我对他进行了一些学习。">
   
   
     <link rel="icon" href="/favicon.png">
@@ -91,28 +91,31 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <p>今天发现有本C陷阱与缺陷，就打开看看，发现其中有个非常有意思的东西：<br><code>(*(void(*)())0())</code>.作者介绍到，这一语句的作用是调用首地址为0的地址的程序。我对他进行了一些学习。</p>
+        <p>今天发现有本C陷阱与缺陷，就打开看看，发现其中有个非常有意思的东西： <code>(*(void(*)())0())</code>.作者介绍到，这一语句的作用是调用首地址为0的地址的程序。我对他进行了一些学习。</p>
 <a id="more"></a>
-<h2 id="函数指针"><a href="#函数指针" class="headerlink" title="函数指针"></a>函数指针</h2><p>首先来一个简单的函数指针使用。<br><div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
+<h2 id="函数指针">函数指针</h2>
+<p>首先来一个简单的函数指针使用。 <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">prt</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">"hello\n"</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">int</span> argc, <span class="keyword">char</span> <span class="keyword">const</span> *argv[])</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">void</span> (*pf)(<span class="keyword">void</span>);</span><br><span class="line">    pf=prt;</span><br><span class="line">    pf();</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 </div></div></p>
 <p>我们将这个函数指针的定义做一些小小的改动，可以获得一个类型转换符。</p>
-<h2 id="类型转换符"><a href="#类型转换符" class="headerlink" title="类型转换符"></a>类型转换符</h2><p>改动定义如下。<br><div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
+<h2 id="类型转换符">类型转换符</h2>
+<p>改动定义如下。 <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">void</span> (*pf)(<span class="keyword">void</span>) ---&gt; (<span class="keyword">void</span> (*)())</span><br></pre></td></tr></table></figure>
 
 </div></div></p>
-<p>从前面我们可以发现函数指针的赋值，其实也是地址的交互。那么我可以将一个地址强制转换为函数指针并使用吗？<br><div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
+<p>从前面我们可以发现函数指针的赋值，其实也是地址的交互。那么我可以将一个地址强制转换为函数指针并使用吗？ <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">prt</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">"hello\n"</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">int</span> argc, <span class="keyword">char</span> <span class="keyword">const</span> *argv[])</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">void</span> (*pf)(<span class="keyword">void</span>);</span><br><span class="line">    pf=prt;</span><br><span class="line">    pf();</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">int64_t</span> addr=(<span class="keyword">int64_t</span>)prt;</span><br><span class="line">    pf=(<span class="keyword">void</span> (*)())addr;</span><br><span class="line">    pf();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 </div></div></p>
-<p>输出如下：<br><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">☁  Desktop  gcc 1.c &amp;&amp; ./a.out</span><br><span class="line">hello</span><br><span class="line">hello</span><br></pre></td></tr></table></figure></p>
+<p>输出如下： <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">☁  Desktop  gcc 1.c &amp;&amp; ./a.out</span><br><span class="line">hello</span><br><span class="line">hello</span><br></pre></td></tr></table></figure></p>
 <p>显而易见这个强制转换是起作用的。</p>
-<h2 id="任意地址运行程序"><a href="#任意地址运行程序" class="headerlink" title="任意地址运行程序"></a>任意地址运行程序</h2><p>那么现在可以做最后一步：<br><div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
+<h2 id="任意地址运行程序">任意地址运行程序</h2>
+<p>那么现在可以做最后一步： <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">prt</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">"hello\n"</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">int</span> argc, <span class="keyword">char</span> <span class="keyword">const</span> *argv[])</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int64_t</span> addr=(<span class="keyword">int64_t</span>)prt;</span><br><span class="line">    (*(<span class="keyword">void</span> (*)())addr)();</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 </div></div></p>
-<p>输出：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">☁  Desktop  gcc 1.c &amp;&amp; ./a.out</span><br><span class="line">hello</span><br></pre></td></tr></table></figure></p>
+<p>输出： <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">☁  Desktop  gcc 1.c &amp;&amp; ./a.out</span><br><span class="line">hello</span><br></pre></td></tr></table></figure></p>
 <p>现在我们就可以运行任意地址的程序了~</p>
 
       
@@ -121,35 +124,38 @@
       
         
         
-          <p>今天发现有本C陷阱与缺陷，就打开看看，发现其中有个非常有意思的东西：<br><code>(*(void(*)())0())</code>.作者介绍到，这一语句的作用是调用首地址为0的地址的程序。我对他进行了一些学习。</p>
+          <p>今天发现有本C陷阱与缺陷，就打开看看，发现其中有个非常有意思的东西： <code>(*(void(*)())0())</code>.作者介绍到，这一语句的作用是调用首地址为0的地址的程序。我对他进行了一些学习。</p>
 <a id="more"></a>
-<h2 id="函数指针"><a href="#函数指针" class="headerlink" title="函数指针"></a>函数指针</h2><p>首先来一个简单的函数指针使用。<br><div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
+<h2 id="函数指针">函数指针</h2>
+<p>首先来一个简单的函数指针使用。 <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">prt</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">"hello\n"</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">int</span> argc, <span class="keyword">char</span> <span class="keyword">const</span> *argv[])</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">void</span> (*pf)(<span class="keyword">void</span>);</span><br><span class="line">    pf=prt;</span><br><span class="line">    pf();</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 </div></div></p>
 <p>我们将这个函数指针的定义做一些小小的改动，可以获得一个类型转换符。</p>
-<h2 id="类型转换符"><a href="#类型转换符" class="headerlink" title="类型转换符"></a>类型转换符</h2><p>改动定义如下。<br><div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
+<h2 id="类型转换符">类型转换符</h2>
+<p>改动定义如下。 <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">void</span> (*pf)(<span class="keyword">void</span>) ---&gt; (<span class="keyword">void</span> (*)())</span><br></pre></td></tr></table></figure>
 
 </div></div></p>
-<p>从前面我们可以发现函数指针的赋值，其实也是地址的交互。那么我可以将一个地址强制转换为函数指针并使用吗？<br><div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
+<p>从前面我们可以发现函数指针的赋值，其实也是地址的交互。那么我可以将一个地址强制转换为函数指针并使用吗？ <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">prt</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">"hello\n"</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">int</span> argc, <span class="keyword">char</span> <span class="keyword">const</span> *argv[])</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">void</span> (*pf)(<span class="keyword">void</span>);</span><br><span class="line">    pf=prt;</span><br><span class="line">    pf();</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">int64_t</span> addr=(<span class="keyword">int64_t</span>)prt;</span><br><span class="line">    pf=(<span class="keyword">void</span> (*)())addr;</span><br><span class="line">    pf();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 </div></div></p>
-<p>输出如下：<br><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">☁  Desktop  gcc 1.c &amp;&amp; ./a.out</span><br><span class="line">hello</span><br><span class="line">hello</span><br></pre></td></tr></table></figure></p>
+<p>输出如下： <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">☁  Desktop  gcc 1.c &amp;&amp; ./a.out</span><br><span class="line">hello</span><br><span class="line">hello</span><br></pre></td></tr></table></figure></p>
 <p>显而易见这个强制转换是起作用的。</p>
-<h2 id="任意地址运行程序"><a href="#任意地址运行程序" class="headerlink" title="任意地址运行程序"></a>任意地址运行程序</h2><p>那么现在可以做最后一步：<br><div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
+<h2 id="任意地址运行程序">任意地址运行程序</h2>
+<p>那么现在可以做最后一步： <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">prt</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">"hello\n"</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">int</span> argc, <span class="keyword">char</span> <span class="keyword">const</span> *argv[])</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int64_t</span> addr=(<span class="keyword">int64_t</span>)prt;</span><br><span class="line">    (*(<span class="keyword">void</span> (*)())addr)();</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 </div></div></p>
-<p>输出：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">☁  Desktop  gcc 1.c &amp;&amp; ./a.out</span><br><span class="line">hello</span><br></pre></td></tr></table></figure></p>
+<p>输出： <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">☁  Desktop  gcc 1.c &amp;&amp; ./a.out</span><br><span class="line">hello</span><br></pre></td></tr></table></figure></p>
 <p>现在我们就可以运行任意地址的程序了~</p>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2018/06/28/Cfuncpointer/" data-id="cjyxtv1y1000ay26x8fyvp3r1" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2018/06/28/Cfuncpointer/" data-id="cjyxu98x5000ft16xwpwfxci0" class="article-share-link">Share</a>
       
       
       
