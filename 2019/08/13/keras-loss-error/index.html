@@ -15,10 +15,12 @@
 <meta property="og:site_name">
 <meta property="og:description" content="以后这篇文章就来记录tensorflow中遇到的问题与解决方式。">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2019-08-15T13:53:53.872Z">
+<meta property="og:image" content="https://zhen8838.github.io/2019/08/13/keras-loss-error/model_reuse.png">
+<meta property="og:updated_time" content="2019-08-16T05:53:35.024Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Tensorflow中的错误记录">
 <meta name="twitter:description" content="以后这篇文章就来记录tensorflow中遇到的问题与解决方式。">
+<meta name="twitter:image" content="https://zhen8838.github.io/2019/08/13/keras-loss-error/model_reuse.png">
   
   
     <link rel="icon" href="/favicon.png">
@@ -111,6 +113,12 @@ Error: The graph is empty. This can happen when TensorFlow could not trace any g
 <p>解决方式：</p>
 <p>找了半天解决方式，就是没找到，我本来想按照以前的方式做，忽然发现就可以了，在<code>callback</code>之后加一句话即可，如下：</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">cbs.append(TensorBoard(str(log_dir), update_freq=<span class="string">'batch'</span>, profile_batch=<span class="number">3</span>))</span><br><span class="line">file_writer = tf.summary.FileWriter(str(log_dir), sess.graph)  <span class="comment"># NOTE avoid can't write graph, I don't now why..</span></span><br></pre></td></tr></table></figure>
+<h4 id="tf.keras中model复用">4. tf.keras中Model复用</h4>
+<p>这个其实不算问题，只不过我不太清楚，就做了个测试来验证一下。就是比如我们用<code>Sequential</code>构建了一个<code>body</code>部分，然后用这个<code>body</code>产生多个输出，我一开始不知道他这样使用是否是公用参数了，然后我就写了个函数测试了下：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">input_sim = k.Input((<span class="number">113</span>))</span><br><span class="line">input_measre = k.Input((<span class="number">113</span>))</span><br><span class="line"></span><br><span class="line">bodymodel = k.Sequential([</span><br><span class="line">    kl.Dense(<span class="number">64</span>, activation=tf.nn.leaky_relu),</span><br><span class="line">    kl.Dense(<span class="number">32</span>, activation=tf.nn.leaky_relu),</span><br><span class="line">    kl.Dense(<span class="number">1</span>),</span><br><span class="line">])</span><br><span class="line"></span><br><span class="line">out_1 = bodymodel(input_sim)</span><br><span class="line">out_2 = bodymodel(input_measre)</span><br><span class="line"></span><br><span class="line">model = k.Model([input_sim, input_measre], [out_1, out_2])</span><br><span class="line">k.utils.plot_model(model, show_shapes=<span class="keyword">True</span>, to_file=<span class="string">'two_in.png'</span>)</span><br><span class="line">fwriter = tf.summary.FileWriter(<span class="string">'logs'</span>, graph=sess.graph)</span><br></pre></td></tr></table></figure>
+<p>结果：</p>
+<p>这样的复用方式是共享参数的，可以看到，两个<code>sequential</code>，一个含有<code>kernel</code>，另一个没有，或者说他们公用一个<code>kernel</code>。</p>
+<p><img src="/2019/08/13/keras-loss-error/model_reuse.png"></p>
 
       
     </div>
@@ -138,12 +146,18 @@ Error: The graph is empty. This can happen when TensorFlow could not trace any g
 <p>解决方式：</p>
 <p>找了半天解决方式，就是没找到，我本来想按照以前的方式做，忽然发现就可以了，在<code>callback</code>之后加一句话即可，如下：</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">cbs.append(TensorBoard(str(log_dir), update_freq=<span class="string">'batch'</span>, profile_batch=<span class="number">3</span>))</span><br><span class="line">file_writer = tf.summary.FileWriter(str(log_dir), sess.graph)  <span class="comment"># NOTE avoid can't write graph, I don't now why..</span></span><br></pre></td></tr></table></figure>
+<h4 id="tf.keras中model复用">4. tf.keras中Model复用</h4>
+<p>这个其实不算问题，只不过我不太清楚，就做了个测试来验证一下。就是比如我们用<code>Sequential</code>构建了一个<code>body</code>部分，然后用这个<code>body</code>产生多个输出，我一开始不知道他这样使用是否是公用参数了，然后我就写了个函数测试了下：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">input_sim = k.Input((<span class="number">113</span>))</span><br><span class="line">input_measre = k.Input((<span class="number">113</span>))</span><br><span class="line"></span><br><span class="line">bodymodel = k.Sequential([</span><br><span class="line">    kl.Dense(<span class="number">64</span>, activation=tf.nn.leaky_relu),</span><br><span class="line">    kl.Dense(<span class="number">32</span>, activation=tf.nn.leaky_relu),</span><br><span class="line">    kl.Dense(<span class="number">1</span>),</span><br><span class="line">])</span><br><span class="line"></span><br><span class="line">out_1 = bodymodel(input_sim)</span><br><span class="line">out_2 = bodymodel(input_measre)</span><br><span class="line"></span><br><span class="line">model = k.Model([input_sim, input_measre], [out_1, out_2])</span><br><span class="line">k.utils.plot_model(model, show_shapes=<span class="keyword">True</span>, to_file=<span class="string">'two_in.png'</span>)</span><br><span class="line">fwriter = tf.summary.FileWriter(<span class="string">'logs'</span>, graph=sess.graph)</span><br></pre></td></tr></table></figure>
+<p>结果：</p>
+<p>这样的复用方式是共享参数的，可以看到，两个<code>sequential</code>，一个含有<code>kernel</code>，另一个没有，或者说他们公用一个<code>kernel</code>。</p>
+<p><img src="/2019/08/13/keras-loss-error/model_reuse.png"></p>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2019/08/13/keras-loss-error/" data-id="cjzcqvm6j003vro6xb7155rl3" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2019/08/13/keras-loss-error/" data-id="cjzdp6p7t003v5p6xqi95jkum" class="article-share-link">Share</a>
       
       
       
