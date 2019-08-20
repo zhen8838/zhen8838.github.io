@@ -16,7 +16,7 @@
 <meta property="og:description" content="以后这篇文章就来记录tensorflow中遇到的问题与解决方式。">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https://zhen8838.github.io/2019/08/13/keras-loss-error/model_reuse.png">
-<meta property="og:updated_time" content="2019-08-18T08:07:17.827Z">
+<meta property="og:updated_time" content="2019-08-20T04:41:55.011Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Tensorflow中的错误记录">
 <meta name="twitter:description" content="以后这篇文章就来记录tensorflow中遇到的问题与解决方式。">
@@ -119,6 +119,14 @@ Error: The graph is empty. This can happen when TensorFlow could not trace any g
 <p>结果：</p>
 <p>这样的复用方式是共享参数的，可以看到，两个<code>sequential</code>，一个含有<code>kernel</code>，另一个没有，或者说他们公用一个<code>kernel</code>。</p>
 <p><img src="/2019/08/13/keras-loss-error/model_reuse.png"></p>
+<h4 id="error-while-reading-resource-variable-xxx-from-container-localhost.-this-could-mean-that-the-variable-was-uninitialized.">5. Error while reading resource variable xxx from Container: localhost. This could mean that the variable was uninitialized.</h4>
+<p>我想在<code>tf.keras</code>里面使用苏神的<code>Lookahead</code>，他的代码是用于纯<code>keras</code>的，但是我现在用<code>tf.keras</code>，虽然表层使用看起来差不多，但是核心代码我发现还是很多都不一样。我的问题出现在这里:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">fast_params = model._collected_trainable_weights</span><br><span class="line"></span><br><span class="line"><span class="keyword">with</span> K.name_scope(<span class="string">'training'</span>):</span><br><span class="line">    <span class="keyword">with</span> K.name_scope(model.optimizer.__class__.__name__):</span><br><span class="line">        training_updates = model.optimizer.get_updates(</span><br><span class="line">            params=fast_params,</span><br><span class="line">            loss=model.total_loss)</span><br><span class="line">        slow_params = [K.variable(p) <span class="keyword">for</span> p <span class="keyword">in</span> fast_params]</span><br></pre></td></tr></table></figure>
+<p>使用<code>K.variable</code>转换参数的时候出错了，说我的变量没有被初始化。 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">tensorflow.python.framework.errors_impl.FailedPreconditionError: Error <span class="keyword">while</span> reading resource variable batch_normalization/gamma <span class="keyword">from</span> Container: localhost. This could mean that the variable was uninitialized. Not found: Resource localhost/batch_normalization/gamma/N10tensorflow3VarE does <span class="keyword">not</span> exist.</span><br><span class="line">         [[&#123;&#123;node training/RAdam/Variable_274/Initializer/ReadVariableOp&#125;&#125;]]</span><br></pre></td></tr></table></figure></p>
+<p>解决方案：</p>
+<p><code>google</code>了一下也没看到有人有相同的问题，我抱着试试看的心态写了如下代码：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sess.run([tf.global_variables_initializer(), tf.local_variables_initializer()])</span><br><span class="line">train_model.compile(optimizer, loss=losses, metrics=metrics)</span><br></pre></td></tr></table></figure>
+<p>在<code>model.compile</code>之前全局初始化，然后就完事了？然后就可以用上最新的优化算法<code>RAdam</code>和<code>Lookahead</code>咯。</p>
 
       
     </div>
@@ -152,12 +160,20 @@ Error: The graph is empty. This can happen when TensorFlow could not trace any g
 <p>结果：</p>
 <p>这样的复用方式是共享参数的，可以看到，两个<code>sequential</code>，一个含有<code>kernel</code>，另一个没有，或者说他们公用一个<code>kernel</code>。</p>
 <p><img src="/2019/08/13/keras-loss-error/model_reuse.png"></p>
+<h4 id="error-while-reading-resource-variable-xxx-from-container-localhost.-this-could-mean-that-the-variable-was-uninitialized.">5. Error while reading resource variable xxx from Container: localhost. This could mean that the variable was uninitialized.</h4>
+<p>我想在<code>tf.keras</code>里面使用苏神的<code>Lookahead</code>，他的代码是用于纯<code>keras</code>的，但是我现在用<code>tf.keras</code>，虽然表层使用看起来差不多，但是核心代码我发现还是很多都不一样。我的问题出现在这里:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">fast_params = model._collected_trainable_weights</span><br><span class="line"></span><br><span class="line"><span class="keyword">with</span> K.name_scope(<span class="string">'training'</span>):</span><br><span class="line">    <span class="keyword">with</span> K.name_scope(model.optimizer.__class__.__name__):</span><br><span class="line">        training_updates = model.optimizer.get_updates(</span><br><span class="line">            params=fast_params,</span><br><span class="line">            loss=model.total_loss)</span><br><span class="line">        slow_params = [K.variable(p) <span class="keyword">for</span> p <span class="keyword">in</span> fast_params]</span><br></pre></td></tr></table></figure>
+<p>使用<code>K.variable</code>转换参数的时候出错了，说我的变量没有被初始化。 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">tensorflow.python.framework.errors_impl.FailedPreconditionError: Error <span class="keyword">while</span> reading resource variable batch_normalization/gamma <span class="keyword">from</span> Container: localhost. This could mean that the variable was uninitialized. Not found: Resource localhost/batch_normalization/gamma/N10tensorflow3VarE does <span class="keyword">not</span> exist.</span><br><span class="line">         [[&#123;&#123;node training/RAdam/Variable_274/Initializer/ReadVariableOp&#125;&#125;]]</span><br></pre></td></tr></table></figure></p>
+<p>解决方案：</p>
+<p><code>google</code>了一下也没看到有人有相同的问题，我抱着试试看的心态写了如下代码：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sess.run([tf.global_variables_initializer(), tf.local_variables_initializer()])</span><br><span class="line">train_model.compile(optimizer, loss=losses, metrics=metrics)</span><br></pre></td></tr></table></figure>
+<p>在<code>model.compile</code>之前全局初始化，然后就完事了？然后就可以用上最新的优化算法<code>RAdam</code>和<code>Lookahead</code>咯。</p>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2019/08/13/keras-loss-error/" data-id="cjzhwqoou003ya86x5d2bvg82" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2019/08/13/keras-loss-error/" data-id="cjzjcd1j5003zsu6xmgz0rfh8" class="article-share-link">Share</a>
       
       
       
