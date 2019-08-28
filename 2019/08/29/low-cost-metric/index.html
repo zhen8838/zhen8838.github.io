@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+<head><meta name="generator" content="Hexo 3.8.0">
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><meta charset="utf-8">
+  
+
+  
+  <title>tf.keras中优化metric计算(提取loss至metric) | </title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="有的时候我们的loss函数是一个复合函数，但是在tf.keras中，loss函数只能返回一个标量，这个时候我们如果想要观察loss中子部分的值就只能写个metric去重新计算，但是这样是很浪费计算资源的，所以最好直接将loss中的值提取至metric。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="tf.keras中优化metric计算(提取loss至metric)">
+<meta property="og:url" content="https://zhen8838.github.io/2019/08/29/low-cost-metric/index.html">
+<meta property="og:site_name">
+<meta property="og:description" content="有的时候我们的loss函数是一个复合函数，但是在tf.keras中，loss函数只能返回一个标量，这个时候我们如果想要观察loss中子部分的值就只能写个metric去重新计算，但是这样是很浪费计算资源的，所以最好直接将loss中的值提取至metric。">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2019-08-28T15:11:19.827Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="tf.keras中优化metric计算(提取loss至metric)">
+<meta name="twitter:description" content="有的时候我们的loss函数是一个复合函数，但是在tf.keras中，loss函数只能返回一个标量，这个时候我们如果想要观察loss中子部分的值就只能写个metric去重新计算，但是这样是很浪费计算资源的，所以最好直接将loss中的值提取至metric。">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.lug.ustc.edu.cn/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+    <!-- <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css"> -->
+    <!-- <link href="//fonts.useso.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css"> -->
+  
+  <link rel="stylesheet" href="/css/style.css"><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+</head>
+</html>
+<body>
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo"></a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+          <a class="main-nav-link" href="/about">about</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+        <a id="nav-search-btn" class="nav-icon" title="搜索"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="https://zhen8838.github.io"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-low-cost-metric" class="article article-type-post" itemscope="" itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2019/08/29/low-cost-metric/" class="article-date">
+  <time datetime="2019-08-28T23:02:18.000Z" itemprop="datePublished">2019-08-28</time>
+</a>
+    
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/学习/">学习</a>
+  </div>
+
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      tf.keras中优化metric计算(提取loss至metric)
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>有的时候我们的<code>loss</code>函数是一个复合函数，但是在<code>tf.keras</code>中，<code>loss</code>函数只能返回一个标量，这个时候我们如果想要观察<code>loss</code>中子部分的值就只能写个<code>metric</code>去重新计算，但是这样是很浪费计算资源的，所以最好直接将<code>loss</code>中的值提取至<code>metric</code>。</p>
+<a id="more"></a>
+<p>代码如下所示，只要我们自定义<code>loss</code>的时候给出一个变量去保存子损失的值，那么我们在<code>metric</code>可以直接对这个变量进行读值操作。</p>
+<p><strong>这里还是有个小问题，就是必须要对变量的操作符进行调用才可以获得到正确的值，我已经在<code>tensorflow</code>中提交<code>issue</code>了，现在用了一个取巧的方法避开这个问题。</strong></p>
+<div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> tensorflow <span class="keyword">as</span> tf</span><br><span class="line"><span class="keyword">import</span> tensorflow.keras <span class="keyword">as</span> k</span><br><span class="line"><span class="keyword">import</span> tensorflow.keras.layers <span class="keyword">as</span> kl</span><br><span class="line"><span class="keyword">import</span> tensorflow.keras.metrics <span class="keyword">as</span> km</span><br><span class="line"><span class="keyword">from</span> tensorflow.keras.datasets <span class="keyword">import</span> fashion_mnist</span><br><span class="line"></span><br><span class="line">tfcfg = tf.ConfigProto()</span><br><span class="line">tfcfg.gpu_options.allow_growth = <span class="keyword">True</span></span><br><span class="line">sess = tf.Session(config=tfcfg)</span><br><span class="line">k.backend.set_session(sess)</span><br><span class="line"></span><br><span class="line">(x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()</span><br><span class="line">x_train = x_train.reshape((<span class="number">-1</span>, <span class="number">28</span>, <span class="number">28</span>, <span class="number">1</span>))</span><br><span class="line">x_test = x_test.reshape((<span class="number">-1</span>, <span class="number">28</span>, <span class="number">28</span>, <span class="number">1</span>))</span><br><span class="line">y_train = k.utils.to_categorical(y_train, <span class="number">10</span>)</span><br><span class="line">y_test = k.utils.to_categorical(y_test, <span class="number">10</span>)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">model = k.Sequential([</span><br><span class="line">    kl.Conv2D(<span class="number">32</span>, <span class="number">3</span>, <span class="number">1</span>, input_shape=[<span class="number">28</span>, <span class="number">28</span>, <span class="number">1</span>]),</span><br><span class="line">    kl.BatchNormalization(),</span><br><span class="line">    kl.LeakyReLU(),</span><br><span class="line">    kl.Conv2D(<span class="number">64</span>, <span class="number">3</span>, <span class="number">1</span>),</span><br><span class="line">    kl.BatchNormalization(),</span><br><span class="line">    kl.LeakyReLU(),</span><br><span class="line">    kl.Conv2D(<span class="number">128</span>, <span class="number">3</span>, <span class="number">1</span>),</span><br><span class="line">    kl.BatchNormalization(),</span><br><span class="line">    kl.LeakyReLU(),</span><br><span class="line">    kl.LeakyReLU(),</span><br><span class="line">    kl.Flatten(),</span><br><span class="line">    kl.Dense(<span class="number">512</span>),</span><br><span class="line">    kl.BatchNormalization(),</span><br><span class="line">    kl.LeakyReLU(),</span><br><span class="line">    kl.Dense(<span class="number">10</span>)</span><br><span class="line">])</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Metric_HIGH_COST</span><span class="params">(km.Metric)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, name=None, dtype=None, **kwargs)</span>:</span></span><br><span class="line">        super().__init__(name=name, dtype=dtype, **kwargs)</span><br><span class="line">        self.ce = self.add_weight(<span class="string">'ce'</span>, initializer=tf.zeros_initializer)</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">update_state</span><span class="params">(self, y_true, y_pred, sample_weight=None)</span>:</span></span><br><span class="line">        self.ce.assign(tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(labels=y_true, logits=y_pred)))</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">result</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">return</span> self.ce</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Metric_LOW_COST</span><span class="params">(km.Metric)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, cross_entropy: tf.Variable, name=<span class="string">'CE'</span>, dtype=None)</span>:</span></span><br><span class="line">        <span class="string">""" yolo landmark error metric</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">        Parameters</span></span><br><span class="line"><span class="string">        ----------</span></span><br><span class="line"><span class="string">        MeanMetricWrapper : [type]</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">        landmark_error : ResourceVariable</span></span><br><span class="line"><span class="string">            a variable from yoloalign loss</span></span><br><span class="line"><span class="string">        name : str, optional</span></span><br><span class="line"><span class="string">            by default 'LE'</span></span><br><span class="line"><span class="string">        dtype : [type], optional</span></span><br><span class="line"><span class="string">            by default None</span></span><br><span class="line"><span class="string">        """</span></span><br><span class="line">        super().__init__(name=name)</span><br><span class="line">        self.ce = cross_entropy</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">update_state</span><span class="params">(self, y_true, y_pred, sample_weight=None)</span>:</span></span><br><span class="line">        self.ce</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">result</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">return</span> self.ce.read_value()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Myloss</span><span class="params">(k.losses.Loss)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, name=None)</span>:</span></span><br><span class="line">        super().__init__(name=name)</span><br><span class="line">        self.ce = tf.get_variable(<span class="string">'ce'</span>, (), tf.float32, tf.zeros_initializer)  <span class="comment"># type:tf.RefVariable</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">call</span><span class="params">(self, y_true, y_pred)</span>:</span></span><br><span class="line">        ce_loss = tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(labels=y_true, logits=y_pred))</span><br><span class="line"></span><br><span class="line">        <span class="comment"># ! method 1 got zero output :</span></span><br><span class="line">        <span class="comment"># self.ce.assign(ce_loss)</span></span><br><span class="line">        <span class="comment"># return ce_loss</span></span><br><span class="line"></span><br><span class="line">        <span class="comment"># ! method 2 get correct output :</span></span><br><span class="line">        <span class="keyword">return</span> ce_loss + <span class="number">0</span> * self.ce.assign(ce_loss)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">myloss = Myloss()</span><br><span class="line">high_cost_metric = Metric_HIGH_COST(<span class="string">'high_cost_ce'</span>)</span><br><span class="line">low_cost_metric = Metric_LOW_COST(myloss.ce, <span class="string">'low_cost_ce'</span>)</span><br><span class="line"></span><br><span class="line">sess.run([tf.global_variables_initializer(), tf.local_variables_initializer()])</span><br><span class="line"></span><br><span class="line">model.compile(k.optimizers.Adam(), [myloss], [high_cost_metric, low_cost_metric])</span><br><span class="line"></span><br><span class="line">model.fit(x_train, y_train, <span class="number">100</span>, <span class="number">10</span>)</span><br></pre></td></tr></table></figure>
+
+</div></div>
+
+      
+    </div>
+    <!-- <div class="article-entry" itemprop="articleBody">
+      
+        
+        
+          <p>有的时候我们的<code>loss</code>函数是一个复合函数，但是在<code>tf.keras</code>中，<code>loss</code>函数只能返回一个标量，这个时候我们如果想要观察<code>loss</code>中子部分的值就只能写个<code>metric</code>去重新计算，但是这样是很浪费计算资源的，所以最好直接将<code>loss</code>中的值提取至<code>metric</code>。</p>
+<a id="more"></a>
+<p>代码如下所示，只要我们自定义<code>loss</code>的时候给出一个变量去保存子损失的值，那么我们在<code>metric</code>可以直接对这个变量进行读值操作。</p>
+<p><strong>这里还是有个小问题，就是必须要对变量的操作符进行调用才可以获得到正确的值，我已经在<code>tensorflow</code>中提交<code>issue</code>了，现在用了一个取巧的方法避开这个问题。</strong></p>
+<div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> tensorflow <span class="keyword">as</span> tf</span><br><span class="line"><span class="keyword">import</span> tensorflow.keras <span class="keyword">as</span> k</span><br><span class="line"><span class="keyword">import</span> tensorflow.keras.layers <span class="keyword">as</span> kl</span><br><span class="line"><span class="keyword">import</span> tensorflow.keras.metrics <span class="keyword">as</span> km</span><br><span class="line"><span class="keyword">from</span> tensorflow.keras.datasets <span class="keyword">import</span> fashion_mnist</span><br><span class="line"></span><br><span class="line">tfcfg = tf.ConfigProto()</span><br><span class="line">tfcfg.gpu_options.allow_growth = <span class="keyword">True</span></span><br><span class="line">sess = tf.Session(config=tfcfg)</span><br><span class="line">k.backend.set_session(sess)</span><br><span class="line"></span><br><span class="line">(x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()</span><br><span class="line">x_train = x_train.reshape((<span class="number">-1</span>, <span class="number">28</span>, <span class="number">28</span>, <span class="number">1</span>))</span><br><span class="line">x_test = x_test.reshape((<span class="number">-1</span>, <span class="number">28</span>, <span class="number">28</span>, <span class="number">1</span>))</span><br><span class="line">y_train = k.utils.to_categorical(y_train, <span class="number">10</span>)</span><br><span class="line">y_test = k.utils.to_categorical(y_test, <span class="number">10</span>)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">model = k.Sequential([</span><br><span class="line">    kl.Conv2D(<span class="number">32</span>, <span class="number">3</span>, <span class="number">1</span>, input_shape=[<span class="number">28</span>, <span class="number">28</span>, <span class="number">1</span>]),</span><br><span class="line">    kl.BatchNormalization(),</span><br><span class="line">    kl.LeakyReLU(),</span><br><span class="line">    kl.Conv2D(<span class="number">64</span>, <span class="number">3</span>, <span class="number">1</span>),</span><br><span class="line">    kl.BatchNormalization(),</span><br><span class="line">    kl.LeakyReLU(),</span><br><span class="line">    kl.Conv2D(<span class="number">128</span>, <span class="number">3</span>, <span class="number">1</span>),</span><br><span class="line">    kl.BatchNormalization(),</span><br><span class="line">    kl.LeakyReLU(),</span><br><span class="line">    kl.LeakyReLU(),</span><br><span class="line">    kl.Flatten(),</span><br><span class="line">    kl.Dense(<span class="number">512</span>),</span><br><span class="line">    kl.BatchNormalization(),</span><br><span class="line">    kl.LeakyReLU(),</span><br><span class="line">    kl.Dense(<span class="number">10</span>)</span><br><span class="line">])</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Metric_HIGH_COST</span><span class="params">(km.Metric)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, name=None, dtype=None, **kwargs)</span>:</span></span><br><span class="line">        super().__init__(name=name, dtype=dtype, **kwargs)</span><br><span class="line">        self.ce = self.add_weight(<span class="string">'ce'</span>, initializer=tf.zeros_initializer)</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">update_state</span><span class="params">(self, y_true, y_pred, sample_weight=None)</span>:</span></span><br><span class="line">        self.ce.assign(tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(labels=y_true, logits=y_pred)))</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">result</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">return</span> self.ce</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Metric_LOW_COST</span><span class="params">(km.Metric)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, cross_entropy: tf.Variable, name=<span class="string">'CE'</span>, dtype=None)</span>:</span></span><br><span class="line">        <span class="string">""" yolo landmark error metric</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">        Parameters</span></span><br><span class="line"><span class="string">        ----------</span></span><br><span class="line"><span class="string">        MeanMetricWrapper : [type]</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">        landmark_error : ResourceVariable</span></span><br><span class="line"><span class="string">            a variable from yoloalign loss</span></span><br><span class="line"><span class="string">        name : str, optional</span></span><br><span class="line"><span class="string">            by default 'LE'</span></span><br><span class="line"><span class="string">        dtype : [type], optional</span></span><br><span class="line"><span class="string">            by default None</span></span><br><span class="line"><span class="string">        """</span></span><br><span class="line">        super().__init__(name=name)</span><br><span class="line">        self.ce = cross_entropy</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">update_state</span><span class="params">(self, y_true, y_pred, sample_weight=None)</span>:</span></span><br><span class="line">        self.ce</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">result</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">return</span> self.ce.read_value()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Myloss</span><span class="params">(k.losses.Loss)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, name=None)</span>:</span></span><br><span class="line">        super().__init__(name=name)</span><br><span class="line">        self.ce = tf.get_variable(<span class="string">'ce'</span>, (), tf.float32, tf.zeros_initializer)  <span class="comment"># type:tf.RefVariable</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">call</span><span class="params">(self, y_true, y_pred)</span>:</span></span><br><span class="line">        ce_loss = tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(labels=y_true, logits=y_pred))</span><br><span class="line"></span><br><span class="line">        <span class="comment"># ! method 1 got zero output :</span></span><br><span class="line">        <span class="comment"># self.ce.assign(ce_loss)</span></span><br><span class="line">        <span class="comment"># return ce_loss</span></span><br><span class="line"></span><br><span class="line">        <span class="comment"># ! method 2 get correct output :</span></span><br><span class="line">        <span class="keyword">return</span> ce_loss + <span class="number">0</span> * self.ce.assign(ce_loss)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">myloss = Myloss()</span><br><span class="line">high_cost_metric = Metric_HIGH_COST(<span class="string">'high_cost_ce'</span>)</span><br><span class="line">low_cost_metric = Metric_LOW_COST(myloss.ce, <span class="string">'low_cost_ce'</span>)</span><br><span class="line"></span><br><span class="line">sess.run([tf.global_variables_initializer(), tf.local_variables_initializer()])</span><br><span class="line"></span><br><span class="line">model.compile(k.optimizers.Adam(), [myloss], [high_cost_metric, low_cost_metric])</span><br><span class="line"></span><br><span class="line">model.fit(x_train, y_train, <span class="number">100</span>, <span class="number">10</span>)</span><br></pre></td></tr></table></figure>
+
+</div></div>
+
+        
+      
+    </div> -->
+    <footer class="article-footer">
+      <a data-url="https://zhen8838.github.io/2019/08/29/low-cost-metric/" data-id="cjzveddaa004qd96xffy737wq" class="article-share-link">Share</a>
+      
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+  
+    <a href="/2019/08/29/mult-cuda/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">Ubuntu多cuda版本控制</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">分类</h3>
+    <div class="widget">
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/学习/">学习</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">标签云</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/C/" style="font-size: 13.08px;">C</a> <a href="/tags/C/" style="font-size: 12.31px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10.77px;">CNN</a> <a href="/tags/Eigen/" style="font-size: 10px;">Eigen</a> <a href="/tags/Linux/" style="font-size: 20px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12.31px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12.31px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.77px;">PCB</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 15.38px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 10.77px;">linux</a> <a href="/tags/python/" style="font-size: 18.46px;">python</a> <a href="/tags/stm32/" style="font-size: 11.54px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 20px;">tensorflow</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 14.62px;">作业</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/图像处理/" style="font-size: 10px;">图像处理</a> <a href="/tags/堆栈/" style="font-size: 10.77px;">堆栈</a> <a href="/tags/声音信号处理/" style="font-size: 12.31px;">声音信号处理</a> <a href="/tags/小工具/" style="font-size: 12.31px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 16.92px;">嵌入式</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 17.69px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 17.69px;">机器学习</a> <a href="/tags/树/" style="font-size: 12.31px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/概率论/" style="font-size: 13.08px;">概率论</a> <a href="/tags/深度学习/" style="font-size: 16.15px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 11.54px;">神经网络</a> <a href="/tags/算法/" style="font-size: 12.31px;">算法</a> <a href="/tags/聚类/" style="font-size: 12.31px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13.85px;">蓝牙</a> <a href="/tags/调参/" style="font-size: 10px;">调参</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/路由/" style="font-size: 10px;">路由</a> <a href="/tags/链表/" style="font-size: 11.54px;">链表</a> <a href="/tags/错误记录/" style="font-size: 19.23px;">错误记录</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">归档</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/08/">八月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/07/">七月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/06/">六月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/05/">五月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">三月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">最新文章</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2019/08/29/low-cost-metric/">tf.keras中优化metric计算(提取loss至metric)</a>
+          </li>
+        
+          <li>
+            <a href="/2019/08/29/mult-cuda/">Ubuntu多cuda版本控制</a>
+          </li>
+        
+          <li>
+            <a href="/2019/08/19/cvae/">条件VAE</a>
+          </li>
+        
+          <li>
+            <a href="/2019/08/13/keras-loss-error/">Tensorflow中的错误记录</a>
+          </li>
+        
+          <li>
+            <a href="/2019/08/02/face-recognition/">人脸识别</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2019 NAke<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+    <a href="/about" class="mobile-nav-link">about</a>
+  
+</nav>
+    
+
+<script src="//cdn.staticfile.org/jquery/2.0.3/jquery.min.js"></script>
+
+
+  <link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
+  <script src="/fancybox/jquery.fancybox.pack.js"></script>
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+  </div>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+</body>
+</html>
