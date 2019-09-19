@@ -16,7 +16,7 @@
 <meta property="og:description" content="以后这篇文章就来记录tensorflow中遇到的问题与解决方式。">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https://zhen8838.github.io/2019/08/13/keras-loss-error/model_reuse.png">
-<meta property="og:updated_time" content="2019-08-20T04:41:55.011Z">
+<meta property="og:updated_time" content="2019-09-19T13:28:25.592Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Tensorflow中的错误记录">
 <meta name="twitter:description" content="以后这篇文章就来记录tensorflow中遇到的问题与解决方式。">
@@ -127,6 +127,13 @@ Error: The graph is empty. This can happen when TensorFlow could not trace any g
 <p><code>google</code>了一下也没看到有人有相同的问题，我抱着试试看的心态写了如下代码：</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sess.run([tf.global_variables_initializer(), tf.local_variables_initializer()])</span><br><span class="line">train_model.compile(optimizer, loss=losses, metrics=metrics)</span><br></pre></td></tr></table></figure>
 <p>在<code>model.compile</code>之前全局初始化，然后就完事了？然后就可以用上最新的优化算法<code>RAdam</code>和<code>Lookahead</code>咯。</p>
+<h4 id="tf.data对于多输入多输出模型时的操作">6. tf.data对于多输入多输出模型时的操作</h4>
+<p>我现在的模型是3输入,2输出的,<code>tf.data</code>输出的应该为( (a,b,c) , (label_a,label_b) ),然后我原本代码如下:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">return</span> [a_img, p_img, n_img], [<span class="number">1.</span>, <span class="number">1.</span>]</span><br></pre></td></tr></table></figure>
+<p>然后<code>dataset</code>对象就是这样: <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;DatasetV1Adapter shapes: ((32, 3, 96, 96, 3), (32, 2)), types: (tf.float32, tf.float32)&gt;</span><br></pre></td></tr></table></figure></p>
+<p>解决方案:</p>
+<p>用元组即可,不然默认是一个张量对象,会把我们的结构破坏掉. <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">return</span> (a_img, p_img, n_img), (<span class="number">1.</span>, <span class="number">1.</span>)</span><br></pre></td></tr></table></figure></p>
+<p>然后<code>dataset</code>对象就是这样: <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;DatasetV1Adapter shapes: (((32, 96, 96, 3), (32, 96, 96, 3), (32, 96, 96, 3)), ((32,), (32,))), types: ((tf.float32, tf.float32, tf.float32), (tf.float32, tf.float32))&gt;</span><br></pre></td></tr></table></figure></p>
 
       
     </div>
@@ -168,12 +175,19 @@ Error: The graph is empty. This can happen when TensorFlow could not trace any g
 <p><code>google</code>了一下也没看到有人有相同的问题，我抱着试试看的心态写了如下代码：</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sess.run([tf.global_variables_initializer(), tf.local_variables_initializer()])</span><br><span class="line">train_model.compile(optimizer, loss=losses, metrics=metrics)</span><br></pre></td></tr></table></figure>
 <p>在<code>model.compile</code>之前全局初始化，然后就完事了？然后就可以用上最新的优化算法<code>RAdam</code>和<code>Lookahead</code>咯。</p>
+<h4 id="tf.data对于多输入多输出模型时的操作">6. tf.data对于多输入多输出模型时的操作</h4>
+<p>我现在的模型是3输入,2输出的,<code>tf.data</code>输出的应该为( (a,b,c) , (label_a,label_b) ),然后我原本代码如下:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">return</span> [a_img, p_img, n_img], [<span class="number">1.</span>, <span class="number">1.</span>]</span><br></pre></td></tr></table></figure>
+<p>然后<code>dataset</code>对象就是这样: <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;DatasetV1Adapter shapes: ((32, 3, 96, 96, 3), (32, 2)), types: (tf.float32, tf.float32)&gt;</span><br></pre></td></tr></table></figure></p>
+<p>解决方案:</p>
+<p>用元组即可,不然默认是一个张量对象,会把我们的结构破坏掉. <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">return</span> (a_img, p_img, n_img), (<span class="number">1.</span>, <span class="number">1.</span>)</span><br></pre></td></tr></table></figure></p>
+<p>然后<code>dataset</code>对象就是这样: <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;DatasetV1Adapter shapes: (((32, 96, 96, 3), (32, 96, 96, 3), (32, 96, 96, 3)), ((32,), (32,))), types: ((tf.float32, tf.float32, tf.float32), (tf.float32, tf.float32))&gt;</span><br></pre></td></tr></table></figure></p>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2019/08/13/keras-loss-error/" data-id="cjzwui9qv003x5v6x8rc8dpey" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2019/08/13/keras-loss-error/" data-id="ck0qqdr6e0062fu6x6mnfwkg9" class="article-share-link">Share</a>
       
       
       
