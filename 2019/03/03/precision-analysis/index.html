@@ -96,21 +96,18 @@
       
         <p>最近在训练<code>yolo</code>模型一类检测模型,我在训练过程中发现<code>precision</code>会降低,思考之后对其做出一些分析.</p>
 <a id="more"></a>
-<h1 id="起因">起因</h1>
-<p>我在训练<code>yolo</code>的时候,首先是进行分类检测,即只训练<code>class_loss</code>,<code>obj_loss</code>,<code>noobj_loss</code>,这个时候训练<code>precision</code>会达到<code>60%</code>.</p>
+<h1 id="起因"><a href="#起因" class="headerlink" title="起因"></a>起因</h1><p>我在训练<code>yolo</code>的时候,首先是进行分类检测,即只训练<code>class_loss</code>,<code>obj_loss</code>,<code>noobj_loss</code>,这个时候训练<code>precision</code>会达到<code>60%</code>.</p>
 <p>接下来进行第二次迭代,这次同时训练<code>class_loss</code>,<code>obj_loss</code>,<code>noobj_loss</code>,<code>xy_loss</code>,<code>wh_loss</code>,这个时候<code>precision</code>会降低到<code>40%</code>.</p>
-<p>如下图所示: <img src="/2019/03/03/precision-analysis/1.jpg"></p>
-<h1 id="原因分析">原因分析</h1>
-<p>经过思考,我找到问题所在: <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">""</span><span class="string">" calc the noobj mask ~ "</span><span class="string">""</span></span><br><span class="line"><span class="keyword">if</span> train_classifier == <span class="string">'True'</span>:</span><br><span class="line">    noobj_mask = tf.logical_not(obj_mask)</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    noobj_mask = calc_noobj_mask(true_xy, true_wh, pred_xy, pred_wh, obj_mask, iou_thresh=iou_thresh, helper=helper)</span><br></pre></td></tr></table></figure></p>
+<p>如下图所示:<br><img src="/2019/03/03/precision-analysis/1.jpg" alt=""></p>
+<h1 id="原因分析"><a href="#原因分析" class="headerlink" title="原因分析"></a>原因分析</h1><p>经过思考,我找到问题所在:<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">""</span><span class="string">" calc the noobj mask ~ "</span><span class="string">""</span></span><br><span class="line"><span class="keyword">if</span> train_classifier == <span class="string">'True'</span>:</span><br><span class="line">    noobj_mask = tf.logical_not(obj_mask)</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    noobj_mask = calc_noobj_mask(true_xy, true_wh, pred_xy, pred_wh, obj_mask, iou_thresh=iou_thresh, helper=helper)</span><br></pre></td></tr></table></figure></p>
 <p>这段代码就是当我开始训练<code>xy_loss</code>,<code>wh_loss</code>时,那么<code>noobj_mask</code>就需要通过预测出来的<code>box</code>与<code>ground truth box</code>计算<code>iou</code>来筛选.</p>
-<p>当我可以拟合<code>box</code>之后,那么也就是说如果其他的<code>cell</code>预测出来的<code>box</code>与<code>ground truth box</code>的<code>iou</code>大于<code>iou_threshold</code>之后,那么这个<code>cell</code>我就不会将他设置为<code>noobj cell</code>,同时也不会对这个<code>cell</code>进行惩罚措施. <img src="/2019/03/03/precision-analysis/2.jpeg"></p>
-<p>再看<code>precision</code>和<code>recall</code>的计算方式: <span class="math display">\[ 
+<p>当我可以拟合<code>box</code>之后,那么也就是说如果其他的<code>cell</code>预测出来的<code>box</code>与<code>ground truth box</code>的<code>iou</code>大于<code>iou_threshold</code>之后,那么这个<code>cell</code>我就不会将他设置为<code>noobj cell</code>,同时也不会对这个<code>cell</code>进行惩罚措施.<br><img src="/2019/03/03/precision-analysis/2.jpeg" alt=""></p>
+<p>再看<code>precision</code>和<code>recall</code>的计算方式:</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-precision&amp;=\frac{true\ positive}{true\ positive+false\ positive} \\
-recall&amp;=\frac{true\ positive}{true\ positive+false\ negative}
-\end{aligned}
-\]</span></p>
-<p>因为我没有对预测<code>box</code>与<code>true box</code>的<code>iou</code>大于<code>iou_threshold</code>进行惩罚,所以我们的<span class="math inline">\(false\ positive\)</span>会增加,<span class="math inline">\(false\ negative\)</span>会减少.最终导致<code>precision</code>减少,<code>recall</code>增加.</p>
+precision&=\frac{true\ positive}{true\ positive+false\ positive} \\
+recall&=\frac{true\ positive}{true\ positive+false\ negative}
+\end{aligned}</script><p>因为我没有对预测<code>box</code>与<code>true box</code>的<code>iou</code>大于<code>iou_threshold</code>进行惩罚,所以我们的$false\ positive$会增加,$false\ negative$会减少.最终导致<code>precision</code>减少,<code>recall</code>增加.</p>
 
       
     </div>
@@ -120,27 +117,24 @@ recall&amp;=\frac{true\ positive}{true\ positive+false\ negative}
         
           <p>最近在训练<code>yolo</code>模型一类检测模型,我在训练过程中发现<code>precision</code>会降低,思考之后对其做出一些分析.</p>
 <a id="more"></a>
-<h1 id="起因">起因</h1>
-<p>我在训练<code>yolo</code>的时候,首先是进行分类检测,即只训练<code>class_loss</code>,<code>obj_loss</code>,<code>noobj_loss</code>,这个时候训练<code>precision</code>会达到<code>60%</code>.</p>
+<h1 id="起因"><a href="#起因" class="headerlink" title="起因"></a>起因</h1><p>我在训练<code>yolo</code>的时候,首先是进行分类检测,即只训练<code>class_loss</code>,<code>obj_loss</code>,<code>noobj_loss</code>,这个时候训练<code>precision</code>会达到<code>60%</code>.</p>
 <p>接下来进行第二次迭代,这次同时训练<code>class_loss</code>,<code>obj_loss</code>,<code>noobj_loss</code>,<code>xy_loss</code>,<code>wh_loss</code>,这个时候<code>precision</code>会降低到<code>40%</code>.</p>
-<p>如下图所示: <img src="/2019/03/03/precision-analysis/1.jpg"></p>
-<h1 id="原因分析">原因分析</h1>
-<p>经过思考,我找到问题所在: <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">""</span><span class="string">" calc the noobj mask ~ "</span><span class="string">""</span></span><br><span class="line"><span class="keyword">if</span> train_classifier == <span class="string">'True'</span>:</span><br><span class="line">    noobj_mask = tf.logical_not(obj_mask)</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    noobj_mask = calc_noobj_mask(true_xy, true_wh, pred_xy, pred_wh, obj_mask, iou_thresh=iou_thresh, helper=helper)</span><br></pre></td></tr></table></figure></p>
+<p>如下图所示:<br><img src="/2019/03/03/precision-analysis/1.jpg" alt=""></p>
+<h1 id="原因分析"><a href="#原因分析" class="headerlink" title="原因分析"></a>原因分析</h1><p>经过思考,我找到问题所在:<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">""</span><span class="string">" calc the noobj mask ~ "</span><span class="string">""</span></span><br><span class="line"><span class="keyword">if</span> train_classifier == <span class="string">'True'</span>:</span><br><span class="line">    noobj_mask = tf.logical_not(obj_mask)</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    noobj_mask = calc_noobj_mask(true_xy, true_wh, pred_xy, pred_wh, obj_mask, iou_thresh=iou_thresh, helper=helper)</span><br></pre></td></tr></table></figure></p>
 <p>这段代码就是当我开始训练<code>xy_loss</code>,<code>wh_loss</code>时,那么<code>noobj_mask</code>就需要通过预测出来的<code>box</code>与<code>ground truth box</code>计算<code>iou</code>来筛选.</p>
-<p>当我可以拟合<code>box</code>之后,那么也就是说如果其他的<code>cell</code>预测出来的<code>box</code>与<code>ground truth box</code>的<code>iou</code>大于<code>iou_threshold</code>之后,那么这个<code>cell</code>我就不会将他设置为<code>noobj cell</code>,同时也不会对这个<code>cell</code>进行惩罚措施. <img src="/2019/03/03/precision-analysis/2.jpeg"></p>
-<p>再看<code>precision</code>和<code>recall</code>的计算方式: <span class="math display">\[ 
+<p>当我可以拟合<code>box</code>之后,那么也就是说如果其他的<code>cell</code>预测出来的<code>box</code>与<code>ground truth box</code>的<code>iou</code>大于<code>iou_threshold</code>之后,那么这个<code>cell</code>我就不会将他设置为<code>noobj cell</code>,同时也不会对这个<code>cell</code>进行惩罚措施.<br><img src="/2019/03/03/precision-analysis/2.jpeg" alt=""></p>
+<p>再看<code>precision</code>和<code>recall</code>的计算方式:</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-precision&amp;=\frac{true\ positive}{true\ positive+false\ positive} \\
-recall&amp;=\frac{true\ positive}{true\ positive+false\ negative}
-\end{aligned}
-\]</span></p>
-<p>因为我没有对预测<code>box</code>与<code>true box</code>的<code>iou</code>大于<code>iou_threshold</code>进行惩罚,所以我们的<span class="math inline">\(false\ positive\)</span>会增加,<span class="math inline">\(false\ negative\)</span>会减少.最终导致<code>precision</code>减少,<code>recall</code>增加.</p>
+precision&=\frac{true\ positive}{true\ positive+false\ positive} \\
+recall&=\frac{true\ positive}{true\ positive+false\ negative}
+\end{aligned}</script><p>因为我没有对预测<code>box</code>与<code>true box</code>的<code>iou</code>大于<code>iou_threshold</code>进行惩罚,所以我们的$false\ positive$会增加,$false\ negative$会减少.最终导致<code>precision</code>减少,<code>recall</code>增加.</p>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2019/03/03/precision-analysis/" data-id="ck1z1inbs0067hm6xfds4jnxj" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2019/03/03/precision-analysis/" data-id="ck20106800069c96xybtl6mtz" class="article-share-link">Share</a>
       
       
       
@@ -213,6 +207,10 @@ recall&amp;=\frac{true\ positive}{true\ positive+false\ negative}
       <ul>
         
           <li>
+            <a href="/2019/10/21/tf15-tb-error/">Tensorflow 1.15中TensorBoard错误</a>
+          </li>
+        
+          <li>
             <a href="/2019/10/21/tf-lookahead/">Lookahead优化器的tf.Keras实现</a>
           </li>
         
@@ -226,10 +224,6 @@ recall&amp;=\frac{true\ positive}{true\ positive+false\ negative}
         
           <li>
             <a href="/2019/09/22/keras-loss-reduction/">tf.keras损失函数聚合测试</a>
-          </li>
-        
-          <li>
-            <a href="/2019/08/30/use-centernet/">配置CenterNet环境</a>
           </li>
         
       </ul>

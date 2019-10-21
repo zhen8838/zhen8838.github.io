@@ -100,161 +100,138 @@
       
         <p>本篇文章是对<code>Large Margin Softmax loss</code>,<code>Angular Margin to Softmax Loss</code>,<code>Additive Margin Softmax Loss</code>的学习记录。公式我尽量按照原文来写，并加入一点注释。</p>
 <a id="more"></a>
-<h1 id="原始的softmax">原始的softmax</h1>
-<p>首先定义第<code>i</code>个输入特征<span class="math inline">\(x_i\)</span>和标签<span class="math inline">\(y_i\)</span>。传统的<code>softmax</code>定义为：</p>
-<p><span class="math display">\[ \begin{aligned}
+<h1 id="原始的softmax"><a href="#原始的softmax" class="headerlink" title="原始的softmax"></a>原始的softmax</h1><p>首先定义第<code>i</code>个输入特征$x_i$和标签$y_i$。传统的<code>softmax</code>定义为：</p>
+<script type="math/tex; mode=display">\begin{aligned}
     Loss=\frac{1}{N}\sum_i Loss_i=\frac{1}{N}-log(P_{y_i})=\frac{1}{N}-log(\frac{e^{f_{y_i}}}{\sum_j e^{f_j}})
-\end{aligned} \]</span></p>
-<p><strong>注：</strong> <span class="math inline">\(f_{y_i}\)</span>应该是指的是输出中对应label分类的那个位置，<span class="math inline">\(f_j\)</span>对应第<span class="math inline">\(j\)</span>个元素(<span class="math inline">\(j \in [1,K)\)</span>,<span class="math inline">\(K\)</span>对应类别数量)的输出.<span class="math inline">\(N\)</span>为输入样本数量.</p>
-<p>因为在<code>softmax loss</code>中最后都使用全连接层来实现分类,所以<span class="math inline">\(f_{y_i}=\boldsymbol{W}_{y_i}^Tx_i\)</span>,<span class="math inline">\(\boldsymbol{W}_{y_i}\)</span>是<span class="math inline">\(\boldsymbol{W}\)</span>的第<span class="math inline">\(y_i\)</span>列.(一般来说是全连接层还需要加上偏置,但是为了公式推导的方便这里不加,在实际中直接加偏置即可).再因为这里的<span class="math inline">\(f_j\)</span>是<span class="math inline">\(\boldsymbol{W}_j\)</span>和<span class="math inline">\(x_i\)</span>的內积,所以<span class="math inline">\(f_j=\boldsymbol{W}_jx_i=||\boldsymbol{W}_j||||x_i||cos(\theta_j)\)</span>,<span class="math inline">\(\theta_j(0\leq\theta_j\leq\pi)\)</span>是向量<span class="math inline">\(\boldsymbol{W}_i\)</span>和<span class="math inline">\(x_i\)</span>的夹角.最终损失函数定义为:</p>
-<p><span class="math display">\[ \begin{aligned}
+\end{aligned}</script><p><strong>注：</strong> $f_{y_i}$应该是指的是输出中对应label分类的那个位置，$f_j$对应第$j$个元素($j \in [1,K)$,$K$对应类别数量)的输出.$N$为输入样本数量.</p>
+<p>因为在<code>softmax loss</code>中最后都使用全连接层来实现分类,所以$f_{y_i}=\boldsymbol{W}_{y_i}^Tx_i$,$\boldsymbol{W}_{y_i}$是$\boldsymbol{W}$的第$y_i$列.(一般来说是全连接层还需要加上偏置,但是为了公式推导的方便这里不加,在实际中直接加偏置即可).再因为这里的$f_j$是$\boldsymbol{W}_j$和$x_i$的內积,所以$f_j=\boldsymbol{W}_jx_i=||\boldsymbol{W}_j||||x_i||cos(\theta_j)$,$\theta_j(0\leq\theta_j\leq\pi)$是向量$\boldsymbol{W}_i$和$x_i$的夹角.最终损失函数定义为:</p>
+<script type="math/tex; mode=display">\begin{aligned}
     Loss_i=-log(\frac{e^{||\boldsymbol{W}_{j_i}||||x_i||cos(\theta_{y_i})}}{\sum_j e^{||\boldsymbol{W}_j||||x_i||cos(\theta_j)}})
-\end{aligned} \]</span></p>
-<h1 id="large-margin-softmax-loss">Large-Margin Softmax Loss</h1>
-<h1 id="动机">动机</h1>
-<p>考虑一个二分类的<code>softmax loss</code>,它的目标是使<span class="math inline">\(\boldsymbol{W}_{1}^Tx&gt;\boldsymbol{W}_{1}^Tx\)</span>或<span class="math inline">\(||\boldsymbol{W}_{1}||||x||cos(\theta_{1})&gt;||\boldsymbol{W}_{2}||||x||cos(\theta_{2})\)</span>来正确分类<span class="math inline">\(x\)</span>. 现在作者想到构建一个决策余量来更加严格地约束决策间距,所以要求<span class="math inline">\(||\boldsymbol{W}_{1}||||x||cos(m\theta_{1})&gt;||\boldsymbol{W}_{2}||||x||cos(\theta_{2}) (0\leq \theta_1 \leq \frac{\pi}{m})\)</span>,<span class="math inline">\(m\)</span>是一个正整数.从而使以下不等式成立: <span class="math display">\[ \begin{aligned}
-    ||\boldsymbol{W}_{1}||||x||cos(\theta_{1})\geq||\boldsymbol{W}_{1}||||x||cos(m\theta_{1})&gt;||\boldsymbol{W}_{2}||||x||cos(\theta_{2})
-\end{aligned} \]</span></p>
-<p>这样对学习<span class="math inline">\(\boldsymbol{W}_1\boldsymbol{W}_2\)</span>都提出了更高的要求.</p>
-<p><strong>注:</strong> 实际上这里是对类内的间距有个限制,假设<span class="math inline">\(m=6\)</span>时,<span class="math inline">\(cos(\theta)\geq cos(m\theta)\)</span>的条件下,<span class="math inline">\(\theta\)</span>被压缩到一个特定的范围中,如下图所示,只有蓝线大于红线的时候的<span class="math inline">\(\theta\)</span>取值才是符合条件的,这相当于变相的增加了<span class="math inline">\(\boldsymbol{W}_1\)</span>与<span class="math inline">\(x\)</span>的方向限制,也就是学习难度更大,类内间距更小.不过我感觉还得限制一下<span class="math inline">\(\theta\)</span>的范围,因为符合条件的<span class="math inline">\(\theta\)</span>范围并不止一个:</p>
-<p><img src="/2019/06/03/l-softmax/1.png"></p>
-<h1 id="定义">定义</h1>
-<p>下面给出<code>L softmax</code>的定义:</p>
-<p><span class="math display">\[ \begin{align}
+\end{aligned}</script><h1 id="Large-Margin-Softmax-Loss"><a href="#Large-Margin-Softmax-Loss" class="headerlink" title="Large-Margin Softmax Loss"></a>Large-Margin Softmax Loss</h1><h1 id="动机"><a href="#动机" class="headerlink" title="动机"></a>动机</h1><p>考虑一个二分类的<code>softmax loss</code>,它的目标是使$\boldsymbol{W}_{1}^Tx&gt;\boldsymbol{W}_{1}^Tx$或$||\boldsymbol{W}_{1}||||x||cos(\theta_{1})&gt;||\boldsymbol{W}_{2}||||x||cos(\theta_{2})$来正确分类$x$. 现在作者想到构建一个决策余量来更加严格地约束决策间距,所以要求$||\boldsymbol{W}_{1}||||x||cos(m\theta_{1})&gt;||\boldsymbol{W}_{2}||||x||cos(\theta_{2}) (0\leq \theta_1 \leq \frac{\pi}{m})$,$m$是一个正整数.从而使以下不等式成立:</p>
+<script type="math/tex; mode=display">\begin{aligned}
+    ||\boldsymbol{W}_{1}||||x||cos(\theta_{1})\geq||\boldsymbol{W}_{1}||||x||cos(m\theta_{1})>||\boldsymbol{W}_{2}||||x||cos(\theta_{2})
+\end{aligned}</script><p>这样对学习$\boldsymbol{W}_1\boldsymbol{W}_2$都提出了更高的要求.</p>
+<p><strong>注:</strong> 实际上这里是对类内的间距有个限制,假设$m=6$时,$cos(\theta)\geq cos(m\theta)$的条件下,$\theta$被压缩到一个特定的范围中,如下图所示,只有蓝线大于红线的时候的$\theta$取值才是符合条件的,这相当于变相的增加了$\boldsymbol{W}_1$与$x$的方向限制,也就是学习难度更大,类内间距更小.不过我感觉还得限制一下$\theta$的范围,因为符合条件的$\theta$范围并不止一个:</p>
+<p><img src="/2019/06/03/l-softmax/1.png" alt=""></p>
+<h1 id="定义"><a href="#定义" class="headerlink" title="定义"></a>定义</h1><p>下面给出<code>L softmax</code>的定义:</p>
+<script type="math/tex; mode=display">\begin{align}
 Loss_{i}=-\log \left(\frac{e^{\left\|\boldsymbol{W}_{y_{i}}\right\| \boldsymbol{x}_{i} \| \psi\left(\theta_{y_{i}}\right)}}{e^{\left\|\boldsymbol{W}_{y_{i}}\right\| \boldsymbol{x}_{i} \| \psi\left(\theta_{y_{i}}\right)}+\sum_{j \neq y_{i}} e^{\left\|\boldsymbol{W}_{j}\right\|\left\|\boldsymbol{x}_{i}\right\| \cos \left(\theta_{j}\right)} )}\right)
-\end{align}
-\]</span></p>
-<p>并:</p>
-<p><span class="math display">\[ \begin{align}
-\psi(\theta)=\left\{\begin{array}{l}{\cos (m \theta), \quad 0 \leq \theta \leq \frac{\pi}{m}} \\ {\mathcal{D}(\theta), \quad \frac{\pi}{m}&lt;\theta \leq \pi}\end{array}\right.
-\end{align}
-\]</span></p>
-<p><span class="math inline">\(m\)</span>是与分类边界密切相关的参数,<span class="math inline">\(m\)</span>越大分类学习越难.同时<span class="math inline">\(\mathcal{D}(\theta)\)</span>需要是一个单调递增函数,且<span class="math inline">\(\mathcal{D}(\frac{\pi}{m})==cas(\frac{\pi}{m})\)</span>(保证他是连续函数才可以求导).下图显示了不同<span class="math inline">\(\theta\)</span>值下的两个损失函数的结果,夹角<span class="math inline">\(\theta\)</span>越大<code>L softmax loss</code>越大.</p>
-<p><img src="/2019/06/03/l-softmax/2.png"></p>
-<p>为了简单起见,文章中特化了<span class="math inline">\(\psi(\theta)\)</span>函数为: <span class="math display">\[ \begin{align}
+\end{align}</script><p>并:</p>
+<script type="math/tex; mode=display">\begin{align}
+\psi(\theta)=\left\{\begin{array}{l}{\cos (m \theta), \quad 0 \leq \theta \leq \frac{\pi}{m}} \\ {\mathcal{D}(\theta), \quad \frac{\pi}{m}<\theta \leq \pi}\end{array}\right.
+\end{align}</script><p>$m$是与分类边界密切相关的参数,$m$越大分类学习越难.同时$\mathcal{D}(\theta)$需要是一个单调递增函数,且$\mathcal{D}(\frac{\pi}{m})==cas(\frac{\pi}{m})$(保证他是连续函数才可以求导).下图显示了不同$\theta$值下的两个损失函数的结果,夹角$\theta$越大<code>L softmax loss</code>越大.</p>
+<p><img src="/2019/06/03/l-softmax/2.png" alt=""></p>
+<p>为了简单起见,文章中特化了$\psi(\theta)$函数为:</p>
+<script type="math/tex; mode=display">\begin{align}
 \psi(\theta)=(-1)^{k} \cos (m \theta)-2 k, \quad \theta \in\left[\frac{k \pi}{m}, \frac{(k+1) \pi}{m}\right]
-\end{align}
-\]</span></p>
-<p>其中<span class="math inline">\(k\in[0,m-1]\)</span>且为正整数.</p>
-<p>在前向传播和反向传播中作者将<span class="math inline">\(cos(\theta_j)\)</span>替换成<span class="math inline">\(\frac{\boldsymbol{W}_{j}^{T} \boldsymbol{x}_{i}}{\left\|\boldsymbol{W}_{j}\right\|\left\|\boldsymbol{x}_{i}\right\|}\)</span>,<span class="math inline">\(cos(m\theta_{y_i})\)</span>替换为: <span class="math display">\[  \begin{align}
-\begin{aligned} \cos \left(m \theta_{y_{i}}\right) &amp;=C_{m}^{0} \cos ^{m}\left(\theta_{y_{i}}\right)-C_{m}^{2} \cos ^{m-2}\left(\theta_{y_{i}}\right)\left(1-\cos ^{2}\left(\theta_{y_{i}}\right)\right) \\ &amp;+C_{m}^{4} \cos ^{m-4}\left(\theta_{y_{i}}\right)\left(1-\cos ^{2}\left(\theta_{y_{i}}\right)\right)^{2}+\cdots \\ &amp;(-1)^{n} C_{m}^{2 n} \cos ^{m-2 n}\left(\theta_{y_{y_{i}}}\right)\left(1-\cos ^{2}\left(\theta_{y_{i}}\right)\right)^{n}+\cdots \end{aligned}
-\end{align}
-\]</span></p>
-<p><span class="math inline">\(n\)</span>是正整数且<span class="math inline">\(2n\leq m\)</span>.然后将这些函数带入<code>L softmax loss</code>公式中计算即可拿来做损失.但是这个公式还是太长了,所以我决定还是不用这个损失函数.</p>
-<h1 id="a-softmax">A softmax</h1>
-<p>这里还是介绍传统的<code>softmax</code>,这里就不赘述了.</p>
-<h2 id="modified-softmax">modified softmax</h2>
-<p>这个就是作者让传统的<code>softmax</code>的权重<span class="math inline">\(\boldsymbol{W}\)</span>归一化:<span class="math inline">\(||\boldsymbol{W}_j||=1\)</span>(必须是没有bias的),得到了<code>modified softmax loss</code>: <span class="math display">\[ \begin{align}
+\end{align}</script><p>其中$k\in[0,m-1]$且为正整数.</p>
+<p>在前向传播和反向传播中作者将$cos(\theta_j)$替换成$\frac{\boldsymbol{W}_{j}^{T} \boldsymbol{x}_{i}}{\left|\boldsymbol{W}_{j}\right|\left|\boldsymbol{x}_{i}\right|}$,$cos(m\theta_{y_i})$替换为:</p>
+<script type="math/tex; mode=display">\begin{align}
+\begin{aligned} \cos \left(m \theta_{y_{i}}\right) &=C_{m}^{0} \cos ^{m}\left(\theta_{y_{i}}\right)-C_{m}^{2} \cos ^{m-2}\left(\theta_{y_{i}}\right)\left(1-\cos ^{2}\left(\theta_{y_{i}}\right)\right) \\ &+C_{m}^{4} \cos ^{m-4}\left(\theta_{y_{i}}\right)\left(1-\cos ^{2}\left(\theta_{y_{i}}\right)\right)^{2}+\cdots \\ &(-1)^{n} C_{m}^{2 n} \cos ^{m-2 n}\left(\theta_{y_{y_{i}}}\right)\left(1-\cos ^{2}\left(\theta_{y_{i}}\right)\right)^{n}+\cdots \end{aligned}
+\end{align}</script><p>$n$是正整数且$2n\leq m$.然后将这些函数带入<code>L softmax loss</code>公式中计算即可拿来做损失.但是这个公式还是太长了,所以我决定还是不用这个损失函数.</p>
+<h1 id="A-softmax"><a href="#A-softmax" class="headerlink" title="A softmax"></a>A softmax</h1><p>这里还是介绍传统的<code>softmax</code>,这里就不赘述了.</p>
+<h2 id="modified-softmax"><a href="#modified-softmax" class="headerlink" title="modified softmax"></a>modified softmax</h2><p>这个就是作者让传统的<code>softmax</code>的权重$\boldsymbol{W}$归一化:$||\boldsymbol{W}_j||=1$(必须是没有bias的),得到了<code>modified softmax loss</code>:</p>
+<script type="math/tex; mode=display">\begin{align}
 Loss=\frac{1}{N} \sum_{i}-\log \left(\frac{e^{\left\|\boldsymbol{x}_{i}\right\| \cos \left(\theta_{y_{i}, i}\right)}}{\sum_{j} e^{\left\|\boldsymbol{x}_{i}\right\| \cos \left(\theta_{j, i}\right)}}\right)
-\end{align}
-\]</span></p>
-<p>当然我不知道这个归一化有什么好处,从作者给出的结果上来看准确率提高了1%.</p>
-<h2 id="angular-margin-to-softmax-loss">Angular Margin to Softmax Loss</h2>
-<p>对于上面的<code>modified softmax loss</code>在二分类问题中,当<span class="math inline">\(\cos(\theta_1)&gt;\cos(\theta_2)\)</span>可以确定类别为1,但是两个类别的决策面是<span class="math inline">\(\cos(\theta_1)=\cos(\theta_2)\)</span>,这样的决策面间隔太小,为了让决策面之间的间距更大一些,作者提出做两个决策面:</p>
-<p>类别1的决策面为<span class="math inline">\(\cos(m\theta_1)=\cos(\theta_2)\)</span>; 类别2的决策面为<span class="math inline">\(\cos(\theta_1)=\cos(m\theta_2)\)</span>; 其中<span class="math inline">\(m\geq2,m\in N\)</span>,<span class="math inline">\(m\)</span>取整数可以利用倍角公式;</p>
-<p>这样的话,也就是说预测出来的<span class="math inline">\(\boldsymbol{x}\)</span>与他对应的类的夹角必须要小于他与其他类<strong>最小</strong>的夹角的<span class="math inline">\(m\)</span>倍,比如2分类问题,其实就有三个决策面,中间两个决策面之间的就是决策间距.然后推导出<code>A softmax loss</code>: <span class="math display">\[ \begin{aligned}
+\end{align}</script><p>当然我不知道这个归一化有什么好处,从作者给出的结果上来看准确率提高了1%.</p>
+<h2 id="Angular-Margin-to-Softmax-Loss"><a href="#Angular-Margin-to-Softmax-Loss" class="headerlink" title="Angular Margin to Softmax Loss"></a>Angular Margin to Softmax Loss</h2><p>对于上面的<code>modified softmax loss</code>在二分类问题中,当$\cos(\theta_1)&gt;\cos(\theta_2)$可以确定类别为1,但是两个类别的决策面是$\cos(\theta_1)=\cos(\theta_2)$,这样的决策面间隔太小,为了让决策面之间的间距更大一些,作者提出做两个决策面:</p>
+<p>类别1的决策面为$\cos(m\theta_1)=\cos(\theta_2)$;<br>类别2的决策面为$\cos(\theta_1)=\cos(m\theta_2)$;<br>其中$m\geq2,m\in N$,$m$取整数可以利用倍角公式;</p>
+<p>这样的话,也就是说预测出来的$\boldsymbol{x}$与他对应的类的夹角必须要小于他与其他类<strong>最小</strong>的夹角的$m$倍,比如2分类问题,其实就有三个决策面,中间两个决策面之间的就是决策间距.然后推导出<code>A softmax loss</code>:</p>
+<script type="math/tex; mode=display">\begin{aligned}
 Loss = \frac{1}{N}\sum_i-\log(\frac{\exp(\|x_i\|\cos(m\theta_{yi,i}))}{\exp(\|x_i\|\cos(m\theta_{yi,i}))+\sum_{j\neq y_i}\exp(\|x_i\|\cos(\theta_{j,i}))})
-\end{aligned} \]</span></p>
-<p>其中<span class="math inline">\(\theta_{yi,i}\in[0, \frac{\pi}{m}]\)</span>,这就是因为<span class="math inline">\(cos\)</span>的性质决定,我在上面也提到了,当<span class="math inline">\(m\theta_{yi,i}&gt;\pi\)</span>时,会使得<span class="math inline">\(m\theta_{yi,i}&gt;\theta_{j,i}\ ,j\neq y_i\)</span>,但<span class="math inline">\(cos(m\theta_{1})&gt;cos(\theta_2)\)</span>也会成立,这就与之前的假设相反.</p>
-<p>为了避免<span class="math inline">\(cos\)</span>的问题,就设计 <span class="math display">\[
+\end{aligned}</script><p>其中$\theta_{yi,i}\in[0, \frac{\pi}{m}]$,这就是因为$cos$的性质决定,我在上面也提到了,当$m\theta_{yi,i}&gt;\pi$时,会使得$m\theta_{yi,i}&gt;\theta_{j,i}\ ,j\neq y_i$,但$cos(m\theta_{1})&gt;cos(\theta_2)$也会成立,这就与之前的假设相反.</p>
+<p>为了避免$cos$的问题,就设计</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
 \psi(\theta_{y_i,i})=(-1)^k\cos(m\theta_{y_i,i})-2k\ \ \ \theta_{y_i,i}\in[\frac{k\pi}{m},\frac{(k+1)\pi}{m}],且k\in[0,m-1]    
-\end{aligned}\]</span></p>
-<p>来代替.这样使得<span class="math inline">\(\psi\)</span>随着<span class="math inline">\(\theta_{y_i,i}\)</span>单调递减,如果<span class="math inline">\(m\theta_{y_i,i}&gt;\theta_{j,i},j\neq y_i\)</span>那么必有<span class="math inline">\(\psi(\theta_{y_i,i})&lt;\cos(\theta_{j,i})\)</span>,这里我们看一下<span class="math inline">\(\psi(\theta)\)</span>函数的图像(完全符合单独递减的要求,并且是连续函数可导):</p>
-<p><img src="/2019/06/03/l-softmax/psi.png"></p>
-<p>最终得出损失函数如下: <span class="math display">\[ \begin{aligned}
+\end{aligned}</script><p>来代替.这样使得$\psi$随着$\theta_{y_i,i}$单调递减,如果$m\theta_{y_i,i}&gt;\theta_{j,i},j\neq y_i$那么必有$\psi(\theta_{y_i,i})&lt;\cos(\theta_{j,i})$,这里我们看一下$\psi(\theta)$函数的图像(完全符合单独递减的要求,并且是连续函数可导):</p>
+<p><img src="/2019/06/03/l-softmax/psi.png" alt=""></p>
+<p>最终得出损失函数如下:</p>
+<script type="math/tex; mode=display">\begin{aligned}
 L_{ang} = \frac{1}{N}\sum_i-\log(\frac{\exp(\|x_i\|\psi(\theta_{yi,i}))}{\exp(\|x_i\|\psi(\theta_{yi,i}))+\sum_{j\neq y_i}\exp(\|x_i\|\cos(\theta_{j,i}))})
-\end{aligned} \]</span></p>
-<p>这里对比一下三个loss的不同决策界:</p>
+\end{aligned}</script><p>这里对比一下三个loss的不同决策界:</p>
+<div class="table-container">
 <table>
-<colgroup>
-<col style="width: 9%">
-<col style="width: 90%">
-</colgroup>
 <thead>
-<tr class="header">
-<th style="text-align: center;">损失函数</th>
-<th style="text-align: center;">决策面</th>
+<tr>
+<th style="text-align:center">损失函数</th>
+<th style="text-align:center">决策面</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
-<td style="text-align: center;">Softmax Loss</td>
-<td style="text-align: center;"><span class="math inline">\(\boldsymbol{W}_1-\boldsymbol{W}_2+b1-b2=0\)</span></td>
+<tr>
+<td style="text-align:center">Softmax Loss</td>
+<td style="text-align:center">$\boldsymbol{W}_1-\boldsymbol{W}_2+b1-b2=0$</td>
 </tr>
-<tr class="even">
-<td style="text-align: center;">Modified Softmax Loss</td>
-<td style="text-align: center;"><span class="math inline">\(\parallel\boldsymbol{x}(cos(\theta_1)-cos(\theta_2))\parallel\)</span>=0</td>
+<tr>
+<td style="text-align:center">Modified Softmax Loss</td>
+<td style="text-align:center">$\parallel\boldsymbol{x}(cos(\theta_1)-cos(\theta_2))\parallel$=0</td>
 </tr>
-<tr class="odd">
-<td style="text-align: center;">A Softmax Loss</td>
-<td style="text-align: center;"><span class="math display">\[\begin{aligned}   \parallel\boldsymbol{x}\parallel(cos(m\theta_1)-cos(\theta_2)=0\ \text{for class 1}\\ \parallel\boldsymbol{x}\parallel(cos(\theta_1)-cos(m\theta_2)=0\ \text{for class 2} \end{aligned} \]</span></td>
+<tr>
+<td style="text-align:center">A Softmax Loss</td>
+<td style="text-align:center"><script type="math/tex">\begin{aligned}   \parallel\boldsymbol{x}\parallel(cos(m\theta_1)-cos(\theta_2)=0\ \text{for class 1}\\ \parallel\boldsymbol{x}\parallel(cos(\theta_1)-cos(m\theta_2)=0\ \text{for class 2} \end{aligned}</script></td>
 </tr>
 </tbody>
 </table>
-<p><strong>注:</strong> 写到这里我发现这tm就是一个作者的两篇文章,到这里<code>A softmax</code>还是与<code>L softmax</code>的区别就在于是否对<span class="math inline">\(\parallel\boldsymbol{W}\parallel\)</span>进行归一化.这样的话对于分类来说可以观察到<code>A softmax</code>的分类结果都是长度会趋近相同,<code>L softmax</code>的分类长度会不相同.</p>
+</div>
+<p><strong>注:</strong> 写到这里我发现这tm就是一个作者的两篇文章,到这里<code>A softmax</code>还是与<code>L softmax</code>的区别就在于是否对$\parallel\boldsymbol{W}\parallel$进行归一化.这样的话对于分类来说可以观察到<code>A softmax</code>的分类结果都是长度会趋近相同,<code>L softmax</code>的分类长度会不相同.</p>
+<div class="table-container">
 <table>
 <thead>
-<tr class="header">
+<tr>
 <th>A softmax</th>
 <th>L softmax</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
-<td><img src="/2019/06/03/l-softmax/a_softmax_res.png"></td>
-<td><img src="/2019/06/03/l-softmax/l_softmax_res.png"></td>
+<tr>
+<td><img src="/2019/06/03/l-softmax/a_softmax_res.png" alt=""></td>
+<td><img src="/2019/06/03/l-softmax/l_softmax_res.png" alt=""></td>
 </tr>
 </tbody>
 </table>
-<h1 id="additive-margin-softmax">Additive Margin Softmax</h1>
-<p>这里这个作者在2018年发表的文章,这里也一并学习了.这个是效果好并且实现简单的一种方案.</p>
-<h2 id="定义-1">定义</h2>
-<p>实际上看了上面的<code>Loss</code>函数,所有的变化点其实就在<span class="math inline">\(e^{?}\)</span>做文章.这里首先替换了<span class="math inline">\(\psi(\theta)\)</span>函数(<span class="math inline">\(m\)</span>是偏移): <span class="math display">\[ \begin{aligned}
+</div>
+<h1 id="Additive-Margin-Softmax"><a href="#Additive-Margin-Softmax" class="headerlink" title="Additive Margin Softmax"></a>Additive Margin Softmax</h1><p>这里这个作者在2018年发表的文章,这里也一并学习了.这个是效果好并且实现简单的一种方案.</p>
+<h2 id="定义-1"><a href="#定义-1" class="headerlink" title="定义"></a>定义</h2><p>实际上看了上面的<code>Loss</code>函数,所有的变化点其实就在$e^{?}$做文章.这里首先替换了$\psi(\theta)$函数($m$是偏移):</p>
+<script type="math/tex; mode=display">\begin{aligned}
     \psi(\theta)=cos(\theta)-m
-\end{aligned} \]</span></p>
-<p>然后又把<span class="math inline">\(W,x\)</span>都归一化: <span class="math display">\[ \begin{aligned}
+\end{aligned}</script><p>然后又把$W,x$都归一化:</p>
+<script type="math/tex; mode=display">\begin{aligned}
     Loss_i=-log(\frac{e^{\parallel \boldsymbol{W}_{j_i}\parallel \parallel x_i\parallel cos(\theta_{y_i})}}{\sum_j e^{\parallel \boldsymbol{W}_j\parallel \parallel x_i\parallel cos(\theta_j)}})\ \ \ \ \parallel\boldsymbol{W}\parallel=1,\parallel x\parallel=1
-\end{aligned} \]</span></p>
-<p>这样內积结果就是: <span class="math display">\[ \begin{aligned}
-    &lt;\boldsymbol{W_{y_i}},x&gt;=cos(\theta_{y_i})
-\end{aligned} \]</span></p>
-<p>接着再来一个偏移<span class="math inline">\(m,\ m&gt;0\)</span>与缩放因子<span class="math inline">\(s\)</span>,得到最后的损失函数: <span class="math display">\[ \begin{aligned}
+\end{aligned}</script><p>这样內积结果就是:</p>
+<script type="math/tex; mode=display">\begin{aligned}
+    <\boldsymbol{W_{y_i}},x>=cos(\theta_{y_i})
+\end{aligned}</script><p>接着再来一个偏移$m,\ m&gt;0$与缩放因子$s$,得到最后的损失函数:</p>
+<script type="math/tex; mode=display">\begin{aligned}
     Loss_i = - \log \frac{e^{s\cdot(\cos\theta_{y_i} -m)}}{e^{s\cdot (\cos\theta_{y_i} -m)}+\sum^c_{j=1,i\neq t}  e^{s\cdot\cos\theta_j }}
-\end{aligned} \]</span></p>
-<p>按照原论文,取<span class="math inline">\(m=0.35\)</span>,<span class="math inline">\(s=30\)</span>.然后就结束了... 😄</p>
-<p>再补张图(<code>AM softmax</code>没有乘<span class="math inline">\(s\)</span>): <img src="/2019/06/03/l-softmax/psi2.png"></p>
-<h1 id="编程实现">编程实现</h1>
-<p>因为<code>A softmax loss</code>是升级版,所以就实现这个.</p>
-<h2 id="a-softmax-loss">A softmax loss</h2>
-<p>首先是几个代码要注意的点,<span class="math inline">\(cos(\theta)\)</span>可以通过向量除计算,<span class="math inline">\(cos(m\theta)\)</span>可以通过倍角公式计算.: <span class="math display">\[ 
+\end{aligned}</script><p>按照原论文,取$m=0.35$,$s=30$.然后就结束了… 😄</p>
+<p>再补张图(<code>AM softmax</code>没有乘$s$):<br><img src="/2019/06/03/l-softmax/psi2.png" alt=""></p>
+<h1 id="编程实现"><a href="#编程实现" class="headerlink" title="编程实现"></a>编程实现</h1><p>因为<code>A softmax loss</code>是升级版,所以就实现这个.</p>
+<h2 id="A-softmax-loss"><a href="#A-softmax-loss" class="headerlink" title="A softmax loss"></a>A softmax loss</h2><p>首先是几个代码要注意的点,$cos(\theta)$可以通过向量除计算,$cos(m\theta)$可以通过倍角公式计算.:</p>
+<script type="math/tex; mode=display">
 \begin{split}
-\cos \theta_{i,j} &amp;= \frac{\vec{x_i}\cdot\vec{W_j}}{\|\vec{x_i}\|\cdot\|\vec{W_j}\|} \frac{\vec{x_i}\cdot\vec{W_{norm_j}}}{\|\vec{x_i}\|} \cr
-\cos 2\theta &amp;= 2\cos^2 \theta -1 \cr
-\cos 3\theta &amp;= 4\cos^2 \theta -3 \cos \theta \cr
-\cos 4\theta &amp;= 8\cos^4 \theta -8\cos^2 \theta + 1 \cr
-\end{split}
-\]</span></p>
-<p>然后还有<span class="math inline">\(k\)</span>的取值,先利用<span class="math inline">\(sign\)</span>函数判断<span class="math inline">\(cos(\theta)\)</span>属于哪一个区间,再确定<span class="math inline">\(k\)</span>的值: <span class="math display">\[ \begin{aligned}
-    sign_0&amp;=sign(cos(\theta))\\
-    sign_3&amp;=sign(cos(2\theta))*sign_0\\
-    sign_4&amp;=2*sign_0+sign_3-3 \\
-    \psi(\theta)&amp;=sign_3*cos(4\theta)+sign_4 \\
-    &amp;=sign_3*(8\cos^4 \theta -8\cos^2 \theta + 1)+sign_4
-\end{aligned} \]</span></p>
-<p>下面是<span class="math inline">\(m=4\)</span>时的<span class="math inline">\(Loss\)</span>计算函数. <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
+\cos \theta_{i,j} &= \frac{\vec{x_i}\cdot\vec{W_j}}{\|\vec{x_i}\|\cdot\|\vec{W_j}\|} \frac{\vec{x_i}\cdot\vec{W_{norm_j}}}{\|\vec{x_i}\|} \cr
+\cos 2\theta &= 2\cos^2 \theta -1 \cr
+\cos 3\theta &= 4\cos^2 \theta -3 \cos \theta \cr
+\cos 4\theta &= 8\cos^4 \theta -8\cos^2 \theta + 1 \cr
+\end{split}</script><p>然后还有$k$的取值,先利用$sign$函数判断$cos(\theta)$属于哪一个区间,再确定$k$的值:</p>
+<script type="math/tex; mode=display">\begin{aligned}
+    sign_0&=sign(cos(\theta))\\
+    sign_3&=sign(cos(2\theta))*sign_0\\
+    sign_4&=2*sign_0+sign_3-3 \\
+    \psi(\theta)&=sign_3*cos(4\theta)+sign_4 \\
+    &=sign_3*(8\cos^4 \theta -8\cos^2 \theta + 1)+sign_4
+\end{aligned}</script><p>下面是$m=4$时的$Loss$计算函数.<br><div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> tensorflow.python <span class="keyword">as</span> tf</span><br><span class="line"><span class="keyword">from</span> tensorflow <span class="keyword">import</span> contrib</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">Angular_Softmax_Loss</span><span class="params">(embeddings, labels, margin=<span class="number">4</span>)</span>:</span></span><br><span class="line">        <span class="string">"""</span></span><br><span class="line"><span class="string">        Note:(about the value of margin)</span></span><br><span class="line"><span class="string">        as for binary-class case, the minimal value of margin is 2+sqrt(3)</span></span><br><span class="line"><span class="string">        as for multi-class  case, the minimal value of margin is 3</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">        the value of margin proposed by the author of paper is 4.</span></span><br><span class="line"><span class="string">        here the margin value is 4.</span></span><br><span class="line"><span class="string">        """</span></span><br><span class="line">        l = <span class="number">0.</span></span><br><span class="line">        embeddings = tf.random_normal((<span class="number">2</span>, <span class="number">10</span>))</span><br><span class="line">        labels = tf.convert_to_tensor([[<span class="number">1</span>], [<span class="number">2</span>]], dtype=tf.int64)</span><br><span class="line">        x_norm = tf.norm(embeddings, axis=<span class="number">1</span>)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">with</span> tf.variable_scope(<span class="string">"softmax"</span>):</span><br><span class="line">            weights = tf.get_variable(name=<span class="string">'embedding_weights'</span>,</span><br><span class="line">                                      shape=[embeddings.get_shape().as_list()[<span class="number">-1</span>], <span class="number">10</span>],</span><br><span class="line">                                      initializer=contrib.layers.xavier_initializer())</span><br><span class="line">            W = tf.nn.l2_normalize(weights, axis=<span class="number">0</span>)</span><br><span class="line">            <span class="comment"># cacualting the cos value of angles between embeddings and W</span></span><br><span class="line">            orgina_logits = tf.matmul(embeddings, W)</span><br><span class="line">            N = embeddings.get_shape()[<span class="number">0</span>]  <span class="comment"># get batch_size</span></span><br><span class="line">            single_sample_label_index = tf.concat([tf.constant(list(range(N)), tf.int64, shape=(N, <span class="number">1</span>)), labels], axis=<span class="number">1</span>)</span><br><span class="line">            <span class="comment"># N = 128, labels = [1,0,...,9]</span></span><br><span class="line">            <span class="comment"># single_sample_label_index:</span></span><br><span class="line">            <span class="comment"># [ [0,1],</span></span><br><span class="line">            <span class="comment">#   [1,0],</span></span><br><span class="line">            <span class="comment">#   ....</span></span><br><span class="line">            <span class="comment">#   [128,9]]</span></span><br><span class="line">            <span class="comment"># 这里就是F_y_i,根据有目标的位置来选取需要计算的loss位置.</span></span><br><span class="line">            f_y_i = tf.gather_nd(orgina_logits, single_sample_label_index)</span><br><span class="line">            <span class="comment"># NOTE 因为 ||W||=1 所以 cos(theta)=f_y_i/x_norm</span></span><br><span class="line">            cos_theta = tf.div(f_y_i, x_norm)</span><br><span class="line">            cos_theta_2 = tf.pow(cos_theta, <span class="number">2</span>)</span><br><span class="line">            cos_theta_4 = tf.pow(cos_theta, <span class="number">4</span>)</span><br><span class="line"></span><br><span class="line">            sign0 = tf.sign(cos_theta)</span><br><span class="line">            sign3 = tf.multiply(tf.sign(<span class="number">2</span> * cos_theta_2 - <span class="number">1</span>), sign0)</span><br><span class="line">            sign4 = <span class="number">2</span> * sign0 + sign3 - <span class="number">3</span></span><br><span class="line">            result = sign3 * (<span class="number">8</span> * cos_theta_4 - <span class="number">8</span> * cos_theta_2 + <span class="number">1</span>) + sign4</span><br><span class="line"></span><br><span class="line">            margin_logits = tf.multiply(result, x_norm)</span><br><span class="line">            f = <span class="number">1.0</span> / (<span class="number">1.0</span> + l)</span><br><span class="line">            ff = <span class="number">1.0</span> - f</span><br><span class="line">            combined_logits = tf.add(orgina_logits,</span><br><span class="line">                                     tf.scatter_nd(single_sample_label_index,</span><br><span class="line">                                                   tf.subtract(margin_logits, f_y_i),</span><br><span class="line">                                                   orgina_logits.get_shape()))</span><br><span class="line">            updated_logits = ff * orgina_logits + f * combined_logits</span><br><span class="line">            loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits_v2(logits=updated_logits, labels=tf.reshape(labels, (<span class="number">-1</span>,))))</span><br><span class="line">            pred_prob = tf.nn.softmax(logits=updated_logits)</span><br><span class="line">            <span class="keyword">return</span> pred_prob, loss</span><br></pre></td></tr></table></figure>
 
 </div></div></p>
-<h2 id="additive-margin-softmax-1">Additive Margin Softmax</h2>
-<p>这个比前面那个简单多了:</p>
+<h2 id="Additive-Margin-Softmax-1"><a href="#Additive-Margin-Softmax-1" class="headerlink" title="Additive Margin Softmax"></a>Additive Margin Softmax</h2><p>这个比前面那个简单多了:</p>
 <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> tensorflow.python <span class="keyword">import</span> keras</span><br><span class="line"><span class="keyword">from</span> tensorflow.python.keras.models <span class="keyword">import</span> Model</span><br><span class="line"><span class="keyword">from</span> tensorflow.python.keras.layers <span class="keyword">import</span> *</span><br><span class="line"><span class="keyword">import</span> tensorflow.python.keras.backend <span class="keyword">as</span> K</span><br><span class="line"><span class="keyword">from</span> tensorflow.python.keras.constraints <span class="keyword">import</span> unit_norm</span><br><span class="line"></span><br><span class="line">(train_x, train_y), (test_x, test_y) = keras.datasets.fashion_mnist.load_data()</span><br><span class="line"></span><br><span class="line">train_x = K.reshape(train_x, (<span class="number">-1</span>, <span class="number">784</span>))</span><br><span class="line">train_y = keras.utils.to_categorical(train_y, <span class="number">10</span>)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">model = keras.Sequential([Input(shape=(<span class="number">784</span>,)),</span><br><span class="line">                          Dense(<span class="number">512</span>, keras.activations.relu),</span><br><span class="line">                          Dense(<span class="number">256</span>, keras.activations.relu),</span><br><span class="line">                          Dense(<span class="number">128</span>, keras.activations.relu),</span><br><span class="line">                          Lambda(<span class="keyword">lambda</span> x: K.l2_normalize(x, <span class="number">1</span>)),</span><br><span class="line">                          Dense(<span class="number">10</span>, use_bias=<span class="keyword">False</span>, kernel_constraint=unit_norm())])</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">am_softmax_loss</span><span class="params">(y_true, y_pred, scale=<span class="number">30</span>, margin=<span class="number">0.35</span>)</span>:</span></span><br><span class="line">    <span class="comment"># NOTE 预测出来的x就是归一化后的,并且W也是归一化后的,所以y_pred就是cos(𝜃)</span></span><br><span class="line">    y_pred = (y_true * (y_pred - margin) + (<span class="number">1</span> - y_true) * y_pred) * scale</span><br><span class="line">    <span class="keyword">return</span> K.categorical_crossentropy(y_true, y_pred, from_logits=<span class="keyword">True</span>)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">model.compile(loss=am_softmax_loss, optimizer=keras.optimizers.Adam(),</span><br><span class="line">              metrics=[keras.metrics.CategoricalAccuracy()])</span><br><span class="line"></span><br><span class="line">model.fit(x=train_x, y=train_y, batch_size=<span class="number">128</span>, epochs=<span class="number">5</span>)</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<h1 id="总结">总结</h1>
-<p>看了三个文章,都是通过减小内类间距来达到效果.减小内类间距的途径都是构建<span class="math inline">\(\psi(\theta)\)</span>代替<span class="math inline">\(cos(\theta)\)</span>,当然要保证<span class="math inline">\(\psi(\theta) &lt; \cos\theta\)</span>.</p>
-<p>之前的<code>L softmax</code>和<code>A softmax</code>为了保证<span class="math inline">\(\psi(\theta)=cos(m\theta) &lt; \cos\theta\)</span>还使用了分段函数,比较麻烦.然后<code>AM softmax</code>就比较简单粗暴了.</p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>看了三个文章,都是通过减小内类间距来达到效果.减小内类间距的途径都是构建$\psi(\theta)$代替$cos(\theta)$,当然要保证$\psi(\theta)  &lt; \cos\theta$.</p>
+<p>之前的<code>L softmax</code>和<code>A softmax</code>为了保证$\psi(\theta)=cos(m\theta)  &lt; \cos\theta$还使用了分段函数,比较麻烦.然后<code>AM softmax</code>就比较简单粗暴了.</p>
 
       
     </div>
@@ -264,167 +241,144 @@ L_{ang} = \frac{1}{N}\sum_i-\log(\frac{\exp(\|x_i\|\psi(\theta_{yi,i}))}{\exp(\|
         
           <p>本篇文章是对<code>Large Margin Softmax loss</code>,<code>Angular Margin to Softmax Loss</code>,<code>Additive Margin Softmax Loss</code>的学习记录。公式我尽量按照原文来写，并加入一点注释。</p>
 <a id="more"></a>
-<h1 id="原始的softmax">原始的softmax</h1>
-<p>首先定义第<code>i</code>个输入特征<span class="math inline">\(x_i\)</span>和标签<span class="math inline">\(y_i\)</span>。传统的<code>softmax</code>定义为：</p>
-<p><span class="math display">\[ \begin{aligned}
+<h1 id="原始的softmax"><a href="#原始的softmax" class="headerlink" title="原始的softmax"></a>原始的softmax</h1><p>首先定义第<code>i</code>个输入特征$x_i$和标签$y_i$。传统的<code>softmax</code>定义为：</p>
+<script type="math/tex; mode=display">\begin{aligned}
     Loss=\frac{1}{N}\sum_i Loss_i=\frac{1}{N}-log(P_{y_i})=\frac{1}{N}-log(\frac{e^{f_{y_i}}}{\sum_j e^{f_j}})
-\end{aligned} \]</span></p>
-<p><strong>注：</strong> <span class="math inline">\(f_{y_i}\)</span>应该是指的是输出中对应label分类的那个位置，<span class="math inline">\(f_j\)</span>对应第<span class="math inline">\(j\)</span>个元素(<span class="math inline">\(j \in [1,K)\)</span>,<span class="math inline">\(K\)</span>对应类别数量)的输出.<span class="math inline">\(N\)</span>为输入样本数量.</p>
-<p>因为在<code>softmax loss</code>中最后都使用全连接层来实现分类,所以<span class="math inline">\(f_{y_i}=\boldsymbol{W}_{y_i}^Tx_i\)</span>,<span class="math inline">\(\boldsymbol{W}_{y_i}\)</span>是<span class="math inline">\(\boldsymbol{W}\)</span>的第<span class="math inline">\(y_i\)</span>列.(一般来说是全连接层还需要加上偏置,但是为了公式推导的方便这里不加,在实际中直接加偏置即可).再因为这里的<span class="math inline">\(f_j\)</span>是<span class="math inline">\(\boldsymbol{W}_j\)</span>和<span class="math inline">\(x_i\)</span>的內积,所以<span class="math inline">\(f_j=\boldsymbol{W}_jx_i=||\boldsymbol{W}_j||||x_i||cos(\theta_j)\)</span>,<span class="math inline">\(\theta_j(0\leq\theta_j\leq\pi)\)</span>是向量<span class="math inline">\(\boldsymbol{W}_i\)</span>和<span class="math inline">\(x_i\)</span>的夹角.最终损失函数定义为:</p>
-<p><span class="math display">\[ \begin{aligned}
+\end{aligned}</script><p><strong>注：</strong> $f_{y_i}$应该是指的是输出中对应label分类的那个位置，$f_j$对应第$j$个元素($j \in [1,K)$,$K$对应类别数量)的输出.$N$为输入样本数量.</p>
+<p>因为在<code>softmax loss</code>中最后都使用全连接层来实现分类,所以$f_{y_i}=\boldsymbol{W}_{y_i}^Tx_i$,$\boldsymbol{W}_{y_i}$是$\boldsymbol{W}$的第$y_i$列.(一般来说是全连接层还需要加上偏置,但是为了公式推导的方便这里不加,在实际中直接加偏置即可).再因为这里的$f_j$是$\boldsymbol{W}_j$和$x_i$的內积,所以$f_j=\boldsymbol{W}_jx_i=||\boldsymbol{W}_j||||x_i||cos(\theta_j)$,$\theta_j(0\leq\theta_j\leq\pi)$是向量$\boldsymbol{W}_i$和$x_i$的夹角.最终损失函数定义为:</p>
+<script type="math/tex; mode=display">\begin{aligned}
     Loss_i=-log(\frac{e^{||\boldsymbol{W}_{j_i}||||x_i||cos(\theta_{y_i})}}{\sum_j e^{||\boldsymbol{W}_j||||x_i||cos(\theta_j)}})
-\end{aligned} \]</span></p>
-<h1 id="large-margin-softmax-loss">Large-Margin Softmax Loss</h1>
-<h1 id="动机">动机</h1>
-<p>考虑一个二分类的<code>softmax loss</code>,它的目标是使<span class="math inline">\(\boldsymbol{W}_{1}^Tx&gt;\boldsymbol{W}_{1}^Tx\)</span>或<span class="math inline">\(||\boldsymbol{W}_{1}||||x||cos(\theta_{1})&gt;||\boldsymbol{W}_{2}||||x||cos(\theta_{2})\)</span>来正确分类<span class="math inline">\(x\)</span>. 现在作者想到构建一个决策余量来更加严格地约束决策间距,所以要求<span class="math inline">\(||\boldsymbol{W}_{1}||||x||cos(m\theta_{1})&gt;||\boldsymbol{W}_{2}||||x||cos(\theta_{2}) (0\leq \theta_1 \leq \frac{\pi}{m})\)</span>,<span class="math inline">\(m\)</span>是一个正整数.从而使以下不等式成立: <span class="math display">\[ \begin{aligned}
-    ||\boldsymbol{W}_{1}||||x||cos(\theta_{1})\geq||\boldsymbol{W}_{1}||||x||cos(m\theta_{1})&gt;||\boldsymbol{W}_{2}||||x||cos(\theta_{2})
-\end{aligned} \]</span></p>
-<p>这样对学习<span class="math inline">\(\boldsymbol{W}_1\boldsymbol{W}_2\)</span>都提出了更高的要求.</p>
-<p><strong>注:</strong> 实际上这里是对类内的间距有个限制,假设<span class="math inline">\(m=6\)</span>时,<span class="math inline">\(cos(\theta)\geq cos(m\theta)\)</span>的条件下,<span class="math inline">\(\theta\)</span>被压缩到一个特定的范围中,如下图所示,只有蓝线大于红线的时候的<span class="math inline">\(\theta\)</span>取值才是符合条件的,这相当于变相的增加了<span class="math inline">\(\boldsymbol{W}_1\)</span>与<span class="math inline">\(x\)</span>的方向限制,也就是学习难度更大,类内间距更小.不过我感觉还得限制一下<span class="math inline">\(\theta\)</span>的范围,因为符合条件的<span class="math inline">\(\theta\)</span>范围并不止一个:</p>
-<p><img src="/2019/06/03/l-softmax/1.png"></p>
-<h1 id="定义">定义</h1>
-<p>下面给出<code>L softmax</code>的定义:</p>
-<p><span class="math display">\[ \begin{align}
+\end{aligned}</script><h1 id="Large-Margin-Softmax-Loss"><a href="#Large-Margin-Softmax-Loss" class="headerlink" title="Large-Margin Softmax Loss"></a>Large-Margin Softmax Loss</h1><h1 id="动机"><a href="#动机" class="headerlink" title="动机"></a>动机</h1><p>考虑一个二分类的<code>softmax loss</code>,它的目标是使$\boldsymbol{W}_{1}^Tx&gt;\boldsymbol{W}_{1}^Tx$或$||\boldsymbol{W}_{1}||||x||cos(\theta_{1})&gt;||\boldsymbol{W}_{2}||||x||cos(\theta_{2})$来正确分类$x$. 现在作者想到构建一个决策余量来更加严格地约束决策间距,所以要求$||\boldsymbol{W}_{1}||||x||cos(m\theta_{1})&gt;||\boldsymbol{W}_{2}||||x||cos(\theta_{2}) (0\leq \theta_1 \leq \frac{\pi}{m})$,$m$是一个正整数.从而使以下不等式成立:</p>
+<script type="math/tex; mode=display">\begin{aligned}
+    ||\boldsymbol{W}_{1}||||x||cos(\theta_{1})\geq||\boldsymbol{W}_{1}||||x||cos(m\theta_{1})>||\boldsymbol{W}_{2}||||x||cos(\theta_{2})
+\end{aligned}</script><p>这样对学习$\boldsymbol{W}_1\boldsymbol{W}_2$都提出了更高的要求.</p>
+<p><strong>注:</strong> 实际上这里是对类内的间距有个限制,假设$m=6$时,$cos(\theta)\geq cos(m\theta)$的条件下,$\theta$被压缩到一个特定的范围中,如下图所示,只有蓝线大于红线的时候的$\theta$取值才是符合条件的,这相当于变相的增加了$\boldsymbol{W}_1$与$x$的方向限制,也就是学习难度更大,类内间距更小.不过我感觉还得限制一下$\theta$的范围,因为符合条件的$\theta$范围并不止一个:</p>
+<p><img src="/2019/06/03/l-softmax/1.png" alt=""></p>
+<h1 id="定义"><a href="#定义" class="headerlink" title="定义"></a>定义</h1><p>下面给出<code>L softmax</code>的定义:</p>
+<script type="math/tex; mode=display">\begin{align}
 Loss_{i}=-\log \left(\frac{e^{\left\|\boldsymbol{W}_{y_{i}}\right\| \boldsymbol{x}_{i} \| \psi\left(\theta_{y_{i}}\right)}}{e^{\left\|\boldsymbol{W}_{y_{i}}\right\| \boldsymbol{x}_{i} \| \psi\left(\theta_{y_{i}}\right)}+\sum_{j \neq y_{i}} e^{\left\|\boldsymbol{W}_{j}\right\|\left\|\boldsymbol{x}_{i}\right\| \cos \left(\theta_{j}\right)} )}\right)
-\end{align}
-\]</span></p>
-<p>并:</p>
-<p><span class="math display">\[ \begin{align}
-\psi(\theta)=\left\{\begin{array}{l}{\cos (m \theta), \quad 0 \leq \theta \leq \frac{\pi}{m}} \\ {\mathcal{D}(\theta), \quad \frac{\pi}{m}&lt;\theta \leq \pi}\end{array}\right.
-\end{align}
-\]</span></p>
-<p><span class="math inline">\(m\)</span>是与分类边界密切相关的参数,<span class="math inline">\(m\)</span>越大分类学习越难.同时<span class="math inline">\(\mathcal{D}(\theta)\)</span>需要是一个单调递增函数,且<span class="math inline">\(\mathcal{D}(\frac{\pi}{m})==cas(\frac{\pi}{m})\)</span>(保证他是连续函数才可以求导).下图显示了不同<span class="math inline">\(\theta\)</span>值下的两个损失函数的结果,夹角<span class="math inline">\(\theta\)</span>越大<code>L softmax loss</code>越大.</p>
-<p><img src="/2019/06/03/l-softmax/2.png"></p>
-<p>为了简单起见,文章中特化了<span class="math inline">\(\psi(\theta)\)</span>函数为: <span class="math display">\[ \begin{align}
+\end{align}</script><p>并:</p>
+<script type="math/tex; mode=display">\begin{align}
+\psi(\theta)=\left\{\begin{array}{l}{\cos (m \theta), \quad 0 \leq \theta \leq \frac{\pi}{m}} \\ {\mathcal{D}(\theta), \quad \frac{\pi}{m}<\theta \leq \pi}\end{array}\right.
+\end{align}</script><p>$m$是与分类边界密切相关的参数,$m$越大分类学习越难.同时$\mathcal{D}(\theta)$需要是一个单调递增函数,且$\mathcal{D}(\frac{\pi}{m})==cas(\frac{\pi}{m})$(保证他是连续函数才可以求导).下图显示了不同$\theta$值下的两个损失函数的结果,夹角$\theta$越大<code>L softmax loss</code>越大.</p>
+<p><img src="/2019/06/03/l-softmax/2.png" alt=""></p>
+<p>为了简单起见,文章中特化了$\psi(\theta)$函数为:</p>
+<script type="math/tex; mode=display">\begin{align}
 \psi(\theta)=(-1)^{k} \cos (m \theta)-2 k, \quad \theta \in\left[\frac{k \pi}{m}, \frac{(k+1) \pi}{m}\right]
-\end{align}
-\]</span></p>
-<p>其中<span class="math inline">\(k\in[0,m-1]\)</span>且为正整数.</p>
-<p>在前向传播和反向传播中作者将<span class="math inline">\(cos(\theta_j)\)</span>替换成<span class="math inline">\(\frac{\boldsymbol{W}_{j}^{T} \boldsymbol{x}_{i}}{\left\|\boldsymbol{W}_{j}\right\|\left\|\boldsymbol{x}_{i}\right\|}\)</span>,<span class="math inline">\(cos(m\theta_{y_i})\)</span>替换为: <span class="math display">\[  \begin{align}
-\begin{aligned} \cos \left(m \theta_{y_{i}}\right) &amp;=C_{m}^{0} \cos ^{m}\left(\theta_{y_{i}}\right)-C_{m}^{2} \cos ^{m-2}\left(\theta_{y_{i}}\right)\left(1-\cos ^{2}\left(\theta_{y_{i}}\right)\right) \\ &amp;+C_{m}^{4} \cos ^{m-4}\left(\theta_{y_{i}}\right)\left(1-\cos ^{2}\left(\theta_{y_{i}}\right)\right)^{2}+\cdots \\ &amp;(-1)^{n} C_{m}^{2 n} \cos ^{m-2 n}\left(\theta_{y_{y_{i}}}\right)\left(1-\cos ^{2}\left(\theta_{y_{i}}\right)\right)^{n}+\cdots \end{aligned}
-\end{align}
-\]</span></p>
-<p><span class="math inline">\(n\)</span>是正整数且<span class="math inline">\(2n\leq m\)</span>.然后将这些函数带入<code>L softmax loss</code>公式中计算即可拿来做损失.但是这个公式还是太长了,所以我决定还是不用这个损失函数.</p>
-<h1 id="a-softmax">A softmax</h1>
-<p>这里还是介绍传统的<code>softmax</code>,这里就不赘述了.</p>
-<h2 id="modified-softmax">modified softmax</h2>
-<p>这个就是作者让传统的<code>softmax</code>的权重<span class="math inline">\(\boldsymbol{W}\)</span>归一化:<span class="math inline">\(||\boldsymbol{W}_j||=1\)</span>(必须是没有bias的),得到了<code>modified softmax loss</code>: <span class="math display">\[ \begin{align}
+\end{align}</script><p>其中$k\in[0,m-1]$且为正整数.</p>
+<p>在前向传播和反向传播中作者将$cos(\theta_j)$替换成$\frac{\boldsymbol{W}_{j}^{T} \boldsymbol{x}_{i}}{\left|\boldsymbol{W}_{j}\right|\left|\boldsymbol{x}_{i}\right|}$,$cos(m\theta_{y_i})$替换为:</p>
+<script type="math/tex; mode=display">\begin{align}
+\begin{aligned} \cos \left(m \theta_{y_{i}}\right) &=C_{m}^{0} \cos ^{m}\left(\theta_{y_{i}}\right)-C_{m}^{2} \cos ^{m-2}\left(\theta_{y_{i}}\right)\left(1-\cos ^{2}\left(\theta_{y_{i}}\right)\right) \\ &+C_{m}^{4} \cos ^{m-4}\left(\theta_{y_{i}}\right)\left(1-\cos ^{2}\left(\theta_{y_{i}}\right)\right)^{2}+\cdots \\ &(-1)^{n} C_{m}^{2 n} \cos ^{m-2 n}\left(\theta_{y_{y_{i}}}\right)\left(1-\cos ^{2}\left(\theta_{y_{i}}\right)\right)^{n}+\cdots \end{aligned}
+\end{align}</script><p>$n$是正整数且$2n\leq m$.然后将这些函数带入<code>L softmax loss</code>公式中计算即可拿来做损失.但是这个公式还是太长了,所以我决定还是不用这个损失函数.</p>
+<h1 id="A-softmax"><a href="#A-softmax" class="headerlink" title="A softmax"></a>A softmax</h1><p>这里还是介绍传统的<code>softmax</code>,这里就不赘述了.</p>
+<h2 id="modified-softmax"><a href="#modified-softmax" class="headerlink" title="modified softmax"></a>modified softmax</h2><p>这个就是作者让传统的<code>softmax</code>的权重$\boldsymbol{W}$归一化:$||\boldsymbol{W}_j||=1$(必须是没有bias的),得到了<code>modified softmax loss</code>:</p>
+<script type="math/tex; mode=display">\begin{align}
 Loss=\frac{1}{N} \sum_{i}-\log \left(\frac{e^{\left\|\boldsymbol{x}_{i}\right\| \cos \left(\theta_{y_{i}, i}\right)}}{\sum_{j} e^{\left\|\boldsymbol{x}_{i}\right\| \cos \left(\theta_{j, i}\right)}}\right)
-\end{align}
-\]</span></p>
-<p>当然我不知道这个归一化有什么好处,从作者给出的结果上来看准确率提高了1%.</p>
-<h2 id="angular-margin-to-softmax-loss">Angular Margin to Softmax Loss</h2>
-<p>对于上面的<code>modified softmax loss</code>在二分类问题中,当<span class="math inline">\(\cos(\theta_1)&gt;\cos(\theta_2)\)</span>可以确定类别为1,但是两个类别的决策面是<span class="math inline">\(\cos(\theta_1)=\cos(\theta_2)\)</span>,这样的决策面间隔太小,为了让决策面之间的间距更大一些,作者提出做两个决策面:</p>
-<p>类别1的决策面为<span class="math inline">\(\cos(m\theta_1)=\cos(\theta_2)\)</span>; 类别2的决策面为<span class="math inline">\(\cos(\theta_1)=\cos(m\theta_2)\)</span>; 其中<span class="math inline">\(m\geq2,m\in N\)</span>,<span class="math inline">\(m\)</span>取整数可以利用倍角公式;</p>
-<p>这样的话,也就是说预测出来的<span class="math inline">\(\boldsymbol{x}\)</span>与他对应的类的夹角必须要小于他与其他类<strong>最小</strong>的夹角的<span class="math inline">\(m\)</span>倍,比如2分类问题,其实就有三个决策面,中间两个决策面之间的就是决策间距.然后推导出<code>A softmax loss</code>: <span class="math display">\[ \begin{aligned}
+\end{align}</script><p>当然我不知道这个归一化有什么好处,从作者给出的结果上来看准确率提高了1%.</p>
+<h2 id="Angular-Margin-to-Softmax-Loss"><a href="#Angular-Margin-to-Softmax-Loss" class="headerlink" title="Angular Margin to Softmax Loss"></a>Angular Margin to Softmax Loss</h2><p>对于上面的<code>modified softmax loss</code>在二分类问题中,当$\cos(\theta_1)&gt;\cos(\theta_2)$可以确定类别为1,但是两个类别的决策面是$\cos(\theta_1)=\cos(\theta_2)$,这样的决策面间隔太小,为了让决策面之间的间距更大一些,作者提出做两个决策面:</p>
+<p>类别1的决策面为$\cos(m\theta_1)=\cos(\theta_2)$;<br>类别2的决策面为$\cos(\theta_1)=\cos(m\theta_2)$;<br>其中$m\geq2,m\in N$,$m$取整数可以利用倍角公式;</p>
+<p>这样的话,也就是说预测出来的$\boldsymbol{x}$与他对应的类的夹角必须要小于他与其他类<strong>最小</strong>的夹角的$m$倍,比如2分类问题,其实就有三个决策面,中间两个决策面之间的就是决策间距.然后推导出<code>A softmax loss</code>:</p>
+<script type="math/tex; mode=display">\begin{aligned}
 Loss = \frac{1}{N}\sum_i-\log(\frac{\exp(\|x_i\|\cos(m\theta_{yi,i}))}{\exp(\|x_i\|\cos(m\theta_{yi,i}))+\sum_{j\neq y_i}\exp(\|x_i\|\cos(\theta_{j,i}))})
-\end{aligned} \]</span></p>
-<p>其中<span class="math inline">\(\theta_{yi,i}\in[0, \frac{\pi}{m}]\)</span>,这就是因为<span class="math inline">\(cos\)</span>的性质决定,我在上面也提到了,当<span class="math inline">\(m\theta_{yi,i}&gt;\pi\)</span>时,会使得<span class="math inline">\(m\theta_{yi,i}&gt;\theta_{j,i}\ ,j\neq y_i\)</span>,但<span class="math inline">\(cos(m\theta_{1})&gt;cos(\theta_2)\)</span>也会成立,这就与之前的假设相反.</p>
-<p>为了避免<span class="math inline">\(cos\)</span>的问题,就设计 <span class="math display">\[
+\end{aligned}</script><p>其中$\theta_{yi,i}\in[0, \frac{\pi}{m}]$,这就是因为$cos$的性质决定,我在上面也提到了,当$m\theta_{yi,i}&gt;\pi$时,会使得$m\theta_{yi,i}&gt;\theta_{j,i}\ ,j\neq y_i$,但$cos(m\theta_{1})&gt;cos(\theta_2)$也会成立,这就与之前的假设相反.</p>
+<p>为了避免$cos$的问题,就设计</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
 \psi(\theta_{y_i,i})=(-1)^k\cos(m\theta_{y_i,i})-2k\ \ \ \theta_{y_i,i}\in[\frac{k\pi}{m},\frac{(k+1)\pi}{m}],且k\in[0,m-1]    
-\end{aligned}\]</span></p>
-<p>来代替.这样使得<span class="math inline">\(\psi\)</span>随着<span class="math inline">\(\theta_{y_i,i}\)</span>单调递减,如果<span class="math inline">\(m\theta_{y_i,i}&gt;\theta_{j,i},j\neq y_i\)</span>那么必有<span class="math inline">\(\psi(\theta_{y_i,i})&lt;\cos(\theta_{j,i})\)</span>,这里我们看一下<span class="math inline">\(\psi(\theta)\)</span>函数的图像(完全符合单独递减的要求,并且是连续函数可导):</p>
-<p><img src="/2019/06/03/l-softmax/psi.png"></p>
-<p>最终得出损失函数如下: <span class="math display">\[ \begin{aligned}
+\end{aligned}</script><p>来代替.这样使得$\psi$随着$\theta_{y_i,i}$单调递减,如果$m\theta_{y_i,i}&gt;\theta_{j,i},j\neq y_i$那么必有$\psi(\theta_{y_i,i})&lt;\cos(\theta_{j,i})$,这里我们看一下$\psi(\theta)$函数的图像(完全符合单独递减的要求,并且是连续函数可导):</p>
+<p><img src="/2019/06/03/l-softmax/psi.png" alt=""></p>
+<p>最终得出损失函数如下:</p>
+<script type="math/tex; mode=display">\begin{aligned}
 L_{ang} = \frac{1}{N}\sum_i-\log(\frac{\exp(\|x_i\|\psi(\theta_{yi,i}))}{\exp(\|x_i\|\psi(\theta_{yi,i}))+\sum_{j\neq y_i}\exp(\|x_i\|\cos(\theta_{j,i}))})
-\end{aligned} \]</span></p>
-<p>这里对比一下三个loss的不同决策界:</p>
+\end{aligned}</script><p>这里对比一下三个loss的不同决策界:</p>
+<div class="table-container">
 <table>
-<colgroup>
-<col style="width: 9%">
-<col style="width: 90%">
-</colgroup>
 <thead>
-<tr class="header">
-<th style="text-align: center;">损失函数</th>
-<th style="text-align: center;">决策面</th>
+<tr>
+<th style="text-align:center">损失函数</th>
+<th style="text-align:center">决策面</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
-<td style="text-align: center;">Softmax Loss</td>
-<td style="text-align: center;"><span class="math inline">\(\boldsymbol{W}_1-\boldsymbol{W}_2+b1-b2=0\)</span></td>
+<tr>
+<td style="text-align:center">Softmax Loss</td>
+<td style="text-align:center">$\boldsymbol{W}_1-\boldsymbol{W}_2+b1-b2=0$</td>
 </tr>
-<tr class="even">
-<td style="text-align: center;">Modified Softmax Loss</td>
-<td style="text-align: center;"><span class="math inline">\(\parallel\boldsymbol{x}(cos(\theta_1)-cos(\theta_2))\parallel\)</span>=0</td>
+<tr>
+<td style="text-align:center">Modified Softmax Loss</td>
+<td style="text-align:center">$\parallel\boldsymbol{x}(cos(\theta_1)-cos(\theta_2))\parallel$=0</td>
 </tr>
-<tr class="odd">
-<td style="text-align: center;">A Softmax Loss</td>
-<td style="text-align: center;"><span class="math display">\[\begin{aligned}   \parallel\boldsymbol{x}\parallel(cos(m\theta_1)-cos(\theta_2)=0\ \text{for class 1}\\ \parallel\boldsymbol{x}\parallel(cos(\theta_1)-cos(m\theta_2)=0\ \text{for class 2} \end{aligned} \]</span></td>
+<tr>
+<td style="text-align:center">A Softmax Loss</td>
+<td style="text-align:center"><script type="math/tex">\begin{aligned}   \parallel\boldsymbol{x}\parallel(cos(m\theta_1)-cos(\theta_2)=0\ \text{for class 1}\\ \parallel\boldsymbol{x}\parallel(cos(\theta_1)-cos(m\theta_2)=0\ \text{for class 2} \end{aligned}</script></td>
 </tr>
 </tbody>
 </table>
-<p><strong>注:</strong> 写到这里我发现这tm就是一个作者的两篇文章,到这里<code>A softmax</code>还是与<code>L softmax</code>的区别就在于是否对<span class="math inline">\(\parallel\boldsymbol{W}\parallel\)</span>进行归一化.这样的话对于分类来说可以观察到<code>A softmax</code>的分类结果都是长度会趋近相同,<code>L softmax</code>的分类长度会不相同.</p>
+</div>
+<p><strong>注:</strong> 写到这里我发现这tm就是一个作者的两篇文章,到这里<code>A softmax</code>还是与<code>L softmax</code>的区别就在于是否对$\parallel\boldsymbol{W}\parallel$进行归一化.这样的话对于分类来说可以观察到<code>A softmax</code>的分类结果都是长度会趋近相同,<code>L softmax</code>的分类长度会不相同.</p>
+<div class="table-container">
 <table>
 <thead>
-<tr class="header">
+<tr>
 <th>A softmax</th>
 <th>L softmax</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
-<td><img src="/2019/06/03/l-softmax/a_softmax_res.png"></td>
-<td><img src="/2019/06/03/l-softmax/l_softmax_res.png"></td>
+<tr>
+<td><img src="/2019/06/03/l-softmax/a_softmax_res.png" alt=""></td>
+<td><img src="/2019/06/03/l-softmax/l_softmax_res.png" alt=""></td>
 </tr>
 </tbody>
 </table>
-<h1 id="additive-margin-softmax">Additive Margin Softmax</h1>
-<p>这里这个作者在2018年发表的文章,这里也一并学习了.这个是效果好并且实现简单的一种方案.</p>
-<h2 id="定义-1">定义</h2>
-<p>实际上看了上面的<code>Loss</code>函数,所有的变化点其实就在<span class="math inline">\(e^{?}\)</span>做文章.这里首先替换了<span class="math inline">\(\psi(\theta)\)</span>函数(<span class="math inline">\(m\)</span>是偏移): <span class="math display">\[ \begin{aligned}
+</div>
+<h1 id="Additive-Margin-Softmax"><a href="#Additive-Margin-Softmax" class="headerlink" title="Additive Margin Softmax"></a>Additive Margin Softmax</h1><p>这里这个作者在2018年发表的文章,这里也一并学习了.这个是效果好并且实现简单的一种方案.</p>
+<h2 id="定义-1"><a href="#定义-1" class="headerlink" title="定义"></a>定义</h2><p>实际上看了上面的<code>Loss</code>函数,所有的变化点其实就在$e^{?}$做文章.这里首先替换了$\psi(\theta)$函数($m$是偏移):</p>
+<script type="math/tex; mode=display">\begin{aligned}
     \psi(\theta)=cos(\theta)-m
-\end{aligned} \]</span></p>
-<p>然后又把<span class="math inline">\(W,x\)</span>都归一化: <span class="math display">\[ \begin{aligned}
+\end{aligned}</script><p>然后又把$W,x$都归一化:</p>
+<script type="math/tex; mode=display">\begin{aligned}
     Loss_i=-log(\frac{e^{\parallel \boldsymbol{W}_{j_i}\parallel \parallel x_i\parallel cos(\theta_{y_i})}}{\sum_j e^{\parallel \boldsymbol{W}_j\parallel \parallel x_i\parallel cos(\theta_j)}})\ \ \ \ \parallel\boldsymbol{W}\parallel=1,\parallel x\parallel=1
-\end{aligned} \]</span></p>
-<p>这样內积结果就是: <span class="math display">\[ \begin{aligned}
-    &lt;\boldsymbol{W_{y_i}},x&gt;=cos(\theta_{y_i})
-\end{aligned} \]</span></p>
-<p>接着再来一个偏移<span class="math inline">\(m,\ m&gt;0\)</span>与缩放因子<span class="math inline">\(s\)</span>,得到最后的损失函数: <span class="math display">\[ \begin{aligned}
+\end{aligned}</script><p>这样內积结果就是:</p>
+<script type="math/tex; mode=display">\begin{aligned}
+    <\boldsymbol{W_{y_i}},x>=cos(\theta_{y_i})
+\end{aligned}</script><p>接着再来一个偏移$m,\ m&gt;0$与缩放因子$s$,得到最后的损失函数:</p>
+<script type="math/tex; mode=display">\begin{aligned}
     Loss_i = - \log \frac{e^{s\cdot(\cos\theta_{y_i} -m)}}{e^{s\cdot (\cos\theta_{y_i} -m)}+\sum^c_{j=1,i\neq t}  e^{s\cdot\cos\theta_j }}
-\end{aligned} \]</span></p>
-<p>按照原论文,取<span class="math inline">\(m=0.35\)</span>,<span class="math inline">\(s=30\)</span>.然后就结束了... 😄</p>
-<p>再补张图(<code>AM softmax</code>没有乘<span class="math inline">\(s\)</span>): <img src="/2019/06/03/l-softmax/psi2.png"></p>
-<h1 id="编程实现">编程实现</h1>
-<p>因为<code>A softmax loss</code>是升级版,所以就实现这个.</p>
-<h2 id="a-softmax-loss">A softmax loss</h2>
-<p>首先是几个代码要注意的点,<span class="math inline">\(cos(\theta)\)</span>可以通过向量除计算,<span class="math inline">\(cos(m\theta)\)</span>可以通过倍角公式计算.: <span class="math display">\[ 
+\end{aligned}</script><p>按照原论文,取$m=0.35$,$s=30$.然后就结束了… 😄</p>
+<p>再补张图(<code>AM softmax</code>没有乘$s$):<br><img src="/2019/06/03/l-softmax/psi2.png" alt=""></p>
+<h1 id="编程实现"><a href="#编程实现" class="headerlink" title="编程实现"></a>编程实现</h1><p>因为<code>A softmax loss</code>是升级版,所以就实现这个.</p>
+<h2 id="A-softmax-loss"><a href="#A-softmax-loss" class="headerlink" title="A softmax loss"></a>A softmax loss</h2><p>首先是几个代码要注意的点,$cos(\theta)$可以通过向量除计算,$cos(m\theta)$可以通过倍角公式计算.:</p>
+<script type="math/tex; mode=display">
 \begin{split}
-\cos \theta_{i,j} &amp;= \frac{\vec{x_i}\cdot\vec{W_j}}{\|\vec{x_i}\|\cdot\|\vec{W_j}\|} \frac{\vec{x_i}\cdot\vec{W_{norm_j}}}{\|\vec{x_i}\|} \cr
-\cos 2\theta &amp;= 2\cos^2 \theta -1 \cr
-\cos 3\theta &amp;= 4\cos^2 \theta -3 \cos \theta \cr
-\cos 4\theta &amp;= 8\cos^4 \theta -8\cos^2 \theta + 1 \cr
-\end{split}
-\]</span></p>
-<p>然后还有<span class="math inline">\(k\)</span>的取值,先利用<span class="math inline">\(sign\)</span>函数判断<span class="math inline">\(cos(\theta)\)</span>属于哪一个区间,再确定<span class="math inline">\(k\)</span>的值: <span class="math display">\[ \begin{aligned}
-    sign_0&amp;=sign(cos(\theta))\\
-    sign_3&amp;=sign(cos(2\theta))*sign_0\\
-    sign_4&amp;=2*sign_0+sign_3-3 \\
-    \psi(\theta)&amp;=sign_3*cos(4\theta)+sign_4 \\
-    &amp;=sign_3*(8\cos^4 \theta -8\cos^2 \theta + 1)+sign_4
-\end{aligned} \]</span></p>
-<p>下面是<span class="math inline">\(m=4\)</span>时的<span class="math inline">\(Loss\)</span>计算函数. <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
+\cos \theta_{i,j} &= \frac{\vec{x_i}\cdot\vec{W_j}}{\|\vec{x_i}\|\cdot\|\vec{W_j}\|} \frac{\vec{x_i}\cdot\vec{W_{norm_j}}}{\|\vec{x_i}\|} \cr
+\cos 2\theta &= 2\cos^2 \theta -1 \cr
+\cos 3\theta &= 4\cos^2 \theta -3 \cos \theta \cr
+\cos 4\theta &= 8\cos^4 \theta -8\cos^2 \theta + 1 \cr
+\end{split}</script><p>然后还有$k$的取值,先利用$sign$函数判断$cos(\theta)$属于哪一个区间,再确定$k$的值:</p>
+<script type="math/tex; mode=display">\begin{aligned}
+    sign_0&=sign(cos(\theta))\\
+    sign_3&=sign(cos(2\theta))*sign_0\\
+    sign_4&=2*sign_0+sign_3-3 \\
+    \psi(\theta)&=sign_3*cos(4\theta)+sign_4 \\
+    &=sign_3*(8\cos^4 \theta -8\cos^2 \theta + 1)+sign_4
+\end{aligned}</script><p>下面是$m=4$时的$Loss$计算函数.<br><div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> tensorflow.python <span class="keyword">as</span> tf</span><br><span class="line"><span class="keyword">from</span> tensorflow <span class="keyword">import</span> contrib</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">Angular_Softmax_Loss</span><span class="params">(embeddings, labels, margin=<span class="number">4</span>)</span>:</span></span><br><span class="line">        <span class="string">"""</span></span><br><span class="line"><span class="string">        Note:(about the value of margin)</span></span><br><span class="line"><span class="string">        as for binary-class case, the minimal value of margin is 2+sqrt(3)</span></span><br><span class="line"><span class="string">        as for multi-class  case, the minimal value of margin is 3</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">        the value of margin proposed by the author of paper is 4.</span></span><br><span class="line"><span class="string">        here the margin value is 4.</span></span><br><span class="line"><span class="string">        """</span></span><br><span class="line">        l = <span class="number">0.</span></span><br><span class="line">        embeddings = tf.random_normal((<span class="number">2</span>, <span class="number">10</span>))</span><br><span class="line">        labels = tf.convert_to_tensor([[<span class="number">1</span>], [<span class="number">2</span>]], dtype=tf.int64)</span><br><span class="line">        x_norm = tf.norm(embeddings, axis=<span class="number">1</span>)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">with</span> tf.variable_scope(<span class="string">"softmax"</span>):</span><br><span class="line">            weights = tf.get_variable(name=<span class="string">'embedding_weights'</span>,</span><br><span class="line">                                      shape=[embeddings.get_shape().as_list()[<span class="number">-1</span>], <span class="number">10</span>],</span><br><span class="line">                                      initializer=contrib.layers.xavier_initializer())</span><br><span class="line">            W = tf.nn.l2_normalize(weights, axis=<span class="number">0</span>)</span><br><span class="line">            <span class="comment"># cacualting the cos value of angles between embeddings and W</span></span><br><span class="line">            orgina_logits = tf.matmul(embeddings, W)</span><br><span class="line">            N = embeddings.get_shape()[<span class="number">0</span>]  <span class="comment"># get batch_size</span></span><br><span class="line">            single_sample_label_index = tf.concat([tf.constant(list(range(N)), tf.int64, shape=(N, <span class="number">1</span>)), labels], axis=<span class="number">1</span>)</span><br><span class="line">            <span class="comment"># N = 128, labels = [1,0,...,9]</span></span><br><span class="line">            <span class="comment"># single_sample_label_index:</span></span><br><span class="line">            <span class="comment"># [ [0,1],</span></span><br><span class="line">            <span class="comment">#   [1,0],</span></span><br><span class="line">            <span class="comment">#   ....</span></span><br><span class="line">            <span class="comment">#   [128,9]]</span></span><br><span class="line">            <span class="comment"># 这里就是F_y_i,根据有目标的位置来选取需要计算的loss位置.</span></span><br><span class="line">            f_y_i = tf.gather_nd(orgina_logits, single_sample_label_index)</span><br><span class="line">            <span class="comment"># NOTE 因为 ||W||=1 所以 cos(theta)=f_y_i/x_norm</span></span><br><span class="line">            cos_theta = tf.div(f_y_i, x_norm)</span><br><span class="line">            cos_theta_2 = tf.pow(cos_theta, <span class="number">2</span>)</span><br><span class="line">            cos_theta_4 = tf.pow(cos_theta, <span class="number">4</span>)</span><br><span class="line"></span><br><span class="line">            sign0 = tf.sign(cos_theta)</span><br><span class="line">            sign3 = tf.multiply(tf.sign(<span class="number">2</span> * cos_theta_2 - <span class="number">1</span>), sign0)</span><br><span class="line">            sign4 = <span class="number">2</span> * sign0 + sign3 - <span class="number">3</span></span><br><span class="line">            result = sign3 * (<span class="number">8</span> * cos_theta_4 - <span class="number">8</span> * cos_theta_2 + <span class="number">1</span>) + sign4</span><br><span class="line"></span><br><span class="line">            margin_logits = tf.multiply(result, x_norm)</span><br><span class="line">            f = <span class="number">1.0</span> / (<span class="number">1.0</span> + l)</span><br><span class="line">            ff = <span class="number">1.0</span> - f</span><br><span class="line">            combined_logits = tf.add(orgina_logits,</span><br><span class="line">                                     tf.scatter_nd(single_sample_label_index,</span><br><span class="line">                                                   tf.subtract(margin_logits, f_y_i),</span><br><span class="line">                                                   orgina_logits.get_shape()))</span><br><span class="line">            updated_logits = ff * orgina_logits + f * combined_logits</span><br><span class="line">            loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits_v2(logits=updated_logits, labels=tf.reshape(labels, (<span class="number">-1</span>,))))</span><br><span class="line">            pred_prob = tf.nn.softmax(logits=updated_logits)</span><br><span class="line">            <span class="keyword">return</span> pred_prob, loss</span><br></pre></td></tr></table></figure>
 
 </div></div></p>
-<h2 id="additive-margin-softmax-1">Additive Margin Softmax</h2>
-<p>这个比前面那个简单多了:</p>
+<h2 id="Additive-Margin-Softmax-1"><a href="#Additive-Margin-Softmax-1" class="headerlink" title="Additive Margin Softmax"></a>Additive Margin Softmax</h2><p>这个比前面那个简单多了:</p>
 <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> tensorflow.python <span class="keyword">import</span> keras</span><br><span class="line"><span class="keyword">from</span> tensorflow.python.keras.models <span class="keyword">import</span> Model</span><br><span class="line"><span class="keyword">from</span> tensorflow.python.keras.layers <span class="keyword">import</span> *</span><br><span class="line"><span class="keyword">import</span> tensorflow.python.keras.backend <span class="keyword">as</span> K</span><br><span class="line"><span class="keyword">from</span> tensorflow.python.keras.constraints <span class="keyword">import</span> unit_norm</span><br><span class="line"></span><br><span class="line">(train_x, train_y), (test_x, test_y) = keras.datasets.fashion_mnist.load_data()</span><br><span class="line"></span><br><span class="line">train_x = K.reshape(train_x, (<span class="number">-1</span>, <span class="number">784</span>))</span><br><span class="line">train_y = keras.utils.to_categorical(train_y, <span class="number">10</span>)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">model = keras.Sequential([Input(shape=(<span class="number">784</span>,)),</span><br><span class="line">                          Dense(<span class="number">512</span>, keras.activations.relu),</span><br><span class="line">                          Dense(<span class="number">256</span>, keras.activations.relu),</span><br><span class="line">                          Dense(<span class="number">128</span>, keras.activations.relu),</span><br><span class="line">                          Lambda(<span class="keyword">lambda</span> x: K.l2_normalize(x, <span class="number">1</span>)),</span><br><span class="line">                          Dense(<span class="number">10</span>, use_bias=<span class="keyword">False</span>, kernel_constraint=unit_norm())])</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">am_softmax_loss</span><span class="params">(y_true, y_pred, scale=<span class="number">30</span>, margin=<span class="number">0.35</span>)</span>:</span></span><br><span class="line">    <span class="comment"># NOTE 预测出来的x就是归一化后的,并且W也是归一化后的,所以y_pred就是cos(𝜃)</span></span><br><span class="line">    y_pred = (y_true * (y_pred - margin) + (<span class="number">1</span> - y_true) * y_pred) * scale</span><br><span class="line">    <span class="keyword">return</span> K.categorical_crossentropy(y_true, y_pred, from_logits=<span class="keyword">True</span>)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">model.compile(loss=am_softmax_loss, optimizer=keras.optimizers.Adam(),</span><br><span class="line">              metrics=[keras.metrics.CategoricalAccuracy()])</span><br><span class="line"></span><br><span class="line">model.fit(x=train_x, y=train_y, batch_size=<span class="number">128</span>, epochs=<span class="number">5</span>)</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<h1 id="总结">总结</h1>
-<p>看了三个文章,都是通过减小内类间距来达到效果.减小内类间距的途径都是构建<span class="math inline">\(\psi(\theta)\)</span>代替<span class="math inline">\(cos(\theta)\)</span>,当然要保证<span class="math inline">\(\psi(\theta) &lt; \cos\theta\)</span>.</p>
-<p>之前的<code>L softmax</code>和<code>A softmax</code>为了保证<span class="math inline">\(\psi(\theta)=cos(m\theta) &lt; \cos\theta\)</span>还使用了分段函数,比较麻烦.然后<code>AM softmax</code>就比较简单粗暴了.</p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>看了三个文章,都是通过减小内类间距来达到效果.减小内类间距的途径都是构建$\psi(\theta)$代替$cos(\theta)$,当然要保证$\psi(\theta)  &lt; \cos\theta$.</p>
+<p>之前的<code>L softmax</code>和<code>A softmax</code>为了保证$\psi(\theta)=cos(m\theta)  &lt; \cos\theta$还使用了分段函数,比较麻烦.然后<code>AM softmax</code>就比较简单粗暴了.</p>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2019/06/03/l-softmax/" data-id="ck1z1indf00cmhm6xnimclkxm" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2019/06/03/l-softmax/" data-id="ck201069x00eec96xqxsbbkfj" class="article-share-link">Share</a>
       
       
       
@@ -497,6 +451,10 @@ L_{ang} = \frac{1}{N}\sum_i-\log(\frac{\exp(\|x_i\|\psi(\theta_{yi,i}))}{\exp(\|
       <ul>
         
           <li>
+            <a href="/2019/10/21/tf15-tb-error/">Tensorflow 1.15中TensorBoard错误</a>
+          </li>
+        
+          <li>
             <a href="/2019/10/21/tf-lookahead/">Lookahead优化器的tf.Keras实现</a>
           </li>
         
@@ -510,10 +468,6 @@ L_{ang} = \frac{1}{N}\sum_i-\log(\frac{\exp(\|x_i\|\psi(\theta_{yi,i}))}{\exp(\|
         
           <li>
             <a href="/2019/09/22/keras-loss-reduction/">tf.keras损失函数聚合测试</a>
-          </li>
-        
-          <li>
-            <a href="/2019/08/30/use-centernet/">配置CenterNet环境</a>
           </li>
         
       </ul>
