@@ -93,31 +93,27 @@
       
         <p>最近搬砖赚了一个<code>GTX2060</code>,所以这两天就在折腾安装显卡以及安装<code>Tensorflow</code>.下面是我的一个记录.</p>
 <a id="more"></a>
-<h1 id="卸载旧驱动与安装新驱动"><a href="#卸载旧驱动与安装新驱动" class="headerlink" title="卸载旧驱动与安装新驱动"></a>卸载旧驱动与安装新驱动</h1><p>首先我要把<code>NVIDIA-390</code>驱动卸载掉,然后安装<code>NVIDIA-418</code>驱动,具体安装流程参考下面这个链接:</p>
+<h1 id="卸载旧驱动与安装新驱动">卸载旧驱动与安装新驱动</h1>
+<p>首先我要把<code>NVIDIA-390</code>驱动卸载掉,然后安装<code>NVIDIA-418</code>驱动,具体安装流程参考下面这个链接:</p>
 <p><strong>注意:</strong>前面都的参考,但是我下载的驱动版本是<code>418</code>,<code>cuda</code>版本为<code>10.0</code>,<code>cudnn</code>为<code>7.5.0</code>.</p>
 <p><code>https://blog.csdn.net/qq_33200967/article/details/80689543</code></p>
-<h1 id="编译Tensorflow"><a href="#编译Tensorflow" class="headerlink" title="编译Tensorflow"></a>编译Tensorflow</h1><p>首先参考<a href="https://www.tensorflow.org/install/source" target="_blank" rel="noopener">官方教程</a>,下载什么的我就不再写了,写几个注意点.</p>
-<ol>
-<li><p>安装<code>bazel</code>版本不能超过<code>0.21.0</code>,不然还得重新装</p>
-</li>
-<li><p>配置选项尽量参照官方的例子.</p>
-</li>
-<li><p>如果内存小于等于8g,那么在编译的时候要加选项限制使用资源</p>
-</li>
-<li><p><code>Ubuntu</code>自带的<code>gcc-7.3</code>,所以编译选项要加<code>--cxxopt=&quot;-D_GLIBCXX_USE_CXX11_ABI=0&quot;</code></p>
-</li>
+<h1 id="编译tensorflow">编译Tensorflow</h1>
+<p>首先参考<a href="https://www.tensorflow.org/install/source" target="_blank" rel="noopener">官方教程</a>,下载什么的我就不再写了,写几个注意点.</p>
+<ol type="1">
+<li><p>安装<code>bazel</code>版本不能超过<code>0.21.0</code>,不然还得重新装</p></li>
+<li><p>配置选项尽量参照官方的例子.</p></li>
+<li><p>如果内存小于等于8g,那么在编译的时候要加选项限制使用资源</p></li>
+<li><p><code>Ubuntu</code>自带的<code>gcc-7.3</code>,所以编译选项要加<code>--cxxopt=&quot;-D_GLIBCXX_USE_CXX11_ABI=0&quot;</code></p></li>
 <li><p>编译的时候发生<code>undefined reference to cudnnCreateLRNDescriptor@libcudnn.so.7</code></p>
-<p>参考:</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sudo touch /etc/ld.so.conf.d/cuda.conf</span><br><span class="line">sudo nano /etc/ld.so.conf.d/cuda.conf</span><br></pre></td></tr></table></figure>
-<p>After edit the file :</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/usr/<span class="built_in">local</span>/cuda/lib64</span><br></pre></td></tr></table></figure>
-<p>Save the changes :</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo ldconfig</span><br></pre></td></tr></table></figure>
-</li>
+<p>参考: <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sudo touch /etc/ld.so.conf.d/cuda.conf</span><br><span class="line">sudo nano /etc/ld.so.conf.d/cuda.conf</span><br></pre></td></tr></table></figure></p>
+<p>After edit the file : <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/usr/<span class="built_in">local</span>/cuda/lib64</span><br></pre></td></tr></table></figure></p>
+<p>Save the changes : <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo ldconfig</span><br></pre></td></tr></table></figure></p></li>
 </ol>
-<h1 id="最后"><a href="#最后" class="headerlink" title="最后"></a>最后</h1><p><strong>NOTE:</strong> 我安装了新显卡之后,使用<code>Tensorflow</code>必须要添加:<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">config = tf.ConfigProto()</span><br><span class="line">config.gpu_options.allow_growth = True</span><br><span class="line">with tf.Session(config=config) as sess:</span><br></pre></td></tr></table></figure></p>
-<p>然后我的软件版本为<code>tensorflow 1.13.1,cuda 10.0,cudnn 7.5.0</code>,我编译的安装包在这里:(<a href="https://github.com/zhen8838/tf-linux-whell" target="_blank" rel="noopener">https://github.com/zhen8838/tf-linux-whell</a>)</p>
+<h1 id="最后">最后</h1>
+<p><strong>NOTE:</strong> 我安装了新显卡之后,使用<code>Tensorflow</code>必须要添加: <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">config = tf.ConfigProto()</span><br><span class="line">config.gpu_options.allow_growth = True</span><br><span class="line">with tf.Session(config=config) as sess:</span><br></pre></td></tr></table></figure></p>
+<p>然后我的软件版本为<code>tensorflow 1.13.1,cuda 10.0,cudnn 7.5.0</code>,我编译的安装包在这里:(https://github.com/zhen8838/tf-linux-whell)</p>
 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">                         ./+o+-       zqh@pc</span><br><span class="line">                 yyyyy- -yyyyyy+      OS: Ubuntu 18.04 bionic</span><br><span class="line">              ://+//////-yyyyyyo      Kernel: x86_64 Linux 4.15.0-46-generic</span><br><span class="line">          .++ .:/++++++/-.+sss/`      Uptime: 7h 52m</span><br><span class="line">        .:++o:  /++++++++/:--:/-      Packages: 2663</span><br><span class="line">       o:+o+:++.`..```.-/oo+++++/     Shell: zsh 5.4.2</span><br><span class="line">      .:+o:+o/.          `+sssoo+/    Resolution: 3000x1920</span><br><span class="line"> .++/+:+oo+o:`             /sssooo.   DE: GNOME </span><br><span class="line">/+++//+:`oo+o               /::--:.   WM: GNOME Shell</span><br><span class="line">\+/+o+++`o++o               ++////.   WM Theme: </span><br><span class="line"> .++.o+++oo+:`             /dddhhh.   GTK Theme: Adwaita [GTK2/3]</span><br><span class="line">      .+.o+oo:.          `oddhhhh+    Icon Theme: Adwaita</span><br><span class="line">       \+.++o+o``-````.:ohdhhhhh+     Font: Cantarell 11</span><br><span class="line">        `:o+++ `ohhhhhhhhyo++os:      CPU: Intel Core i7-7700 @ 8x 4.2GHz [27.8°C]</span><br><span class="line">          .o:`.syhhhhhhh/.oo++o`      GPU: GeForce RTX 2060</span><br><span class="line">              /osyyyyyyo++ooo+++/     RAM: 4622MiB / 16003MiB</span><br><span class="line">                  ````` +oo+++o\:    </span><br><span class="line">                         `oo++.</span><br></pre></td></tr></table></figure>
+
       
     </div>
     <!-- <div class="article-entry" itemprop="articleBody">
@@ -126,36 +122,32 @@
         
           <p>最近搬砖赚了一个<code>GTX2060</code>,所以这两天就在折腾安装显卡以及安装<code>Tensorflow</code>.下面是我的一个记录.</p>
 <a id="more"></a>
-<h1 id="卸载旧驱动与安装新驱动"><a href="#卸载旧驱动与安装新驱动" class="headerlink" title="卸载旧驱动与安装新驱动"></a>卸载旧驱动与安装新驱动</h1><p>首先我要把<code>NVIDIA-390</code>驱动卸载掉,然后安装<code>NVIDIA-418</code>驱动,具体安装流程参考下面这个链接:</p>
+<h1 id="卸载旧驱动与安装新驱动">卸载旧驱动与安装新驱动</h1>
+<p>首先我要把<code>NVIDIA-390</code>驱动卸载掉,然后安装<code>NVIDIA-418</code>驱动,具体安装流程参考下面这个链接:</p>
 <p><strong>注意:</strong>前面都的参考,但是我下载的驱动版本是<code>418</code>,<code>cuda</code>版本为<code>10.0</code>,<code>cudnn</code>为<code>7.5.0</code>.</p>
 <p><code>https://blog.csdn.net/qq_33200967/article/details/80689543</code></p>
-<h1 id="编译Tensorflow"><a href="#编译Tensorflow" class="headerlink" title="编译Tensorflow"></a>编译Tensorflow</h1><p>首先参考<a href="https://www.tensorflow.org/install/source" target="_blank" rel="noopener">官方教程</a>,下载什么的我就不再写了,写几个注意点.</p>
-<ol>
-<li><p>安装<code>bazel</code>版本不能超过<code>0.21.0</code>,不然还得重新装</p>
-</li>
-<li><p>配置选项尽量参照官方的例子.</p>
-</li>
-<li><p>如果内存小于等于8g,那么在编译的时候要加选项限制使用资源</p>
-</li>
-<li><p><code>Ubuntu</code>自带的<code>gcc-7.3</code>,所以编译选项要加<code>--cxxopt=&quot;-D_GLIBCXX_USE_CXX11_ABI=0&quot;</code></p>
-</li>
+<h1 id="编译tensorflow">编译Tensorflow</h1>
+<p>首先参考<a href="https://www.tensorflow.org/install/source" target="_blank" rel="noopener">官方教程</a>,下载什么的我就不再写了,写几个注意点.</p>
+<ol type="1">
+<li><p>安装<code>bazel</code>版本不能超过<code>0.21.0</code>,不然还得重新装</p></li>
+<li><p>配置选项尽量参照官方的例子.</p></li>
+<li><p>如果内存小于等于8g,那么在编译的时候要加选项限制使用资源</p></li>
+<li><p><code>Ubuntu</code>自带的<code>gcc-7.3</code>,所以编译选项要加<code>--cxxopt=&quot;-D_GLIBCXX_USE_CXX11_ABI=0&quot;</code></p></li>
 <li><p>编译的时候发生<code>undefined reference to cudnnCreateLRNDescriptor@libcudnn.so.7</code></p>
-<p>参考:</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sudo touch /etc/ld.so.conf.d/cuda.conf</span><br><span class="line">sudo nano /etc/ld.so.conf.d/cuda.conf</span><br></pre></td></tr></table></figure>
-<p>After edit the file :</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/usr/<span class="built_in">local</span>/cuda/lib64</span><br></pre></td></tr></table></figure>
-<p>Save the changes :</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo ldconfig</span><br></pre></td></tr></table></figure>
-</li>
+<p>参考: <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sudo touch /etc/ld.so.conf.d/cuda.conf</span><br><span class="line">sudo nano /etc/ld.so.conf.d/cuda.conf</span><br></pre></td></tr></table></figure></p>
+<p>After edit the file : <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/usr/<span class="built_in">local</span>/cuda/lib64</span><br></pre></td></tr></table></figure></p>
+<p>Save the changes : <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo ldconfig</span><br></pre></td></tr></table></figure></p></li>
 </ol>
-<h1 id="最后"><a href="#最后" class="headerlink" title="最后"></a>最后</h1><p><strong>NOTE:</strong> 我安装了新显卡之后,使用<code>Tensorflow</code>必须要添加:<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">config = tf.ConfigProto()</span><br><span class="line">config.gpu_options.allow_growth = True</span><br><span class="line">with tf.Session(config=config) as sess:</span><br></pre></td></tr></table></figure></p>
-<p>然后我的软件版本为<code>tensorflow 1.13.1,cuda 10.0,cudnn 7.5.0</code>,我编译的安装包在这里:(<a href="https://github.com/zhen8838/tf-linux-whell" target="_blank" rel="noopener">https://github.com/zhen8838/tf-linux-whell</a>)</p>
+<h1 id="最后">最后</h1>
+<p><strong>NOTE:</strong> 我安装了新显卡之后,使用<code>Tensorflow</code>必须要添加: <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">config = tf.ConfigProto()</span><br><span class="line">config.gpu_options.allow_growth = True</span><br><span class="line">with tf.Session(config=config) as sess:</span><br></pre></td></tr></table></figure></p>
+<p>然后我的软件版本为<code>tensorflow 1.13.1,cuda 10.0,cudnn 7.5.0</code>,我编译的安装包在这里:(https://github.com/zhen8838/tf-linux-whell)</p>
 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">                         ./+o+-       zqh@pc</span><br><span class="line">                 yyyyy- -yyyyyy+      OS: Ubuntu 18.04 bionic</span><br><span class="line">              ://+//////-yyyyyyo      Kernel: x86_64 Linux 4.15.0-46-generic</span><br><span class="line">          .++ .:/++++++/-.+sss/`      Uptime: 7h 52m</span><br><span class="line">        .:++o:  /++++++++/:--:/-      Packages: 2663</span><br><span class="line">       o:+o+:++.`..```.-/oo+++++/     Shell: zsh 5.4.2</span><br><span class="line">      .:+o:+o/.          `+sssoo+/    Resolution: 3000x1920</span><br><span class="line"> .++/+:+oo+o:`             /sssooo.   DE: GNOME </span><br><span class="line">/+++//+:`oo+o               /::--:.   WM: GNOME Shell</span><br><span class="line">\+/+o+++`o++o               ++////.   WM Theme: </span><br><span class="line"> .++.o+++oo+:`             /dddhhh.   GTK Theme: Adwaita [GTK2/3]</span><br><span class="line">      .+.o+oo:.          `oddhhhh+    Icon Theme: Adwaita</span><br><span class="line">       \+.++o+o``-````.:ohdhhhhh+     Font: Cantarell 11</span><br><span class="line">        `:o+++ `ohhhhhhhhyo++os:      CPU: Intel Core i7-7700 @ 8x 4.2GHz [27.8°C]</span><br><span class="line">          .o:`.syhhhhhhh/.oo++o`      GPU: GeForce RTX 2060</span><br><span class="line">              /osyyyyyyo++ooo+++/     RAM: 4622MiB / 16003MiB</span><br><span class="line">                  ````` +oo+++o\:    </span><br><span class="line">                         `oo++.</span><br></pre></td></tr></table></figure>
+
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2019/03/15/build-tensoflow/" data-id="ck3qnzuz6003umd6xe6p4j2fh" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2019/03/15/build-tensoflow/" data-id="ck441ignr003nek6x5dncs2ch" class="article-share-link">Share</a>
       
       
       
@@ -228,6 +220,10 @@
       <ul>
         
           <li>
+            <a href="/2019/12/14/tf-boolmask-index/">tf2.0得到子boolmask在boolmask中的索引</a>
+          </li>
+        
+          <li>
             <a href="/2019/12/03/tf-item-assign/">tf2.0数组索引与赋值</a>
           </li>
         
@@ -241,10 +237,6 @@
         
           <li>
             <a href="/2019/11/02/skimage-mem-leak/">skimage中resize内存泄漏</a>
-          </li>
-        
-          <li>
-            <a href="/2019/10/21/tf15-tb-error/">Tensorflow 1.15中TensorBoard错误</a>
           </li>
         
       </ul>

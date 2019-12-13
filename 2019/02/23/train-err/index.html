@@ -96,25 +96,26 @@
       
         <p>我把<code>Google</code>官方的<code>mobile-net</code>模型拿来做迁移学习.在训练的过程中发现一个问题,在测试中对于目标的<code>recall</code>率十分低.经过了两天的尝试,大概找到了解决办法</p>
 <a id="more"></a>
-<h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>首先看<code>precision</code>和<code>recall</code>曲线,其中蓝色的是迁移学习模型训练过程,后面记为<code>yolonet</code>.橙色的是我自定义的模型训练过程,后面记为<code>pureconv</code>.<br><img src="/2019/02/23/train-err/1.png" alt=""></p>
-<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>可以发现我两个模型的测试与训练时的<code>precision</code>都较好,所以暂时不管.</p>
+<h1 id="问题描述">问题描述</h1>
+<p>首先看<code>precision</code>和<code>recall</code>曲线,其中蓝色的是迁移学习模型训练过程,后面记为<code>yolonet</code>.橙色的是我自定义的模型训练过程,后面记为<code>pureconv</code>. <img src="/2019/02/23/train-err/1.png"></p>
+<h2 id="分析">分析</h2>
+<p>可以发现我两个模型的测试与训练时的<code>precision</code>都较好,所以暂时不管.</p>
 <p>接着看<code>recall</code>,在训练期间,<code>yolonet</code>明显好于<code>pureconv</code>.但是在测试期间情况却相反了.</p>
-<ol>
+<ol type="1">
 <li><p>Batch norm</p>
-<p>这个原因我很快否决了.因为我上一次就已经解决.</p>
-</li>
+<p>这个原因我很快否决了.因为我上一次就已经解决.</p></li>
 <li><p>过拟合</p>
-<p>有的人说这是典型的过拟合,但是我可以确认这完全不是过拟合,因为我才训练一千的<code>step</code>是不应该出现过拟合的情况.当然,我这样说也缺乏证据.必须要绘制出<code>bias-variance</code>曲线才可以证明.(目标检测任务中的<code>bias-variance</code>曲线我还需要去了解如何计算)</p>
-</li>
+<p>有的人说这是典型的过拟合,但是我可以确认这完全不是过拟合,因为我才训练一千的<code>step</code>是不应该出现过拟合的情况.当然,我这样说也缺乏证据.必须要绘制出<code>bias-variance</code>曲线才可以证明.(目标检测任务中的<code>bias-variance</code>曲线我还需要去了解如何计算)</p></li>
 <li><p>神经元被抑制</p>
-<p>这是我的猜想.不过我确实发现了问题所在.</p>
-</li>
+<p>这是我的猜想.不过我确实发现了问题所在.</p></li>
 </ol>
-<h1 id="问题解决"><a href="#问题解决" class="headerlink" title="问题解决"></a>问题解决</h1><p>我查看了模型的代码发现,模型定义的时候增加了<code>l2_regularizer</code>,它应该是罪魁祸首:<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">batch_norm_params = &#123;</span><br><span class="line">    <span class="string">'center'</span>: <span class="keyword">True</span>,</span><br><span class="line">    <span class="string">'scale'</span>: <span class="keyword">True</span>,</span><br><span class="line">    <span class="string">'decay'</span>: batch_norm_decay,</span><br><span class="line">    <span class="string">'epsilon'</span>: batch_norm_epsilon,</span><br><span class="line">    <span class="string">'updates_collections'</span>: batch_norm_updates_collections,</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">if</span> is_training <span class="keyword">is</span> <span class="keyword">not</span> <span class="keyword">None</span>:</span><br><span class="line">    batch_norm_params[<span class="string">'is_training'</span>] = is_training</span><br><span class="line"></span><br><span class="line"><span class="comment"># Set weight_decay for weights in Conv and DepthSepConv layers.</span></span><br><span class="line">weights_init = tf.truncated_normal_initializer(stddev=stddev)</span><br><span class="line">regularizer = tf.contrib.layers.l2_regularizer(weight_decay)</span><br><span class="line"><span class="keyword">if</span> regularize_depthwise:</span><br><span class="line">    depthwise_regularizer = regularizer</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    depthwise_regularizer = <span class="keyword">None</span></span><br><span class="line"><span class="keyword">with</span> slim.arg_scope([slim.conv2d, slim.separable_conv2d],</span><br><span class="line">                    weights_initializer=weights_init,</span><br><span class="line">                    activation_fn=tf.nn.relu6, normalizer_fn=normalizer_fn):</span><br><span class="line">    <span class="keyword">with</span> slim.arg_scope([slim.batch_norm], **batch_norm_params):</span><br><span class="line">        <span class="keyword">with</span> slim.arg_scope([slim.conv2d], weights_regularizer=regularizer):</span><br><span class="line">            <span class="keyword">with</span> slim.arg_scope([slim.separable_conv2d],</span><br><span class="line">                                weights_regularizer=depthwise_regularizer) <span class="keyword">as</span> sc:</span><br><span class="line">                <span class="keyword">return</span> sc</span><br></pre></td></tr></table></figure></p>
+<h1 id="问题解决">问题解决</h1>
+<p>我查看了模型的代码发现,模型定义的时候增加了<code>l2_regularizer</code>,它应该是罪魁祸首: <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">batch_norm_params = &#123;</span><br><span class="line">    <span class="string">'center'</span>: <span class="keyword">True</span>,</span><br><span class="line">    <span class="string">'scale'</span>: <span class="keyword">True</span>,</span><br><span class="line">    <span class="string">'decay'</span>: batch_norm_decay,</span><br><span class="line">    <span class="string">'epsilon'</span>: batch_norm_epsilon,</span><br><span class="line">    <span class="string">'updates_collections'</span>: batch_norm_updates_collections,</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">if</span> is_training <span class="keyword">is</span> <span class="keyword">not</span> <span class="keyword">None</span>:</span><br><span class="line">    batch_norm_params[<span class="string">'is_training'</span>] = is_training</span><br><span class="line"></span><br><span class="line"><span class="comment"># Set weight_decay for weights in Conv and DepthSepConv layers.</span></span><br><span class="line">weights_init = tf.truncated_normal_initializer(stddev=stddev)</span><br><span class="line">regularizer = tf.contrib.layers.l2_regularizer(weight_decay)</span><br><span class="line"><span class="keyword">if</span> regularize_depthwise:</span><br><span class="line">    depthwise_regularizer = regularizer</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    depthwise_regularizer = <span class="keyword">None</span></span><br><span class="line"><span class="keyword">with</span> slim.arg_scope([slim.conv2d, slim.separable_conv2d],</span><br><span class="line">                    weights_initializer=weights_init,</span><br><span class="line">                    activation_fn=tf.nn.relu6, normalizer_fn=normalizer_fn):</span><br><span class="line">    <span class="keyword">with</span> slim.arg_scope([slim.batch_norm], **batch_norm_params):</span><br><span class="line">        <span class="keyword">with</span> slim.arg_scope([slim.conv2d], weights_regularizer=regularizer):</span><br><span class="line">            <span class="keyword">with</span> slim.arg_scope([slim.separable_conv2d],</span><br><span class="line">                                weights_regularizer=depthwise_regularizer) <span class="keyword">as</span> sc:</span><br><span class="line">                <span class="keyword">return</span> sc</span><br></pre></td></tr></table></figure></p>
 <p>然后我删去了正则化部分.</p>
 <p>同时把<code>Batch norm</code>的<code>decay</code>参数从<code>0.9997</code>设置到了<code>0.999</code>,这样加快的归一化的学习速度.</p>
-<p>原因:</p>
-<script type="math/tex; mode=display">variable = variable - (1 - decay) * (variable - value)</script><h1 id="效果"><a href="#效果" class="headerlink" title="效果"></a>效果</h1><p>可以看到,现在<code>yoloconv</code>的效果都高于<code>pureconv</code>.<br><img src="/2019/02/23/train-err/2.png" alt=""></p>
+<p>原因: <span class="math display">\[ variable = variable - (1 - decay) * (variable - value) \]</span></p>
+<h1 id="效果">效果</h1>
+<p>可以看到,现在<code>yoloconv</code>的效果都高于<code>pureconv</code>. <img src="/2019/02/23/train-err/2.png"></p>
 
       
     </div>
@@ -124,31 +125,32 @@
         
           <p>我把<code>Google</code>官方的<code>mobile-net</code>模型拿来做迁移学习.在训练的过程中发现一个问题,在测试中对于目标的<code>recall</code>率十分低.经过了两天的尝试,大概找到了解决办法</p>
 <a id="more"></a>
-<h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>首先看<code>precision</code>和<code>recall</code>曲线,其中蓝色的是迁移学习模型训练过程,后面记为<code>yolonet</code>.橙色的是我自定义的模型训练过程,后面记为<code>pureconv</code>.<br><img src="/2019/02/23/train-err/1.png" alt=""></p>
-<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>可以发现我两个模型的测试与训练时的<code>precision</code>都较好,所以暂时不管.</p>
+<h1 id="问题描述">问题描述</h1>
+<p>首先看<code>precision</code>和<code>recall</code>曲线,其中蓝色的是迁移学习模型训练过程,后面记为<code>yolonet</code>.橙色的是我自定义的模型训练过程,后面记为<code>pureconv</code>. <img src="/2019/02/23/train-err/1.png"></p>
+<h2 id="分析">分析</h2>
+<p>可以发现我两个模型的测试与训练时的<code>precision</code>都较好,所以暂时不管.</p>
 <p>接着看<code>recall</code>,在训练期间,<code>yolonet</code>明显好于<code>pureconv</code>.但是在测试期间情况却相反了.</p>
-<ol>
+<ol type="1">
 <li><p>Batch norm</p>
-<p>这个原因我很快否决了.因为我上一次就已经解决.</p>
-</li>
+<p>这个原因我很快否决了.因为我上一次就已经解决.</p></li>
 <li><p>过拟合</p>
-<p>有的人说这是典型的过拟合,但是我可以确认这完全不是过拟合,因为我才训练一千的<code>step</code>是不应该出现过拟合的情况.当然,我这样说也缺乏证据.必须要绘制出<code>bias-variance</code>曲线才可以证明.(目标检测任务中的<code>bias-variance</code>曲线我还需要去了解如何计算)</p>
-</li>
+<p>有的人说这是典型的过拟合,但是我可以确认这完全不是过拟合,因为我才训练一千的<code>step</code>是不应该出现过拟合的情况.当然,我这样说也缺乏证据.必须要绘制出<code>bias-variance</code>曲线才可以证明.(目标检测任务中的<code>bias-variance</code>曲线我还需要去了解如何计算)</p></li>
 <li><p>神经元被抑制</p>
-<p>这是我的猜想.不过我确实发现了问题所在.</p>
-</li>
+<p>这是我的猜想.不过我确实发现了问题所在.</p></li>
 </ol>
-<h1 id="问题解决"><a href="#问题解决" class="headerlink" title="问题解决"></a>问题解决</h1><p>我查看了模型的代码发现,模型定义的时候增加了<code>l2_regularizer</code>,它应该是罪魁祸首:<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">batch_norm_params = &#123;</span><br><span class="line">    <span class="string">'center'</span>: <span class="keyword">True</span>,</span><br><span class="line">    <span class="string">'scale'</span>: <span class="keyword">True</span>,</span><br><span class="line">    <span class="string">'decay'</span>: batch_norm_decay,</span><br><span class="line">    <span class="string">'epsilon'</span>: batch_norm_epsilon,</span><br><span class="line">    <span class="string">'updates_collections'</span>: batch_norm_updates_collections,</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">if</span> is_training <span class="keyword">is</span> <span class="keyword">not</span> <span class="keyword">None</span>:</span><br><span class="line">    batch_norm_params[<span class="string">'is_training'</span>] = is_training</span><br><span class="line"></span><br><span class="line"><span class="comment"># Set weight_decay for weights in Conv and DepthSepConv layers.</span></span><br><span class="line">weights_init = tf.truncated_normal_initializer(stddev=stddev)</span><br><span class="line">regularizer = tf.contrib.layers.l2_regularizer(weight_decay)</span><br><span class="line"><span class="keyword">if</span> regularize_depthwise:</span><br><span class="line">    depthwise_regularizer = regularizer</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    depthwise_regularizer = <span class="keyword">None</span></span><br><span class="line"><span class="keyword">with</span> slim.arg_scope([slim.conv2d, slim.separable_conv2d],</span><br><span class="line">                    weights_initializer=weights_init,</span><br><span class="line">                    activation_fn=tf.nn.relu6, normalizer_fn=normalizer_fn):</span><br><span class="line">    <span class="keyword">with</span> slim.arg_scope([slim.batch_norm], **batch_norm_params):</span><br><span class="line">        <span class="keyword">with</span> slim.arg_scope([slim.conv2d], weights_regularizer=regularizer):</span><br><span class="line">            <span class="keyword">with</span> slim.arg_scope([slim.separable_conv2d],</span><br><span class="line">                                weights_regularizer=depthwise_regularizer) <span class="keyword">as</span> sc:</span><br><span class="line">                <span class="keyword">return</span> sc</span><br></pre></td></tr></table></figure></p>
+<h1 id="问题解决">问题解决</h1>
+<p>我查看了模型的代码发现,模型定义的时候增加了<code>l2_regularizer</code>,它应该是罪魁祸首: <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">batch_norm_params = &#123;</span><br><span class="line">    <span class="string">'center'</span>: <span class="keyword">True</span>,</span><br><span class="line">    <span class="string">'scale'</span>: <span class="keyword">True</span>,</span><br><span class="line">    <span class="string">'decay'</span>: batch_norm_decay,</span><br><span class="line">    <span class="string">'epsilon'</span>: batch_norm_epsilon,</span><br><span class="line">    <span class="string">'updates_collections'</span>: batch_norm_updates_collections,</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">if</span> is_training <span class="keyword">is</span> <span class="keyword">not</span> <span class="keyword">None</span>:</span><br><span class="line">    batch_norm_params[<span class="string">'is_training'</span>] = is_training</span><br><span class="line"></span><br><span class="line"><span class="comment"># Set weight_decay for weights in Conv and DepthSepConv layers.</span></span><br><span class="line">weights_init = tf.truncated_normal_initializer(stddev=stddev)</span><br><span class="line">regularizer = tf.contrib.layers.l2_regularizer(weight_decay)</span><br><span class="line"><span class="keyword">if</span> regularize_depthwise:</span><br><span class="line">    depthwise_regularizer = regularizer</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    depthwise_regularizer = <span class="keyword">None</span></span><br><span class="line"><span class="keyword">with</span> slim.arg_scope([slim.conv2d, slim.separable_conv2d],</span><br><span class="line">                    weights_initializer=weights_init,</span><br><span class="line">                    activation_fn=tf.nn.relu6, normalizer_fn=normalizer_fn):</span><br><span class="line">    <span class="keyword">with</span> slim.arg_scope([slim.batch_norm], **batch_norm_params):</span><br><span class="line">        <span class="keyword">with</span> slim.arg_scope([slim.conv2d], weights_regularizer=regularizer):</span><br><span class="line">            <span class="keyword">with</span> slim.arg_scope([slim.separable_conv2d],</span><br><span class="line">                                weights_regularizer=depthwise_regularizer) <span class="keyword">as</span> sc:</span><br><span class="line">                <span class="keyword">return</span> sc</span><br></pre></td></tr></table></figure></p>
 <p>然后我删去了正则化部分.</p>
 <p>同时把<code>Batch norm</code>的<code>decay</code>参数从<code>0.9997</code>设置到了<code>0.999</code>,这样加快的归一化的学习速度.</p>
-<p>原因:</p>
-<script type="math/tex; mode=display">variable = variable - (1 - decay) * (variable - value)</script><h1 id="效果"><a href="#效果" class="headerlink" title="效果"></a>效果</h1><p>可以看到,现在<code>yoloconv</code>的效果都高于<code>pureconv</code>.<br><img src="/2019/02/23/train-err/2.png" alt=""></p>
+<p>原因: <span class="math display">\[ variable = variable - (1 - decay) * (variable - value) \]</span></p>
+<h1 id="效果">效果</h1>
+<p>可以看到,现在<code>yoloconv</code>的效果都高于<code>pureconv</code>. <img src="/2019/02/23/train-err/2.png"></p>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2019/02/23/train-err/" data-id="ck3qnzv2i00c1md6x49vt1gkg" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2019/02/23/train-err/" data-id="ck441igr800c6ek6x074ggmc8" class="article-share-link">Share</a>
       
       
       
@@ -221,6 +223,10 @@
       <ul>
         
           <li>
+            <a href="/2019/12/14/tf-boolmask-index/">tf2.0得到子boolmask在boolmask中的索引</a>
+          </li>
+        
+          <li>
             <a href="/2019/12/03/tf-item-assign/">tf2.0数组索引与赋值</a>
           </li>
         
@@ -234,10 +240,6 @@
         
           <li>
             <a href="/2019/11/02/skimage-mem-leak/">skimage中resize内存泄漏</a>
-          </li>
-        
-          <li>
-            <a href="/2019/10/21/tf15-tb-error/">Tensorflow 1.15中TensorBoard错误</a>
           </li>
         
       </ul>
