@@ -21,7 +21,7 @@
 <meta property="og:image" content="https://zhen8838.github.io/2019/06/03/l-softmax/a_softmax_res.png">
 <meta property="og:image" content="https://zhen8838.github.io/2019/06/03/l-softmax/l_softmax_res.png">
 <meta property="og:image" content="https://zhen8838.github.io/2019/06/03/l-softmax/psi2.png">
-<meta property="og:updated_time" content="2020-01-14T05:18:20.721Z">
+<meta property="og:updated_time" content="2020-02-02T12:00:41.305Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="L softmx -&gt; A softmx -&gt; AM softmax">
 <meta name="twitter:description" content="本篇文章是对Large Margin Softmax loss,Angular Margin to Softmax Loss,Additive Margin Softmax Loss的学习记录。公式我尽量按照原文来写，并加入一点注释。">
@@ -102,9 +102,11 @@
 <a id="more"></a>
 <h1 id="原始的softmax">原始的softmax</h1>
 <p>首先定义第<code>i</code>个输入特征<span class="math inline">\(x_i\)</span>和标签<span class="math inline">\(y_i\)</span>。传统的<code>softmax</code>定义为：</p>
-<p><span class="math display">\[ \begin{aligned}
+<p><span class="math display">\[ 
+\begin{aligned}
     Loss=\frac{1}{N}\sum_i Loss_i=-\frac{1}{N}log(P_{y_i})=-\frac{1}{N}log(\frac{e^{f_{y_i}}}{\sum_j e^{f_j}})
-\end{aligned} \]</span></p>
+\end{aligned} 
+\]</span></p>
 <p><strong>注：</strong> <span class="math inline">\(f_{y_i}\)</span>应该是指的是输出中对应label分类的那个位置，<span class="math inline">\(f_j\)</span>对应第<span class="math inline">\(j\)</span>个元素(<span class="math inline">\(j \in [1,K)\)</span>,<span class="math inline">\(K\)</span>对应类别数量)的输出.<span class="math inline">\(N\)</span>为输入样本数量.</p>
 <p>因为在<code>softmax loss</code>中最后都使用全连接层来实现分类,所以<span class="math inline">\(f_{y_i}=\boldsymbol{W}_{y_i}^Tx_i\)</span>,<span class="math inline">\(\boldsymbol{W}_{y_i}\)</span>是<span class="math inline">\(\boldsymbol{W}\)</span>的第<span class="math inline">\(y_i\)</span>列.(一般来说是全连接层还需要加上偏置,但是为了公式推导的方便这里不加,在实际中直接加偏置即可).再因为这里的<span class="math inline">\(f_j\)</span>是<span class="math inline">\(\boldsymbol{W}_j\)</span>和<span class="math inline">\(x_i\)</span>的內积,所以<span class="math inline">\(f_j=\boldsymbol{W}_jx_i=\parallel \boldsymbol{W}_j\parallel \parallel x_i\parallel cos(\theta_j)\)</span>,<span class="math inline">\(\theta_j(0\leq\theta_j\leq\pi)\)</span>是向量<span class="math inline">\(\boldsymbol{W}_i\)</span>和<span class="math inline">\(x_i\)</span>的夹角.最终损失函数定义为:</p>
 <p><span class="math display">\[ \begin{aligned}
@@ -266,9 +268,11 @@ L_{ang} = \frac{1}{N}\sum_i-\log(\frac{\exp(\|x_i\|\psi(\theta_{yi,i}))}{\exp(\|
 <a id="more"></a>
 <h1 id="原始的softmax">原始的softmax</h1>
 <p>首先定义第<code>i</code>个输入特征<span class="math inline">\(x_i\)</span>和标签<span class="math inline">\(y_i\)</span>。传统的<code>softmax</code>定义为：</p>
-<p><span class="math display">\[ \begin{aligned}
+<p><span class="math display">\[ 
+\begin{aligned}
     Loss=\frac{1}{N}\sum_i Loss_i=-\frac{1}{N}log(P_{y_i})=-\frac{1}{N}log(\frac{e^{f_{y_i}}}{\sum_j e^{f_j}})
-\end{aligned} \]</span></p>
+\end{aligned} 
+\]</span></p>
 <p><strong>注：</strong> <span class="math inline">\(f_{y_i}\)</span>应该是指的是输出中对应label分类的那个位置，<span class="math inline">\(f_j\)</span>对应第<span class="math inline">\(j\)</span>个元素(<span class="math inline">\(j \in [1,K)\)</span>,<span class="math inline">\(K\)</span>对应类别数量)的输出.<span class="math inline">\(N\)</span>为输入样本数量.</p>
 <p>因为在<code>softmax loss</code>中最后都使用全连接层来实现分类,所以<span class="math inline">\(f_{y_i}=\boldsymbol{W}_{y_i}^Tx_i\)</span>,<span class="math inline">\(\boldsymbol{W}_{y_i}\)</span>是<span class="math inline">\(\boldsymbol{W}\)</span>的第<span class="math inline">\(y_i\)</span>列.(一般来说是全连接层还需要加上偏置,但是为了公式推导的方便这里不加,在实际中直接加偏置即可).再因为这里的<span class="math inline">\(f_j\)</span>是<span class="math inline">\(\boldsymbol{W}_j\)</span>和<span class="math inline">\(x_i\)</span>的內积,所以<span class="math inline">\(f_j=\boldsymbol{W}_jx_i=\parallel \boldsymbol{W}_j\parallel \parallel x_i\parallel cos(\theta_j)\)</span>,<span class="math inline">\(\theta_j(0\leq\theta_j\leq\pi)\)</span>是向量<span class="math inline">\(\boldsymbol{W}_i\)</span>和<span class="math inline">\(x_i\)</span>的夹角.最终损失函数定义为:</p>
 <p><span class="math display">\[ \begin{aligned}
@@ -424,7 +428,7 @@ L_{ang} = \frac{1}{N}\sum_i-\log(\frac{\exp(\|x_i\|\psi(\theta_{yi,i}))}{\exp(\|
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2019/06/03/l-softmax/" data-id="ck64z20tj007bre6xvjhl8a9v" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2019/06/03/l-softmax/" data-id="ck64z4oa3006dkr6xl0yv718f" class="article-share-link">Share</a>
       
       
       
