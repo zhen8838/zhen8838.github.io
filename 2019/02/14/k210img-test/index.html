@@ -95,29 +95,19 @@
       
         <p>马上要开始移植模型到k210中,首先我需要知道k210中的图像数据是如何排列的.所以需要做一个测试.</p>
 <a id="more"></a>
-<h1 id="介绍">介绍</h1>
-<p>k210中的lcd所显示的<code>buf</code>为<code>rgb565</code>排列.对应<code>numpy</code>中的<code>hwc</code>顺序.</p>
+<h1 id="介绍"><a href="#介绍" class="headerlink" title="介绍"></a>介绍</h1><p>k210中的lcd所显示的<code>buf</code>为<code>rgb565</code>排列.对应<code>numpy</code>中的<code>hwc</code>顺序.</p>
 <p>k210中送入<code>kpu</code>的<code>ai_buf</code>为<code>rgb888</code>排列,对应<code>numpy</code>中的<code>chw</code>顺序.</p>
-<h1 id="图片转c数组">图片转c数组</h1>
-<p>因为两个<code>buf</code>的排列顺序不同,所以需要两个不同的程序:</p>
-<h2 id="jpg转img_buf">jpg转img_buf</h2>
-<p>这里发现要把两个<code>rgb</code>拼成一个32位的数据,图片的显示效果会更好.</p>
+<h1 id="图片转c数组"><a href="#图片转c数组" class="headerlink" title="图片转c数组"></a>图片转c数组</h1><p>因为两个<code>buf</code>的排列顺序不同,所以需要两个不同的程序:</p>
+<h2 id="jpg转img-buf"><a href="#jpg转img-buf" class="headerlink" title="jpg转img_buf"></a>jpg转img_buf</h2><p>这里发现要把两个<code>rgb</code>拼成一个32位的数据,图片的显示效果会更好.</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">test_jpg_to_array</span><span class="params">()</span>:</span></span><br><span class="line">    img = fddb._read_img(<span class="string">'data/2.jpeg'</span>, <span class="keyword">True</span>)</span><br><span class="line">    img = img.astype(<span class="string">'uint8'</span>)</span><br><span class="line">    <span class="keyword">with</span> open(<span class="string">'tmp/img.h'</span>, <span class="string">'w'</span>) <span class="keyword">as</span> f:</span><br><span class="line">        f.write(<span class="string">'#ifndef _IMG_H_ \n\</span></span><br><span class="line"><span class="string">#define _IMG_H_ \n\</span></span><br><span class="line"><span class="string">#include &lt;stdint.h&gt; \n\</span></span><br><span class="line"><span class="string">uint32_t rgb_image[38400] __attribute__((aligned(64))) = &#123;'</span>)</span><br><span class="line">        <span class="keyword">for</span> i <span class="keyword">in</span> range(img.shape[<span class="number">0</span>]):</span><br><span class="line">            <span class="keyword">for</span> j <span class="keyword">in</span> range(<span class="number">0</span>, img.shape[<span class="number">1</span>], <span class="number">2</span>):</span><br><span class="line">                rR = img[i, j, <span class="number">0</span>] &gt;&gt; <span class="number">3</span></span><br><span class="line">                rG = img[i, j, <span class="number">1</span>] &gt;&gt; <span class="number">2</span></span><br><span class="line">                rB = img[i, j, <span class="number">2</span>] &gt;&gt; <span class="number">3</span></span><br><span class="line">                rrgb = (rR &lt;&lt; <span class="number">11</span>) | (rG &lt;&lt; <span class="number">5</span>) | rB</span><br><span class="line">                lR = img[i, j+<span class="number">1</span>, <span class="number">0</span>] &gt;&gt; <span class="number">3</span></span><br><span class="line">                lG = img[i, j+<span class="number">1</span>, <span class="number">1</span>] &gt;&gt; <span class="number">2</span></span><br><span class="line">                lB = img[i, j+<span class="number">1</span>, <span class="number">2</span>] &gt;&gt; <span class="number">3</span></span><br><span class="line">                lrgb = (lR &lt;&lt; <span class="number">11</span>) | (lG &lt;&lt; <span class="number">5</span>) | lB</span><br><span class="line">                f.write(str(hex(rrgb &lt;&lt; <span class="number">16</span> | lrgb))+<span class="string">','</span>)</span><br><span class="line">            f.write(<span class="string">'\n'</span>)</span><br><span class="line">        f.write(<span class="string">'&#125;;\n\</span></span><br><span class="line"><span class="string">#endif'</span>)</span><br></pre></td></tr></table></figure>
-<h2 id="jpg转ai_buf">jpg转ai_buf</h2>
-<p>这里就是把<code>hwc</code>移动成<code>chw</code>数据,然后写入即可.</p>
+<h2 id="jpg转ai-buf"><a href="#jpg转ai-buf" class="headerlink" title="jpg转ai_buf"></a>jpg转ai_buf</h2><p>这里就是把<code>hwc</code>移动成<code>chw</code>数据,然后写入即可.</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">test_jpeg_to_ai_array</span><span class="params">()</span>:</span></span><br><span class="line">    img = fddb._read_img(<span class="string">'data/2.jpeg'</span>, <span class="keyword">True</span>)</span><br><span class="line">    img = img.astype(<span class="string">'uint8'</span>)</span><br><span class="line">    img = np.rollaxis(img, <span class="number">2</span>, <span class="number">0</span>)</span><br><span class="line">    <span class="keyword">with</span> open(<span class="string">'tmp/aiimg.h'</span>, <span class="string">'w'</span>) <span class="keyword">as</span> f:</span><br><span class="line">        f.write(<span class="string">'#ifndef _AIIMG_H_ \n\</span></span><br><span class="line"><span class="string">#define _AIIMG_H_ \n\</span></span><br><span class="line"><span class="string">#include &lt;stdint.h&gt; \n\</span></span><br><span class="line"><span class="string">uint8_t ai_image[] __attribute__((aligned(64))) = &#123;'</span>)</span><br><span class="line">        <span class="keyword">for</span> c <span class="keyword">in</span> range(img.shape[<span class="number">0</span>]):</span><br><span class="line">            <span class="keyword">for</span> i <span class="keyword">in</span> range(img.shape[<span class="number">1</span>]):</span><br><span class="line">                <span class="keyword">for</span> j <span class="keyword">in</span> range(img.shape[<span class="number">2</span>]):</span><br><span class="line">                    f.write(str(hex(img[c, i, j]))+<span class="string">','</span>)</span><br><span class="line">                f.write(<span class="string">'\n'</span>)</span><br><span class="line">        f.write(<span class="string">'&#125;;\n\</span></span><br><span class="line"><span class="string">#endif'</span>)</span><br></pre></td></tr></table></figure>
-<h1 id="修改kpu程序">修改kpu程序</h1>
-<h2 id="显示图片部分">显示图片部分</h2>
-<p>只需要修改成对应的<code>buf</code>即可</p>
+<h1 id="修改kpu程序"><a href="#修改kpu程序" class="headerlink" title="修改kpu程序"></a>修改kpu程序</h1><h2 id="显示图片部分"><a href="#显示图片部分" class="headerlink" title="显示图片部分"></a>显示图片部分</h2><p>只需要修改成对应的<code>buf</code>即可</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">lcd_draw_picture(<span class="number">0</span>, <span class="number">0</span>, <span class="number">320</span>, <span class="number">240</span>, rgb_image);</span><br></pre></td></tr></table></figure>
-<h2 id="kpu部分">kpu部分</h2>
-<p>只需要把<code>task.src</code>改成对应的<code>buf</code>即可.</p>
+<h2 id="kpu部分"><a href="#kpu部分" class="headerlink" title="kpu部分"></a>kpu部分</h2><p>只需要把<code>task.src</code>改成对应的<code>buf</code>即可.</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* init face detect model */</span></span><br><span class="line">kpu_task_gencode_output_init(&amp;task);</span><br><span class="line">task.src= (<span class="keyword">uint64_t</span> *)ai_image;</span><br><span class="line">task.dma_ch= <span class="number">5</span>;</span><br><span class="line">task.callback= ai_done;</span><br><span class="line">kpu_single_task_init(&amp;task);</span><br></pre></td></tr></table></figure>
-<h1 id="效果">效果</h1>
-<p>有了这个方法,我就可以去测试我的模型输出是否正确.</p>
-<figure>
-<img src="/2019/02/14/k210img-test/1.jpg" alt="显示效果"><figcaption>显示效果</figcaption>
-</figure>
+<h1 id="效果"><a href="#效果" class="headerlink" title="效果"></a>效果</h1><p>有了这个方法,我就可以去测试我的模型输出是否正确.</p>
+<p><img src="/2019/02/14/k210img-test/1.jpg" alt="显示效果"></p>
 
       
     </div>
@@ -127,35 +117,25 @@
         
           <p>马上要开始移植模型到k210中,首先我需要知道k210中的图像数据是如何排列的.所以需要做一个测试.</p>
 <a id="more"></a>
-<h1 id="介绍">介绍</h1>
-<p>k210中的lcd所显示的<code>buf</code>为<code>rgb565</code>排列.对应<code>numpy</code>中的<code>hwc</code>顺序.</p>
+<h1 id="介绍"><a href="#介绍" class="headerlink" title="介绍"></a>介绍</h1><p>k210中的lcd所显示的<code>buf</code>为<code>rgb565</code>排列.对应<code>numpy</code>中的<code>hwc</code>顺序.</p>
 <p>k210中送入<code>kpu</code>的<code>ai_buf</code>为<code>rgb888</code>排列,对应<code>numpy</code>中的<code>chw</code>顺序.</p>
-<h1 id="图片转c数组">图片转c数组</h1>
-<p>因为两个<code>buf</code>的排列顺序不同,所以需要两个不同的程序:</p>
-<h2 id="jpg转img_buf">jpg转img_buf</h2>
-<p>这里发现要把两个<code>rgb</code>拼成一个32位的数据,图片的显示效果会更好.</p>
+<h1 id="图片转c数组"><a href="#图片转c数组" class="headerlink" title="图片转c数组"></a>图片转c数组</h1><p>因为两个<code>buf</code>的排列顺序不同,所以需要两个不同的程序:</p>
+<h2 id="jpg转img-buf"><a href="#jpg转img-buf" class="headerlink" title="jpg转img_buf"></a>jpg转img_buf</h2><p>这里发现要把两个<code>rgb</code>拼成一个32位的数据,图片的显示效果会更好.</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">test_jpg_to_array</span><span class="params">()</span>:</span></span><br><span class="line">    img = fddb._read_img(<span class="string">'data/2.jpeg'</span>, <span class="keyword">True</span>)</span><br><span class="line">    img = img.astype(<span class="string">'uint8'</span>)</span><br><span class="line">    <span class="keyword">with</span> open(<span class="string">'tmp/img.h'</span>, <span class="string">'w'</span>) <span class="keyword">as</span> f:</span><br><span class="line">        f.write(<span class="string">'#ifndef _IMG_H_ \n\</span></span><br><span class="line"><span class="string">#define _IMG_H_ \n\</span></span><br><span class="line"><span class="string">#include &lt;stdint.h&gt; \n\</span></span><br><span class="line"><span class="string">uint32_t rgb_image[38400] __attribute__((aligned(64))) = &#123;'</span>)</span><br><span class="line">        <span class="keyword">for</span> i <span class="keyword">in</span> range(img.shape[<span class="number">0</span>]):</span><br><span class="line">            <span class="keyword">for</span> j <span class="keyword">in</span> range(<span class="number">0</span>, img.shape[<span class="number">1</span>], <span class="number">2</span>):</span><br><span class="line">                rR = img[i, j, <span class="number">0</span>] &gt;&gt; <span class="number">3</span></span><br><span class="line">                rG = img[i, j, <span class="number">1</span>] &gt;&gt; <span class="number">2</span></span><br><span class="line">                rB = img[i, j, <span class="number">2</span>] &gt;&gt; <span class="number">3</span></span><br><span class="line">                rrgb = (rR &lt;&lt; <span class="number">11</span>) | (rG &lt;&lt; <span class="number">5</span>) | rB</span><br><span class="line">                lR = img[i, j+<span class="number">1</span>, <span class="number">0</span>] &gt;&gt; <span class="number">3</span></span><br><span class="line">                lG = img[i, j+<span class="number">1</span>, <span class="number">1</span>] &gt;&gt; <span class="number">2</span></span><br><span class="line">                lB = img[i, j+<span class="number">1</span>, <span class="number">2</span>] &gt;&gt; <span class="number">3</span></span><br><span class="line">                lrgb = (lR &lt;&lt; <span class="number">11</span>) | (lG &lt;&lt; <span class="number">5</span>) | lB</span><br><span class="line">                f.write(str(hex(rrgb &lt;&lt; <span class="number">16</span> | lrgb))+<span class="string">','</span>)</span><br><span class="line">            f.write(<span class="string">'\n'</span>)</span><br><span class="line">        f.write(<span class="string">'&#125;;\n\</span></span><br><span class="line"><span class="string">#endif'</span>)</span><br></pre></td></tr></table></figure>
-<h2 id="jpg转ai_buf">jpg转ai_buf</h2>
-<p>这里就是把<code>hwc</code>移动成<code>chw</code>数据,然后写入即可.</p>
+<h2 id="jpg转ai-buf"><a href="#jpg转ai-buf" class="headerlink" title="jpg转ai_buf"></a>jpg转ai_buf</h2><p>这里就是把<code>hwc</code>移动成<code>chw</code>数据,然后写入即可.</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">test_jpeg_to_ai_array</span><span class="params">()</span>:</span></span><br><span class="line">    img = fddb._read_img(<span class="string">'data/2.jpeg'</span>, <span class="keyword">True</span>)</span><br><span class="line">    img = img.astype(<span class="string">'uint8'</span>)</span><br><span class="line">    img = np.rollaxis(img, <span class="number">2</span>, <span class="number">0</span>)</span><br><span class="line">    <span class="keyword">with</span> open(<span class="string">'tmp/aiimg.h'</span>, <span class="string">'w'</span>) <span class="keyword">as</span> f:</span><br><span class="line">        f.write(<span class="string">'#ifndef _AIIMG_H_ \n\</span></span><br><span class="line"><span class="string">#define _AIIMG_H_ \n\</span></span><br><span class="line"><span class="string">#include &lt;stdint.h&gt; \n\</span></span><br><span class="line"><span class="string">uint8_t ai_image[] __attribute__((aligned(64))) = &#123;'</span>)</span><br><span class="line">        <span class="keyword">for</span> c <span class="keyword">in</span> range(img.shape[<span class="number">0</span>]):</span><br><span class="line">            <span class="keyword">for</span> i <span class="keyword">in</span> range(img.shape[<span class="number">1</span>]):</span><br><span class="line">                <span class="keyword">for</span> j <span class="keyword">in</span> range(img.shape[<span class="number">2</span>]):</span><br><span class="line">                    f.write(str(hex(img[c, i, j]))+<span class="string">','</span>)</span><br><span class="line">                f.write(<span class="string">'\n'</span>)</span><br><span class="line">        f.write(<span class="string">'&#125;;\n\</span></span><br><span class="line"><span class="string">#endif'</span>)</span><br></pre></td></tr></table></figure>
-<h1 id="修改kpu程序">修改kpu程序</h1>
-<h2 id="显示图片部分">显示图片部分</h2>
-<p>只需要修改成对应的<code>buf</code>即可</p>
+<h1 id="修改kpu程序"><a href="#修改kpu程序" class="headerlink" title="修改kpu程序"></a>修改kpu程序</h1><h2 id="显示图片部分"><a href="#显示图片部分" class="headerlink" title="显示图片部分"></a>显示图片部分</h2><p>只需要修改成对应的<code>buf</code>即可</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">lcd_draw_picture(<span class="number">0</span>, <span class="number">0</span>, <span class="number">320</span>, <span class="number">240</span>, rgb_image);</span><br></pre></td></tr></table></figure>
-<h2 id="kpu部分">kpu部分</h2>
-<p>只需要把<code>task.src</code>改成对应的<code>buf</code>即可.</p>
+<h2 id="kpu部分"><a href="#kpu部分" class="headerlink" title="kpu部分"></a>kpu部分</h2><p>只需要把<code>task.src</code>改成对应的<code>buf</code>即可.</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* init face detect model */</span></span><br><span class="line">kpu_task_gencode_output_init(&amp;task);</span><br><span class="line">task.src= (<span class="keyword">uint64_t</span> *)ai_image;</span><br><span class="line">task.dma_ch= <span class="number">5</span>;</span><br><span class="line">task.callback= ai_done;</span><br><span class="line">kpu_single_task_init(&amp;task);</span><br></pre></td></tr></table></figure>
-<h1 id="效果">效果</h1>
-<p>有了这个方法,我就可以去测试我的模型输出是否正确.</p>
-<figure>
-<img src="/2019/02/14/k210img-test/1.jpg" alt="显示效果"><figcaption>显示效果</figcaption>
-</figure>
+<h1 id="效果"><a href="#效果" class="headerlink" title="效果"></a>效果</h1><p>有了这个方法,我就可以去测试我的模型输出是否正确.</p>
+<p><img src="/2019/02/14/k210img-test/1.jpg" alt="显示效果"></p>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2019/02/14/k210img-test/" data-id="ck6agcftw0059u06xkz3ntxhc" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2019/02/14/k210img-test/" data-id="ck6izfkmt0063k16xidrt95es" class="article-share-link">Share</a>
       
       
       
@@ -228,6 +208,10 @@
       <ul>
         
           <li>
+            <a href="/2020/02/12/tf-all-regularizers/">tf2.0 全局添加regularizers</a>
+          </li>
+        
+          <li>
             <a href="/2020/02/06/ssl-fixmatch/">半监督学习：FixMatch</a>
           </li>
         
@@ -241,10 +225,6 @@
         
           <li>
             <a href="/2020/02/04/ssl-mixmatch/">半监督学习：MixMatch</a>
-          </li>
-        
-          <li>
-            <a href="/2020/02/03/ssl-ict/">半监督学习：Interpolation Consistency Training</a>
           </li>
         
       </ul>

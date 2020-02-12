@@ -93,40 +93,34 @@
       
         <p>今天在看<code>centernet</code>的<code>heatmap</code>损失函数时,发现他的损失和熵差不多,但是我用<code>tf</code>的实现会导致<code>loss</code>为<code>Nan</code>,因此我看了下<code>Cross Entropy</code>的计算优化,这里记录一下.</p>
 <a id="more"></a>
-<h2 id="tensorflow中的cross_entropy计算">Tensorflow中的cross_entropy计算</h2>
-<p>令<span class="math inline">\(x = logits\)</span>,<span class="math inline">\(z = labels\)</span>: <span class="math display">\[
+<h2 id="Tensorflow中的cross-entropy计算"><a href="#Tensorflow中的cross-entropy计算" class="headerlink" title="Tensorflow中的cross_entropy计算"></a>Tensorflow中的cross_entropy计算</h2><p>令$x = logits$,$z = labels$:</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-    &amp;  z * -\log(\text{sigmoid}(x)) + (1 - z) * -\log(1 - \text{sigmoid}(x)) \\
-=&amp; z * -\log(\frac{1}{1 + e^{-x}}) + (1 - z) * -\log(\frac{e^{-x}}{1 + e^{-x}}) \\
-=&amp; z * \log(1 + e^{-x}) + (1 - z) * (-\log(e^{-x}) + \log(1 + e^{-x})) \\
-=&amp; z * \log(1 + e^{-x}) + (1 - z) * (x + \log(1 + e^{-x}) \\
-=&amp; (1 - z) * x + \log(1 + e^{-x}) \\
-=&amp; x - x * z + \log(1 + e^{-x}) \\
-=&amp; \log(e^x) - x * z + \log(1 + e^{-x}) \\
-=&amp; - x * z + \log(1 + e^{x})
-\end{aligned}
-\]</span></p>
-<p>下面为了避免<span class="math inline">\(e^{x}\)</span>数值溢出,因此优化为如下:</p>
-<p><span class="math display">\[
+    &  z * -\log(\text{sigmoid}(x)) + (1 - z) * -\log(1 - \text{sigmoid}(x)) \\
+=& z * -\log(\frac{1}{1 + e^{-x}}) + (1 - z) * -\log(\frac{e^{-x}}{1 + e^{-x}}) \\
+=& z * \log(1 + e^{-x}) + (1 - z) * (-\log(e^{-x}) + \log(1 + e^{-x})) \\
+=& z * \log(1 + e^{-x}) + (1 - z) * (x + \log(1 + e^{-x}) \\
+=& (1 - z) * x + \log(1 + e^{-x}) \\
+=& x - x * z + \log(1 + e^{-x}) \\
+=& \log(e^x) - x * z + \log(1 + e^{-x}) \\
+=& - x * z + \log(1 + e^{x})
+\end{aligned}</script><p>下面为了避免$e^{x}$数值溢出,因此优化为如下:</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-  &amp;  \log(1 + e^{x}) \\
-=&amp;  \log(1 + e^{-|x|}) + \max(x, 0)
-\end{aligned}   
-\]</span></p>
-<p><strong>NOTE:</strong> <code>tensorflow</code>中有个专门的函数<span class="math inline">\(softplus(x)=\log(1 + e^{x})\)</span>,其中已经包含了数值溢出的优化.</p>
-<h2 id="centernet中的focalloss计算">Centernet中的FocalLoss计算</h2>
-<p>先给出他的<code>FocalLoss</code>部分代码:</p>
+  &  \log(1 + e^{x}) \\
+=&  \log(1 + e^{-|x|}) + \max(x, 0)
+\end{aligned}</script><p><strong>NOTE:</strong> <code>tensorflow</code>中有个专门的函数$softplus(x)=\log(1 + e^{x})$,其中已经包含了数值溢出的优化.</p>
+<h2 id="Centernet中的FocalLoss计算"><a href="#Centernet中的FocalLoss计算" class="headerlink" title="Centernet中的FocalLoss计算"></a>Centernet中的FocalLoss计算</h2><p>先给出他的<code>FocalLoss</code>部分代码:</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">_neg_loss</span><span class="params">(pred, gt)</span>:</span></span><br><span class="line">  <span class="string">''' Modified focal loss. Exactly the same as CornerNet.</span></span><br><span class="line"><span class="string">      Runs faster and costs a little bit more memory</span></span><br><span class="line"><span class="string">    Arguments:</span></span><br><span class="line"><span class="string">      pred [batch,c,h,w]</span></span><br><span class="line"><span class="string">      gt_regr [batch,c,h,w]</span></span><br><span class="line"><span class="string">  '''</span></span><br><span class="line">  pos_inds = gt.eq(<span class="number">1</span>).float()</span><br><span class="line">  neg_inds = gt.lt(<span class="number">1</span>).float()</span><br><span class="line"></span><br><span class="line">  neg_weights = torch.pow(<span class="number">1</span> - gt, <span class="number">4</span>)</span><br><span class="line"></span><br><span class="line">  loss = <span class="number">0</span></span><br><span class="line"></span><br><span class="line">  pos_loss = torch.log(pred) * torch.pow(<span class="number">1</span> - pred, <span class="number">2</span>) * pos_inds</span><br><span class="line">  neg_loss = torch.log(<span class="number">1</span> - pred) * torch.pow(pred, <span class="number">2</span>) * neg_weights * neg_inds</span><br><span class="line"></span><br><span class="line">  num_pos  = pos_inds.float().sum()</span><br><span class="line">  pos_loss = pos_loss.sum()</span><br><span class="line">  neg_loss = neg_loss.sum()</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> num_pos == <span class="number">0</span>:</span><br><span class="line">    loss = loss - neg_loss</span><br><span class="line">  <span class="keyword">else</span>:</span><br><span class="line">    loss = loss - (pos_loss + neg_loss) / num_pos</span><br><span class="line">  <span class="keyword">return</span> loss</span><br></pre></td></tr></table></figure>
 <p><strong>NOTE:</strong> 注意这里的<code>pred</code>是经过<code>sigmoid</code>的.</p>
-<p>将上述代码转换为公式,令<span class="math inline">\(x = logits\)</span>,<span class="math inline">\(z = labels\)</span>,<span class="math inline">\(x_s=\text{sigmoid}(x)\)</span>: <span class="math display">\[
+<p>将上述代码转换为公式,令$x = logits$,$z = labels$,$x_s=\text{sigmoid}(x)$:</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-  &amp; -\log(\text{sigmoid}(x))*(1-x_s)^2-\log(1-\text{sigmoid}(x))* x_s^2\\
-= &amp; -\log(\frac{1}{1+e^{-x}})*(1-x_s)^2-\log(\frac{e^{-x}}{1+e^{-x}})* x_s^2\\
-= &amp; \log(1+e^{-x})*(1-x_s)^2+[-\log(e^{-x}) + \log(1 + e^{-x})]*x_s^2] \\
-= &amp; \text{softplus}(-x)*(1-x_s)^2+[x + \text{softplus}(-x)]*x_s^2]
-\end{aligned}   
-\]</span></p>
-<p>优化后对应代码为: <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">focal_loss</span><span class="params">(self, true_hm: tf.Tensor, pred_hm: tf.Tensor)</span> -&gt; tf.Tensor:</span></span><br><span class="line">    <span class="string">""" Modified focal loss. Exactly the same as CornerNet.</span></span><br><span class="line"><span class="string">        Runs faster and costs a little bit more memory</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    Parameters</span></span><br><span class="line"><span class="string">    ----------</span></span><br><span class="line"><span class="string">    true_hm : tf.Tensor</span></span><br><span class="line"><span class="string">        shape : [batch, out_h , out_w, calss_num]</span></span><br><span class="line"><span class="string">    pred_hm : tf.Tensor</span></span><br><span class="line"><span class="string">        shape : [batch, out_h , out_w, calss_num]</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    Returns</span></span><br><span class="line"><span class="string">    -------</span></span><br><span class="line"><span class="string">    tf.Tensor</span></span><br><span class="line"><span class="string">        heatmap loss</span></span><br><span class="line"><span class="string">        shape : [batch,]</span></span><br><span class="line"><span class="string">    """</span></span><br><span class="line">    z = true_hm</span><br><span class="line">    x = pred_hm</span><br><span class="line">    x_s = tf.sigmoid(pred_hm)</span><br><span class="line"></span><br><span class="line">    pos_inds = tf.cast(tf.equal(z, <span class="number">1.</span>), tf.float32)</span><br><span class="line">    neg_inds = <span class="number">1</span> - pos_inds</span><br><span class="line">    neg_weights = tf.pow(<span class="number">1</span> - z, <span class="number">4</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># neg entropy loss =  −log(sigmoid(x)) ∗ (1−sigmoid(x))^2 − log(1−sigmoid(x)) ∗ sigmoid(x)^2</span></span><br><span class="line">    loss = tf.add(tf.nn.softplus(-x) * tf.pow(<span class="number">1</span> - x_s, <span class="number">2</span>) * pos_inds, (x + tf.nn.softplus(-x)) * tf.pow(x_s, <span class="number">2</span>) * neg_weights * neg_inds)</span><br><span class="line"></span><br><span class="line">    num_pos = tf.reduce_sum(pos_inds, [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>])</span><br><span class="line">    loss = tf.reduce_sum(loss, [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>])</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> tf.div_no_nan(loss, num_pos)</span><br></pre></td></tr></table></figure></p>
+  & -\log(\text{sigmoid}(x))*(1-x_s)^2-\log(1-\text{sigmoid}(x))* x_s^2\\
+= & -\log(\frac{1}{1+e^{-x}})*(1-x_s)^2-\log(\frac{e^{-x}}{1+e^{-x}})* x_s^2\\
+= & \log(1+e^{-x})*(1-x_s)^2+[-\log(e^{-x}) + \log(1 + e^{-x})]*x_s^2] \\
+= & \text{softplus}(-x)*(1-x_s)^2+[x + \text{softplus}(-x)]*x_s^2]
+\end{aligned}</script><p>优化后对应代码为:<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">focal_loss</span><span class="params">(self, true_hm: tf.Tensor, pred_hm: tf.Tensor)</span> -&gt; tf.Tensor:</span></span><br><span class="line">    <span class="string">""" Modified focal loss. Exactly the same as CornerNet.</span></span><br><span class="line"><span class="string">        Runs faster and costs a little bit more memory</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    Parameters</span></span><br><span class="line"><span class="string">    ----------</span></span><br><span class="line"><span class="string">    true_hm : tf.Tensor</span></span><br><span class="line"><span class="string">        shape : [batch, out_h , out_w, calss_num]</span></span><br><span class="line"><span class="string">    pred_hm : tf.Tensor</span></span><br><span class="line"><span class="string">        shape : [batch, out_h , out_w, calss_num]</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    Returns</span></span><br><span class="line"><span class="string">    -------</span></span><br><span class="line"><span class="string">    tf.Tensor</span></span><br><span class="line"><span class="string">        heatmap loss</span></span><br><span class="line"><span class="string">        shape : [batch,]</span></span><br><span class="line"><span class="string">    """</span></span><br><span class="line">    z = true_hm</span><br><span class="line">    x = pred_hm</span><br><span class="line">    x_s = tf.sigmoid(pred_hm)</span><br><span class="line"></span><br><span class="line">    pos_inds = tf.cast(tf.equal(z, <span class="number">1.</span>), tf.float32)</span><br><span class="line">    neg_inds = <span class="number">1</span> - pos_inds</span><br><span class="line">    neg_weights = tf.pow(<span class="number">1</span> - z, <span class="number">4</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># neg entropy loss =  −log(sigmoid(x)) ∗ (1−sigmoid(x))^2 − log(1−sigmoid(x)) ∗ sigmoid(x)^2</span></span><br><span class="line">    loss = tf.add(tf.nn.softplus(-x) * tf.pow(<span class="number">1</span> - x_s, <span class="number">2</span>) * pos_inds, (x + tf.nn.softplus(-x)) * tf.pow(x_s, <span class="number">2</span>) * neg_weights * neg_inds)</span><br><span class="line"></span><br><span class="line">    num_pos = tf.reduce_sum(pos_inds, [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>])</span><br><span class="line">    loss = tf.reduce_sum(loss, [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>])</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> tf.div_no_nan(loss, num_pos)</span><br></pre></td></tr></table></figure></p>
 
       
     </div>
@@ -136,46 +130,40 @@
         
           <p>今天在看<code>centernet</code>的<code>heatmap</code>损失函数时,发现他的损失和熵差不多,但是我用<code>tf</code>的实现会导致<code>loss</code>为<code>Nan</code>,因此我看了下<code>Cross Entropy</code>的计算优化,这里记录一下.</p>
 <a id="more"></a>
-<h2 id="tensorflow中的cross_entropy计算">Tensorflow中的cross_entropy计算</h2>
-<p>令<span class="math inline">\(x = logits\)</span>,<span class="math inline">\(z = labels\)</span>: <span class="math display">\[
+<h2 id="Tensorflow中的cross-entropy计算"><a href="#Tensorflow中的cross-entropy计算" class="headerlink" title="Tensorflow中的cross_entropy计算"></a>Tensorflow中的cross_entropy计算</h2><p>令$x = logits$,$z = labels$:</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-    &amp;  z * -\log(\text{sigmoid}(x)) + (1 - z) * -\log(1 - \text{sigmoid}(x)) \\
-=&amp; z * -\log(\frac{1}{1 + e^{-x}}) + (1 - z) * -\log(\frac{e^{-x}}{1 + e^{-x}}) \\
-=&amp; z * \log(1 + e^{-x}) + (1 - z) * (-\log(e^{-x}) + \log(1 + e^{-x})) \\
-=&amp; z * \log(1 + e^{-x}) + (1 - z) * (x + \log(1 + e^{-x}) \\
-=&amp; (1 - z) * x + \log(1 + e^{-x}) \\
-=&amp; x - x * z + \log(1 + e^{-x}) \\
-=&amp; \log(e^x) - x * z + \log(1 + e^{-x}) \\
-=&amp; - x * z + \log(1 + e^{x})
-\end{aligned}
-\]</span></p>
-<p>下面为了避免<span class="math inline">\(e^{x}\)</span>数值溢出,因此优化为如下:</p>
-<p><span class="math display">\[
+    &  z * -\log(\text{sigmoid}(x)) + (1 - z) * -\log(1 - \text{sigmoid}(x)) \\
+=& z * -\log(\frac{1}{1 + e^{-x}}) + (1 - z) * -\log(\frac{e^{-x}}{1 + e^{-x}}) \\
+=& z * \log(1 + e^{-x}) + (1 - z) * (-\log(e^{-x}) + \log(1 + e^{-x})) \\
+=& z * \log(1 + e^{-x}) + (1 - z) * (x + \log(1 + e^{-x}) \\
+=& (1 - z) * x + \log(1 + e^{-x}) \\
+=& x - x * z + \log(1 + e^{-x}) \\
+=& \log(e^x) - x * z + \log(1 + e^{-x}) \\
+=& - x * z + \log(1 + e^{x})
+\end{aligned}</script><p>下面为了避免$e^{x}$数值溢出,因此优化为如下:</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-  &amp;  \log(1 + e^{x}) \\
-=&amp;  \log(1 + e^{-|x|}) + \max(x, 0)
-\end{aligned}   
-\]</span></p>
-<p><strong>NOTE:</strong> <code>tensorflow</code>中有个专门的函数<span class="math inline">\(softplus(x)=\log(1 + e^{x})\)</span>,其中已经包含了数值溢出的优化.</p>
-<h2 id="centernet中的focalloss计算">Centernet中的FocalLoss计算</h2>
-<p>先给出他的<code>FocalLoss</code>部分代码:</p>
+  &  \log(1 + e^{x}) \\
+=&  \log(1 + e^{-|x|}) + \max(x, 0)
+\end{aligned}</script><p><strong>NOTE:</strong> <code>tensorflow</code>中有个专门的函数$softplus(x)=\log(1 + e^{x})$,其中已经包含了数值溢出的优化.</p>
+<h2 id="Centernet中的FocalLoss计算"><a href="#Centernet中的FocalLoss计算" class="headerlink" title="Centernet中的FocalLoss计算"></a>Centernet中的FocalLoss计算</h2><p>先给出他的<code>FocalLoss</code>部分代码:</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">_neg_loss</span><span class="params">(pred, gt)</span>:</span></span><br><span class="line">  <span class="string">''' Modified focal loss. Exactly the same as CornerNet.</span></span><br><span class="line"><span class="string">      Runs faster and costs a little bit more memory</span></span><br><span class="line"><span class="string">    Arguments:</span></span><br><span class="line"><span class="string">      pred [batch,c,h,w]</span></span><br><span class="line"><span class="string">      gt_regr [batch,c,h,w]</span></span><br><span class="line"><span class="string">  '''</span></span><br><span class="line">  pos_inds = gt.eq(<span class="number">1</span>).float()</span><br><span class="line">  neg_inds = gt.lt(<span class="number">1</span>).float()</span><br><span class="line"></span><br><span class="line">  neg_weights = torch.pow(<span class="number">1</span> - gt, <span class="number">4</span>)</span><br><span class="line"></span><br><span class="line">  loss = <span class="number">0</span></span><br><span class="line"></span><br><span class="line">  pos_loss = torch.log(pred) * torch.pow(<span class="number">1</span> - pred, <span class="number">2</span>) * pos_inds</span><br><span class="line">  neg_loss = torch.log(<span class="number">1</span> - pred) * torch.pow(pred, <span class="number">2</span>) * neg_weights * neg_inds</span><br><span class="line"></span><br><span class="line">  num_pos  = pos_inds.float().sum()</span><br><span class="line">  pos_loss = pos_loss.sum()</span><br><span class="line">  neg_loss = neg_loss.sum()</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> num_pos == <span class="number">0</span>:</span><br><span class="line">    loss = loss - neg_loss</span><br><span class="line">  <span class="keyword">else</span>:</span><br><span class="line">    loss = loss - (pos_loss + neg_loss) / num_pos</span><br><span class="line">  <span class="keyword">return</span> loss</span><br></pre></td></tr></table></figure>
 <p><strong>NOTE:</strong> 注意这里的<code>pred</code>是经过<code>sigmoid</code>的.</p>
-<p>将上述代码转换为公式,令<span class="math inline">\(x = logits\)</span>,<span class="math inline">\(z = labels\)</span>,<span class="math inline">\(x_s=\text{sigmoid}(x)\)</span>: <span class="math display">\[
+<p>将上述代码转换为公式,令$x = logits$,$z = labels$,$x_s=\text{sigmoid}(x)$:</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-  &amp; -\log(\text{sigmoid}(x))*(1-x_s)^2-\log(1-\text{sigmoid}(x))* x_s^2\\
-= &amp; -\log(\frac{1}{1+e^{-x}})*(1-x_s)^2-\log(\frac{e^{-x}}{1+e^{-x}})* x_s^2\\
-= &amp; \log(1+e^{-x})*(1-x_s)^2+[-\log(e^{-x}) + \log(1 + e^{-x})]*x_s^2] \\
-= &amp; \text{softplus}(-x)*(1-x_s)^2+[x + \text{softplus}(-x)]*x_s^2]
-\end{aligned}   
-\]</span></p>
-<p>优化后对应代码为: <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">focal_loss</span><span class="params">(self, true_hm: tf.Tensor, pred_hm: tf.Tensor)</span> -&gt; tf.Tensor:</span></span><br><span class="line">    <span class="string">""" Modified focal loss. Exactly the same as CornerNet.</span></span><br><span class="line"><span class="string">        Runs faster and costs a little bit more memory</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    Parameters</span></span><br><span class="line"><span class="string">    ----------</span></span><br><span class="line"><span class="string">    true_hm : tf.Tensor</span></span><br><span class="line"><span class="string">        shape : [batch, out_h , out_w, calss_num]</span></span><br><span class="line"><span class="string">    pred_hm : tf.Tensor</span></span><br><span class="line"><span class="string">        shape : [batch, out_h , out_w, calss_num]</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    Returns</span></span><br><span class="line"><span class="string">    -------</span></span><br><span class="line"><span class="string">    tf.Tensor</span></span><br><span class="line"><span class="string">        heatmap loss</span></span><br><span class="line"><span class="string">        shape : [batch,]</span></span><br><span class="line"><span class="string">    """</span></span><br><span class="line">    z = true_hm</span><br><span class="line">    x = pred_hm</span><br><span class="line">    x_s = tf.sigmoid(pred_hm)</span><br><span class="line"></span><br><span class="line">    pos_inds = tf.cast(tf.equal(z, <span class="number">1.</span>), tf.float32)</span><br><span class="line">    neg_inds = <span class="number">1</span> - pos_inds</span><br><span class="line">    neg_weights = tf.pow(<span class="number">1</span> - z, <span class="number">4</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># neg entropy loss =  −log(sigmoid(x)) ∗ (1−sigmoid(x))^2 − log(1−sigmoid(x)) ∗ sigmoid(x)^2</span></span><br><span class="line">    loss = tf.add(tf.nn.softplus(-x) * tf.pow(<span class="number">1</span> - x_s, <span class="number">2</span>) * pos_inds, (x + tf.nn.softplus(-x)) * tf.pow(x_s, <span class="number">2</span>) * neg_weights * neg_inds)</span><br><span class="line"></span><br><span class="line">    num_pos = tf.reduce_sum(pos_inds, [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>])</span><br><span class="line">    loss = tf.reduce_sum(loss, [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>])</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> tf.div_no_nan(loss, num_pos)</span><br></pre></td></tr></table></figure></p>
+  & -\log(\text{sigmoid}(x))*(1-x_s)^2-\log(1-\text{sigmoid}(x))* x_s^2\\
+= & -\log(\frac{1}{1+e^{-x}})*(1-x_s)^2-\log(\frac{e^{-x}}{1+e^{-x}})* x_s^2\\
+= & \log(1+e^{-x})*(1-x_s)^2+[-\log(e^{-x}) + \log(1 + e^{-x})]*x_s^2] \\
+= & \text{softplus}(-x)*(1-x_s)^2+[x + \text{softplus}(-x)]*x_s^2]
+\end{aligned}</script><p>优化后对应代码为:<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">focal_loss</span><span class="params">(self, true_hm: tf.Tensor, pred_hm: tf.Tensor)</span> -&gt; tf.Tensor:</span></span><br><span class="line">    <span class="string">""" Modified focal loss. Exactly the same as CornerNet.</span></span><br><span class="line"><span class="string">        Runs faster and costs a little bit more memory</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    Parameters</span></span><br><span class="line"><span class="string">    ----------</span></span><br><span class="line"><span class="string">    true_hm : tf.Tensor</span></span><br><span class="line"><span class="string">        shape : [batch, out_h , out_w, calss_num]</span></span><br><span class="line"><span class="string">    pred_hm : tf.Tensor</span></span><br><span class="line"><span class="string">        shape : [batch, out_h , out_w, calss_num]</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    Returns</span></span><br><span class="line"><span class="string">    -------</span></span><br><span class="line"><span class="string">    tf.Tensor</span></span><br><span class="line"><span class="string">        heatmap loss</span></span><br><span class="line"><span class="string">        shape : [batch,]</span></span><br><span class="line"><span class="string">    """</span></span><br><span class="line">    z = true_hm</span><br><span class="line">    x = pred_hm</span><br><span class="line">    x_s = tf.sigmoid(pred_hm)</span><br><span class="line"></span><br><span class="line">    pos_inds = tf.cast(tf.equal(z, <span class="number">1.</span>), tf.float32)</span><br><span class="line">    neg_inds = <span class="number">1</span> - pos_inds</span><br><span class="line">    neg_weights = tf.pow(<span class="number">1</span> - z, <span class="number">4</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># neg entropy loss =  −log(sigmoid(x)) ∗ (1−sigmoid(x))^2 − log(1−sigmoid(x)) ∗ sigmoid(x)^2</span></span><br><span class="line">    loss = tf.add(tf.nn.softplus(-x) * tf.pow(<span class="number">1</span> - x_s, <span class="number">2</span>) * pos_inds, (x + tf.nn.softplus(-x)) * tf.pow(x_s, <span class="number">2</span>) * neg_weights * neg_inds)</span><br><span class="line"></span><br><span class="line">    num_pos = tf.reduce_sum(pos_inds, [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>])</span><br><span class="line">    loss = tf.reduce_sum(loss, [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>])</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> tf.div_no_nan(loss, num_pos)</span><br></pre></td></tr></table></figure></p>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2019/09/23/cross-entropy-calc/" data-id="ck6agcft5002tu06xhhnkybtg" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2019/09/23/cross-entropy-calc/" data-id="ck6izfkks002ek16xcwoql3pz" class="article-share-link">Share</a>
       
       
       
@@ -248,6 +236,10 @@
       <ul>
         
           <li>
+            <a href="/2020/02/12/tf-all-regularizers/">tf2.0 全局添加regularizers</a>
+          </li>
+        
+          <li>
             <a href="/2020/02/06/ssl-fixmatch/">半监督学习：FixMatch</a>
           </li>
         
@@ -261,10 +253,6 @@
         
           <li>
             <a href="/2020/02/04/ssl-mixmatch/">半监督学习：MixMatch</a>
-          </li>
-        
-          <li>
-            <a href="/2020/02/03/ssl-ict/">半监督学习：Interpolation Consistency Training</a>
           </li>
         
       </ul>

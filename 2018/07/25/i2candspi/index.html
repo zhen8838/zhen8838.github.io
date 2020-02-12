@@ -7,13 +7,13 @@
   
   <title>i2c之总结 | </title>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta name="description" content="最近在linux下移植i2c的传感器驱动。移植了才发现各个设备的i2c读写都不太一样，对于这几个方式我做一个小总结。 首先我使用的是linux应用层通用的i2c读写，我的读写默认是使用smbus协议进行读写的。">
+  <meta name="description" content="最近在linux下移植i2c的传感器驱动。移植了才发现各个设备的i2c读写都不太一样，对于这几个方式我做一个小总结。首先我使用的是linux应用层通用的i2c读写，我的读写默认是使用smbus协议进行读写的。">
 <meta name="keywords" content="嵌入式,错误记录,PCB">
 <meta property="og:type" content="article">
 <meta property="og:title" content="i2c之总结">
 <meta property="og:url" content="https://zhen8838.github.io/2018/07/25/i2candspi/index.html">
 <meta property="og:site_name">
-<meta property="og:description" content="最近在linux下移植i2c的传感器驱动。移植了才发现各个设备的i2c读写都不太一样，对于这几个方式我做一个小总结。 首先我使用的是linux应用层通用的i2c读写，我的读写默认是使用smbus协议进行读写的。">
+<meta property="og:description" content="最近在linux下移植i2c的传感器驱动。移植了才发现各个设备的i2c读写都不太一样，对于这几个方式我做一个小总结。首先我使用的是linux应用层通用的i2c读写，我的读写默认是使用smbus协议进行读写的。">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https://zhen8838.github.io/2018/07/25/i2candspi/1.png">
 <meta property="og:image" content="https://zhen8838.github.io/2018/07/25/i2candspi/2.png">
@@ -21,7 +21,7 @@
 <meta property="og:updated_time" content="2019-03-22T08:58:12.774Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="i2c之总结">
-<meta name="twitter:description" content="最近在linux下移植i2c的传感器驱动。移植了才发现各个设备的i2c读写都不太一样，对于这几个方式我做一个小总结。 首先我使用的是linux应用层通用的i2c读写，我的读写默认是使用smbus协议进行读写的。">
+<meta name="twitter:description" content="最近在linux下移植i2c的传感器驱动。移植了才发现各个设备的i2c读写都不太一样，对于这几个方式我做一个小总结。首先我使用的是linux应用层通用的i2c读写，我的读写默认是使用smbus协议进行读写的。">
 <meta name="twitter:image" content="https://zhen8838.github.io/2018/07/25/i2candspi/1.png">
   
   
@@ -95,44 +95,42 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <p>最近在linux下移植i2c的传感器驱动。移植了才发现各个设备的i2c读写都不太一样，对于这几个方式我做一个小总结。 首先我使用的是linux应用层通用的i2c读写，我的读写默认是使用smbus协议进行读写的。</p>
+        <p>最近在linux下移植i2c的传感器驱动。移植了才发现各个设备的i2c读写都不太一样，对于这几个方式我做一个小总结。<br>首先我使用的是linux应用层通用的i2c读写，我的读写默认是使用smbus协议进行读写的。</p>
 <a id="more"></a>
-<h1 id="smbus协议">smbus协议</h1>
-先放一张图片合集，接下来就逐一看看这几种方式。
-<div data-align="center">
-<p><img src="/2018/07/25/i2candspi/1.png" width="80%"></p>
+<h1 id="smbus协议"><a href="#smbus协议" class="headerlink" title="smbus协议"></a>smbus协议</h1><p>先放一张图片合集，接下来就逐一看看这几种方式。</p>
+<div align="center">
+<img src="/2018/07/25/i2candspi/1.png" width="80%">
 </div>
-<h1 id="smbus-send-byte">smbus Send Byte</h1>
-<p>这个方式比较少用到，一般我们的传感器都有地址位以及数据位，所以至少传输两位。但是我在使用SHT31这个传感器的就需要用到此方式。先看看SHT31寄存器的读写：</p>
-<div data-align="center">
-<p><img src="/2018/07/25/i2candspi/2.png" width="80%"></p>
+
+
+<h1 id="smbus-Send-Byte"><a href="#smbus-Send-Byte" class="headerlink" title="smbus Send Byte"></a>smbus Send Byte</h1><p>这个方式比较少用到，一般我们的传感器都有地址位以及数据位，所以至少传输两位。但是我在使用SHT31这个传感器的就需要用到此方式。先看看SHT31寄存器的读写：</p>
+<div align="center">
+<img src="/2018/07/25/i2candspi/2.png" width="80%">
 </div>
-<p>这里发现这个传感器没有寄存器地址，但是也要发两位数据，而且是高位先行。 所以这个时候就需要改写对应的读写函数如下：</p>
-<pre><code>直接按高低位写两位数据即可。</code></pre>
-<p>当然这里我也存在一个疑问，直接调用write函数，对应的i2c输出应该是一个地址位，一个数据位，但是我两次调用write函数，应该会有四个byte信号输出，但是按照读写情况，还是十分正常的。</p>
+
+<p>这里发现这个传感器没有寄存器地址，但是也要发两位数据，而且是高位先行。<br>所以这个时候就需要改写对应的读写函数如下：</p>
+<pre><code>直接按高低位写两位数据即可。
+</code></pre><p>当然这里我也存在一个疑问，直接调用write函数，对应的i2c输出应该是一个地址位，一个数据位，但是我两次调用write函数，应该会有四个byte信号输出，但是按照读写情况，还是十分正常的。</p>
 <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">DrvStatus_t <span class="title">SHT31_writeCommand</span><span class="params">(<span class="keyword">uint16_t</span> cmd)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">uint8_t</span> data[<span class="number">2</span>];</span><br><span class="line">    data[<span class="number">0</span>] = cmd &gt;&gt; <span class="number">8</span>, data[<span class="number">1</span>] = cmd &amp; <span class="number">0x00FF</span>;</span><br><span class="line">    <span class="keyword">if</span> (write(sht31Fd, data, <span class="number">2</span>) &lt; <span class="number">0</span>)</span><br><span class="line">        <span class="keyword">return</span> COMPONENT_ERROR;</span><br><span class="line">    <span class="keyword">return</span> COMPONENT_OK;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<h1 id="smbus-write-byte">smbus Write Byte</h1>
-<p>这个应该是使用最多的的了。写一个数据到对应的寄存器中。这个就不赘述了。</p>
-<h1 id="smbus-write-word">smbus Write Word</h1>
-<p>对于smbus的读取和写入16位都应该算是上一操作的扩展，但是有时候也有不按常理出牌的地方。 因为标准的smbus协议读取16位数据是，都是默认先读到的为低8位，之后读取到的是高8位。 在使用smbus协议读取fdc2214传感器设备id就会出现问题。</p>
+<h1 id="smbus-Write-Byte"><a href="#smbus-Write-Byte" class="headerlink" title="smbus Write Byte"></a>smbus Write Byte</h1><p>这个应该是使用最多的的了。写一个数据到对应的寄存器中。这个就不赘述了。</p>
+<h1 id="smbus-Write-Word"><a href="#smbus-Write-Word" class="headerlink" title="smbus Write Word"></a>smbus Write Word</h1><p>对于smbus的读取和写入16位都应该算是上一操作的扩展，但是有时候也有不按常理出牌的地方。<br>因为标准的smbus协议读取16位数据是，都是默认先读到的为低8位，之后读取到的是高8位。<br>在使用smbus协议读取fdc2214传感器设备id就会出现问题。</p>
 <p>fdc2214传感器读取协议：</p>
-<div data-align="center">
-<p><img src="/2018/07/25/i2candspi/3.png" width="80%"></p>
+<div align="center">
+<img src="/2018/07/25/i2candspi/3.png" width="80%">
 </div>
+
 <p>可以发现他的读取是默认先高位，再低位。</p>
 <p>所以我们在使用smbus协议读取到数据后要做好数据高低转换的措施：</p>
 <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* 读取16位 先读高8位再读低8位 */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> uint16_t <span class="title">read16</span><span class="params">(<span class="keyword">uint8_t</span> reg)</span> </span>&#123;</span><br><span class="line">    <span class="comment">/* 读取两字节 bmp280默认先输出高位再输出低位  */</span></span><br><span class="line">    <span class="comment">/* smbus协议默认先低位再高位 所以需要转换  */</span></span><br><span class="line">    <span class="keyword">uint16_t</span> temp = (<span class="keyword">uint16_t</span>)i2c_smbus_read_word_data(bmp280fd, reg);</span><br><span class="line">    <span class="keyword">return</span> temp &gt;&gt; <span class="number">8</span> | temp &lt;&lt; <span class="number">8</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<h1 id="i2c传输位顺序">i2c传输位顺序</h1>
-<p>值得一提的是i2c传输中的每一位都是高位先行的,也只有这样我们接收到msb的数据后直接8位交换位置即可。</p>
-<p>比如设备id为 <code>0x3055</code> 其二进制为:<code>0011 0000 0101 0101</code> 发送顺序为:<code>0011 0000 0101 0101</code></p>
-<p>smbus接收到后为: 高八位 <code>0011 0000</code> -&gt; 低八位 <code>0011 0000</code><br>
-低八位 <code>0101 0101</code> -&gt; 高八位 <code>0101 0101</code></p>
+<h1 id="i2c传输位顺序"><a href="#i2c传输位顺序" class="headerlink" title="i2c传输位顺序"></a>i2c传输位顺序</h1><p>值得一提的是i2c传输中的每一位都是高位先行的,也只有这样我们接收到msb的数据后直接8位交换位置即可。</p>
+<p>比如设备id为 <code>0x3055</code><br>其二进制为:<code>0011 0000 0101 0101</code><br>发送顺序为:<code>0011 0000 0101 0101</code></p>
+<p>smbus接收到后为:<br>高八位 <code>0011 0000</code> -&gt; 低八位 <code>0011 0000</code><br>低八位 <code>0101 0101</code> -&gt; 高八位 <code>0101 0101</code>  </p>
 <p>拼接==&gt; <code>0101 0101 0011 0000</code> = <code>0x5530</code></p>
 <p>交换==&gt; <code>0x5530</code> = <code>0x3055</code></p>
 
@@ -142,44 +140,42 @@
       
         
         
-          <p>最近在linux下移植i2c的传感器驱动。移植了才发现各个设备的i2c读写都不太一样，对于这几个方式我做一个小总结。 首先我使用的是linux应用层通用的i2c读写，我的读写默认是使用smbus协议进行读写的。</p>
+          <p>最近在linux下移植i2c的传感器驱动。移植了才发现各个设备的i2c读写都不太一样，对于这几个方式我做一个小总结。<br>首先我使用的是linux应用层通用的i2c读写，我的读写默认是使用smbus协议进行读写的。</p>
 <a id="more"></a>
-<h1 id="smbus协议">smbus协议</h1>
-先放一张图片合集，接下来就逐一看看这几种方式。
-<div data-align="center">
-<p><img src="/2018/07/25/i2candspi/1.png" width="80%"></p>
+<h1 id="smbus协议"><a href="#smbus协议" class="headerlink" title="smbus协议"></a>smbus协议</h1><p>先放一张图片合集，接下来就逐一看看这几种方式。</p>
+<div align="center">
+<img src="/2018/07/25/i2candspi/1.png" width="80%">
 </div>
-<h1 id="smbus-send-byte">smbus Send Byte</h1>
-<p>这个方式比较少用到，一般我们的传感器都有地址位以及数据位，所以至少传输两位。但是我在使用SHT31这个传感器的就需要用到此方式。先看看SHT31寄存器的读写：</p>
-<div data-align="center">
-<p><img src="/2018/07/25/i2candspi/2.png" width="80%"></p>
+
+
+<h1 id="smbus-Send-Byte"><a href="#smbus-Send-Byte" class="headerlink" title="smbus Send Byte"></a>smbus Send Byte</h1><p>这个方式比较少用到，一般我们的传感器都有地址位以及数据位，所以至少传输两位。但是我在使用SHT31这个传感器的就需要用到此方式。先看看SHT31寄存器的读写：</p>
+<div align="center">
+<img src="/2018/07/25/i2candspi/2.png" width="80%">
 </div>
-<p>这里发现这个传感器没有寄存器地址，但是也要发两位数据，而且是高位先行。 所以这个时候就需要改写对应的读写函数如下：</p>
-<pre><code>直接按高低位写两位数据即可。</code></pre>
-<p>当然这里我也存在一个疑问，直接调用write函数，对应的i2c输出应该是一个地址位，一个数据位，但是我两次调用write函数，应该会有四个byte信号输出，但是按照读写情况，还是十分正常的。</p>
+
+<p>这里发现这个传感器没有寄存器地址，但是也要发两位数据，而且是高位先行。<br>所以这个时候就需要改写对应的读写函数如下：</p>
+<pre><code>直接按高低位写两位数据即可。
+</code></pre><p>当然这里我也存在一个疑问，直接调用write函数，对应的i2c输出应该是一个地址位，一个数据位，但是我两次调用write函数，应该会有四个byte信号输出，但是按照读写情况，还是十分正常的。</p>
 <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">DrvStatus_t <span class="title">SHT31_writeCommand</span><span class="params">(<span class="keyword">uint16_t</span> cmd)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">uint8_t</span> data[<span class="number">2</span>];</span><br><span class="line">    data[<span class="number">0</span>] = cmd &gt;&gt; <span class="number">8</span>, data[<span class="number">1</span>] = cmd &amp; <span class="number">0x00FF</span>;</span><br><span class="line">    <span class="keyword">if</span> (write(sht31Fd, data, <span class="number">2</span>) &lt; <span class="number">0</span>)</span><br><span class="line">        <span class="keyword">return</span> COMPONENT_ERROR;</span><br><span class="line">    <span class="keyword">return</span> COMPONENT_OK;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<h1 id="smbus-write-byte">smbus Write Byte</h1>
-<p>这个应该是使用最多的的了。写一个数据到对应的寄存器中。这个就不赘述了。</p>
-<h1 id="smbus-write-word">smbus Write Word</h1>
-<p>对于smbus的读取和写入16位都应该算是上一操作的扩展，但是有时候也有不按常理出牌的地方。 因为标准的smbus协议读取16位数据是，都是默认先读到的为低8位，之后读取到的是高8位。 在使用smbus协议读取fdc2214传感器设备id就会出现问题。</p>
+<h1 id="smbus-Write-Byte"><a href="#smbus-Write-Byte" class="headerlink" title="smbus Write Byte"></a>smbus Write Byte</h1><p>这个应该是使用最多的的了。写一个数据到对应的寄存器中。这个就不赘述了。</p>
+<h1 id="smbus-Write-Word"><a href="#smbus-Write-Word" class="headerlink" title="smbus Write Word"></a>smbus Write Word</h1><p>对于smbus的读取和写入16位都应该算是上一操作的扩展，但是有时候也有不按常理出牌的地方。<br>因为标准的smbus协议读取16位数据是，都是默认先读到的为低8位，之后读取到的是高8位。<br>在使用smbus协议读取fdc2214传感器设备id就会出现问题。</p>
 <p>fdc2214传感器读取协议：</p>
-<div data-align="center">
-<p><img src="/2018/07/25/i2candspi/3.png" width="80%"></p>
+<div align="center">
+<img src="/2018/07/25/i2candspi/3.png" width="80%">
 </div>
+
 <p>可以发现他的读取是默认先高位，再低位。</p>
 <p>所以我们在使用smbus协议读取到数据后要做好数据高低转换的措施：</p>
 <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* 读取16位 先读高8位再读低8位 */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> uint16_t <span class="title">read16</span><span class="params">(<span class="keyword">uint8_t</span> reg)</span> </span>&#123;</span><br><span class="line">    <span class="comment">/* 读取两字节 bmp280默认先输出高位再输出低位  */</span></span><br><span class="line">    <span class="comment">/* smbus协议默认先低位再高位 所以需要转换  */</span></span><br><span class="line">    <span class="keyword">uint16_t</span> temp = (<span class="keyword">uint16_t</span>)i2c_smbus_read_word_data(bmp280fd, reg);</span><br><span class="line">    <span class="keyword">return</span> temp &gt;&gt; <span class="number">8</span> | temp &lt;&lt; <span class="number">8</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<h1 id="i2c传输位顺序">i2c传输位顺序</h1>
-<p>值得一提的是i2c传输中的每一位都是高位先行的,也只有这样我们接收到msb的数据后直接8位交换位置即可。</p>
-<p>比如设备id为 <code>0x3055</code> 其二进制为:<code>0011 0000 0101 0101</code> 发送顺序为:<code>0011 0000 0101 0101</code></p>
-<p>smbus接收到后为: 高八位 <code>0011 0000</code> -&gt; 低八位 <code>0011 0000</code><br>
-低八位 <code>0101 0101</code> -&gt; 高八位 <code>0101 0101</code></p>
+<h1 id="i2c传输位顺序"><a href="#i2c传输位顺序" class="headerlink" title="i2c传输位顺序"></a>i2c传输位顺序</h1><p>值得一提的是i2c传输中的每一位都是高位先行的,也只有这样我们接收到msb的数据后直接8位交换位置即可。</p>
+<p>比如设备id为 <code>0x3055</code><br>其二进制为:<code>0011 0000 0101 0101</code><br>发送顺序为:<code>0011 0000 0101 0101</code></p>
+<p>smbus接收到后为:<br>高八位 <code>0011 0000</code> -&gt; 低八位 <code>0011 0000</code><br>低八位 <code>0101 0101</code> -&gt; 高八位 <code>0101 0101</code>  </p>
 <p>拼接==&gt; <code>0101 0101 0011 0000</code> = <code>0x5530</code></p>
 <p>交换==&gt; <code>0x5530</code> = <code>0x3055</code></p>
 
@@ -187,7 +183,7 @@
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2018/07/25/i2candspi/" data-id="ck6agcftk004bu06xxao5h4zx" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2018/07/25/i2candspi/" data-id="ck6izfkmb0059k16xx4eemcia" class="article-share-link">Share</a>
       
       
       
@@ -260,6 +256,10 @@
       <ul>
         
           <li>
+            <a href="/2020/02/12/tf-all-regularizers/">tf2.0 全局添加regularizers</a>
+          </li>
+        
+          <li>
             <a href="/2020/02/06/ssl-fixmatch/">半监督学习：FixMatch</a>
           </li>
         
@@ -273,10 +273,6 @@
         
           <li>
             <a href="/2020/02/04/ssl-mixmatch/">半监督学习：MixMatch</a>
-          </li>
-        
-          <li>
-            <a href="/2020/02/03/ssl-ict/">半监督学习：Interpolation Consistency Training</a>
           </li>
         
       </ul>

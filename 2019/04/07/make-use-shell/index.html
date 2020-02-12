@@ -93,24 +93,24 @@
       
         <p>今天我为了<code>makefile</code>的方便起见,将一些变量通过脚本的形式给到<code>makefile</code>中,但是通过<code>shell</code>命令给<code>makefile</code>变量赋值让我头疼了一波.. 🙄</p>
 <a id="more"></a>
-<h1 id="shell中执行方式">shell中执行方式</h1>
-<p>在<code>shell</code>中赋值非常简单 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">➜ PRE_CKPT=<span class="built_in">log</span>/20190405-174159        </span><br><span class="line">➜ NUM=`python3 tools/get_trian_num.py <span class="variable">$&#123;PRE_CKPT&#125;</span>`</span><br><span class="line">➜ <span class="built_in">echo</span> <span class="variable">$&#123;NUM&#125;</span></span><br><span class="line">4700</span><br></pre></td></tr></table></figure></p>
-<h1 id="在makefile中实现">在makefile中实现</h1>
-<ol type="1">
-<li>第一次写法 <figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">freeze: </span></span><br><span class="line">	NUM=`python3 tools/get_trian_num.py $&#123;PRE_CKPT&#125;`</span><br><span class="line">	echo $&#123;NUM&#125;</span><br></pre></td></tr></table></figure></li>
+<h1 id="shell中执行方式"><a href="#shell中执行方式" class="headerlink" title="shell中执行方式"></a>shell中执行方式</h1><p>在<code>shell</code>中赋值非常简单<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">➜ PRE_CKPT=<span class="built_in">log</span>/20190405-174159        </span><br><span class="line">➜ NUM=`python3 tools/get_trian_num.py <span class="variable">$&#123;PRE_CKPT&#125;</span>`</span><br><span class="line">➜ <span class="built_in">echo</span> <span class="variable">$&#123;NUM&#125;</span></span><br><span class="line">4700</span><br></pre></td></tr></table></figure></p>
+<h1 id="在makefile中实现"><a href="#在makefile中实现" class="headerlink" title="在makefile中实现"></a>在makefile中实现</h1><ol>
+<li>第一次写法<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">freeze: </span></span><br><span class="line">	NUM=`python3 tools/get_trian_num.py $&#123;PRE_CKPT&#125;`</span><br><span class="line">	echo $&#123;NUM&#125;</span><br></pre></td></tr></table></figure>
+</li>
 </ol>
-<p>执行,发现什么都没有输出 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">➜ make freeze PRE_CKPT=<span class="built_in">log</span>/20190405-174159</span><br><span class="line">NUM=`python3 tools/get_trian_num.py <span class="built_in">log</span>/20190405-174159`</span><br><span class="line"><span class="built_in">echo</span></span><br></pre></td></tr></table></figure></p>
+<p>执行,发现什么都没有输出<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">➜ make freeze PRE_CKPT=<span class="built_in">log</span>/20190405-174159</span><br><span class="line">NUM=`python3 tools/get_trian_num.py <span class="built_in">log</span>/20190405-174159`</span><br><span class="line"><span class="built_in">echo</span></span><br></pre></td></tr></table></figure></p>
 <p>这里的问题是,我们通过<code>shell</code>命令赋值的是<code>shell</code>的变量,这个变量还不是<code>makefile</code>的变量.所以我们需要通过<code>$$VAR</code>的方式调用这个变量.</p>
-<ol start="2" type="1">
-<li>第二次写法 <figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">freeze: </span></span><br><span class="line">	NUM=`python3 tools/get_trian_num.py $&#123;PRE_CKPT&#125;`</span><br><span class="line">	echo $$NUM</span><br></pre></td></tr></table></figure></li>
+<ol>
+<li>第二次写法<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">freeze: </span></span><br><span class="line">	NUM=`python3 tools/get_trian_num.py $&#123;PRE_CKPT&#125;`</span><br><span class="line">	echo $$NUM</span><br></pre></td></tr></table></figure>
+</li>
 </ol>
-<p>执行,发现还是没有输出 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">➜ make freeze PRE_CKPT=<span class="built_in">log</span>/20190405-174159</span><br><span class="line">NUM=`python3 tools/get_trian_num.py <span class="built_in">log</span>/20190405-174159`</span><br><span class="line"><span class="built_in">echo</span> <span class="variable">$NUM</span></span><br></pre></td></tr></table></figure></p>
+<p>执行,发现还是没有输出<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">➜ make freeze PRE_CKPT=<span class="built_in">log</span>/20190405-174159</span><br><span class="line">NUM=`python3 tools/get_trian_num.py <span class="built_in">log</span>/20190405-174159`</span><br><span class="line"><span class="built_in">echo</span> <span class="variable">$NUM</span></span><br></pre></td></tr></table></figure></p>
 <p>这里是因为<code>makefile</code>中命令如果没有使用<code>;\</code>来连接,是无法共享变量的.所以还得修改</p>
-<ol start="3" type="1">
+<ol>
 <li>第三次写法</li>
 </ol>
 <figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">freeze: </span></span><br><span class="line">	@NUM=`python3 tools/get_trian_num.py $&#123;PRE_CKPT&#125;`; \</span><br><span class="line">	echo $$NUM</span><br></pre></td></tr></table></figure>
-<p>终于有了我想要的输出 😊 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">➜  make freeze PRE_CKPT=<span class="built_in">log</span>/20190405-174159</span><br><span class="line">4700</span><br></pre></td></tr></table></figure></p>
+<p>终于有了我想要的输出 😊<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">➜  make freeze PRE_CKPT=<span class="built_in">log</span>/20190405-174159</span><br><span class="line">4700</span><br></pre></td></tr></table></figure></p>
 
       
     </div>
@@ -120,30 +120,30 @@
         
           <p>今天我为了<code>makefile</code>的方便起见,将一些变量通过脚本的形式给到<code>makefile</code>中,但是通过<code>shell</code>命令给<code>makefile</code>变量赋值让我头疼了一波.. 🙄</p>
 <a id="more"></a>
-<h1 id="shell中执行方式">shell中执行方式</h1>
-<p>在<code>shell</code>中赋值非常简单 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">➜ PRE_CKPT=<span class="built_in">log</span>/20190405-174159        </span><br><span class="line">➜ NUM=`python3 tools/get_trian_num.py <span class="variable">$&#123;PRE_CKPT&#125;</span>`</span><br><span class="line">➜ <span class="built_in">echo</span> <span class="variable">$&#123;NUM&#125;</span></span><br><span class="line">4700</span><br></pre></td></tr></table></figure></p>
-<h1 id="在makefile中实现">在makefile中实现</h1>
-<ol type="1">
-<li>第一次写法 <figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">freeze: </span></span><br><span class="line">	NUM=`python3 tools/get_trian_num.py $&#123;PRE_CKPT&#125;`</span><br><span class="line">	echo $&#123;NUM&#125;</span><br></pre></td></tr></table></figure></li>
+<h1 id="shell中执行方式"><a href="#shell中执行方式" class="headerlink" title="shell中执行方式"></a>shell中执行方式</h1><p>在<code>shell</code>中赋值非常简单<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">➜ PRE_CKPT=<span class="built_in">log</span>/20190405-174159        </span><br><span class="line">➜ NUM=`python3 tools/get_trian_num.py <span class="variable">$&#123;PRE_CKPT&#125;</span>`</span><br><span class="line">➜ <span class="built_in">echo</span> <span class="variable">$&#123;NUM&#125;</span></span><br><span class="line">4700</span><br></pre></td></tr></table></figure></p>
+<h1 id="在makefile中实现"><a href="#在makefile中实现" class="headerlink" title="在makefile中实现"></a>在makefile中实现</h1><ol>
+<li>第一次写法<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">freeze: </span></span><br><span class="line">	NUM=`python3 tools/get_trian_num.py $&#123;PRE_CKPT&#125;`</span><br><span class="line">	echo $&#123;NUM&#125;</span><br></pre></td></tr></table></figure>
+</li>
 </ol>
-<p>执行,发现什么都没有输出 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">➜ make freeze PRE_CKPT=<span class="built_in">log</span>/20190405-174159</span><br><span class="line">NUM=`python3 tools/get_trian_num.py <span class="built_in">log</span>/20190405-174159`</span><br><span class="line"><span class="built_in">echo</span></span><br></pre></td></tr></table></figure></p>
+<p>执行,发现什么都没有输出<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">➜ make freeze PRE_CKPT=<span class="built_in">log</span>/20190405-174159</span><br><span class="line">NUM=`python3 tools/get_trian_num.py <span class="built_in">log</span>/20190405-174159`</span><br><span class="line"><span class="built_in">echo</span></span><br></pre></td></tr></table></figure></p>
 <p>这里的问题是,我们通过<code>shell</code>命令赋值的是<code>shell</code>的变量,这个变量还不是<code>makefile</code>的变量.所以我们需要通过<code>$$VAR</code>的方式调用这个变量.</p>
-<ol start="2" type="1">
-<li>第二次写法 <figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">freeze: </span></span><br><span class="line">	NUM=`python3 tools/get_trian_num.py $&#123;PRE_CKPT&#125;`</span><br><span class="line">	echo $$NUM</span><br></pre></td></tr></table></figure></li>
+<ol>
+<li>第二次写法<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">freeze: </span></span><br><span class="line">	NUM=`python3 tools/get_trian_num.py $&#123;PRE_CKPT&#125;`</span><br><span class="line">	echo $$NUM</span><br></pre></td></tr></table></figure>
+</li>
 </ol>
-<p>执行,发现还是没有输出 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">➜ make freeze PRE_CKPT=<span class="built_in">log</span>/20190405-174159</span><br><span class="line">NUM=`python3 tools/get_trian_num.py <span class="built_in">log</span>/20190405-174159`</span><br><span class="line"><span class="built_in">echo</span> <span class="variable">$NUM</span></span><br></pre></td></tr></table></figure></p>
+<p>执行,发现还是没有输出<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">➜ make freeze PRE_CKPT=<span class="built_in">log</span>/20190405-174159</span><br><span class="line">NUM=`python3 tools/get_trian_num.py <span class="built_in">log</span>/20190405-174159`</span><br><span class="line"><span class="built_in">echo</span> <span class="variable">$NUM</span></span><br></pre></td></tr></table></figure></p>
 <p>这里是因为<code>makefile</code>中命令如果没有使用<code>;\</code>来连接,是无法共享变量的.所以还得修改</p>
-<ol start="3" type="1">
+<ol>
 <li>第三次写法</li>
 </ol>
 <figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">freeze: </span></span><br><span class="line">	@NUM=`python3 tools/get_trian_num.py $&#123;PRE_CKPT&#125;`; \</span><br><span class="line">	echo $$NUM</span><br></pre></td></tr></table></figure>
-<p>终于有了我想要的输出 😊 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">➜  make freeze PRE_CKPT=<span class="built_in">log</span>/20190405-174159</span><br><span class="line">4700</span><br></pre></td></tr></table></figure></p>
+<p>终于有了我想要的输出 😊<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">➜  make freeze PRE_CKPT=<span class="built_in">log</span>/20190405-174159</span><br><span class="line">4700</span><br></pre></td></tr></table></figure></p>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2019/04/07/make-use-shell/" data-id="ck6agcfu6006au06xcm1z5zf5" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2019/04/07/make-use-shell/" data-id="ck6izfkn20071k16x3dyix20e" class="article-share-link">Share</a>
       
       
       
@@ -216,6 +216,10 @@
       <ul>
         
           <li>
+            <a href="/2020/02/12/tf-all-regularizers/">tf2.0 全局添加regularizers</a>
+          </li>
+        
+          <li>
             <a href="/2020/02/06/ssl-fixmatch/">半监督学习：FixMatch</a>
           </li>
         
@@ -229,10 +233,6 @@
         
           <li>
             <a href="/2020/02/04/ssl-mixmatch/">半监督学习：MixMatch</a>
-          </li>
-        
-          <li>
-            <a href="/2020/02/03/ssl-ict/">半监督学习：Interpolation Consistency Training</a>
           </li>
         
       </ul>
