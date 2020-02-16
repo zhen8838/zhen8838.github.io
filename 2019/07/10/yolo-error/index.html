@@ -92,27 +92,32 @@
     <div class="article-entry" itemprop="articleBody">
       
         <p>终于把<a href="https://github.com/zhen8838/K210_Yolo_framework" target="_blank" rel="noopener">yolo v3框架</a>写好了。支持多模型、多数据集、任意输出层数量、任意anchor数量、模型剪枝还适配k210.不要太好用～</p>
-<p>这里记录一下我之前的实现的问题出在哪里。<br><a id="more"></a></p>
-<h1 id="错误地计算了ignore-mask"><a href="#错误地计算了ignore-mask" class="headerlink" title="错误地计算了ignore mask"></a>错误地计算了ignore mask</h1><p>从<code>yolo v2</code>开始就会计算正确<code>box</code>与预测<code>box</code>直接<code>iou</code>关系，如果<code>iou score</code>大于阈值，那么说明这个预测<code>box</code>是成功预测到了这个对象的，极大的提高了模型的<code>recall</code>。<br>但是我在开源的<code>yolo v2</code>中使用<code>Boolean mask</code>函数时忽略了一点，比如<code>batch</code>为16，那么输出<code>label</code>的尺寸为$[16,7,10,3,25]$,直接使用<code>Boolean mask</code>会得到正确<code>box</code>尺寸为$[?,4]$。然后我把这个$[?,4]$与预测出来的<code>box</code>$[16,7,10,3,4]$计算<code>iou score</code>。</p>
+<p>这里记录一下我之前的实现的问题出在哪里。 <a id="more"></a></p>
+<h1 id="错误地计算了ignore-mask">错误地计算了ignore mask</h1>
+<p>从<code>yolo v2</code>开始就会计算正确<code>box</code>与预测<code>box</code>直接<code>iou</code>关系，如果<code>iou score</code>大于阈值，那么说明这个预测<code>box</code>是成功预测到了这个对象的，极大的提高了模型的<code>recall</code>。 但是我在开源的<code>yolo v2</code>中使用<code>Boolean mask</code>函数时忽略了一点，比如<code>batch</code>为16，那么输出<code>label</code>的尺寸为<span class="math inline">\([16,7,10,3,25]\)</span>,直接使用<code>Boolean mask</code>会得到正确<code>box</code>尺寸为<span class="math inline">\([?,4]\)</span>。然后我把这个<span class="math inline">\([?,4]\)</span>与预测出来的<code>box</code><span class="math inline">\([16,7,10,3,4]\)</span>计算<code>iou score</code>。</p>
 <p>乍一看还以为没什么毛病，其实这里最大的毛病就是整个<code>batch</code>的正确<code>box</code>都与整个<code>batch</code>的预测<code>box</code>都做了<code>iou score</code>，如果这时候计算最优<code>iou score</code>，很有可能这个最优的预测<code>box</code>不属于这张图片！数据直接出现了混合，这就是根源问题。</p>
 <p>在新的写的代码中，我用了<code>map</code>的方式处理每张图片，既提高了效率，又避免了错误。</p>
 <p>题外话一句。。我现在都惊讶我之前的<code>yolo v2</code>为啥效果还行，很有可能误打误撞搞了个数据集<code>mix</code>的效果。。。</p>
-<p><strong>更新:</strong>  通过对比腾讯优图所开源的<code>yolo3</code>的代码,我发现这个<code>ignore mask</code>不但需要每张图像单独计算,还需要单一输出层与全局的目标进行计算,因为我用的是<code>tf.keras</code>,所以没办法在不使用<code>hack</code>的方式下传入整张图像的<code>bbox</code>数组,所以我在<code>label</code>中多加了一维,标记全局的对象位置.</p>
+<p><strong>更新:</strong> 通过对比腾讯优图所开源的<code>yolo3</code>的代码,我发现这个<code>ignore mask</code>不但需要每张图像单独计算,还需要单一输出层与全局的目标进行计算,因为我用的是<code>tf.keras</code>,所以没办法在不使用<code>hack</code>的方式下传入整张图像的<code>bbox</code>数组,所以我在<code>label</code>中多加了一维,标记全局的对象位置.</p>
 <p>以下代码为我目前的标签制作代码:</p>
 <ul>
-<li>避免了<code>inf</code> </li>
+<li>避免了<code>inf</code></li>
 <li>避免了对象重叠(原版yolo也没有考虑到这一点)</li>
-<li>添加了全局的对象标记. </li>
+<li>添加了全局的对象标记.</li>
 </ul>
 <p>这些问题消除之后,我的<code>yolo</code>所计算出的<code>loss</code>与腾讯优图所开源的<code>yolo</code>完全一致.终于完美复现出<code>yolo</code>的效果了~</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">labels = [np.zeros((self.out_hw[i][<span class="number">0</span>], self.out_hw[i][<span class="number">1</span>], len(self.anchors[i]),</span><br><span class="line">                    <span class="number">5</span> + self.class_num + <span class="number">1</span>), dtype=<span class="string">'float32'</span>) <span class="keyword">for</span> i <span class="keyword">in</span> range(self.output_number)]</span><br><span class="line"></span><br><span class="line">layer_idx, anchor_idx = self._get_anchor_index(ann[:, <span class="number">3</span>:<span class="number">5</span>])</span><br><span class="line"><span class="keyword">for</span> box, l, n <span class="keyword">in</span> zip(ann, layer_idx, anchor_idx):</span><br><span class="line">    <span class="comment"># NOTE box [x y w h] are relative to the size of the entire image [0~1]</span></span><br><span class="line">    <span class="comment"># clip box avoid width or heigh == 0 ====&gt; loss = inf</span></span><br><span class="line">    bb = np.clip(box[<span class="number">1</span>:<span class="number">5</span>], <span class="number">1e-8</span>, <span class="number">0.99999999</span>)</span><br><span class="line">    cnt = np.zeros(self.output_number, np.bool)  <span class="comment"># assigned flag</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> range(len(l)):</span><br><span class="line">        x, y = self._xy_grid_index(bb[<span class="number">0</span>:<span class="number">2</span>], l[i])  <span class="comment"># [x index , y index]</span></span><br><span class="line">        <span class="keyword">if</span> cnt[l[i]] <span class="keyword">or</span> labels[l[i]][y, x, n[i], <span class="number">4</span>] == <span class="number">1.</span>:</span><br><span class="line">            <span class="comment"># 1. when this output layer already have ground truth, skip</span></span><br><span class="line">            <span class="comment"># 2. when this grid already being assigned, skip</span></span><br><span class="line">            <span class="keyword">continue</span></span><br><span class="line">        labels[l[i]][y, x, n[i], <span class="number">0</span>:<span class="number">4</span>] = bb</span><br><span class="line">        labels[l[i]][y, x, n[i], <span class="number">4</span>] = (<span class="number">0.</span> <span class="keyword">if</span> cnt.any() <span class="keyword">else</span> <span class="number">1.</span>)</span><br><span class="line">        labels[l[i]][y, x, n[i], <span class="number">5</span> + int(box[<span class="number">0</span>])] = <span class="number">1.</span></span><br><span class="line">        labels[l[i]][y, x, n[i], <span class="number">-1</span>] = <span class="number">1.</span>  <span class="comment"># set gt flag = 1</span></span><br><span class="line">        cnt[l[i]] = <span class="keyword">True</span>  <span class="comment"># output layer ground truth flag</span></span><br><span class="line">        <span class="keyword">if</span> cnt.all():</span><br><span class="line">            <span class="comment"># when all output layer have ground truth, exit</span></span><br><span class="line">            <span class="keyword">break</span></span><br></pre></td></tr></table></figure>
-<h1 id="anchor的尺度"><a href="#anchor的尺度" class="headerlink" title="anchor的尺度"></a>anchor的尺度</h1><p>前面我有个文章也写了，<code>anchor</code>的作用就是让预测<code>wh</code>与真实<code>wh</code>直接的比例接近与1，那么细细想来，<code>anchor</code>的尺度是对应图片尺度$[224,320]$还是对应栅格的尺度，还是对应全局的<code>0-1</code>都没有什么关系，只不过<code>anchor</code>的尺度就代表做标签的时候<code>label</code>要转换的尺度。所以为了方便起见，直接把<code>anchor</code>尺度设置为全局的<code>0-1</code>就完事了，还减少运算量。</p>
-<h1 id="loss出现NaN"><a href="#loss出现NaN" class="headerlink" title="loss出现NaN"></a>loss出现NaN</h1><p>问题原因在于图片标签的<code>width</code>与<code>height</code>出现了<code>0</code>,导致<code>log(0)=-inf</code>的问题.<br>解决起来很简单,在制作标签的时候限制<code>width</code>与<code>height</code>范围即可.</p>
-<h1 id="label中的极端情况的考虑"><a href="#label中的极端情况的考虑" class="headerlink" title="label中的极端情况的考虑"></a>label中的极端情况的考虑</h1><h2 id="bbox到达边界值"><a href="#bbox到达边界值" class="headerlink" title="bbox到达边界值"></a>bbox到达边界值</h2><p>当<code>bbox</code>的中心点位于边界值最大值时,如下图所示.</p>
-<script type="math/tex; mode=display">\begin{aligned}
-    index&=floor(x*w) \\
-    \because w&=3,x=1 \Rightarrow floor(1*3)=3
-\end{aligned}</script><p>但使用<code>3</code>进行索引就会报错,所以我们需要限制一下<code>bbox</code>的中心坐标不能大于等于$1$.</p>
+<h1 id="anchor的尺度">anchor的尺度</h1>
+<p>前面我有个文章也写了，<code>anchor</code>的作用就是让预测<code>wh</code>与真实<code>wh</code>直接的比例接近与1，那么细细想来，<code>anchor</code>的尺度是对应图片尺度<span class="math inline">\([224,320]\)</span>还是对应栅格的尺度，还是对应全局的<code>0-1</code>都没有什么关系，只不过<code>anchor</code>的尺度就代表做标签的时候<code>label</code>要转换的尺度。所以为了方便起见，直接把<code>anchor</code>尺度设置为全局的<code>0-1</code>就完事了，还减少运算量。</p>
+<h1 id="loss出现nan">loss出现NaN</h1>
+<p>问题原因在于图片标签的<code>width</code>与<code>height</code>出现了<code>0</code>,导致<code>log(0)=-inf</code>的问题. 解决起来很简单,在制作标签的时候限制<code>width</code>与<code>height</code>范围即可.</p>
+<h1 id="label中的极端情况的考虑">label中的极端情况的考虑</h1>
+<h2 id="bbox到达边界值">bbox到达边界值</h2>
+<p>当<code>bbox</code>的中心点位于边界值最大值时,如下图所示. <span class="math display">\[\begin{aligned}
+    index&amp;=floor(x*w) \\
+    \because w&amp;=3,x=1 \Rightarrow floor(1*3)=3
+\end{aligned}
+\]</span> 但使用<code>3</code>进行索引就会报错,所以我们需要限制一下<code>bbox</code>的中心坐标不能大于等于<span class="math inline">\(1\)</span>.</p>
 <pre><code>+-------+-------+-------+
 |       |       |       |
 |       |       |       |
@@ -126,7 +131,9 @@
 |       |       |       |
 |       |       |       |
 +-------+-------+-------+
-</code></pre><h2 id="当两个目标的label相同时"><a href="#当两个目标的label相同时" class="headerlink" title="当两个目标的label相同时"></a>当两个目标的label相同时</h2><p>如下图所示,当两个<code>bbox</code>真的非常靠近时,就会出现他们的<code>label</code>所在的位置都是相同的,就会出现<code>label</code>被覆盖的问题了.目前我将相同<code>label</code>时,后面的<code>label</code>分配给次优的<code>anchor</code>.</p>
+            </code></pre>
+<h2 id="当两个目标的label相同时">当两个目标的label相同时</h2>
+<p>如下图所示,当两个<code>bbox</code>真的非常靠近时,就会出现他们的<code>label</code>所在的位置都是相同的,就会出现<code>label</code>被覆盖的问题了.目前我将相同<code>label</code>时,后面的<code>label</code>分配给次优的<code>anchor</code>.</p>
 <pre><code>+---------------+-------+
 |  +---------+  |       |
 | +|--------+|  |       |
@@ -139,9 +146,11 @@
 | +---------+   |       |
 |       |       |       |
 |       |       |       |
-+-------+-------+-------+
-</code></pre><h1 id="数据增强"><a href="#数据增强" class="headerlink" title="数据增强"></a>数据增强</h1><p>数据增强我使用<code>gluoncv</code>的方式，首先是图像<code>crop</code>与<code>resize</code>，使用的是<code>ssd</code>所提出的带<code>iou</code>约束的<code>crop</code>方式，<code>resize</code>之后结合<code>imgaug</code>库进行数据增强，效果不错。如果可以再进一步，可以使用谷歌提出的<code>autoaugment</code>策略。我这里暂时还没用<code>mixup</code>，<code>gluoncv</code>里面应该是有使用的。</p>
-<h1 id="IOULoss"><a href="#IOULoss" class="headerlink" title="IOULoss"></a>IOULoss</h1><p>推荐使用<code>ciou loss</code>，我测试之后<code>map</code>提高了4个点，效果相当不错。几个<code>iou loss</code>的实现方式我总结在<a href="https://zhen8838.github.io/2020/01/25/tf-ious/">这里</a></p>
++-------+-------+-------+</code></pre>
+<h1 id="数据增强">数据增强</h1>
+<p>数据增强我使用<code>gluoncv</code>的方式，首先是图像<code>crop</code>与<code>resize</code>，使用的是<code>ssd</code>所提出的带<code>iou</code>约束的<code>crop</code>方式，<code>resize</code>之后结合<code>imgaug</code>库进行数据增强，效果不错。如果可以再进一步，可以使用谷歌提出的<code>autoaugment</code>策略。我这里暂时还没用<code>mixup</code>，<code>gluoncv</code>里面应该是有使用的。</p>
+<h1 id="iouloss">IOULoss</h1>
+<p>推荐使用<code>ciou loss</code>，我测试之后<code>map</code>提高了4个点，效果相当不错。几个<code>iou loss</code>的实现方式我总结在<a href="https://zhen8838.github.io/2020/01/25/tf-ious/">这里</a></p>
 
       
     </div>
@@ -150,27 +159,32 @@
         
         
           <p>终于把<a href="https://github.com/zhen8838/K210_Yolo_framework" target="_blank" rel="noopener">yolo v3框架</a>写好了。支持多模型、多数据集、任意输出层数量、任意anchor数量、模型剪枝还适配k210.不要太好用～</p>
-<p>这里记录一下我之前的实现的问题出在哪里。<br><a id="more"></a></p>
-<h1 id="错误地计算了ignore-mask"><a href="#错误地计算了ignore-mask" class="headerlink" title="错误地计算了ignore mask"></a>错误地计算了ignore mask</h1><p>从<code>yolo v2</code>开始就会计算正确<code>box</code>与预测<code>box</code>直接<code>iou</code>关系，如果<code>iou score</code>大于阈值，那么说明这个预测<code>box</code>是成功预测到了这个对象的，极大的提高了模型的<code>recall</code>。<br>但是我在开源的<code>yolo v2</code>中使用<code>Boolean mask</code>函数时忽略了一点，比如<code>batch</code>为16，那么输出<code>label</code>的尺寸为$[16,7,10,3,25]$,直接使用<code>Boolean mask</code>会得到正确<code>box</code>尺寸为$[?,4]$。然后我把这个$[?,4]$与预测出来的<code>box</code>$[16,7,10,3,4]$计算<code>iou score</code>。</p>
+<p>这里记录一下我之前的实现的问题出在哪里。 <a id="more"></a></p>
+<h1 id="错误地计算了ignore-mask">错误地计算了ignore mask</h1>
+<p>从<code>yolo v2</code>开始就会计算正确<code>box</code>与预测<code>box</code>直接<code>iou</code>关系，如果<code>iou score</code>大于阈值，那么说明这个预测<code>box</code>是成功预测到了这个对象的，极大的提高了模型的<code>recall</code>。 但是我在开源的<code>yolo v2</code>中使用<code>Boolean mask</code>函数时忽略了一点，比如<code>batch</code>为16，那么输出<code>label</code>的尺寸为<span class="math inline">\([16,7,10,3,25]\)</span>,直接使用<code>Boolean mask</code>会得到正确<code>box</code>尺寸为<span class="math inline">\([?,4]\)</span>。然后我把这个<span class="math inline">\([?,4]\)</span>与预测出来的<code>box</code><span class="math inline">\([16,7,10,3,4]\)</span>计算<code>iou score</code>。</p>
 <p>乍一看还以为没什么毛病，其实这里最大的毛病就是整个<code>batch</code>的正确<code>box</code>都与整个<code>batch</code>的预测<code>box</code>都做了<code>iou score</code>，如果这时候计算最优<code>iou score</code>，很有可能这个最优的预测<code>box</code>不属于这张图片！数据直接出现了混合，这就是根源问题。</p>
 <p>在新的写的代码中，我用了<code>map</code>的方式处理每张图片，既提高了效率，又避免了错误。</p>
 <p>题外话一句。。我现在都惊讶我之前的<code>yolo v2</code>为啥效果还行，很有可能误打误撞搞了个数据集<code>mix</code>的效果。。。</p>
-<p><strong>更新:</strong>  通过对比腾讯优图所开源的<code>yolo3</code>的代码,我发现这个<code>ignore mask</code>不但需要每张图像单独计算,还需要单一输出层与全局的目标进行计算,因为我用的是<code>tf.keras</code>,所以没办法在不使用<code>hack</code>的方式下传入整张图像的<code>bbox</code>数组,所以我在<code>label</code>中多加了一维,标记全局的对象位置.</p>
+<p><strong>更新:</strong> 通过对比腾讯优图所开源的<code>yolo3</code>的代码,我发现这个<code>ignore mask</code>不但需要每张图像单独计算,还需要单一输出层与全局的目标进行计算,因为我用的是<code>tf.keras</code>,所以没办法在不使用<code>hack</code>的方式下传入整张图像的<code>bbox</code>数组,所以我在<code>label</code>中多加了一维,标记全局的对象位置.</p>
 <p>以下代码为我目前的标签制作代码:</p>
 <ul>
-<li>避免了<code>inf</code> </li>
+<li>避免了<code>inf</code></li>
 <li>避免了对象重叠(原版yolo也没有考虑到这一点)</li>
-<li>添加了全局的对象标记. </li>
+<li>添加了全局的对象标记.</li>
 </ul>
 <p>这些问题消除之后,我的<code>yolo</code>所计算出的<code>loss</code>与腾讯优图所开源的<code>yolo</code>完全一致.终于完美复现出<code>yolo</code>的效果了~</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">labels = [np.zeros((self.out_hw[i][<span class="number">0</span>], self.out_hw[i][<span class="number">1</span>], len(self.anchors[i]),</span><br><span class="line">                    <span class="number">5</span> + self.class_num + <span class="number">1</span>), dtype=<span class="string">'float32'</span>) <span class="keyword">for</span> i <span class="keyword">in</span> range(self.output_number)]</span><br><span class="line"></span><br><span class="line">layer_idx, anchor_idx = self._get_anchor_index(ann[:, <span class="number">3</span>:<span class="number">5</span>])</span><br><span class="line"><span class="keyword">for</span> box, l, n <span class="keyword">in</span> zip(ann, layer_idx, anchor_idx):</span><br><span class="line">    <span class="comment"># NOTE box [x y w h] are relative to the size of the entire image [0~1]</span></span><br><span class="line">    <span class="comment"># clip box avoid width or heigh == 0 ====&gt; loss = inf</span></span><br><span class="line">    bb = np.clip(box[<span class="number">1</span>:<span class="number">5</span>], <span class="number">1e-8</span>, <span class="number">0.99999999</span>)</span><br><span class="line">    cnt = np.zeros(self.output_number, np.bool)  <span class="comment"># assigned flag</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> range(len(l)):</span><br><span class="line">        x, y = self._xy_grid_index(bb[<span class="number">0</span>:<span class="number">2</span>], l[i])  <span class="comment"># [x index , y index]</span></span><br><span class="line">        <span class="keyword">if</span> cnt[l[i]] <span class="keyword">or</span> labels[l[i]][y, x, n[i], <span class="number">4</span>] == <span class="number">1.</span>:</span><br><span class="line">            <span class="comment"># 1. when this output layer already have ground truth, skip</span></span><br><span class="line">            <span class="comment"># 2. when this grid already being assigned, skip</span></span><br><span class="line">            <span class="keyword">continue</span></span><br><span class="line">        labels[l[i]][y, x, n[i], <span class="number">0</span>:<span class="number">4</span>] = bb</span><br><span class="line">        labels[l[i]][y, x, n[i], <span class="number">4</span>] = (<span class="number">0.</span> <span class="keyword">if</span> cnt.any() <span class="keyword">else</span> <span class="number">1.</span>)</span><br><span class="line">        labels[l[i]][y, x, n[i], <span class="number">5</span> + int(box[<span class="number">0</span>])] = <span class="number">1.</span></span><br><span class="line">        labels[l[i]][y, x, n[i], <span class="number">-1</span>] = <span class="number">1.</span>  <span class="comment"># set gt flag = 1</span></span><br><span class="line">        cnt[l[i]] = <span class="keyword">True</span>  <span class="comment"># output layer ground truth flag</span></span><br><span class="line">        <span class="keyword">if</span> cnt.all():</span><br><span class="line">            <span class="comment"># when all output layer have ground truth, exit</span></span><br><span class="line">            <span class="keyword">break</span></span><br></pre></td></tr></table></figure>
-<h1 id="anchor的尺度"><a href="#anchor的尺度" class="headerlink" title="anchor的尺度"></a>anchor的尺度</h1><p>前面我有个文章也写了，<code>anchor</code>的作用就是让预测<code>wh</code>与真实<code>wh</code>直接的比例接近与1，那么细细想来，<code>anchor</code>的尺度是对应图片尺度$[224,320]$还是对应栅格的尺度，还是对应全局的<code>0-1</code>都没有什么关系，只不过<code>anchor</code>的尺度就代表做标签的时候<code>label</code>要转换的尺度。所以为了方便起见，直接把<code>anchor</code>尺度设置为全局的<code>0-1</code>就完事了，还减少运算量。</p>
-<h1 id="loss出现NaN"><a href="#loss出现NaN" class="headerlink" title="loss出现NaN"></a>loss出现NaN</h1><p>问题原因在于图片标签的<code>width</code>与<code>height</code>出现了<code>0</code>,导致<code>log(0)=-inf</code>的问题.<br>解决起来很简单,在制作标签的时候限制<code>width</code>与<code>height</code>范围即可.</p>
-<h1 id="label中的极端情况的考虑"><a href="#label中的极端情况的考虑" class="headerlink" title="label中的极端情况的考虑"></a>label中的极端情况的考虑</h1><h2 id="bbox到达边界值"><a href="#bbox到达边界值" class="headerlink" title="bbox到达边界值"></a>bbox到达边界值</h2><p>当<code>bbox</code>的中心点位于边界值最大值时,如下图所示.</p>
-<script type="math/tex; mode=display">\begin{aligned}
-    index&=floor(x*w) \\
-    \because w&=3,x=1 \Rightarrow floor(1*3)=3
-\end{aligned}</script><p>但使用<code>3</code>进行索引就会报错,所以我们需要限制一下<code>bbox</code>的中心坐标不能大于等于$1$.</p>
+<h1 id="anchor的尺度">anchor的尺度</h1>
+<p>前面我有个文章也写了，<code>anchor</code>的作用就是让预测<code>wh</code>与真实<code>wh</code>直接的比例接近与1，那么细细想来，<code>anchor</code>的尺度是对应图片尺度<span class="math inline">\([224,320]\)</span>还是对应栅格的尺度，还是对应全局的<code>0-1</code>都没有什么关系，只不过<code>anchor</code>的尺度就代表做标签的时候<code>label</code>要转换的尺度。所以为了方便起见，直接把<code>anchor</code>尺度设置为全局的<code>0-1</code>就完事了，还减少运算量。</p>
+<h1 id="loss出现nan">loss出现NaN</h1>
+<p>问题原因在于图片标签的<code>width</code>与<code>height</code>出现了<code>0</code>,导致<code>log(0)=-inf</code>的问题. 解决起来很简单,在制作标签的时候限制<code>width</code>与<code>height</code>范围即可.</p>
+<h1 id="label中的极端情况的考虑">label中的极端情况的考虑</h1>
+<h2 id="bbox到达边界值">bbox到达边界值</h2>
+<p>当<code>bbox</code>的中心点位于边界值最大值时,如下图所示. <span class="math display">\[\begin{aligned}
+    index&amp;=floor(x*w) \\
+    \because w&amp;=3,x=1 \Rightarrow floor(1*3)=3
+\end{aligned}
+\]</span> 但使用<code>3</code>进行索引就会报错,所以我们需要限制一下<code>bbox</code>的中心坐标不能大于等于<span class="math inline">\(1\)</span>.</p>
 <pre><code>+-------+-------+-------+
 |       |       |       |
 |       |       |       |
@@ -184,7 +198,9 @@
 |       |       |       |
 |       |       |       |
 +-------+-------+-------+
-</code></pre><h2 id="当两个目标的label相同时"><a href="#当两个目标的label相同时" class="headerlink" title="当两个目标的label相同时"></a>当两个目标的label相同时</h2><p>如下图所示,当两个<code>bbox</code>真的非常靠近时,就会出现他们的<code>label</code>所在的位置都是相同的,就会出现<code>label</code>被覆盖的问题了.目前我将相同<code>label</code>时,后面的<code>label</code>分配给次优的<code>anchor</code>.</p>
+            </code></pre>
+<h2 id="当两个目标的label相同时">当两个目标的label相同时</h2>
+<p>如下图所示,当两个<code>bbox</code>真的非常靠近时,就会出现他们的<code>label</code>所在的位置都是相同的,就会出现<code>label</code>被覆盖的问题了.目前我将相同<code>label</code>时,后面的<code>label</code>分配给次优的<code>anchor</code>.</p>
 <pre><code>+---------------+-------+
 |  +---------+  |       |
 | +|--------+|  |       |
@@ -197,15 +213,17 @@
 | +---------+   |       |
 |       |       |       |
 |       |       |       |
-+-------+-------+-------+
-</code></pre><h1 id="数据增强"><a href="#数据增强" class="headerlink" title="数据增强"></a>数据增强</h1><p>数据增强我使用<code>gluoncv</code>的方式，首先是图像<code>crop</code>与<code>resize</code>，使用的是<code>ssd</code>所提出的带<code>iou</code>约束的<code>crop</code>方式，<code>resize</code>之后结合<code>imgaug</code>库进行数据增强，效果不错。如果可以再进一步，可以使用谷歌提出的<code>autoaugment</code>策略。我这里暂时还没用<code>mixup</code>，<code>gluoncv</code>里面应该是有使用的。</p>
-<h1 id="IOULoss"><a href="#IOULoss" class="headerlink" title="IOULoss"></a>IOULoss</h1><p>推荐使用<code>ciou loss</code>，我测试之后<code>map</code>提高了4个点，效果相当不错。几个<code>iou loss</code>的实现方式我总结在<a href="https://zhen8838.github.io/2020/01/25/tf-ious/">这里</a></p>
++-------+-------+-------+</code></pre>
+<h1 id="数据增强">数据增强</h1>
+<p>数据增强我使用<code>gluoncv</code>的方式，首先是图像<code>crop</code>与<code>resize</code>，使用的是<code>ssd</code>所提出的带<code>iou</code>约束的<code>crop</code>方式，<code>resize</code>之后结合<code>imgaug</code>库进行数据增强，效果不错。如果可以再进一步，可以使用谷歌提出的<code>autoaugment</code>策略。我这里暂时还没用<code>mixup</code>，<code>gluoncv</code>里面应该是有使用的。</p>
+<h1 id="iouloss">IOULoss</h1>
+<p>推荐使用<code>ciou loss</code>，我测试之后<code>map</code>提高了4个点，效果相当不错。几个<code>iou loss</code>的实现方式我总结在<a href="https://zhen8838.github.io/2020/01/25/tf-ious/">这里</a></p>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2019/07/10/yolo-error/" data-id="ck6izfkoq00cak16xps78b0gn" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2019/07/10/yolo-error/" data-id="ck6p1dy5600c14b6xhrbsc6h5" class="article-share-link">Share</a>
       
       
       
@@ -278,6 +296,10 @@
       <ul>
         
           <li>
+            <a href="/2020/02/16/tf-focal-loss/">bce focal loss</a>
+          </li>
+        
+          <li>
             <a href="/2020/02/12/tf-all-regularizers/">tf2.0 全局添加regularizers</a>
           </li>
         
@@ -291,10 +313,6 @@
         
           <li>
             <a href="/2020/02/04/ssl-uda/">半监督学习：Unsupervised Data Augmentation</a>
-          </li>
-        
-          <li>
-            <a href="/2020/02/04/ssl-mixmatch/">半监督学习：MixMatch</a>
           </li>
         
       </ul>
