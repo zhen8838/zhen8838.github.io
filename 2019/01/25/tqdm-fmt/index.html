@@ -97,7 +97,7 @@
 <p>首先分析<code>tqdm</code>的默认格式: 重点就在于<code>bar_format</code>函数</p>
 <ul>
 <li><p><strong>bar_format</strong> : str, optional</p>
-<p>Specify a custom bar string formatting. May impact performance. <strong>[default: '{l_bar}{bar}{r_bar}']</strong>, where <strong>l_bar='{desc}: {percentage:3.0f}%|'</strong> and <strong>r_bar='| {n_fmt}/{total_fmt} [{elapsed}&lt;{remaining}, ' '{rate_fmt}{postfix}]'</strong> Possible vars: l_bar, bar, r_bar, n, n_fmt, total, total_fmt, percentage, rate, rate_fmt, rate_noinv, rate_noinv_fmt, rate_inv, rate_inv_fmt, elapsed, remaining, desc, postfix. Note that a trailing &quot;: &quot; is automatically removed after {desc} if the latter is empty.</p></li>
+<p>Specify a custom bar string formatting. May impact performance. <strong>[default: '{l_bar}{bar}{r_bar}']</strong>, where <strong>l_bar='{desc}: {percentage:3.0f}%|'</strong> and <strong>r_bar='| {n_fmt}/{total_fmt} [{elapsed}&lt;{remaining}, ' '{rate_fmt}{postfix}]'</strong> Possible vars: l_bar, bar, r_bar, n, n_fmt, total, total_fmt, percentage, rate, rate_fmt, rate_noinv, rate_noinv_fmt, rate_inv, rate_inv_fmt, elapsed, remaining, desc, postfix. Note that a trailing ": " is automatically removed after {desc} if the latter is empty.</p></li>
 </ul>
 <p>其中默认进度条有3块组成,分别是<strong>l_bar,bar,r_bar</strong>,下面分别描述一下.</p>
 <h2 id="l_bar">l_bar</h2>
@@ -131,7 +131,7 @@
 <h4 id="例子2">例子2</h4>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> tqdm <span class="keyword">import</span> trange, tqdm</span><br><span class="line"><span class="keyword">from</span> random <span class="keyword">import</span> random, randint</span><br><span class="line"><span class="keyword">from</span> time <span class="keyword">import</span> sleep</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">training</span><span class="params">(epoch: int, step_per_epoch: int)</span>:</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> range(epoch):</span><br><span class="line">        <span class="keyword">with</span> tqdm(total=step_per_epoch, bar_format=<span class="string">'&#123;l_bar&#125;&#123;bar&#125;| &#123;rate_fmt&#125; &#123;postfix[0]&#125;&#123;postfix[1][loss]:&gt;6.3f&#125;'</span>,</span><br><span class="line">                  unit=<span class="string">' batch'</span>, postfix=[<span class="string">'loss='</span>, dict(loss=<span class="number">0</span>)], ncols=<span class="number">80</span>) <span class="keyword">as</span> t:</span><br><span class="line">            <span class="keyword">for</span> j <span class="keyword">in</span> range(step_per_epoch):</span><br><span class="line">                t.postfix[<span class="number">1</span>][<span class="string">"loss"</span>] = random()</span><br><span class="line">                t.update()</span><br><span class="line"></span><br><span class="line">training(epoch=<span class="number">3</span>, step_per_epoch=<span class="number">10</span>)</span><br></pre></td></tr></table></figure>
 <h4 id="分析2">分析2</h4>
-<p>上面我首先改变了<code>bar_format</code>,不过我没有动前面的两部分,只修改了最后一部分.具体看这里:<code>{postfix[0]}{postfix[1][loss]:&gt;6.3f}</code>.这样相当与这个<code>postfix</code>是一个列表.其中<code>t.postfix[1][&quot;loss&quot;] = random()</code>意思是向这个列表中的字典项<code>loss</code>复制,最终达到更新<code>loss</code>的效果.</p>
+<p>上面我首先改变了<code>bar_format</code>,不过我没有动前面的两部分,只修改了最后一部分.具体看这里:<code>{postfix[0]}{postfix[1][loss]:&gt;6.3f}</code>.这样相当与这个<code>postfix</code>是一个列表.其中<code>t.postfix[1]["loss"] = random()</code>意思是向这个列表中的字典项<code>loss</code>复制,最终达到更新<code>loss</code>的效果.</p>
 <h4 id="例子3">例子3</h4>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> tqdm <span class="keyword">import</span> trange, tqdm</span><br><span class="line"><span class="keyword">from</span> random <span class="keyword">import</span> random, randint</span><br><span class="line"><span class="keyword">from</span> time <span class="keyword">import</span> sleep</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">training</span><span class="params">(epoch: int, step_per_epoch: int)</span>:</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> range(epoch):</span><br><span class="line">        <span class="keyword">with</span> tqdm(total=step_per_epoch, bar_format=<span class="string">'&#123;n_fmt&#125;/&#123;total_fmt&#125; |&#123;bar&#125;| &#123;rate_fmt&#125; &#123;postfix&#125;'</span>, ncols=<span class="number">80</span>) <span class="keyword">as</span> t:</span><br><span class="line">            <span class="keyword">for</span> i <span class="keyword">in</span> range(step_per_epoch):</span><br><span class="line">                t.set_postfix_str(<span class="string">'loss=&#123;:^7.3f&#125;'</span>.format(random()))</span><br><span class="line">                sleep(<span class="number">.1</span>)</span><br><span class="line">                t.update()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">training(epoch=<span class="number">3</span>, step_per_epoch=<span class="number">10</span>)</span><br></pre></td></tr></table></figure>
 <h4 id="效果3">效果3</h4>
@@ -151,7 +151,7 @@
 <p>首先分析<code>tqdm</code>的默认格式: 重点就在于<code>bar_format</code>函数</p>
 <ul>
 <li><p><strong>bar_format</strong> : str, optional</p>
-<p>Specify a custom bar string formatting. May impact performance. <strong>[default: '{l_bar}{bar}{r_bar}']</strong>, where <strong>l_bar='{desc}: {percentage:3.0f}%|'</strong> and <strong>r_bar='| {n_fmt}/{total_fmt} [{elapsed}&lt;{remaining}, ' '{rate_fmt}{postfix}]'</strong> Possible vars: l_bar, bar, r_bar, n, n_fmt, total, total_fmt, percentage, rate, rate_fmt, rate_noinv, rate_noinv_fmt, rate_inv, rate_inv_fmt, elapsed, remaining, desc, postfix. Note that a trailing &quot;: &quot; is automatically removed after {desc} if the latter is empty.</p></li>
+<p>Specify a custom bar string formatting. May impact performance. <strong>[default: '{l_bar}{bar}{r_bar}']</strong>, where <strong>l_bar='{desc}: {percentage:3.0f}%|'</strong> and <strong>r_bar='| {n_fmt}/{total_fmt} [{elapsed}&lt;{remaining}, ' '{rate_fmt}{postfix}]'</strong> Possible vars: l_bar, bar, r_bar, n, n_fmt, total, total_fmt, percentage, rate, rate_fmt, rate_noinv, rate_noinv_fmt, rate_inv, rate_inv_fmt, elapsed, remaining, desc, postfix. Note that a trailing ": " is automatically removed after {desc} if the latter is empty.</p></li>
 </ul>
 <p>其中默认进度条有3块组成,分别是<strong>l_bar,bar,r_bar</strong>,下面分别描述一下.</p>
 <h2 id="l_bar">l_bar</h2>
@@ -185,7 +185,7 @@
 <h4 id="例子2">例子2</h4>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> tqdm <span class="keyword">import</span> trange, tqdm</span><br><span class="line"><span class="keyword">from</span> random <span class="keyword">import</span> random, randint</span><br><span class="line"><span class="keyword">from</span> time <span class="keyword">import</span> sleep</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">training</span><span class="params">(epoch: int, step_per_epoch: int)</span>:</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> range(epoch):</span><br><span class="line">        <span class="keyword">with</span> tqdm(total=step_per_epoch, bar_format=<span class="string">'&#123;l_bar&#125;&#123;bar&#125;| &#123;rate_fmt&#125; &#123;postfix[0]&#125;&#123;postfix[1][loss]:&gt;6.3f&#125;'</span>,</span><br><span class="line">                  unit=<span class="string">' batch'</span>, postfix=[<span class="string">'loss='</span>, dict(loss=<span class="number">0</span>)], ncols=<span class="number">80</span>) <span class="keyword">as</span> t:</span><br><span class="line">            <span class="keyword">for</span> j <span class="keyword">in</span> range(step_per_epoch):</span><br><span class="line">                t.postfix[<span class="number">1</span>][<span class="string">"loss"</span>] = random()</span><br><span class="line">                t.update()</span><br><span class="line"></span><br><span class="line">training(epoch=<span class="number">3</span>, step_per_epoch=<span class="number">10</span>)</span><br></pre></td></tr></table></figure>
 <h4 id="分析2">分析2</h4>
-<p>上面我首先改变了<code>bar_format</code>,不过我没有动前面的两部分,只修改了最后一部分.具体看这里:<code>{postfix[0]}{postfix[1][loss]:&gt;6.3f}</code>.这样相当与这个<code>postfix</code>是一个列表.其中<code>t.postfix[1][&quot;loss&quot;] = random()</code>意思是向这个列表中的字典项<code>loss</code>复制,最终达到更新<code>loss</code>的效果.</p>
+<p>上面我首先改变了<code>bar_format</code>,不过我没有动前面的两部分,只修改了最后一部分.具体看这里:<code>{postfix[0]}{postfix[1][loss]:&gt;6.3f}</code>.这样相当与这个<code>postfix</code>是一个列表.其中<code>t.postfix[1]["loss"] = random()</code>意思是向这个列表中的字典项<code>loss</code>复制,最终达到更新<code>loss</code>的效果.</p>
 <h4 id="例子3">例子3</h4>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> tqdm <span class="keyword">import</span> trange, tqdm</span><br><span class="line"><span class="keyword">from</span> random <span class="keyword">import</span> random, randint</span><br><span class="line"><span class="keyword">from</span> time <span class="keyword">import</span> sleep</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">training</span><span class="params">(epoch: int, step_per_epoch: int)</span>:</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> range(epoch):</span><br><span class="line">        <span class="keyword">with</span> tqdm(total=step_per_epoch, bar_format=<span class="string">'&#123;n_fmt&#125;/&#123;total_fmt&#125; |&#123;bar&#125;| &#123;rate_fmt&#125; &#123;postfix&#125;'</span>, ncols=<span class="number">80</span>) <span class="keyword">as</span> t:</span><br><span class="line">            <span class="keyword">for</span> i <span class="keyword">in</span> range(step_per_epoch):</span><br><span class="line">                t.set_postfix_str(<span class="string">'loss=&#123;:^7.3f&#125;'</span>.format(random()))</span><br><span class="line">                sleep(<span class="number">.1</span>)</span><br><span class="line">                t.update()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">training(epoch=<span class="number">3</span>, step_per_epoch=<span class="number">10</span>)</span><br></pre></td></tr></table></figure>
 <h4 id="效果3">效果3</h4>
@@ -197,7 +197,7 @@
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2019/01/25/tqdm-fmt/" data-id="ck70l70ia009h026xbmjdfyjq" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2019/01/25/tqdm-fmt/" data-id="ck77qiv7v009idy6x2t7luvw4" class="article-share-link">Share</a>
       
       
       
@@ -270,6 +270,10 @@
       <ul>
         
           <li>
+            <a href="/2020/03/01/mel-augments/">Augmentation For Mel Spectrogram</a>
+          </li>
+        
+          <li>
             <a href="/2020/02/25/mxnet2tflite/">mxnet模型转tflite</a>
           </li>
         
@@ -283,10 +287,6 @@
         
           <li>
             <a href="/2020/02/06/ssl-fixmatch/">半监督学习：FixMatch</a>
-          </li>
-        
-          <li>
-            <a href="/2020/02/05/ssl-remixmatch/">半监督学习：ReMixMatch</a>
           </li>
         
       </ul>
@@ -330,21 +330,6 @@
 
 
 
-  </div>
-<script type="text/x-mathjax-config">
-    MathJax.Hub.Config({
-        tex2jax: {
-            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
-            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
-            processEscapes: true
-        }
-    });
-    MathJax.Hub.Queue(function() {
-        var all = MathJax.Hub.getAllJax();
-        for (var i = 0; i < all.length; ++i)
-            all[i].SourceElement().parentNode.className += ' has-jax';
-    });
-</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+  </div><!-- hexo-inject:begin --><!-- hexo-inject:end -->
 </body>
 </html>
