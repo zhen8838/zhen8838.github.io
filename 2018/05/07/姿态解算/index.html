@@ -7,20 +7,20 @@
   
   <title>四轴飞行器姿态解算介绍 | </title>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta name="description" content="一.姿态的描述方法四元数因为网络上的欧拉角的文章讲解的也比较详细了，所以这里直接开始介绍四元数。">
+  <meta name="description" content="一.姿态的描述方法 四元数 因为网络上的欧拉角的文章讲解的也比较详细了，所以这里直接开始介绍四元数。">
 <meta name="keywords" content="算法">
 <meta property="og:type" content="article">
 <meta property="og:title" content="四轴飞行器姿态解算介绍">
 <meta property="og:url" content="https://zhen8838.github.io/2018/05/07/姿态解算/index.html">
 <meta property="og:site_name">
-<meta property="og:description" content="一.姿态的描述方法四元数因为网络上的欧拉角的文章讲解的也比较详细了，所以这里直接开始介绍四元数。">
+<meta property="og:description" content="一.姿态的描述方法 四元数 因为网络上的欧拉角的文章讲解的也比较详细了，所以这里直接开始介绍四元数。">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https://zhen8838.github.io/2018/05/07/姿态解算/images/siyuanshu.png">
 <meta property="og:image" content="https://zhen8838.github.io/2018/05/07/姿态解算/images/siyuanshu1.png">
 <meta property="og:updated_time" content="2019-08-05T03:28:20.009Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="四轴飞行器姿态解算介绍">
-<meta name="twitter:description" content="一.姿态的描述方法四元数因为网络上的欧拉角的文章讲解的也比较详细了，所以这里直接开始介绍四元数。">
+<meta name="twitter:description" content="一.姿态的描述方法 四元数 因为网络上的欧拉角的文章讲解的也比较详细了，所以这里直接开始介绍四元数。">
 <meta name="twitter:image" content="https://zhen8838.github.io/2018/05/07/姿态解算/images/siyuanshu.png">
   
   
@@ -94,48 +94,46 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <h2 id="一-姿态的描述方法"><a href="#一-姿态的描述方法" class="headerlink" title="一.姿态的描述方法"></a>一.姿态的描述方法</h2><h2 id="四元数"><a href="#四元数" class="headerlink" title="四元数"></a>四元数</h2><pre><code>因为网络上的欧拉角的文章讲解的也比较详细了，所以这里直接开始介绍四元数。
-</code></pre><a id="more"></a>
+        <h2 id="一.姿态的描述方法">一.姿态的描述方法</h2>
+<h2 id="四元数">四元数</h2>
+<pre><code>因为网络上的欧拉角的文章讲解的也比较详细了，所以这里直接开始介绍四元数。</code></pre>
+<a id="more"></a>
 <ul>
-<li><p><strong>基本定义</strong><br>  顾名思义四元数就是由四个元构成的数：</p>
-<script type="math/tex; mode=display">\textbf{Q}(q_0+q_1+q_2+q_3)=q_0+q_1 \textbf{i} +q_2 \textbf{j} +q_3 \textbf{k}</script><p>  其中$q_0$、$q_1$、$q_2$、$q_3$是实数，$\textbf{i}$、$\textbf{j}$、$\textbf{k}$    是互相正交的单位向量，又是虚单位$\sqrt{-1}$,具体规定的四元数乘法为：</p>
-<script type="math/tex; mode=display">\begin{align}\textbf{i} \bigotimes \textbf{i} &=-1,\quad  \textbf{j}\bigotimes  \textbf{j} =-1,\quad \textbf{k}  \bigotimes  \textbf{k} =-1 \quad \\
-  \textbf{i}  \bigotimes  \textbf{j} &= \textbf{k} ,\ \quad  \textbf{j}  \bigotimes  \textbf{k} = \textbf{i} ,\ \quad  \textbf{k}  \bigotimes i= \textbf{j}  \quad \\
-   \textbf{j}  \bigotimes  \textbf{i} &=- \textbf{k} ,\quad  \textbf{k}  \bigotimes  \textbf{j} =- \textbf{i} ,\quad  \textbf{i}  \bigotimes  \textbf{k} =- \textbf{j}  \quad
-   \end{align}</script></li>
-<li><p><strong>表达方式</strong><br>  (1) 矢量式</p>
-<script type="math/tex; mode=display">\textbf{Q}=q_0+\textbf{q}</script><p>  (2) 复数式</p>
-<script type="math/tex; mode=display">\textbf{Q}=q_0+q_1\textbf{i}+q_2 \textbf{j} +q_3 \textbf{k}</script><p>  记$Q$的共轭复数为$Q^*$</p>
-<script type="math/tex; mode=display">\textbf{Q*}=q_0-q_1\textbf{i}-q_2 \textbf{j} -q_3 \textbf{k}</script><p>  (3) 矩阵式</p>
-<script type="math/tex; mode=display">\textbf{Q}=\begin{bmatrix} q_0\\q_1\\q_2\\q_3 \end{bmatrix}</script></li>
-<li><p><strong>四元数大小</strong></p>
-<script type="math/tex; mode=display">||\textbf{Q}||=q_0^2+q_1^2+q_2^2+q_3^2</script></li>
-<li><p><strong>四元数运算</strong><br>  (1) 加法<br>  设：</p>
-<script type="math/tex; mode=display">\textbf{Q}=q_0+q_1 \textbf{i} +q_2 \textbf{j} +q_3 \textbf{k}\\
-  \textbf{P}=p_0+p_1 \textbf{i} +p_2 \textbf{j} +p_3 \textbf{k}</script><p>  则：</p>
-<script type="math/tex; mode=display">\textbf{Q}\pm\textbf{P}=(q_0\pm p_0)+(q_1\pm p_1) \textbf{i} +(q_2\pm p_2) \textbf{j} +(q_3\pm p_3) \textbf{k}</script><p>  (2) 乘法</p>
-<script type="math/tex; mode=display">\begin{align}
-  \textbf{P}\bigotimes \textbf{Q}& =(\textbf{P}=p_0+p_1 \textbf{i} +p_2 \textbf{j} +p_3                   \textbf{k})\bigotimes (q_0+q_1 \textbf{i} +q_2 \textbf{j} +q_3 \textbf{k})\\
-  &=(p_0q_0-p_1q_1-p_2q_2-p_3q_3)+(p_0q_1+p_1q_0+p_2q_3-p_3q_2)\textbf{i}\\
-  &+(p_0q_2+p_2q_0+p_3q_1-p_1q_3)\textbf{j}+(p_0q_3+p_3q_0+p_1q_2-p_2q_1)\textbf{k}\\
-  &=r_0+r_1\textbf{i}+r_2\textbf{j}+r_3\textbf{k}
-  \end{align}</script><p>  乘法即简单的系数相乘。<br>  当然也可以写成矩阵形式：</p>
-<script type="math/tex; mode=display">\begin{bmatrix} r_0 \\ r_1 \\r_2 \\r_3\end{bmatrix}= \begin{gather*}\begin{bmatrix}
-  & p_0 \ &-p_1 \ &-p_2 \ &-p_3\\
-  & p_1 \ &p_0 \ &-p_3 \ &p_2\\
-  & p_2 \ &p_3 \ &p_0 \ &-p_1\\
-  & p_3 \ &-p_2 \ &p_1 \ &p_0\\
-  \end{bmatrix}\end{gather*}\begin{bmatrix}q_0\\q_1\\q_2\\q_3\end{bmatrix}</script><p>  要注意：</p>
-<script type="math/tex; mode=display">\textbf{P}\bigotimes\textbf{Q}\neq\textbf{Q}\bigotimes\textbf{P}</script><p>  四元数的乘法也满足分配律和结合律</p>
-<script type="math/tex; mode=display">\textbf{P}\bigotimes(\textbf{Q}+\textbf{R})=\textbf{P}\bigotimes\textbf{Q}+\textbf{P}\bigotimes\textbf{R}</script></li>
-<li><p><strong>四元数与姿态阵的关系</strong><br>  &emsp;&emsp;设有参考坐标系$R$,坐标轴为$x_0,y_0,z_0$,坐标轴方向的单位向量为$\textbf{i}_0,\textbf{j}_0,\textbf{k}_0$。刚体相对$R$系做定点转动，定点为$O$。取坐标系$b$与刚体固联，$b$系的坐标轴为$x,y,z$，坐标方向的单位向量为$\textbf{i},\textbf{j},\textbf{k}$。假设初始状态下$b$系与$R$系重合。为了便于分析刚体的空间角位置，在刚体上取一点$A$，转动点为点$O$。如下图所示：<br>  <img src="/2018/05/07/姿态解算/images/siyuanshu.png" align="left" style=" width:380px;height:100 px"><br>  <img src="/2018/05/07/姿态解算/images/siyuanshu1.png" align="right" style=" width:380px;height:100 px"></p>
-<p>  &emsp;设刚体以$\boldsymbol{\omega}=\omega_x\textbf{i}+\omega_y\textbf{j}+\omega_z\textbf{k}$相对于$\textbf{R}$系旋转，初始时刻位置向量为$\textbf{OA}=\textbf{r}$,经过时间$t$后位置向量处于$\mathop{\textbf{OA}’}=\mathop{\textbf{r}’}$。根据欧拉定理，仅考虑刚体在0时刻和$t$时刻的角位置时，刚体从$\mathop{\textbf{A}}$位置转动到$\mathop{\textbf{A}’}$可等效成绕瞬轴$\mu$(单位向量)转过$\theta$角一次完成。这样，单位向量做圆锥运动，$\mathop{\textbf{A}}$和$\mathop{\textbf{A}’}$位于同一个圆上，$\mathop{\textbf{r}}$和$\mathop{\textbf{r}’}$位于同一圆锥面上。</p>
-<p>  &emsp;&emsp;下面分析$\mathop{\textbf{r}}$和$\mathop{\textbf{r}’}$的关系。在圆上取一点$B$，使$\angle A\mathop{O’}B=90^\circ$，由图得：</p>
-<pre><code>  $$\begin{align}
-  \mathop{\boldsymbol{O}\boldsymbol{O}&#39;} &amp;=(\boldsymbol{r}\cdot\boldsymbol{u})\boldsymbol{u} \\
-  \mathop{\boldsymbol{O}&#39;\boldsymbol{A}} &amp;=\boldsymbol{r}-\mathop{\boldsymbol{O}\boldsymbol{O}&#39;}=\boldsymbol{r}-(\boldsymbol{r}\cdot\boldsymbol{u})\boldsymbol{u} \\
-  \end{align}$$
-</code></pre></li>
+<li><p><strong>基本定义</strong> 顾名思义四元数就是由四个元构成的数： <span class="math display">\[\textbf{Q}(q_0+q_1+q_2+q_3)=q_0+q_1 \textbf{i} +q_2 \textbf{j} +q_3 \textbf{k} \]</span><br>
+其中<span class="math inline">\(q_0\)</span>、<span class="math inline">\(q_1\)</span>、<span class="math inline">\(q_2\)</span>、<span class="math inline">\(q_3\)</span>是实数，<span class="math inline">\(\textbf{i}\)</span>、<span class="math inline">\(\textbf{j}\)</span>、<span class="math inline">\(\textbf{k}\)</span> 是互相正交的单位向量，又是虚单位<span class="math inline">\(\sqrt{-1}\)</span>,具体规定的四元数乘法为： <span class="math display">\[\begin{align}\textbf{i} \bigotimes \textbf{i} &amp;=-1,\quad  \textbf{j}\bigotimes  \textbf{j} =-1,\quad \textbf{k}  \bigotimes  \textbf{k} =-1 \quad \\
+  \textbf{i}  \bigotimes  \textbf{j} &amp;= \textbf{k} ,\ \quad  \textbf{j}  \bigotimes  \textbf{k} = \textbf{i} ,\ \quad  \textbf{k}  \bigotimes i= \textbf{j}  \quad \\
+   \textbf{j}  \bigotimes  \textbf{i} &amp;=- \textbf{k} ,\quad  \textbf{k}  \bigotimes  \textbf{j} =- \textbf{i} ,\quad  \textbf{i}  \bigotimes  \textbf{k} =- \textbf{j}  \quad
+   \end{align} \]</span></p></li>
+<li><p><strong>表达方式</strong></p>
+<ol type="1">
+<li>矢量式 <span class="math display">\[\textbf{Q}=q_0+\textbf{q}\]</span></li>
+<li>复数式 <span class="math display">\[\textbf{Q}=q_0+q_1\textbf{i}+q_2 \textbf{j} +q_3 \textbf{k}\]</span> 记<span class="math inline">\(Q\)</span>的共轭复数为<span class="math inline">\(Q^*\)</span> <span class="math display">\[\textbf{Q*}=q_0-q_1\textbf{i}-q_2 \textbf{j} -q_3 \textbf{k}\]</span></li>
+<li>矩阵式 <span class="math display">\[\textbf{Q}=\begin{bmatrix} q_0\\q_1\\q_2\\q_3 \end{bmatrix}\]</span></li>
+</ol></li>
+<li><p><strong>四元数大小</strong> <span class="math display">\[||\textbf{Q}||=q_0^2+q_1^2+q_2^2+q_3^2\]</span></p></li>
+<li><p><strong>四元数运算</strong></p>
+<ol type="1">
+<li>加法 设： <span class="math display">\[\textbf{Q}=q_0+q_1 \textbf{i} +q_2 \textbf{j} +q_3 \textbf{k}\\
+  \textbf{P}=p_0+p_1 \textbf{i} +p_2 \textbf{j} +p_3 \textbf{k}\]</span> 则： <span class="math display">\[\textbf{Q}\pm\textbf{P}=(q_0\pm p_0)+(q_1\pm p_1) \textbf{i} +(q_2\pm p_2) \textbf{j} +(q_3\pm p_3) \textbf{k}\]</span></li>
+<li>乘法 <span class="math display">\[\begin{align}
+  \textbf{P}\bigotimes \textbf{Q}&amp; =(\textbf{P}=p_0+p_1 \textbf{i} +p_2 \textbf{j} +p_3               \textbf{k})\bigotimes (q_0+q_1 \textbf{i} +q_2 \textbf{j} +q_3 \textbf{k})\\
+  &amp;=(p_0q_0-p_1q_1-p_2q_2-p_3q_3)+(p_0q_1+p_1q_0+p_2q_3-p_3q_2)\textbf{i}\\
+  &amp;+(p_0q_2+p_2q_0+p_3q_1-p_1q_3)\textbf{j}+(p_0q_3+p_3q_0+p_1q_2-p_2q_1)\textbf{k}\\
+  &amp;=r_0+r_1\textbf{i}+r_2\textbf{j}+r_3\textbf{k}
+  \end{align}\]</span> 乘法即简单的系数相乘。 当然也可以写成矩阵形式： <span class="math display">\[\begin{bmatrix} r_0 \\ r_1 \\r_2 \\r_3\end{bmatrix}= \begin{gather*}\begin{bmatrix}
+  &amp; p_0 \ &amp;-p_1 \ &amp;-p_2 \ &amp;-p_3\\
+  &amp; p_1 \ &amp;p_0 \ &amp;-p_3 \ &amp;p_2\\
+  &amp; p_2 \ &amp;p_3 \ &amp;p_0 \ &amp;-p_1\\
+  &amp; p_3 \ &amp;-p_2 \ &amp;p_1 \ &amp;p_0\\
+  \end{bmatrix}\end{gather*}\begin{bmatrix}q_0\\q_1\\q_2\\q_3\end{bmatrix}
+  \]</span> 要注意： <span class="math display">\[\textbf{P}\bigotimes\textbf{Q}\neq\textbf{Q}\bigotimes\textbf{P}\]</span> 四元数的乘法也满足分配律和结合律 <span class="math display">\[\textbf{P}\bigotimes(\textbf{Q}+\textbf{R})=\textbf{P}\bigotimes\textbf{Q}+\textbf{P}\bigotimes\textbf{R}\]</span></li>
+</ol></li>
+<li><p><strong>四元数与姿态阵的关系</strong>   设有参考坐标系<span class="math inline">\(R\)</span>,坐标轴为<span class="math inline">\(x_0,y_0,z_0\)</span>,坐标轴方向的单位向量为<span class="math inline">\(\textbf{i}_0,\textbf{j}_0,\textbf{k}_0\)</span>。刚体相对<span class="math inline">\(R\)</span>系做定点转动，定点为<span class="math inline">\(O\)</span>。取坐标系<span class="math inline">\(b\)</span>与刚体固联，<span class="math inline">\(b\)</span>系的坐标轴为<span class="math inline">\(x,y,z\)</span>，坐标方向的单位向量为<span class="math inline">\(\textbf{i},\textbf{j},\textbf{k}\)</span>。假设初始状态下<span class="math inline">\(b\)</span>系与<span class="math inline">\(R\)</span>系重合。为了便于分析刚体的空间角位置，在刚体上取一点<span class="math inline">\(A\)</span>，转动点为点<span class="math inline">\(O\)</span>。如下图所示： <img src="/2018/05/07/姿态解算/images/siyuanshu.png" align="left" style=" width:380px;height:100 px"> <img src="/2018/05/07/姿态解算/images/siyuanshu1.png" align="right" style=" width:380px;height:100 px"></p>
+<p> 设刚体以<span class="math inline">\(\boldsymbol{\omega}=\omega_x\textbf{i}+\omega_y\textbf{j}+\omega_z\textbf{k}\)</span>相对于<span class="math inline">\(\textbf{R}\)</span>系旋转，初始时刻位置向量为<span class="math inline">\(\textbf{OA}=\textbf{r}\)</span>,经过时间<span class="math inline">\(t\)</span>后位置向量处于<span class="math inline">\(\mathop{\textbf{OA}&#39;}=\mathop{\textbf{r}&#39;}\)</span>。根据欧拉定理，仅考虑刚体在0时刻和<span class="math inline">\(t\)</span>时刻的角位置时，刚体从<span class="math inline">\(\mathop{\textbf{A}}\)</span>位置转动到<span class="math inline">\(\mathop{\textbf{A}&#39;}\)</span>可等效成绕瞬轴<span class="math inline">\(\mu\)</span>(单位向量)转过<span class="math inline">\(\theta\)</span>角一次完成。这样，单位向量做圆锥运动，<span class="math inline">\(\mathop{\textbf{A}}\)</span>和<span class="math inline">\(\mathop{\textbf{A}&#39;}\)</span>位于同一个圆上，<span class="math inline">\(\mathop{\textbf{r}}\)</span>和<span class="math inline">\(\mathop{\textbf{r}&#39;}\)</span>位于同一圆锥面上。</p>
+<p>  下面分析<span class="math inline">\(\mathop{\textbf{r}}\)</span>和<span class="math inline">\(\mathop{\textbf{r}&#39;}\)</span>的关系。在圆上取一点<span class="math inline">\(B\)</span>，使<span class="math inline">\(\angle A\mathop{O&#39;}B=90^\circ\)</span>，由图得： <span class="math display">\[\begin{align}
+      \mathop{\boldsymbol{O}\boldsymbol{O}&#39;} &amp;=(\boldsymbol{r}\cdot\boldsymbol{u})\boldsymbol{u} \\
+      \mathop{\boldsymbol{O}&#39;\boldsymbol{A}} &amp;=\boldsymbol{r}-\mathop{\boldsymbol{O}\boldsymbol{O}&#39;}=\boldsymbol{r}-(\boldsymbol{r}\cdot\boldsymbol{u})\boldsymbol{u} \\
+      \end{align}\]</span></p></li>
 </ul>
 
       
@@ -144,55 +142,53 @@
       
         
         
-          <h2 id="一-姿态的描述方法"><a href="#一-姿态的描述方法" class="headerlink" title="一.姿态的描述方法"></a>一.姿态的描述方法</h2><h2 id="四元数"><a href="#四元数" class="headerlink" title="四元数"></a>四元数</h2><pre><code>因为网络上的欧拉角的文章讲解的也比较详细了，所以这里直接开始介绍四元数。
-</code></pre><a id="more"></a>
+          <h2 id="一.姿态的描述方法">一.姿态的描述方法</h2>
+<h2 id="四元数">四元数</h2>
+<pre><code>因为网络上的欧拉角的文章讲解的也比较详细了，所以这里直接开始介绍四元数。</code></pre>
+<a id="more"></a>
 <ul>
-<li><p><strong>基本定义</strong><br>  顾名思义四元数就是由四个元构成的数：</p>
-<script type="math/tex; mode=display">\textbf{Q}(q_0+q_1+q_2+q_3)=q_0+q_1 \textbf{i} +q_2 \textbf{j} +q_3 \textbf{k}</script><p>  其中$q_0$、$q_1$、$q_2$、$q_3$是实数，$\textbf{i}$、$\textbf{j}$、$\textbf{k}$    是互相正交的单位向量，又是虚单位$\sqrt{-1}$,具体规定的四元数乘法为：</p>
-<script type="math/tex; mode=display">\begin{align}\textbf{i} \bigotimes \textbf{i} &=-1,\quad  \textbf{j}\bigotimes  \textbf{j} =-1,\quad \textbf{k}  \bigotimes  \textbf{k} =-1 \quad \\
-  \textbf{i}  \bigotimes  \textbf{j} &= \textbf{k} ,\ \quad  \textbf{j}  \bigotimes  \textbf{k} = \textbf{i} ,\ \quad  \textbf{k}  \bigotimes i= \textbf{j}  \quad \\
-   \textbf{j}  \bigotimes  \textbf{i} &=- \textbf{k} ,\quad  \textbf{k}  \bigotimes  \textbf{j} =- \textbf{i} ,\quad  \textbf{i}  \bigotimes  \textbf{k} =- \textbf{j}  \quad
-   \end{align}</script></li>
-<li><p><strong>表达方式</strong><br>  (1) 矢量式</p>
-<script type="math/tex; mode=display">\textbf{Q}=q_0+\textbf{q}</script><p>  (2) 复数式</p>
-<script type="math/tex; mode=display">\textbf{Q}=q_0+q_1\textbf{i}+q_2 \textbf{j} +q_3 \textbf{k}</script><p>  记$Q$的共轭复数为$Q^*$</p>
-<script type="math/tex; mode=display">\textbf{Q*}=q_0-q_1\textbf{i}-q_2 \textbf{j} -q_3 \textbf{k}</script><p>  (3) 矩阵式</p>
-<script type="math/tex; mode=display">\textbf{Q}=\begin{bmatrix} q_0\\q_1\\q_2\\q_3 \end{bmatrix}</script></li>
-<li><p><strong>四元数大小</strong></p>
-<script type="math/tex; mode=display">||\textbf{Q}||=q_0^2+q_1^2+q_2^2+q_3^2</script></li>
-<li><p><strong>四元数运算</strong><br>  (1) 加法<br>  设：</p>
-<script type="math/tex; mode=display">\textbf{Q}=q_0+q_1 \textbf{i} +q_2 \textbf{j} +q_3 \textbf{k}\\
-  \textbf{P}=p_0+p_1 \textbf{i} +p_2 \textbf{j} +p_3 \textbf{k}</script><p>  则：</p>
-<script type="math/tex; mode=display">\textbf{Q}\pm\textbf{P}=(q_0\pm p_0)+(q_1\pm p_1) \textbf{i} +(q_2\pm p_2) \textbf{j} +(q_3\pm p_3) \textbf{k}</script><p>  (2) 乘法</p>
-<script type="math/tex; mode=display">\begin{align}
-  \textbf{P}\bigotimes \textbf{Q}& =(\textbf{P}=p_0+p_1 \textbf{i} +p_2 \textbf{j} +p_3                   \textbf{k})\bigotimes (q_0+q_1 \textbf{i} +q_2 \textbf{j} +q_3 \textbf{k})\\
-  &=(p_0q_0-p_1q_1-p_2q_2-p_3q_3)+(p_0q_1+p_1q_0+p_2q_3-p_3q_2)\textbf{i}\\
-  &+(p_0q_2+p_2q_0+p_3q_1-p_1q_3)\textbf{j}+(p_0q_3+p_3q_0+p_1q_2-p_2q_1)\textbf{k}\\
-  &=r_0+r_1\textbf{i}+r_2\textbf{j}+r_3\textbf{k}
-  \end{align}</script><p>  乘法即简单的系数相乘。<br>  当然也可以写成矩阵形式：</p>
-<script type="math/tex; mode=display">\begin{bmatrix} r_0 \\ r_1 \\r_2 \\r_3\end{bmatrix}= \begin{gather*}\begin{bmatrix}
-  & p_0 \ &-p_1 \ &-p_2 \ &-p_3\\
-  & p_1 \ &p_0 \ &-p_3 \ &p_2\\
-  & p_2 \ &p_3 \ &p_0 \ &-p_1\\
-  & p_3 \ &-p_2 \ &p_1 \ &p_0\\
-  \end{bmatrix}\end{gather*}\begin{bmatrix}q_0\\q_1\\q_2\\q_3\end{bmatrix}</script><p>  要注意：</p>
-<script type="math/tex; mode=display">\textbf{P}\bigotimes\textbf{Q}\neq\textbf{Q}\bigotimes\textbf{P}</script><p>  四元数的乘法也满足分配律和结合律</p>
-<script type="math/tex; mode=display">\textbf{P}\bigotimes(\textbf{Q}+\textbf{R})=\textbf{P}\bigotimes\textbf{Q}+\textbf{P}\bigotimes\textbf{R}</script></li>
-<li><p><strong>四元数与姿态阵的关系</strong><br>  &emsp;&emsp;设有参考坐标系$R$,坐标轴为$x_0,y_0,z_0$,坐标轴方向的单位向量为$\textbf{i}_0,\textbf{j}_0,\textbf{k}_0$。刚体相对$R$系做定点转动，定点为$O$。取坐标系$b$与刚体固联，$b$系的坐标轴为$x,y,z$，坐标方向的单位向量为$\textbf{i},\textbf{j},\textbf{k}$。假设初始状态下$b$系与$R$系重合。为了便于分析刚体的空间角位置，在刚体上取一点$A$，转动点为点$O$。如下图所示：<br>  <img src="/2018/05/07/姿态解算/images/siyuanshu.png" align="left" style=" width:380px;height:100 px"><br>  <img src="/2018/05/07/姿态解算/images/siyuanshu1.png" align="right" style=" width:380px;height:100 px"></p>
-<p>  &emsp;设刚体以$\boldsymbol{\omega}=\omega_x\textbf{i}+\omega_y\textbf{j}+\omega_z\textbf{k}$相对于$\textbf{R}$系旋转，初始时刻位置向量为$\textbf{OA}=\textbf{r}$,经过时间$t$后位置向量处于$\mathop{\textbf{OA}’}=\mathop{\textbf{r}’}$。根据欧拉定理，仅考虑刚体在0时刻和$t$时刻的角位置时，刚体从$\mathop{\textbf{A}}$位置转动到$\mathop{\textbf{A}’}$可等效成绕瞬轴$\mu$(单位向量)转过$\theta$角一次完成。这样，单位向量做圆锥运动，$\mathop{\textbf{A}}$和$\mathop{\textbf{A}’}$位于同一个圆上，$\mathop{\textbf{r}}$和$\mathop{\textbf{r}’}$位于同一圆锥面上。</p>
-<p>  &emsp;&emsp;下面分析$\mathop{\textbf{r}}$和$\mathop{\textbf{r}’}$的关系。在圆上取一点$B$，使$\angle A\mathop{O’}B=90^\circ$，由图得：</p>
-<pre><code>  $$\begin{align}
-  \mathop{\boldsymbol{O}\boldsymbol{O}&#39;} &amp;=(\boldsymbol{r}\cdot\boldsymbol{u})\boldsymbol{u} \\
-  \mathop{\boldsymbol{O}&#39;\boldsymbol{A}} &amp;=\boldsymbol{r}-\mathop{\boldsymbol{O}\boldsymbol{O}&#39;}=\boldsymbol{r}-(\boldsymbol{r}\cdot\boldsymbol{u})\boldsymbol{u} \\
-  \end{align}$$
-</code></pre></li>
+<li><p><strong>基本定义</strong> 顾名思义四元数就是由四个元构成的数： <span class="math display">\[\textbf{Q}(q_0+q_1+q_2+q_3)=q_0+q_1 \textbf{i} +q_2 \textbf{j} +q_3 \textbf{k} \]</span><br>
+其中<span class="math inline">\(q_0\)</span>、<span class="math inline">\(q_1\)</span>、<span class="math inline">\(q_2\)</span>、<span class="math inline">\(q_3\)</span>是实数，<span class="math inline">\(\textbf{i}\)</span>、<span class="math inline">\(\textbf{j}\)</span>、<span class="math inline">\(\textbf{k}\)</span> 是互相正交的单位向量，又是虚单位<span class="math inline">\(\sqrt{-1}\)</span>,具体规定的四元数乘法为： <span class="math display">\[\begin{align}\textbf{i} \bigotimes \textbf{i} &amp;=-1,\quad  \textbf{j}\bigotimes  \textbf{j} =-1,\quad \textbf{k}  \bigotimes  \textbf{k} =-1 \quad \\
+  \textbf{i}  \bigotimes  \textbf{j} &amp;= \textbf{k} ,\ \quad  \textbf{j}  \bigotimes  \textbf{k} = \textbf{i} ,\ \quad  \textbf{k}  \bigotimes i= \textbf{j}  \quad \\
+   \textbf{j}  \bigotimes  \textbf{i} &amp;=- \textbf{k} ,\quad  \textbf{k}  \bigotimes  \textbf{j} =- \textbf{i} ,\quad  \textbf{i}  \bigotimes  \textbf{k} =- \textbf{j}  \quad
+   \end{align} \]</span></p></li>
+<li><p><strong>表达方式</strong></p>
+<ol type="1">
+<li>矢量式 <span class="math display">\[\textbf{Q}=q_0+\textbf{q}\]</span></li>
+<li>复数式 <span class="math display">\[\textbf{Q}=q_0+q_1\textbf{i}+q_2 \textbf{j} +q_3 \textbf{k}\]</span> 记<span class="math inline">\(Q\)</span>的共轭复数为<span class="math inline">\(Q^*\)</span> <span class="math display">\[\textbf{Q*}=q_0-q_1\textbf{i}-q_2 \textbf{j} -q_3 \textbf{k}\]</span></li>
+<li>矩阵式 <span class="math display">\[\textbf{Q}=\begin{bmatrix} q_0\\q_1\\q_2\\q_3 \end{bmatrix}\]</span></li>
+</ol></li>
+<li><p><strong>四元数大小</strong> <span class="math display">\[||\textbf{Q}||=q_0^2+q_1^2+q_2^2+q_3^2\]</span></p></li>
+<li><p><strong>四元数运算</strong></p>
+<ol type="1">
+<li>加法 设： <span class="math display">\[\textbf{Q}=q_0+q_1 \textbf{i} +q_2 \textbf{j} +q_3 \textbf{k}\\
+  \textbf{P}=p_0+p_1 \textbf{i} +p_2 \textbf{j} +p_3 \textbf{k}\]</span> 则： <span class="math display">\[\textbf{Q}\pm\textbf{P}=(q_0\pm p_0)+(q_1\pm p_1) \textbf{i} +(q_2\pm p_2) \textbf{j} +(q_3\pm p_3) \textbf{k}\]</span></li>
+<li>乘法 <span class="math display">\[\begin{align}
+  \textbf{P}\bigotimes \textbf{Q}&amp; =(\textbf{P}=p_0+p_1 \textbf{i} +p_2 \textbf{j} +p_3               \textbf{k})\bigotimes (q_0+q_1 \textbf{i} +q_2 \textbf{j} +q_3 \textbf{k})\\
+  &amp;=(p_0q_0-p_1q_1-p_2q_2-p_3q_3)+(p_0q_1+p_1q_0+p_2q_3-p_3q_2)\textbf{i}\\
+  &amp;+(p_0q_2+p_2q_0+p_3q_1-p_1q_3)\textbf{j}+(p_0q_3+p_3q_0+p_1q_2-p_2q_1)\textbf{k}\\
+  &amp;=r_0+r_1\textbf{i}+r_2\textbf{j}+r_3\textbf{k}
+  \end{align}\]</span> 乘法即简单的系数相乘。 当然也可以写成矩阵形式： <span class="math display">\[\begin{bmatrix} r_0 \\ r_1 \\r_2 \\r_3\end{bmatrix}= \begin{gather*}\begin{bmatrix}
+  &amp; p_0 \ &amp;-p_1 \ &amp;-p_2 \ &amp;-p_3\\
+  &amp; p_1 \ &amp;p_0 \ &amp;-p_3 \ &amp;p_2\\
+  &amp; p_2 \ &amp;p_3 \ &amp;p_0 \ &amp;-p_1\\
+  &amp; p_3 \ &amp;-p_2 \ &amp;p_1 \ &amp;p_0\\
+  \end{bmatrix}\end{gather*}\begin{bmatrix}q_0\\q_1\\q_2\\q_3\end{bmatrix}
+  \]</span> 要注意： <span class="math display">\[\textbf{P}\bigotimes\textbf{Q}\neq\textbf{Q}\bigotimes\textbf{P}\]</span> 四元数的乘法也满足分配律和结合律 <span class="math display">\[\textbf{P}\bigotimes(\textbf{Q}+\textbf{R})=\textbf{P}\bigotimes\textbf{Q}+\textbf{P}\bigotimes\textbf{R}\]</span></li>
+</ol></li>
+<li><p><strong>四元数与姿态阵的关系</strong>   设有参考坐标系<span class="math inline">\(R\)</span>,坐标轴为<span class="math inline">\(x_0,y_0,z_0\)</span>,坐标轴方向的单位向量为<span class="math inline">\(\textbf{i}_0,\textbf{j}_0,\textbf{k}_0\)</span>。刚体相对<span class="math inline">\(R\)</span>系做定点转动，定点为<span class="math inline">\(O\)</span>。取坐标系<span class="math inline">\(b\)</span>与刚体固联，<span class="math inline">\(b\)</span>系的坐标轴为<span class="math inline">\(x,y,z\)</span>，坐标方向的单位向量为<span class="math inline">\(\textbf{i},\textbf{j},\textbf{k}\)</span>。假设初始状态下<span class="math inline">\(b\)</span>系与<span class="math inline">\(R\)</span>系重合。为了便于分析刚体的空间角位置，在刚体上取一点<span class="math inline">\(A\)</span>，转动点为点<span class="math inline">\(O\)</span>。如下图所示： <img src="/2018/05/07/姿态解算/images/siyuanshu.png" align="left" style=" width:380px;height:100 px"> <img src="/2018/05/07/姿态解算/images/siyuanshu1.png" align="right" style=" width:380px;height:100 px"></p>
+<p> 设刚体以<span class="math inline">\(\boldsymbol{\omega}=\omega_x\textbf{i}+\omega_y\textbf{j}+\omega_z\textbf{k}\)</span>相对于<span class="math inline">\(\textbf{R}\)</span>系旋转，初始时刻位置向量为<span class="math inline">\(\textbf{OA}=\textbf{r}\)</span>,经过时间<span class="math inline">\(t\)</span>后位置向量处于<span class="math inline">\(\mathop{\textbf{OA}&#39;}=\mathop{\textbf{r}&#39;}\)</span>。根据欧拉定理，仅考虑刚体在0时刻和<span class="math inline">\(t\)</span>时刻的角位置时，刚体从<span class="math inline">\(\mathop{\textbf{A}}\)</span>位置转动到<span class="math inline">\(\mathop{\textbf{A}&#39;}\)</span>可等效成绕瞬轴<span class="math inline">\(\mu\)</span>(单位向量)转过<span class="math inline">\(\theta\)</span>角一次完成。这样，单位向量做圆锥运动，<span class="math inline">\(\mathop{\textbf{A}}\)</span>和<span class="math inline">\(\mathop{\textbf{A}&#39;}\)</span>位于同一个圆上，<span class="math inline">\(\mathop{\textbf{r}}\)</span>和<span class="math inline">\(\mathop{\textbf{r}&#39;}\)</span>位于同一圆锥面上。</p>
+<p>  下面分析<span class="math inline">\(\mathop{\textbf{r}}\)</span>和<span class="math inline">\(\mathop{\textbf{r}&#39;}\)</span>的关系。在圆上取一点<span class="math inline">\(B\)</span>，使<span class="math inline">\(\angle A\mathop{O&#39;}B=90^\circ\)</span>，由图得： <span class="math display">\[\begin{align}
+      \mathop{\boldsymbol{O}\boldsymbol{O}&#39;} &amp;=(\boldsymbol{r}\cdot\boldsymbol{u})\boldsymbol{u} \\
+      \mathop{\boldsymbol{O}&#39;\boldsymbol{A}} &amp;=\boldsymbol{r}-\mathop{\boldsymbol{O}\boldsymbol{O}&#39;}=\boldsymbol{r}-(\boldsymbol{r}\cdot\boldsymbol{u})\boldsymbol{u} \\
+      \end{align}\]</span></p></li>
 </ul>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2018/05/07/姿态解算/" data-id="ck794z2mh00dsts6xdt2brsdx" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2018/05/07/姿态解算/" data-id="ck7hp7bh600egcq6xiky1s8nq" class="article-share-link">Share</a>
       
       
       
@@ -204,11 +200,11 @@
     
 <nav id="article-nav">
   
-    <a href="/2018/05/08/编译静态库/" id="article-nav-newer" class="article-nav-link-wrap">
+    <a href="/2018/05/08/资源整理/" id="article-nav-newer" class="article-nav-link-wrap">
       <strong class="article-nav-caption">Newer</strong>
       <div class="article-nav-title">
         
-          CMake编译静态库
+          资源整理
         
       </div>
     </a>
@@ -247,7 +243,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">归档</h3>
     <div class="widget">
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/12/">十二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/09/">九月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/08/">八月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/07/">七月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/06/">六月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/05/">五月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">三月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/12/">十二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/09/">九月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/08/">八月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/07/">七月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/06/">六月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/05/">五月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">三月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a></li></ul>
     </div>
   </div>
 
@@ -258,6 +254,10 @@
     <h3 class="widget-title">最新文章</h3>
     <div class="widget">
       <ul>
+        
+          <li>
+            <a href="/2020/03/08/ct-augments/">Control Theory Augment</a>
+          </li>
         
           <li>
             <a href="/2020/03/01/mel-augments/">Augmentation For Mel Spectrogram</a>
@@ -273,10 +273,6 @@
         
           <li>
             <a href="/2020/02/12/tf-all-regularizers/">tf2.0 全局添加regularizers</a>
-          </li>
-        
-          <li>
-            <a href="/2020/02/06/ssl-fixmatch/">半监督学习：FixMatch</a>
           </li>
         
       </ul>

@@ -95,48 +95,62 @@
       
         <p>第五个算法<code>mixup: BEYOND EMPIRICAL RISK MINIMIZATION</code>，这个算法应该很多人都听过或者用过，它十分简单但又十分有效，是之后大部分半监督论文都用到的技巧。</p>
 <a id="more"></a>
-<h1 id="算法理论"><a href="#算法理论" class="headerlink" title="算法理论"></a>算法理论</h1><h2 id="从经验风险最小化到mixup"><a href="#从经验风险最小化到mixup" class="headerlink" title="从经验风险最小化到mixup"></a>从经验风险最小化到mixup</h2><p>在监督学习中，我们的目标是找到一个函数$f\in\mathcal{F}$，该函数描述遵循联合分布$P(X,Y)$的随机特征向量$X$和随机目标向量$Y$之间的关系。为此，我们首先定义一个损失函数，该函数对预测$f(x)$和实际目标$y$之间的差异进行惩罚，例如$(x,y)\sim p$。然后，我们将数据分布$P$上损失函数$\ell$的平均值最小化，也称为预期风险：</p>
-<script type="math/tex; mode=display">
+<h1 id="算法理论">算法理论</h1>
+<h2 id="从经验风险最小化到mixup">从经验风险最小化到mixup</h2>
+<p>在监督学习中，我们的目标是找到一个函数<span class="math inline">\(f\in\mathcal{F}\)</span>，该函数描述遵循联合分布<span class="math inline">\(P(X,Y)\)</span>的随机特征向量<span class="math inline">\(X\)</span>和随机目标向量<span class="math inline">\(Y\)</span>之间的关系。为此，我们首先定义一个损失函数，该函数对预测<span class="math inline">\(f(x)\)</span>和实际目标<span class="math inline">\(y\)</span>之间的差异进行惩罚，例如<span class="math inline">\((x,y)\sim p\)</span>。然后，我们将数据分布<span class="math inline">\(P\)</span>上损失函数<span class="math inline">\(\ell\)</span>的平均值最小化，也称为预期风险： <span class="math display">\[
 \begin{align}
 R(f)=\int \ell(f(x), y) \mathrm{d} P(x, y)
-\end{align}</script><p>不幸的是，在大多数实际情况下，分布$P$是未知的。相反，我们通常可以加载一组训练数据$\mathcal{D}={(x_i,y_i)}_{i=1}^n$，其中$(x_i,y_i)\sim P$,$i=1,\ldots,n$。使用训练数据$\mathcal{D}$，我们可以根据经验分布来近似：</p>
-<script type="math/tex; mode=display">
+\end{align}
+\]</span></p>
+<p>不幸的是，在大多数实际情况下，分布<span class="math inline">\(P\)</span>是未知的。相反，我们通常可以加载一组训练数据<span class="math inline">\(\mathcal{D}={(x_i,y_i)}_{i=1}^n\)</span>，其中<span class="math inline">\((x_i,y_i)\sim P\)</span>,<span class="math inline">\(i=1,\ldots,n\)</span>。使用训练数据<span class="math inline">\(\mathcal{D}\)</span>，我们可以根据经验分布来近似： <span class="math display">\[
 \begin{align}
 P_{\delta}(x, y)=\frac{1}{n} \sum_{i=1}^{n} \delta\left(x=x_{i}, y=y_{i}\right)
-\end{align}</script><p>其中$\delta\left(x=x_{i}, y=y_{i}\right)$是$(x_{i}, y_{i})$的狄克拉质量中心。使用经验分布$P_\delta$，我们现在可以通过经验风险来近似预期风险:</p>
-<script type="math/tex; mode=display">
+\end{align}
+\]</span></p>
+<p>其中<span class="math inline">\(\delta\left(x=x_{i}, y=y_{i}\right)\)</span>是<span class="math inline">\((x_{i}, y_{i})\)</span>的狄克拉质量中心。使用经验分布<span class="math inline">\(P_\delta\)</span>，我们现在可以通过经验风险来近似预期风险:</p>
+<p><span class="math display">\[
 \begin{align}
 R_{\delta}(f)=\int \ell(f(x), y) \mathrm{d} P_{\delta}(x, y)=\frac{1}{n} \sum_{i=1}^{n} \ell\left(f\left(x_{i}\right), y_{i}\right)
-\end{align}\tag{1}</script><p>通过最小化学习函数$1$被称为经验风险最小化(ERM)原理(Vapnik，1998年)。尽管计算效率很高，但经验风险$1$仅在一组有限的n个示例中监控行为偏离。当考虑具有大量参数的功能时(例如大型神经网络)，最小化$1$的一种简单方法是记忆训练数据(Zhang et al。，2017)。记忆反过来会导致训练数据之外的不良行为(Szegedy等，2014)。</p>
-<p>但是，朴素估计$P_\delta$是逼近真实分布$P$的许多可能选择之一。例如，在<code>领域风险最小化(VRM)</code>原理中(Chapelle等，2000)，分布$P$近似为:</p>
-<script type="math/tex; mode=display">
+\end{align}\tag{1}
+\]</span></p>
+<p>通过最小化学习函数<span class="math inline">\(1\)</span>被称为经验风险最小化(ERM)原理(Vapnik，1998年)。尽管计算效率很高，但经验风险<span class="math inline">\(1\)</span>仅在一组有限的n个示例中监控行为偏离。当考虑具有大量参数的功能时(例如大型神经网络)，最小化<span class="math inline">\(1\)</span>的一种简单方法是记忆训练数据(Zhang et al。，2017)。记忆反过来会导致训练数据之外的不良行为(Szegedy等，2014)。</p>
+<p>但是，朴素估计<span class="math inline">\(P_\delta\)</span>是逼近真实分布<span class="math inline">\(P\)</span>的许多可能选择之一。例如，在<code>领域风险最小化(VRM)</code>原理中(Chapelle等，2000)，分布<span class="math inline">\(P\)</span>近似为: <span class="math display">\[
 \begin{align}
 P_{\nu}(\tilde{x}, \tilde{y})=\frac{1}{n} \sum_{i=1}^{n} \nu\left(\tilde{x}, \tilde{y} | x_{i}, y_{i}\right)
-\end{align}</script><p>其中$v$是<code>vicinity distributionth</code>用于测量在训练特征-目标对$(x_{i}, y_{i})$的领域内找到虚拟特征-目标对$(\hat{x}, \hat{y})$的概率，特别是，chapellpe等人(2000年)考虑了高斯领域内$\nu\left(\tilde{x}, \tilde{y} | x_{i}, y_{i}\right)=\mathcal{N}\left(\tilde{x}-x_{i}, \sigma^{2}\right) \delta\left(\tilde{y}=y_{i}\right)$，相对与用加性高斯噪声来增强训练数据。要学习使用<code>VRM</code>，我们对附近的分布进行采样以构建数据$\mathcal{D}_{\nu}:=\left\{\left(\tilde{x}_{i}, \tilde{y}_{i}\right)\right\}_{i=1}^{m}$，然后最小化经验风险损失：</p>
-<script type="math/tex; mode=display">
+\end{align}
+\]</span></p>
+<p>其中<span class="math inline">\(v\)</span>是<code>vicinity distributionth</code>用于测量在训练特征-目标对<span class="math inline">\((x_{i}, y_{i})\)</span>的领域内找到虚拟特征-目标对<span class="math inline">\((\hat{x}, \hat{y})\)</span>的概率，特别是，chapellpe等人(2000年)考虑了高斯领域内<span class="math inline">\(\nu\left(\tilde{x}, \tilde{y} | x_{i}, y_{i}\right)=\mathcal{N}\left(\tilde{x}-x_{i}, \sigma^{2}\right) \delta\left(\tilde{y}=y_{i}\right)\)</span>，相对与用加性高斯噪声来增强训练数据。要学习使用<code>VRM</code>，我们对附近的分布进行采样以构建数据<span class="math inline">\(\mathcal{D}_{\nu}:=\left\{\left(\tilde{x}_{i}, \tilde{y}_{i}\right)\right\}_{i=1}^{m}\)</span>，然后最小化经验风险损失：</p>
+<p><span class="math display">\[
 \begin{align}
 R_{\nu}(f)=\frac{1}{m} \sum_{i=1}^{m} \ell\left(f\left(\tilde{x}_{i}\right), \tilde{y}_{i}\right)
-\end{align}</script><p>此文章的作用是提出一种通用的邻域分布，称为<code>mixup</code>：</p>
-<script type="math/tex; mode=display">
+\end{align}
+\]</span></p>
+<p>此文章的作用是提出一种通用的邻域分布，称为<code>mixup</code>：</p>
+<p><span class="math display">\[
 \begin{align}
 \mu\left(\tilde{x}, \tilde{y} | x_{i}, y_{i}\right)=\frac{1}{n} \sum_{j}^{n} \underset{\lambda}{\mathbb{E}}\left[\delta\left(\tilde{x}=\lambda \cdot x_{i}+(1-\lambda) \cdot x_{j}, \tilde{y}=\lambda \cdot y_{i}+(1-\lambda) \cdot y_{j}\right)\right]
-\end{align}</script><p>其中$\lambda\sim \text{Beta}(\alpha,\alpha),\alpha\in(0,\infty)$。从混合邻域分布中采样会生成虚拟特征目标向量：</p>
-<script type="math/tex; mode=display">
+\end{align}
+\]</span></p>
+<p>其中<span class="math inline">\(\lambda\sim \text{Beta}(\alpha,\alpha),\alpha\in(0,\infty)\)</span>。从混合邻域分布中采样会生成虚拟特征目标向量： <span class="math display">\[
 \begin{align}
 \begin{aligned}
-&\tilde{x}=\lambda x_{i}+(1-\lambda) x_{j}\\
-&\tilde{y}=\lambda y_{i}+(1-\lambda) y_{j}
+&amp;\tilde{x}=\lambda x_{i}+(1-\lambda) x_{j}\\
+&amp;\tilde{y}=\lambda y_{i}+(1-\lambda) y_{j}
 \end{aligned}
-\end{align}</script><h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>实际上<code>mixup</code>的目标是使的模型更加线性，联想到之前的几个算法，就如<code>mean-teacher</code>算法第一幅图所展示的，最终目标是使在两个标注数据间的未标注区域获得更平滑的概率分布输出，这样我们可以找到类别<code>A</code>与类别<code>B</code>间更加合适的决策面，从而提升分类准确性，下图可以看到输出的概率分布更加平滑了。</p>
-<div align="center">
-<img src="/2020/02/02/ssl-mixup/mixup-1.png">
+\end{align}
+\]</span></p>
+<h2 id="总结">总结</h2>
+<p>实际上<code>mixup</code>的目标是使的模型更加线性，联想到之前的几个算法，就如<code>mean-teacher</code>算法第一幅图所展示的，最终目标是使在两个标注数据间的未标注区域获得更平滑的概率分布输出，这样我们可以找到类别<code>A</code>与类别<code>B</code>间更加合适的决策面，从而提升分类准确性，下图可以看到输出的概率分布更加平滑了。</p>
+<div data-align="center">
+<p><img src="/2020/02/02/ssl-mixup/mixup-1.png"></p>
 </div>
-
-
-<h1 id="代码"><a href="#代码" class="headerlink" title="代码"></a>代码</h1><p>原论文提出<code>mixup</code>针对的是有标签数据，代码是针对半监督学习的(pseudo label结合mixup)：</p>
+<h1 id="代码">代码</h1>
+<p>原论文提出<code>mixup</code>针对的是有标签数据，代码是针对半监督学习的(pseudo label结合mixup)：</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">augment</span><span class="params">(self, x, l, beta, **kwargs)</span>:</span></span><br><span class="line">    <span class="keyword">del</span> kwargs</span><br><span class="line">    mix = tf.distributions.Beta(beta, beta).sample([tf.shape(x)[<span class="number">0</span>], <span class="number">1</span>, <span class="number">1</span>, <span class="number">1</span>])</span><br><span class="line">    mix = tf.maximum(mix, <span class="number">1</span> - mix)</span><br><span class="line">    <span class="comment"># batch中数据反转并mixup</span></span><br><span class="line">    xmix = x * mix + x[::<span class="number">-1</span>] * (<span class="number">1</span> - mix)</span><br><span class="line">    lmix = l * mix[:, :, <span class="number">0</span>, <span class="number">0</span>] + l[::<span class="number">-1</span>] * (<span class="number">1</span> - mix[:, :, <span class="number">0</span>, <span class="number">0</span>])</span><br><span class="line">    <span class="keyword">return</span> xmix, lmix</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">model</span><span class="params">(self, batch, lr, wd, ema, **kwargs)</span>:</span></span><br><span class="line">    hwc = [self.dataset.height, self.dataset.width, self.dataset.colors]</span><br><span class="line">    xt_in = tf.placeholder(tf.float32, [batch] + hwc, <span class="string">'xt'</span>)  <span class="comment"># For training</span></span><br><span class="line">    x_in = tf.placeholder(tf.float32, [<span class="keyword">None</span>] + hwc, <span class="string">'x'</span>)</span><br><span class="line">    y_in = tf.placeholder(tf.float32, [batch] + hwc, <span class="string">'y'</span>)</span><br><span class="line">    l_in = tf.placeholder(tf.int32, [batch], <span class="string">'labels'</span>)</span><br><span class="line">    wd *= lr</span><br><span class="line">    classifier = <span class="keyword">lambda</span> x, **kw: self.classifier(x, **kw, **kwargs).logits</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">get_logits</span><span class="params">(x)</span>:</span></span><br><span class="line">        logits = classifier(x, training=<span class="keyword">True</span>)</span><br><span class="line">        <span class="keyword">return</span> logits</span><br><span class="line">    <span class="comment"># 有标签数据mixup</span></span><br><span class="line">    x, labels_x = self.augment(xt_in, tf.one_hot(l_in, self.nclass), **kwargs)</span><br><span class="line">    logits_x = get_logits(x)</span><br><span class="line">    post_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)</span><br><span class="line">    <span class="comment"># 无标签数据mixup，首先构造pseudo label再进行mixup，虽然这样比较慢。</span></span><br><span class="line">    y, labels_y = self.augment(y_in, tf.nn.softmax(get_logits(y_in)), **kwargs)</span><br><span class="line">    labels_y = tf.stop_gradient(labels_y)</span><br><span class="line">    logits_y = get_logits(y)</span><br><span class="line"></span><br><span class="line">    loss_xe = tf.nn.softmax_cross_entropy_with_logits_v2(labels=labels_x, logits=logits_x)</span><br><span class="line">    loss_xe = tf.reduce_mean(loss_xe)</span><br><span class="line">    loss_xeu = tf.nn.softmax_cross_entropy_with_logits_v2(labels=labels_y, logits=logits_y)</span><br><span class="line">    loss_xeu = tf.reduce_mean(loss_xeu)</span><br><span class="line">    tf.summary.scalar(<span class="string">'losses/xe'</span>, loss_xe)</span><br><span class="line">    tf.summary.scalar(<span class="string">'losses/xeu'</span>, loss_xeu)</span><br><span class="line"></span><br><span class="line">    ema = tf.train.ExponentialMovingAverage(decay=ema)</span><br><span class="line">    ema_op = ema.apply(utils.model_vars())</span><br><span class="line">    ema_getter = functools.partial(utils.getter_ema, ema)</span><br><span class="line">    post_ops.append(ema_op)</span><br><span class="line">    post_ops.extend([tf.assign(v, v * (<span class="number">1</span> - wd)) <span class="keyword">for</span> v <span class="keyword">in</span> utils.model_vars(<span class="string">'classify'</span>) <span class="keyword">if</span> <span class="string">'kernel'</span> <span class="keyword">in</span> v.name])</span><br><span class="line"></span><br><span class="line">    train_op = tf.train.AdamOptimizer(lr).minimize(loss_xe + loss_xeu, colocate_gradients_with_ops=<span class="keyword">True</span>)</span><br><span class="line">    <span class="keyword">with</span> tf.control_dependencies([train_op]):</span><br><span class="line">        train_op = tf.group(*post_ops)</span><br></pre></td></tr></table></figure>
-<h1 id="测试结果"><a href="#测试结果" class="headerlink" title="测试结果"></a>测试结果</h1><p>使用默认参数以及cifar10中250张标注样本训练128个epoch，得到测试集准确率如下，比之前的算法的确有提升，不如<code>vat</code>好，不过胜在它比较简单，而且<code>vat</code>也会出现退化的情况，<code>mixup</code>更加稳定：</p>
+<h1 id="测试结果">测试结果</h1>
+<p>使用默认参数以及cifar10中250张标注样本训练128个epoch，得到测试集准确率如下，比之前的算法的确有提升，不如<code>vat</code>好，不过胜在它比较简单，而且<code>vat</code>也会出现退化的情况，<code>mixup</code>更加稳定：</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&quot;last01&quot;: 52.7400016784668,</span><br><span class="line">&quot;last10&quot;: 52.939998626708984,</span><br><span class="line">&quot;last20&quot;: 52.73500061035156,</span><br><span class="line">&quot;last50&quot;: 52.47999954223633</span><br></pre></td></tr></table></figure>
+
       
     </div>
     <!-- <div class="article-entry" itemprop="articleBody">
@@ -145,53 +159,67 @@ R_{\nu}(f)=\frac{1}{m} \sum_{i=1}^{m} \ell\left(f\left(\tilde{x}_{i}\right), \ti
         
           <p>第五个算法<code>mixup: BEYOND EMPIRICAL RISK MINIMIZATION</code>，这个算法应该很多人都听过或者用过，它十分简单但又十分有效，是之后大部分半监督论文都用到的技巧。</p>
 <a id="more"></a>
-<h1 id="算法理论"><a href="#算法理论" class="headerlink" title="算法理论"></a>算法理论</h1><h2 id="从经验风险最小化到mixup"><a href="#从经验风险最小化到mixup" class="headerlink" title="从经验风险最小化到mixup"></a>从经验风险最小化到mixup</h2><p>在监督学习中，我们的目标是找到一个函数$f\in\mathcal{F}$，该函数描述遵循联合分布$P(X,Y)$的随机特征向量$X$和随机目标向量$Y$之间的关系。为此，我们首先定义一个损失函数，该函数对预测$f(x)$和实际目标$y$之间的差异进行惩罚，例如$(x,y)\sim p$。然后，我们将数据分布$P$上损失函数$\ell$的平均值最小化，也称为预期风险：</p>
-<script type="math/tex; mode=display">
+<h1 id="算法理论">算法理论</h1>
+<h2 id="从经验风险最小化到mixup">从经验风险最小化到mixup</h2>
+<p>在监督学习中，我们的目标是找到一个函数<span class="math inline">\(f\in\mathcal{F}\)</span>，该函数描述遵循联合分布<span class="math inline">\(P(X,Y)\)</span>的随机特征向量<span class="math inline">\(X\)</span>和随机目标向量<span class="math inline">\(Y\)</span>之间的关系。为此，我们首先定义一个损失函数，该函数对预测<span class="math inline">\(f(x)\)</span>和实际目标<span class="math inline">\(y\)</span>之间的差异进行惩罚，例如<span class="math inline">\((x,y)\sim p\)</span>。然后，我们将数据分布<span class="math inline">\(P\)</span>上损失函数<span class="math inline">\(\ell\)</span>的平均值最小化，也称为预期风险： <span class="math display">\[
 \begin{align}
 R(f)=\int \ell(f(x), y) \mathrm{d} P(x, y)
-\end{align}</script><p>不幸的是，在大多数实际情况下，分布$P$是未知的。相反，我们通常可以加载一组训练数据$\mathcal{D}={(x_i,y_i)}_{i=1}^n$，其中$(x_i,y_i)\sim P$,$i=1,\ldots,n$。使用训练数据$\mathcal{D}$，我们可以根据经验分布来近似：</p>
-<script type="math/tex; mode=display">
+\end{align}
+\]</span></p>
+<p>不幸的是，在大多数实际情况下，分布<span class="math inline">\(P\)</span>是未知的。相反，我们通常可以加载一组训练数据<span class="math inline">\(\mathcal{D}={(x_i,y_i)}_{i=1}^n\)</span>，其中<span class="math inline">\((x_i,y_i)\sim P\)</span>,<span class="math inline">\(i=1,\ldots,n\)</span>。使用训练数据<span class="math inline">\(\mathcal{D}\)</span>，我们可以根据经验分布来近似： <span class="math display">\[
 \begin{align}
 P_{\delta}(x, y)=\frac{1}{n} \sum_{i=1}^{n} \delta\left(x=x_{i}, y=y_{i}\right)
-\end{align}</script><p>其中$\delta\left(x=x_{i}, y=y_{i}\right)$是$(x_{i}, y_{i})$的狄克拉质量中心。使用经验分布$P_\delta$，我们现在可以通过经验风险来近似预期风险:</p>
-<script type="math/tex; mode=display">
+\end{align}
+\]</span></p>
+<p>其中<span class="math inline">\(\delta\left(x=x_{i}, y=y_{i}\right)\)</span>是<span class="math inline">\((x_{i}, y_{i})\)</span>的狄克拉质量中心。使用经验分布<span class="math inline">\(P_\delta\)</span>，我们现在可以通过经验风险来近似预期风险:</p>
+<p><span class="math display">\[
 \begin{align}
 R_{\delta}(f)=\int \ell(f(x), y) \mathrm{d} P_{\delta}(x, y)=\frac{1}{n} \sum_{i=1}^{n} \ell\left(f\left(x_{i}\right), y_{i}\right)
-\end{align}\tag{1}</script><p>通过最小化学习函数$1$被称为经验风险最小化(ERM)原理(Vapnik，1998年)。尽管计算效率很高，但经验风险$1$仅在一组有限的n个示例中监控行为偏离。当考虑具有大量参数的功能时(例如大型神经网络)，最小化$1$的一种简单方法是记忆训练数据(Zhang et al。，2017)。记忆反过来会导致训练数据之外的不良行为(Szegedy等，2014)。</p>
-<p>但是，朴素估计$P_\delta$是逼近真实分布$P$的许多可能选择之一。例如，在<code>领域风险最小化(VRM)</code>原理中(Chapelle等，2000)，分布$P$近似为:</p>
-<script type="math/tex; mode=display">
+\end{align}\tag{1}
+\]</span></p>
+<p>通过最小化学习函数<span class="math inline">\(1\)</span>被称为经验风险最小化(ERM)原理(Vapnik，1998年)。尽管计算效率很高，但经验风险<span class="math inline">\(1\)</span>仅在一组有限的n个示例中监控行为偏离。当考虑具有大量参数的功能时(例如大型神经网络)，最小化<span class="math inline">\(1\)</span>的一种简单方法是记忆训练数据(Zhang et al。，2017)。记忆反过来会导致训练数据之外的不良行为(Szegedy等，2014)。</p>
+<p>但是，朴素估计<span class="math inline">\(P_\delta\)</span>是逼近真实分布<span class="math inline">\(P\)</span>的许多可能选择之一。例如，在<code>领域风险最小化(VRM)</code>原理中(Chapelle等，2000)，分布<span class="math inline">\(P\)</span>近似为: <span class="math display">\[
 \begin{align}
 P_{\nu}(\tilde{x}, \tilde{y})=\frac{1}{n} \sum_{i=1}^{n} \nu\left(\tilde{x}, \tilde{y} | x_{i}, y_{i}\right)
-\end{align}</script><p>其中$v$是<code>vicinity distributionth</code>用于测量在训练特征-目标对$(x_{i}, y_{i})$的领域内找到虚拟特征-目标对$(\hat{x}, \hat{y})$的概率，特别是，chapellpe等人(2000年)考虑了高斯领域内$\nu\left(\tilde{x}, \tilde{y} | x_{i}, y_{i}\right)=\mathcal{N}\left(\tilde{x}-x_{i}, \sigma^{2}\right) \delta\left(\tilde{y}=y_{i}\right)$，相对与用加性高斯噪声来增强训练数据。要学习使用<code>VRM</code>，我们对附近的分布进行采样以构建数据$\mathcal{D}_{\nu}:=\left\{\left(\tilde{x}_{i}, \tilde{y}_{i}\right)\right\}_{i=1}^{m}$，然后最小化经验风险损失：</p>
-<script type="math/tex; mode=display">
+\end{align}
+\]</span></p>
+<p>其中<span class="math inline">\(v\)</span>是<code>vicinity distributionth</code>用于测量在训练特征-目标对<span class="math inline">\((x_{i}, y_{i})\)</span>的领域内找到虚拟特征-目标对<span class="math inline">\((\hat{x}, \hat{y})\)</span>的概率，特别是，chapellpe等人(2000年)考虑了高斯领域内<span class="math inline">\(\nu\left(\tilde{x}, \tilde{y} | x_{i}, y_{i}\right)=\mathcal{N}\left(\tilde{x}-x_{i}, \sigma^{2}\right) \delta\left(\tilde{y}=y_{i}\right)\)</span>，相对与用加性高斯噪声来增强训练数据。要学习使用<code>VRM</code>，我们对附近的分布进行采样以构建数据<span class="math inline">\(\mathcal{D}_{\nu}:=\left\{\left(\tilde{x}_{i}, \tilde{y}_{i}\right)\right\}_{i=1}^{m}\)</span>，然后最小化经验风险损失：</p>
+<p><span class="math display">\[
 \begin{align}
 R_{\nu}(f)=\frac{1}{m} \sum_{i=1}^{m} \ell\left(f\left(\tilde{x}_{i}\right), \tilde{y}_{i}\right)
-\end{align}</script><p>此文章的作用是提出一种通用的邻域分布，称为<code>mixup</code>：</p>
-<script type="math/tex; mode=display">
+\end{align}
+\]</span></p>
+<p>此文章的作用是提出一种通用的邻域分布，称为<code>mixup</code>：</p>
+<p><span class="math display">\[
 \begin{align}
 \mu\left(\tilde{x}, \tilde{y} | x_{i}, y_{i}\right)=\frac{1}{n} \sum_{j}^{n} \underset{\lambda}{\mathbb{E}}\left[\delta\left(\tilde{x}=\lambda \cdot x_{i}+(1-\lambda) \cdot x_{j}, \tilde{y}=\lambda \cdot y_{i}+(1-\lambda) \cdot y_{j}\right)\right]
-\end{align}</script><p>其中$\lambda\sim \text{Beta}(\alpha,\alpha),\alpha\in(0,\infty)$。从混合邻域分布中采样会生成虚拟特征目标向量：</p>
-<script type="math/tex; mode=display">
+\end{align}
+\]</span></p>
+<p>其中<span class="math inline">\(\lambda\sim \text{Beta}(\alpha,\alpha),\alpha\in(0,\infty)\)</span>。从混合邻域分布中采样会生成虚拟特征目标向量： <span class="math display">\[
 \begin{align}
 \begin{aligned}
-&\tilde{x}=\lambda x_{i}+(1-\lambda) x_{j}\\
-&\tilde{y}=\lambda y_{i}+(1-\lambda) y_{j}
+&amp;\tilde{x}=\lambda x_{i}+(1-\lambda) x_{j}\\
+&amp;\tilde{y}=\lambda y_{i}+(1-\lambda) y_{j}
 \end{aligned}
-\end{align}</script><h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>实际上<code>mixup</code>的目标是使的模型更加线性，联想到之前的几个算法，就如<code>mean-teacher</code>算法第一幅图所展示的，最终目标是使在两个标注数据间的未标注区域获得更平滑的概率分布输出，这样我们可以找到类别<code>A</code>与类别<code>B</code>间更加合适的决策面，从而提升分类准确性，下图可以看到输出的概率分布更加平滑了。</p>
-<div align="center">
-<img src="/2020/02/02/ssl-mixup/mixup-1.png">
+\end{align}
+\]</span></p>
+<h2 id="总结">总结</h2>
+<p>实际上<code>mixup</code>的目标是使的模型更加线性，联想到之前的几个算法，就如<code>mean-teacher</code>算法第一幅图所展示的，最终目标是使在两个标注数据间的未标注区域获得更平滑的概率分布输出，这样我们可以找到类别<code>A</code>与类别<code>B</code>间更加合适的决策面，从而提升分类准确性，下图可以看到输出的概率分布更加平滑了。</p>
+<div data-align="center">
+<p><img src="/2020/02/02/ssl-mixup/mixup-1.png"></p>
 </div>
-
-
-<h1 id="代码"><a href="#代码" class="headerlink" title="代码"></a>代码</h1><p>原论文提出<code>mixup</code>针对的是有标签数据，代码是针对半监督学习的(pseudo label结合mixup)：</p>
+<h1 id="代码">代码</h1>
+<p>原论文提出<code>mixup</code>针对的是有标签数据，代码是针对半监督学习的(pseudo label结合mixup)：</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">augment</span><span class="params">(self, x, l, beta, **kwargs)</span>:</span></span><br><span class="line">    <span class="keyword">del</span> kwargs</span><br><span class="line">    mix = tf.distributions.Beta(beta, beta).sample([tf.shape(x)[<span class="number">0</span>], <span class="number">1</span>, <span class="number">1</span>, <span class="number">1</span>])</span><br><span class="line">    mix = tf.maximum(mix, <span class="number">1</span> - mix)</span><br><span class="line">    <span class="comment"># batch中数据反转并mixup</span></span><br><span class="line">    xmix = x * mix + x[::<span class="number">-1</span>] * (<span class="number">1</span> - mix)</span><br><span class="line">    lmix = l * mix[:, :, <span class="number">0</span>, <span class="number">0</span>] + l[::<span class="number">-1</span>] * (<span class="number">1</span> - mix[:, :, <span class="number">0</span>, <span class="number">0</span>])</span><br><span class="line">    <span class="keyword">return</span> xmix, lmix</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">model</span><span class="params">(self, batch, lr, wd, ema, **kwargs)</span>:</span></span><br><span class="line">    hwc = [self.dataset.height, self.dataset.width, self.dataset.colors]</span><br><span class="line">    xt_in = tf.placeholder(tf.float32, [batch] + hwc, <span class="string">'xt'</span>)  <span class="comment"># For training</span></span><br><span class="line">    x_in = tf.placeholder(tf.float32, [<span class="keyword">None</span>] + hwc, <span class="string">'x'</span>)</span><br><span class="line">    y_in = tf.placeholder(tf.float32, [batch] + hwc, <span class="string">'y'</span>)</span><br><span class="line">    l_in = tf.placeholder(tf.int32, [batch], <span class="string">'labels'</span>)</span><br><span class="line">    wd *= lr</span><br><span class="line">    classifier = <span class="keyword">lambda</span> x, **kw: self.classifier(x, **kw, **kwargs).logits</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">get_logits</span><span class="params">(x)</span>:</span></span><br><span class="line">        logits = classifier(x, training=<span class="keyword">True</span>)</span><br><span class="line">        <span class="keyword">return</span> logits</span><br><span class="line">    <span class="comment"># 有标签数据mixup</span></span><br><span class="line">    x, labels_x = self.augment(xt_in, tf.one_hot(l_in, self.nclass), **kwargs)</span><br><span class="line">    logits_x = get_logits(x)</span><br><span class="line">    post_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)</span><br><span class="line">    <span class="comment"># 无标签数据mixup，首先构造pseudo label再进行mixup，虽然这样比较慢。</span></span><br><span class="line">    y, labels_y = self.augment(y_in, tf.nn.softmax(get_logits(y_in)), **kwargs)</span><br><span class="line">    labels_y = tf.stop_gradient(labels_y)</span><br><span class="line">    logits_y = get_logits(y)</span><br><span class="line"></span><br><span class="line">    loss_xe = tf.nn.softmax_cross_entropy_with_logits_v2(labels=labels_x, logits=logits_x)</span><br><span class="line">    loss_xe = tf.reduce_mean(loss_xe)</span><br><span class="line">    loss_xeu = tf.nn.softmax_cross_entropy_with_logits_v2(labels=labels_y, logits=logits_y)</span><br><span class="line">    loss_xeu = tf.reduce_mean(loss_xeu)</span><br><span class="line">    tf.summary.scalar(<span class="string">'losses/xe'</span>, loss_xe)</span><br><span class="line">    tf.summary.scalar(<span class="string">'losses/xeu'</span>, loss_xeu)</span><br><span class="line"></span><br><span class="line">    ema = tf.train.ExponentialMovingAverage(decay=ema)</span><br><span class="line">    ema_op = ema.apply(utils.model_vars())</span><br><span class="line">    ema_getter = functools.partial(utils.getter_ema, ema)</span><br><span class="line">    post_ops.append(ema_op)</span><br><span class="line">    post_ops.extend([tf.assign(v, v * (<span class="number">1</span> - wd)) <span class="keyword">for</span> v <span class="keyword">in</span> utils.model_vars(<span class="string">'classify'</span>) <span class="keyword">if</span> <span class="string">'kernel'</span> <span class="keyword">in</span> v.name])</span><br><span class="line"></span><br><span class="line">    train_op = tf.train.AdamOptimizer(lr).minimize(loss_xe + loss_xeu, colocate_gradients_with_ops=<span class="keyword">True</span>)</span><br><span class="line">    <span class="keyword">with</span> tf.control_dependencies([train_op]):</span><br><span class="line">        train_op = tf.group(*post_ops)</span><br></pre></td></tr></table></figure>
-<h1 id="测试结果"><a href="#测试结果" class="headerlink" title="测试结果"></a>测试结果</h1><p>使用默认参数以及cifar10中250张标注样本训练128个epoch，得到测试集准确率如下，比之前的算法的确有提升，不如<code>vat</code>好，不过胜在它比较简单，而且<code>vat</code>也会出现退化的情况，<code>mixup</code>更加稳定：</p>
+<h1 id="测试结果">测试结果</h1>
+<p>使用默认参数以及cifar10中250张标注样本训练128个epoch，得到测试集准确率如下，比之前的算法的确有提升，不如<code>vat</code>好，不过胜在它比较简单，而且<code>vat</code>也会出现退化的情况，<code>mixup</code>更加稳定：</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&quot;last01&quot;: 52.7400016784668,</span><br><span class="line">&quot;last10&quot;: 52.939998626708984,</span><br><span class="line">&quot;last20&quot;: 52.73500061035156,</span><br><span class="line">&quot;last50&quot;: 52.47999954223633</span><br></pre></td></tr></table></figure>
+
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2020/02/02/ssl-mixup/" data-id="ck794z2jk00aots6x2blgduq0" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2020/02/02/ssl-mixup/" data-id="ck7hp7bdv0076cq6xdm3dki1d" class="article-share-link">Share</a>
       
       
       
@@ -251,7 +279,7 @@ R_{\nu}(f)=\frac{1}{m} \sum_{i=1}^{m} \ell\left(f\left(\tilde{x}_{i}\right), \ti
   <div class="widget-wrap">
     <h3 class="widget-title">归档</h3>
     <div class="widget">
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/12/">十二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/09/">九月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/08/">八月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/07/">七月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/06/">六月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/05/">五月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">三月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/12/">十二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/09/">九月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/08/">八月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/07/">七月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/06/">六月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/05/">五月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">三月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a></li></ul>
     </div>
   </div>
 
@@ -262,6 +290,10 @@ R_{\nu}(f)=\frac{1}{m} \sum_{i=1}^{m} \ell\left(f\left(\tilde{x}_{i}\right), \ti
     <h3 class="widget-title">最新文章</h3>
     <div class="widget">
       <ul>
+        
+          <li>
+            <a href="/2020/03/08/ct-augments/">Control Theory Augment</a>
+          </li>
         
           <li>
             <a href="/2020/03/01/mel-augments/">Augmentation For Mel Spectrogram</a>
@@ -277,10 +309,6 @@ R_{\nu}(f)=\frac{1}{m} \sum_{i=1}^{m} \ell\left(f\left(\tilde{x}_{i}\right), \ti
         
           <li>
             <a href="/2020/02/12/tf-all-regularizers/">tf2.0 全局添加regularizers</a>
-          </li>
-        
-          <li>
-            <a href="/2020/02/06/ssl-fixmatch/">半监督学习：FixMatch</a>
           </li>
         
       </ul>
