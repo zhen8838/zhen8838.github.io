@@ -95,168 +95,129 @@
       
         <p>本文是对苏剑林的<a href="https://kexue.fm/archives/6024" target="_blank" rel="noopener">深度学习的互信息：无监督提取特征</a>的学习总结,主要是关于<code>Deep INFOMAX</code>的论文复现.</p>
 <a id="more"></a>
-<h1 id="互信息">互信息</h1>
-<p>大概是需要有一个标准来衡量<strong>两个值统一出现的概率</strong>,如果这个概率很大,说明两个值倾向于<strong>共同出现</strong>,如果这个概率很小,就代表他们<strong>刻意回避对方</strong>。这个值定义为点互信息(Pointwise Mutual Information，PMI): <span class="math display">\[
+<h1 id="互信息"><a href="#互信息" class="headerlink" title="互信息"></a>互信息</h1><p>大概是需要有一个标准来衡量<strong>两个值统一出现的概率</strong>,如果这个概率很大,说明两个值倾向于<strong>共同出现</strong>,如果这个概率很小,就代表他们<strong>刻意回避对方</strong>。这个值定义为点互信息(Pointwise Mutual Information，PMI):</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-    PMI(x,z)&amp;=p(x,z)\log\frac{p(x,z)}{p(x)p(z)}
-\end{aligned}
-\]</span></p>
-<p>因为<span class="math inline">\(\log\)</span>的原因，所以两个多元变量的相关度可以被累加：</p>
-<p><span class="math display">\[
+    PMI(x,z)&=p(x,z)\log\frac{p(x,z)}{p(x)p(z)}
+\end{aligned}</script><p>因为$\log$的原因，所以两个多元变量的相关度可以被累加：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-    I(X,Z)&amp;=\sum^k_{i=1}\sum^l_{j=1}p(x_i,z_j) \log\frac{p(x_i,z_j)}{p(x_i)p(z_j)} \ \ \ \ \text{离散型}\\
-    &amp;=\int_Z\int_X p(x,z)\log\frac{p(x,z)}{p(x)p(z)}\ dx\ dz\ \ \ \ \text{连续型}
-\end{aligned}
-\]</span></p>
-<p>细心的小伙伴可以看出，这个不就是<code>KL散度</code>么,如下： <span class="math display">\[
+    I(X,Z)&=\sum^k_{i=1}\sum^l_{j=1}p(x_i,z_j) \log\frac{p(x_i,z_j)}{p(x_i)p(z_j)} \ \ \ \ \text{离散型}\\
+    &=\int_Z\int_X p(x,z)\log\frac{p(x,z)}{p(x)p(z)}\ dx\ dz\ \ \ \ \text{连续型}
+\end{aligned}</script><p>细心的小伙伴可以看出，这个不就是<code>KL散度</code>么,如下：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-    I(X,Z)&amp;=KL(p(x,z)\|p(x)p(z))
-\end{aligned}
-\]</span> 且假设<span class="math inline">\(p(x)\)</span>和<span class="math inline">\(p(z)\)</span>相互独立时，则： <span class="math display">\[
+    I(X,Z)&=KL(p(x,z)\|p(x)p(z))
+\end{aligned}</script><p>且假设$p(x)$和$p(z)$相互独立时，则：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-    \because p(x|z)&amp;=\frac{p(x,z)}{p(z)}\\
-    \therefore I(X,Z)&amp;=\int_Z\int_X\ p(z) p(x|z)\log\frac{p(x|z)}{p(x)}\ dx\ dz\\
-    &amp;=\mathbb{E}[KL(\ p(x|z)\ \| \ p(z)\ )]\\
+    \because p(x|z)&=\frac{p(x,z)}{p(z)}\\
+    \therefore I(X,Z)&=\int_Z\int_X\ p(z) p(x|z)\log\frac{p(x|z)}{p(x)}\ dx\ dz\\
+    &=\mathbb{E}[KL(\ p(x|z)\ \| \ p(z)\ )]\\
     \text{或}\\
-    \because p(z|x)&amp;=\frac{p(x,z)}{p(x)}\\
-    \therefore I(X,Z)&amp;=\int_Z\int_X\ p(x) p(z|x)\log\frac{p(z|x)}{p(z)}\ dx\ dz\\
-    &amp;=\mathbb{E}[KL(\ p(z|x)\ \| \ p(x)\ )]
-\end{aligned}
-\]</span></p>
-<h1 id="自编码器">自编码器</h1>
-<p>通常自编码器都配有一个解码器，使用自编码对原始数据进行解析并<strong>保留尽可能多的重要特征</strong>，那么如何验证自编码器所解析的特征是<strong>最有效</strong>的呢？</p>
-<h2 id="关于重构">关于重构</h2>
-<p>传统思想是使用解码器将去重构原始图像，但使用低维编码重构原图的结果通常是很模糊的。比如我们都能轻松辨认一个物体是什么，但是让我们将他完整地画出来是很难的，这就说明对于任务来说，<strong>最合理的特征并不能一定能完成图像重构。</strong></p>
-<h1 id="最大化互信息">最大化互信息</h1>
-<h2 id="互信息引出">互信息引出</h2>
-<p>既然重构不是好特征的必要条件。那好特征的基本原则应当是<code>能够从整个数据集中辨别出该样本出来</code>，也就是说，提取出该样本（最）独特的信息。如何衡量提取出来的信息是该样本独特的呢？我们用<code>互信息</code>来衡量。</p>
-<p>用<span class="math inline">\(X\)</span>表示原始图像的集合，<span class="math inline">\(x\in X\)</span>表示其中一图像，<span class="math inline">\(\tilde{p}(x)\)</span>表示采样所得<span class="math inline">\(x\)</span>的分布，<span class="math inline">\(Z\)</span>为编码向量集合，<span class="math inline">\(z\in Z\)</span>表示其中一编码向量，<span class="math inline">\(p(z|x)\)</span>表示<span class="math inline">\(x\)</span>所产生的编码向量<span class="math inline">\(z\)</span>的分布，我们假设它为正态分布且<span class="math inline">\(\tilde{p}(x)\)</span>和<span class="math inline">\(p(z)\)</span><strong>相互独立</strong>，即 <span class="math display">\[
+    \because p(z|x)&=\frac{p(x,z)}{p(x)}\\
+    \therefore I(X,Z)&=\int_Z\int_X\ p(x) p(z|x)\log\frac{p(z|x)}{p(z)}\ dx\ dz\\
+    &=\mathbb{E}[KL(\ p(z|x)\ \| \ p(x)\ )]
+\end{aligned}</script><h1 id="自编码器"><a href="#自编码器" class="headerlink" title="自编码器"></a>自编码器</h1><p>通常自编码器都配有一个解码器，使用自编码对原始数据进行解析并<strong>保留尽可能多的重要特征</strong>，那么如何验证自编码器所解析的特征是<strong>最有效</strong>的呢？</p>
+<h2 id="关于重构"><a href="#关于重构" class="headerlink" title="关于重构"></a>关于重构</h2><p>传统思想是使用解码器将去重构原始图像，但使用低维编码重构原图的结果通常是很模糊的。比如我们都能轻松辨认一个物体是什么，但是让我们将他完整地画出来是很难的，这就说明对于任务来说，<strong>最合理的特征并不能一定能完成图像重构。</strong></p>
+<h1 id="最大化互信息"><a href="#最大化互信息" class="headerlink" title="最大化互信息"></a>最大化互信息</h1><h2 id="互信息引出"><a href="#互信息引出" class="headerlink" title="互信息引出"></a>互信息引出</h2><p>既然重构不是好特征的必要条件。那好特征的基本原则应当是<code>能够从整个数据集中辨别出该样本出来</code>，也就是说，提取出该样本（最）独特的信息。如何衡量提取出来的信息是该样本独特的呢？我们用<code>互信息</code>来衡量。</p>
+<p>用$X$表示原始图像的集合，$x\in X$表示其中一图像，$\tilde{p}(x)$表示采样所得$x$的分布，$Z$为编码向量集合，$z\in Z$表示其中一编码向量，$p(z|x)$表示$x$所产生的编码向量$z$的分布，我们假设它为正态分布且$\tilde{p}(x)$和$p(z)$<strong>相互独立</strong>，即</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
     p(z) = \int p(z|x)\tilde{p}(x)\ dx
-\end{aligned}
-\]</span></p>
-<p>接下来使用互信息来表示<span class="math inline">\(X，Z\)</span>的相关性： <span class="math display">\[
+\end{aligned}</script><p>接下来使用互信息来表示$X，Z$的相关性：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-I(X,Z) &amp;= \iint p(z,x)\log \frac{p(z,x)}{\tilde{p}(x)p(z)}\ dx\ dz \\
-&amp;= \iint p(z,x)\log \frac{p(z|x)}{p(z)}\ dx\ dz\\
-&amp;= \iint p(z|x)\tilde{p}(x)\log \frac{p(z|x)}{p(z)}\ dx\ dz
-\end{aligned}
-\]</span></p>
-<p>那么接下来我们就要使互信息尽可能的大，来得到一个好的特征编码器： <span class="math display">\[
+I(X,Z) &= \iint p(z,x)\log \frac{p(z,x)}{\tilde{p}(x)p(z)}\ dx\ dz \\
+&= \iint p(z,x)\log \frac{p(z|x)}{p(z)}\ dx\ dz\\
+&= \iint p(z|x)\tilde{p}(x)\log \frac{p(z|x)}{p(z)}\ dx\ dz
+\end{aligned}</script><p>那么接下来我们就要使互信息尽可能的大，来得到一个好的特征编码器：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
 p(z|x) = -\min_{p(z|x)} I(X,Z)
-\end{aligned}
-\]</span></p>
-<p>互信息越大就代表<span class="math inline">\(\log \frac{p(z|x)}{p(z)}\)</span>越大，说明<span class="math inline">\(p(z|x)\gg p(x)\)</span>,则此时的解码出向量<span class="math inline">\(p(z|x)\)</span>和<span class="math inline">\(p(x)\)</span><strong>同时出现</strong>的概率越大，那就代表编码器找到了专属于<span class="math inline">\(x\)</span>的那个<span class="math inline">\(z\)</span>，这不就是我们所需要的独特信息么。</p>
-<h2 id="先验分布">先验分布</h2>
-<p>前面提到，相对于自编码器，变分自编码器同时还希望隐变量服从标准正态分布的先验分布，<strong>这有利于使得编码空间更加规整，甚至有利于解耦特征，便于后续学习</strong>。因此，在这里我们同样希望加上这个约束。</p>
-<pre><code>关于服从于标准正态就可以有利于解耦特征，我暂时没有找到相关的资料，这里是摘录的原文。</code></pre>
-<p>利用在<code>VAE</code>中思路(<a href="https://zhen8838.github.io/2019/07/29/vae2/">参考VAE直观推导</a>)添加<code>KL散度</code>约束来实现，假设<span class="math inline">\(q(z)\sim N(0,1)\)</span>,则： <span class="math display">\[
-    KL(q(z)\|p(z))=\int p(z)\log\frac{p(z)}{q(z)}\ dz
-\]</span></p>
-<h2 id="化简先验分布">化简先验分布</h2>
-<p>将<code>KL散度</code>约束加权并与互信息约束混合得： <span class="math display">\[
+\end{aligned}</script><p>互信息越大就代表$\log \frac{p(z|x)}{p(z)}$越大，说明$p(z|x)\gg p(x)$,则此时的解码出向量$p(z|x)$和$p(x)$<strong>同时出现</strong>的概率越大，那就代表编码器找到了专属于$x$的那个$z$，这不就是我们所需要的独特信息么。</p>
+<h2 id="先验分布"><a href="#先验分布" class="headerlink" title="先验分布"></a>先验分布</h2><p>前面提到，相对于自编码器，变分自编码器同时还希望隐变量服从标准正态分布的先验分布，<strong>这有利于使得编码空间更加规整，甚至有利于解耦特征，便于后续学习</strong>。因此，在这里我们同样希望加上这个约束。</p>
+<pre><code>关于服从于标准正态就可以有利于解耦特征，我暂时没有找到相关的资料，这里是摘录的原文。
+</code></pre><p>利用在<code>VAE</code>中思路(<a href="https://zhen8838.github.io/2019/07/29/vae2/">参考VAE直观推导</a>)添加<code>KL散度</code>约束来实现，假设$q(z)\sim N(0,1)$,则：</p>
+<script type="math/tex; mode=display">
+    KL(q(z)\|p(z))=\int p(z)\log\frac{p(z)}{q(z)}\ dz</script><h2 id="化简先验分布"><a href="#化简先验分布" class="headerlink" title="化简先验分布"></a>化简先验分布</h2><p>将<code>KL散度</code>约束加权并与互信息约束混合得：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-    p(z|x) &amp;= \min_{p(z|x)}\left\{- I(X,Z) + \lambda KL(p(z)\Vert q(z))\right\}\\ 
-    =\min_{p(z|x)}&amp;\left\{- I(X,Z)+ \lambda\int p(z)\log \frac{p(z)}{q(z)}\ dz\right\} \\
-    =\min_{p(z|x)}&amp;\left\{- I(X,Z)+ \lambda\left(\int p(z)\log \left(\frac{p(z|x)}{q(z)}\times\frac{p(z)}{p(z|x)}\right)\ dz\right)\right\} \\
-    =\min_{p(z|x)}&amp;\left\{- I(X,Z)+ \lambda\left(\int p(z)\log\frac{p(z|x)}{q(z)} \ dz-\int p(z)\log\frac{p(z|x)}{p(z)} \ dz\right)\right\} \\
-    =\min_{p(z|x)}&amp;\left\{- \iint p(z)\log \frac{p(z|x)}{p(z)}\ dx\ dz+ \lambda\left(\int p(z)\log\frac{p(z|x)}{q(z)} \ dz-\int p(z)\log\frac{p(z|x)}{p(z)} \ dz\right)\right\} \\
-    =\min_{p(z|x)}&amp;\left\{- (1+\lambda)\iint p(z)\log \frac{p(z|x)}{p(z)}\ dx\ dz+ \lambda\int p(z)\log\frac{p(z|x)}{q(z)} \ dz\right\} \\
-    =\min_{p(z|x)}&amp;\left\{\iint p(z|x)\tilde{p}(x) \left[- (1+\lambda)\log\frac{p(z|x)}{p(z)}+\lambda\log\frac{p(z|x)}{q(x)}\right]\ dx\ dz \right\} \\
-    =\min_{p(z|x)}&amp;\left\{-(1+\lambda)\cdot I(X,Z)+\lambda\cdot \mathbb{E}_{x\sim\tilde{p}(x)}\left[KL(p(z|x)||q(z))\right] \right\} \\
-    =\min_{p(z|x)}&amp;\left\{-(1+\lambda)\cdot KL(p(z|x)\tilde{p}(x)\| p(z)\tilde{p}(x)) +\lambda\cdot \mathbb{E}_{x\sim\tilde{p}(x)}\left[KL(p(z|x)||q(z))\right] \right\}
-\end{aligned}
-\]</span></p>
-<p>现在发现先验分布在化简后被去除了，并且约束函数中后面一部分就是<code>VAE</code>中的约束，比较容易实现，接下来考虑如何构建<code>互信息约束</code>。</p>
-<h2 id="互信息转化">互信息转化</h2>
-<p>在第一部分提到了互信息可以化为<code>KL散度</code>的形式：</p>
-<p><span class="math display">\[
+    p(z|x) &= \min_{p(z|x)}\left\{- I(X,Z) + \lambda KL(p(z)\Vert q(z))\right\}\\ 
+    =\min_{p(z|x)}&\left\{- I(X,Z)+ \lambda\int p(z)\log \frac{p(z)}{q(z)}\ dz\right\} \\
+    =\min_{p(z|x)}&\left\{- I(X,Z)+ \lambda\left(\int p(z)\log \left(\frac{p(z|x)}{q(z)}\times\frac{p(z)}{p(z|x)}\right)\ dz\right)\right\} \\
+    =\min_{p(z|x)}&\left\{- I(X,Z)+ \lambda\left(\int p(z)\log\frac{p(z|x)}{q(z)} \ dz-\int p(z)\log\frac{p(z|x)}{p(z)} \ dz\right)\right\} \\
+    =\min_{p(z|x)}&\left\{- \iint p(z)\log \frac{p(z|x)}{p(z)}\ dx\ dz+ \lambda\left(\int p(z)\log\frac{p(z|x)}{q(z)} \ dz-\int p(z)\log\frac{p(z|x)}{p(z)} \ dz\right)\right\} \\
+    =\min_{p(z|x)}&\left\{- (1+\lambda)\iint p(z)\log \frac{p(z|x)}{p(z)}\ dx\ dz+ \lambda\int p(z)\log\frac{p(z|x)}{q(z)} \ dz\right\} \\
+    =\min_{p(z|x)}&\left\{\iint p(z|x)\tilde{p}(x) \left[- (1+\lambda)\log\frac{p(z|x)}{p(z)}+\lambda\log\frac{p(z|x)}{q(x)}\right]\ dx\ dz \right\} \\
+    =\min_{p(z|x)}&\left\{-(1+\lambda)\cdot I(X,Z)+\lambda\cdot \mathbb{E}_{x\sim\tilde{p}(x)}\left[KL(p(z|x)||q(z))\right] \right\} \\
+    =\min_{p(z|x)}&\left\{-(1+\lambda)\cdot KL(p(z|x)\tilde{p}(x)\| p(z)\tilde{p}(x)) +\lambda\cdot \mathbb{E}_{x\sim\tilde{p}(x)}\left[KL(p(z|x)||q(z))\right] \right\}
+\end{aligned}</script><p>现在发现先验分布在化简后被去除了，并且约束函数中后面一部分就是<code>VAE</code>中的约束，比较容易实现，接下来考虑如何构建<code>互信息约束</code>。</p>
+<h2 id="互信息转化"><a href="#互信息转化" class="headerlink" title="互信息转化"></a>互信息转化</h2><p>在第一部分提到了互信息可以化为<code>KL散度</code>的形式：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-    I(X,Z) =&amp; \iint p(z|x)\tilde{p}(x)\log \frac{p(z|x)\tilde{p}(x)}{p(z)\tilde{p}(x)}dxdz\\ 
-    =&amp; KL(p(z|x)\tilde{p}(x)\Vert p(z)\tilde{p}(x)) 
-\end{aligned}
-\]</span></p>
-<p>这个形式展示了互信息的本质含义：<span class="math inline">\(p(z|x)\tilde{p}(x)\)</span>表示变量<span class="math inline">\(x,z\)</span>的联合分布，<span class="math inline">\(p(z)\tilde{p}(x)\)</span>表示随机抽取一个<span class="math inline">\(x\)</span>和一个<span class="math inline">\(z\)</span>时的分布(假设不相关)，而互信息则是这两个分布的<code>KL散度</code>，那么最大化互信息意思就是拉大这两个分布间的距离。</p>
+    I(X,Z) =& \iint p(z|x)\tilde{p}(x)\log \frac{p(z|x)\tilde{p}(x)}{p(z)\tilde{p}(x)}dxdz\\ 
+    =& KL(p(z|x)\tilde{p}(x)\Vert p(z)\tilde{p}(x)) 
+\end{aligned}</script><p>这个形式展示了互信息的本质含义：$p(z|x)\tilde{p}(x)$表示变量$x,z$的联合分布，$p(z)\tilde{p}(x)$表示随机抽取一个$x$和一个$z$时的分布(假设不相关)，而互信息则是这两个分布的<code>KL散度</code>，那么最大化互信息意思就是拉大这两个分布间的距离。</p>
 <p><strong>一个严重问题是<code>KL散度</code>理论上是无上界的，我们不能去最大化一个无上界的量</strong>。为了有效优化，抓住</p>
 <blockquote>
-<p>最大化互信息就是拉大<span class="math inline">\(p(z|x)\tilde{p}{x}\)</span>和<span class="math inline">\(p(z)\tilde{p}(x)\)</span>之间的距离</p>
+<p>  最大化互信息就是拉大$p(z|x)\tilde{p}{x}$和$p(z)\tilde{p}(x)$之间的距离</p>
 </blockquote>
 <p>这个核心要点，我们可以选择其他的度量函数来进行约束，可以选择<code>JS散度</code>和<code>Hellinger距离</code>。这里使用<code>JS散度</code>：</p>
-<p><span class="math display">\[
+<script type="math/tex; mode=display">
 \begin{aligned}
     JS(P,Q) = \frac{1}{2}KL\left(P\left\Vert\frac{P+Q}{2}\right.\right)+\frac{1}{2}KL\left(Q\left\Vert\frac{P+Q}{2}\right.\right)
-\end{aligned}   
-\]</span></p>
-<p><code>JS散度</code>同样衡量了两个分布的距离，但他具备上界<span class="math inline">\(\frac{1}{2}\log2\)</span>，我们最大化他的时候，也可以起到最大化互信息的效果，下面将<code>JS散度</code>代入约束函数。</p>
-<p><span class="math display">\[
+\end{aligned}</script><p><code>JS散度</code>同样衡量了两个分布的距离，但他具备上界$\frac{1}{2}\log2$，我们最大化他的时候，也可以起到最大化互信息的效果，下面将<code>JS散度</code>代入约束函数。</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-    p(z|x) =\min_{p(z|x)}&amp;\left\{-(1+\lambda)\cdot JS(p(z|x)\tilde{p}(x)\| p(z)\tilde{p}(x)) +\lambda\cdot \mathbb{E}_{x\sim\tilde{p}(x)}\left[KL(p(z|x)||q(z))\right] \right\}
-\end{aligned}
-\]</span></p>
-<p>但是还是存在一个<span class="math inline">\(p(z)\)</span>让我们无法解决，下面就要把他解决：</p>
-<h2 id="变分推断">变分推断</h2>
-<p>参考<a href="https://kexue.fm/archives/6016" target="_blank" rel="noopener">f-GAN简介：GAN模型的生产车间</a>中的<code>f散度局部变分推断</code>中的距离定义为：</p>
-<p><span class="math display">\[
-\begin{aligned}\mathcal{D}_f(P\Vert Q) =&amp; \max_{T}\int q(x) \left[\frac{p(x)}{q(x)}T\left(\frac{p(x)}{q(x)}\right)-g\left(T\left(\frac{p(x)}{q(x)}\right)\right)\right]\ dx\\ 
-=&amp; \max_{T}\int\left[p(x)\cdot T\left(\frac{p(x)}{q(x)}\right)-q(x)\cdot g\left(T\left(\frac{p(x)}{q(x)}\right)\right)\right]\ dx \\
-\text{记}T\left(\frac{p(x)}{q(x)}\right)\text{为}&amp;T(x)\text{得}\\
-\mathcal{D}_f(P\Vert Q) =&amp; \max_{T}\Big(\mathbb{E}_{x\sim p(x)}[T(x)]-\mathbb{E}_{x\sim q(x)}[g(T(x))]\Big)
-\end{aligned}
-\]</span></p>
-<p>利用上面这个公式，我们可以进行<code>f散度估计</code>，意思是：分别从两个分布中采样，然后分别计算<span class="math inline">\(T(x)\)</span>和<span class="math inline">\(g(T(x))\)</span>的均值，优化函数<span class="math inline">\(T(x)\)</span>使得他们的差值尽可能的大，最终的结果即为<code>f散度</code>的近似值了。显然<span class="math inline">\(T(x)\)</span>可以用神经网络进行拟合，我们优化此函数就是优化神经网络参数。</p>
-<p>将上述公式代入<code>JS散度</code>中得： <span class="math display">\[
+    p(z|x) =\min_{p(z|x)}&\left\{-(1+\lambda)\cdot JS(p(z|x)\tilde{p}(x)\| p(z)\tilde{p}(x)) +\lambda\cdot \mathbb{E}_{x\sim\tilde{p}(x)}\left[KL(p(z|x)||q(z))\right] \right\}
+\end{aligned}</script><p>但是还是存在一个$p(z)$让我们无法解决，下面就要把他解决：</p>
+<h2 id="变分推断"><a href="#变分推断" class="headerlink" title="变分推断"></a>变分推断</h2><p>参考<a href="https://kexue.fm/archives/6016" target="_blank" rel="noopener">f-GAN简介：GAN模型的生产车间</a>中的<code>f散度局部变分推断</code>中的距离定义为：</p>
+<script type="math/tex; mode=display">
+\begin{aligned}\mathcal{D}_f(P\Vert Q) =& \max_{T}\int q(x) \left[\frac{p(x)}{q(x)}T\left(\frac{p(x)}{q(x)}\right)-g\left(T\left(\frac{p(x)}{q(x)}\right)\right)\right]\ dx\\ 
+=& \max_{T}\int\left[p(x)\cdot T\left(\frac{p(x)}{q(x)}\right)-q(x)\cdot g\left(T\left(\frac{p(x)}{q(x)}\right)\right)\right]\ dx \\
+\text{记}T\left(\frac{p(x)}{q(x)}\right)\text{为}&T(x)\text{得}\\
+\mathcal{D}_f(P\Vert Q) =& \max_{T}\Big(\mathbb{E}_{x\sim p(x)}[T(x)]-\mathbb{E}_{x\sim q(x)}[g(T(x))]\Big)
+\end{aligned}</script><p>利用上面这个公式，我们可以进行<code>f散度估计</code>，意思是：分别从两个分布中采样，然后分别计算$T(x)$和$g(T(x))$的均值，优化函数$T(x)$使得他们的差值尽可能的大，最终的结果即为<code>f散度</code>的近似值了。显然$T(x)$可以用神经网络进行拟合，我们优化此函数就是优化神经网络参数。</p>
+<p>将上述公式代入<code>JS散度</code>中得：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-    &amp;JS(P,Q) \\
-    =&amp; \max_{T}\Big(\mathbb{E}_{x\sim p(x)}[\log \sigma(T(x))] + \mathbb{E}_{x\sim q(x)}[\log(1-\sigma(T(x))]\Big) \\
+    &JS(P,Q) \\
+    =& \max_{T}\Big(\mathbb{E}_{x\sim p(x)}[\log \sigma(T(x))] + \mathbb{E}_{x\sim q(x)}[\log(1-\sigma(T(x))]\Big) \\
     \\
-    &amp;JS\big(p(z|x)\tilde{p}(x), p(z)\tilde{p}(x)\big)\\
-    =&amp; \max_{T}\Big(\mathbb{E}_{(x,z)\sim p(z|x)\tilde{p}(x)}[\log \sigma(T(x,z))] + \mathbb{E}_{(x,z)\sim p(z)\tilde{p}(x)}[\log(1-\sigma(T(x,z))]\Big)
-\end{aligned}
-\]</span></p>
-<p><strong>注意</strong>:这里的<span class="math inline">\(1-\sigma(T(x))\)</span>是根据此前文章中的变分推断所计算的激活函数<span class="math inline">\(g\)</span>，具体请参考<a href="https://kexue.fm/archives/6016" target="_blank" rel="noopener">文章</a></p>
-<p>并且现在这个约束函数可以看成<code>负采样估计</code>：引入一个判别网络<span class="math inline">\(\sigma(T(x,z))\)</span>，<span class="math inline">\(x\)</span>和对应的<span class="math inline">\(z\)</span>看成一个正样本对，<span class="math inline">\(x\)</span>与其他一个随机抽取的<span class="math inline">\(z\)</span>作为负样本对，然后最大化似然函数，等价于最小化交叉熵。终于通过负采样的方式，得到了一种估计<code>JS散度</code>的方案，从而解决了互信息的最大化问题，得到具体的<code>loss</code>为：</p>
-<p><span class="math display">\[
+    &JS\big(p(z|x)\tilde{p}(x), p(z)\tilde{p}(x)\big)\\
+    =& \max_{T}\Big(\mathbb{E}_{(x,z)\sim p(z|x)\tilde{p}(x)}[\log \sigma(T(x,z))] + \mathbb{E}_{(x,z)\sim p(z)\tilde{p}(x)}[\log(1-\sigma(T(x,z))]\Big)
+\end{aligned}</script><p><strong>注意</strong>:这里的$1-\sigma(T(x))$是根据此前文章中的变分推断所计算的激活函数$g$，具体请参考<a href="https://kexue.fm/archives/6016" target="_blank" rel="noopener">文章</a></p>
+<p>并且现在这个约束函数可以看成<code>负采样估计</code>：引入一个判别网络$\sigma(T(x,z))$，$x$和对应的$z$看成一个正样本对，$x$与其他一个随机抽取的$z$作为负样本对，然后最大化似然函数，等价于最小化交叉熵。终于通过负采样的方式，得到了一种估计<code>JS散度</code>的方案，从而解决了互信息的最大化问题，得到具体的<code>loss</code>为：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
 p(z|x),T(x,z)=\\
-\min_{p(z|x),T(x,z)}\Big\{-&amp;(1+\lambda)\cdot\Big(\mathbb{E}_{(x,z)\sim p(z|x)\tilde{p}(x)}[\log \sigma(T(x,z))] + \mathbb{E}_{(x,z)\sim p(z)\tilde{p}(x)}[\log(1-\sigma(T(x,z))]\Big)\\ 
-+&amp;\lambda\cdot \mathbb{E}_{x\sim\tilde{p}(x)}[KL(p(z|x)\Vert q(z))]\Big\}
-\end{aligned}
-\]</span></p>
-<p>下面开始实际实验。</p>
-<h1 id="从全局到局部">从全局到局部</h1>
-<p>在实际实验中，如何去践行<code>负采样</code>呢？</p>
-<h2 id="batch内负采样">batch内负采样</h2>
-<p>我们可以对这个<code>batch</code>中样本对顺序进行<code>shuffle</code>，<code>shuffle</code>前的样本对为正样本，<code>shuffle</code>之后的样本对为负样本。</p>
-<h2 id="局部负采样">局部负采样</h2>
-<p>上面的做法，实际上就是考虑了整张图片之间的关联，但是我们知道，图片的相关性更多体现在局部中（也就是因为这样所以我们才可以对图片使用CNN）。换言之，图片的识别、分类等应该是一个从局部到整体的过程。因此，有必要把“局部互信息”也考虑进来。</p>
-<p>一般的CNN编码过程： <span class="math display">\[
-\text{原始图片}x\xrightarrow{\text{多个卷积层}} h\times w\times c\text{的特征} \xrightarrow{\text{卷积和全局池化}} \text{固定长度的向量}z
-\]</span></p>
-<p>我们已经考虑到了<span class="math inline">\(x\)</span>和<span class="math inline">\(z\)</span>的关联，那么中间层特征(feature map)和<span class="math inline">\(z\)</span>的关联呢？把中间层向量记为<span class="math inline">\(\{C_{ij}(x)|i=1,2,\dots,h;j=1,2,\dots,w\}\)</span>,一共<span class="math inline">\(h\times w\)</span>个向量与<span class="math inline">\(z_x\)</span>的互信息，称为<code>局部互信息</code>。</p>
-<p>那么我们要构建出一个局部的互信息估算网络，首先把每个通道的向量与<span class="math inline">\(z_x\)</span>拼接得到<span class="math inline">\([C_{ij}(x),z_x]\)</span>,相当于得到了一个更大的feature map，然后对这个feature map用多个1x1的卷积层来作为局部互信息的估算网络<span class="math inline">\(T_{local}\)</span>。负样本的选取方法也是用在batch内随机打算的方案。</p>
-<p>加入局部互信息的总<code>loss</code>为： <span class="math display">\[
+\min_{p(z|x),T(x,z)}\Big\{-&(1+\lambda)\cdot\Big(\mathbb{E}_{(x,z)\sim p(z|x)\tilde{p}(x)}[\log \sigma(T(x,z))] + \mathbb{E}_{(x,z)\sim p(z)\tilde{p}(x)}[\log(1-\sigma(T(x,z))]\Big)\\ 
++&\lambda\cdot \mathbb{E}_{x\sim\tilde{p}(x)}[KL(p(z|x)\Vert q(z))]\Big\}
+\end{aligned}</script><p>下面开始实际实验。</p>
+<h1 id="从全局到局部"><a href="#从全局到局部" class="headerlink" title="从全局到局部"></a>从全局到局部</h1><p>在实际实验中，如何去践行<code>负采样</code>呢？</p>
+<h2 id="batch内负采样"><a href="#batch内负采样" class="headerlink" title="batch内负采样"></a>batch内负采样</h2><p>我们可以对这个<code>batch</code>中样本对顺序进行<code>shuffle</code>，<code>shuffle</code>前的样本对为正样本，<code>shuffle</code>之后的样本对为负样本。</p>
+<h2 id="局部负采样"><a href="#局部负采样" class="headerlink" title="局部负采样"></a>局部负采样</h2><p>上面的做法，实际上就是考虑了整张图片之间的关联，但是我们知道，图片的相关性更多体现在局部中（也就是因为这样所以我们才可以对图片使用CNN）。换言之，图片的识别、分类等应该是一个从局部到整体的过程。因此，有必要把“局部互信息”也考虑进来。</p>
+<p>一般的CNN编码过程：</p>
+<script type="math/tex; mode=display">
+\text{原始图片}x\xrightarrow{\text{多个卷积层}} h\times w\times c\text{的特征} \xrightarrow{\text{卷积和全局池化}} \text{固定长度的向量}z</script><p>我们已经考虑到了$x$和$z$的关联，那么中间层特征(feature map)和$z$的关联呢？把中间层向量记为$\{C_{ij}(x)|i=1,2,\dots,h;j=1,2,\dots,w\}$,一共$h\times w$个向量与$z_x$的互信息，称为<code>局部互信息</code>。</p>
+<p>那么我们要构建出一个局部的互信息估算网络，首先把每个通道的向量与$z_x$拼接得到$[C_{ij}(x),z_x]$,相当于得到了一个更大的feature map，然后对这个feature map用多个1x1的卷积层来作为局部互信息的估算网络$T_{local}$。负样本的选取方法也是用在batch内随机打算的方案。</p>
+<p>加入局部互信息的总<code>loss</code>为：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-&amp;p(z|x),T_1(x,z),T_2(C_{ij}, z) \\ 
-=&amp;\min_{p(z|x),T_1,T_2}\Big\{-\alpha\cdot\Big(\mathbb{E}_{(x,z)\sim p(z|x)\tilde{p}(x)}[\log \sigma(T_1(x,z))] + \mathbb{E}_{(x,z)\sim p(z)\tilde{p}(x)}[\log(1-\sigma(T_1(x,z))]\Big)\\ 
-&amp;\qquad-\frac{\beta}{hw}\sum_{i,j}\Big(\mathbb{E}_{(x,z)\sim p(z|x)\tilde{p}(x)}[\log \sigma(T_2(C_{ij},z))] + \mathbb{E}_{(x,z)\sim p(z)\tilde{p}(x)}[\log(1-\sigma(T_2(C_{ij},z))]\Big)\\ 
-&amp;\qquad+\gamma\cdot \mathbb{E}_{x\sim\tilde{p}(x)}[KL(p(z|x)\Vert q(z))]\Big\}
-\end{aligned}
-\]</span></p>
-<p><strong>注意</strong>：上面的几部分的损失权重分别设置为<span class="math inline">\(\alpha,\beta,\gamma\)</span>。</p>
-<h1 id="代码实现">代码实现</h1>
-<p>在<code>Tensorflow 1.14</code>下运行：</p>
+&p(z|x),T_1(x,z),T_2(C_{ij}, z) \\ 
+=&\min_{p(z|x),T_1,T_2}\Big\{-\alpha\cdot\Big(\mathbb{E}_{(x,z)\sim p(z|x)\tilde{p}(x)}[\log \sigma(T_1(x,z))] + \mathbb{E}_{(x,z)\sim p(z)\tilde{p}(x)}[\log(1-\sigma(T_1(x,z))]\Big)\\ 
+&\qquad-\frac{\beta}{hw}\sum_{i,j}\Big(\mathbb{E}_{(x,z)\sim p(z|x)\tilde{p}(x)}[\log \sigma(T_2(C_{ij},z))] + \mathbb{E}_{(x,z)\sim p(z)\tilde{p}(x)}[\log(1-\sigma(T_2(C_{ij},z))]\Big)\\ 
+&\qquad+\gamma\cdot \mathbb{E}_{x\sim\tilde{p}(x)}[KL(p(z|x)\Vert q(z))]\Big\}
+\end{aligned}</script><p><strong>注意</strong>：上面的几部分的损失权重分别设置为$\alpha,\beta,\gamma$。</p>
+<h1 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h1><p>在<code>Tensorflow 1.14</code>下运行：</p>
 <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line"><span class="keyword">import</span> glob</span><br><span class="line"><span class="keyword">import</span> imageio</span><br><span class="line"><span class="keyword">from</span> tensorflow.python.keras.models <span class="keyword">import</span> Model</span><br><span class="line"><span class="keyword">from</span> tensorflow.python.keras.layers <span class="keyword">import</span> *</span><br><span class="line"><span class="keyword">import</span> tensorflow.python <span class="keyword">as</span> tf</span><br><span class="line"><span class="keyword">from</span> tensorflow.python.keras <span class="keyword">import</span> backend <span class="keyword">as</span> K</span><br><span class="line"><span class="keyword">from</span> tensorflow.python.keras.optimizers <span class="keyword">import</span> Adam</span><br><span class="line"><span class="keyword">from</span> tensorflow.python.keras.datasets <span class="keyword">import</span> cifar10</span><br><span class="line"><span class="keyword">from</span> tensorflow.python.keras.utils <span class="keyword">import</span> plot_model</span><br><span class="line"><span class="keyword">from</span> pathlib <span class="keyword">import</span> Path</span><br><span class="line"><span class="keyword">from</span> termcolor <span class="keyword">import</span> colored</span><br><span class="line"></span><br><span class="line">config = tf.ConfigProto()</span><br><span class="line">config.gpu_options.allow_growth = <span class="keyword">True</span></span><br><span class="line">K.set_session(tf.Session(config=config))</span><br><span class="line"></span><br><span class="line">(x_train, y_train), (x_test, y_test) = cifar10.load_data()</span><br><span class="line">x_train = x_train.astype(<span class="string">'float32'</span>) / <span class="number">255</span> - <span class="number">0.5</span></span><br><span class="line">x_test = x_test.astype(<span class="string">'float32'</span>) / <span class="number">255</span> - <span class="number">0.5</span></span><br><span class="line">y_train = y_train.reshape(<span class="number">-1</span>)</span><br><span class="line">y_test = y_test.reshape(<span class="number">-1</span>)</span><br><span class="line">img_dim = x_train.shape[<span class="number">1</span>]</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">z_dim = <span class="number">256</span>  <span class="comment"># 隐变量维度</span></span><br><span class="line">α = <span class="number">0.5</span>  <span class="comment"># 全局互信息的loss比重</span></span><br><span class="line">β = <span class="number">1.5</span>  <span class="comment"># 局部互信息的loss比重</span></span><br><span class="line">γ = <span class="number">0.01</span>  <span class="comment"># 先验分布的loss比重</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># 编码器（卷积与最大池化）</span></span><br><span class="line">x_in = Input(shape=(img_dim, img_dim, <span class="number">3</span>))</span><br><span class="line">x = x_in</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">3</span>):</span><br><span class="line">    x = Conv2D(z_dim // <span class="number">2</span>**int(<span class="number">2</span> - i), kernel_size=(<span class="number">3</span>, <span class="number">3</span>), padding=<span class="string">'SAME'</span>)(x)</span><br><span class="line">    x = BatchNormalization()(x)</span><br><span class="line">    x = LeakyReLU(<span class="number">0.2</span>)(x)</span><br><span class="line">    x = MaxPooling2D((<span class="number">2</span>, <span class="number">2</span>))(x)</span><br><span class="line"></span><br><span class="line">feature_map = x  <span class="comment"># 截断到这里，认为到这里是feature_map（局部特征）</span></span><br><span class="line">feature_map_encoder = Model(x_in, x)</span><br><span class="line"></span><br><span class="line">plot_model(feature_map_encoder, to_file=<span class="string">'feature_map_encoder.png'</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">2</span>):</span><br><span class="line">    x = Conv2D(z_dim,</span><br><span class="line">               kernel_size=(<span class="number">3</span>, <span class="number">3</span>),</span><br><span class="line">               padding=<span class="string">'SAME'</span>)(x)</span><br><span class="line">    x = BatchNormalization()(x)</span><br><span class="line">    x = LeakyReLU(<span class="number">0.2</span>)(x)</span><br><span class="line"></span><br><span class="line">x = GlobalMaxPooling2D()(x)  <span class="comment"># 全局特征</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">z_μ = Dense(z_dim)(x)  <span class="comment"># 均值，也就是最终输出的编码</span></span><br><span class="line">z_log_σ = Dense(z_dim)(x)  <span class="comment"># 方差，这里都是模仿VAE的</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">encoder = Model(x_in, z_μ)  <span class="comment"># 总的编码器就是输出z_μ</span></span><br><span class="line"></span><br><span class="line">plot_model(encoder, to_file=<span class="string">'encoder.png'</span>)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># 重参数技巧</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">sampling</span><span class="params">(args)</span>:</span></span><br><span class="line">    z_μ, z_log_σ = args</span><br><span class="line">    u = K.random_normal(shape=K.shape(z_μ))</span><br><span class="line">    <span class="keyword">return</span> z_μ + K.exp(z_log_σ / <span class="number">2</span>) * u</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># 重参数层，相当于给输入加入噪声</span></span><br><span class="line">z_samples = Lambda(sampling)([z_μ, z_log_σ])</span><br><span class="line">prior_kl_loss = - <span class="number">0.5</span> * K.mean(<span class="number">1</span> + z_log_σ - K.square(z_μ) - K.exp(z_log_σ))</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># shuffle层，打乱第一个轴</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">shuffling</span><span class="params">(x)</span>:</span></span><br><span class="line">    idxs = K.arange(<span class="number">0</span>, K.shape(x)[<span class="number">0</span>])</span><br><span class="line">    idxs = tf.random_shuffle(idxs)</span><br><span class="line">    <span class="keyword">return</span> K.gather(x, idxs)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="string">""" 构建正负样本对 """</span></span><br><span class="line"><span class="comment"># 与随机采样的特征拼接（全局）</span></span><br><span class="line">z_shuffle = Lambda(shuffling)(z_samples)</span><br><span class="line">z_z_true = Concatenate()([z_samples, z_samples])  <span class="comment"># 这就是正样本对</span></span><br><span class="line">z_z_false = Concatenate()([z_samples, z_shuffle])  <span class="comment"># 这就是负样本对</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 与随机采样的特征拼接（局部）</span></span><br><span class="line">feature_map_shuffle = Lambda(shuffling)(feature_map)</span><br><span class="line">z_samples_map = Reshape((<span class="number">4</span>, <span class="number">4</span>, z_dim))(RepeatVector(<span class="number">4</span> * <span class="number">4</span>)(z_samples))  <span class="comment"># 重复z样本到H×W次并reshape</span></span><br><span class="line">z_f_true = Concatenate()([z_samples_map, feature_map])  <span class="comment"># 拼接出局部正样本</span></span><br><span class="line">z_f_false = Concatenate()([z_samples_map, feature_map_shuffle])  <span class="comment"># 拼接出局部负样本</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># 全局互信息判别器</span></span><br><span class="line">z_in = Input(shape=(z_dim * <span class="number">2</span>,))</span><br><span class="line">z = z_in</span><br><span class="line">z = Dense(z_dim, activation=<span class="string">'relu'</span>)(z)</span><br><span class="line">z = Dense(z_dim, activation=<span class="string">'relu'</span>)(z)</span><br><span class="line">z = Dense(z_dim, activation=<span class="string">'relu'</span>)(z)</span><br><span class="line">z = Dense(<span class="number">1</span>, activation=<span class="string">'sigmoid'</span>)(z)</span><br><span class="line"></span><br><span class="line">GlobalDiscriminator = Model(z_in, z)</span><br><span class="line">plot_model(GlobalDiscriminator, to_file=<span class="string">'GlobalDiscriminator.png'</span>)</span><br><span class="line"></span><br><span class="line">z_z_true_scores = GlobalDiscriminator(z_z_true)  <span class="comment"># 使用判别器判别正样本对</span></span><br><span class="line">z_z_flase_scores = GlobalDiscriminator(z_z_false)  <span class="comment"># 使用判别器判别负样本对</span></span><br><span class="line">global_info_loss = - K.mean(K.log(z_z_true_scores + <span class="number">1e-6</span>) + K.log(<span class="number">1</span> - z_z_flase_scores + <span class="number">1e-6</span>))</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># 局部互信息判别器</span></span><br><span class="line">z_in = Input(shape=(<span class="keyword">None</span>, <span class="keyword">None</span>, z_dim * <span class="number">2</span>))</span><br><span class="line">z = z_in</span><br><span class="line">z = Dense(z_dim, activation=<span class="string">'relu'</span>)(z)</span><br><span class="line">z = Dense(z_dim, activation=<span class="string">'relu'</span>)(z)</span><br><span class="line">z = Dense(z_dim, activation=<span class="string">'relu'</span>)(z)</span><br><span class="line">z = Dense(<span class="number">1</span>, activation=<span class="string">'sigmoid'</span>)(z)</span><br><span class="line"></span><br><span class="line">LocalDiscriminator = Model(z_in, z)</span><br><span class="line">plot_model(LocalDiscriminator, to_file=<span class="string">'LocalDiscriminator.png'</span>)</span><br><span class="line"></span><br><span class="line">z_f_true_scores = LocalDiscriminator(z_f_true)  <span class="comment"># 使用判别器判别正样本对</span></span><br><span class="line">z_f_false_scores = LocalDiscriminator(z_f_false)  <span class="comment"># 使用判别器判别负样本对</span></span><br><span class="line">local_info_loss = - K.mean(K.log(z_f_true_scores + <span class="number">1e-6</span>) + K.log(<span class="number">1</span> - z_f_false_scores + <span class="number">1e-6</span>))</span><br><span class="line"></span><br><span class="line"><span class="comment"># 用来训练的模型</span></span><br><span class="line">model_train = Model(x_in, [z_z_true_scores, z_z_flase_scores, z_f_true_scores, z_f_false_scores])</span><br><span class="line">model_train.add_loss(α * global_info_loss + β * local_info_loss + γ * prior_kl_loss)</span><br><span class="line">model_train.compile(optimizer=Adam(<span class="number">1e-3</span>))</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> <span class="keyword">not</span> Path(<span class="string">'cifar10.h5'</span>).exists():</span><br><span class="line">    model_train.fit(x_train, epochs=<span class="number">50</span>, batch_size=<span class="number">64</span>)</span><br><span class="line">    model_train.save_weights(<span class="string">'cifar10.h5'</span>)</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    model_train.load_weights(<span class="string">'cifar10.h5'</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 输出编码器的特征</span></span><br><span class="line">zs = encoder.predict(x_train, verbose=<span class="keyword">True</span>)</span><br><span class="line">print(colored(<span class="string">'z mean'</span>, <span class="string">'green'</span>), zs.mean())  <span class="comment"># 查看均值（简单观察先验分布有没有达到效果）</span></span><br><span class="line">print(colored(<span class="string">'z std'</span>, <span class="string">'green'</span>), zs.std())  <span class="comment"># 查看方差（简单观察先验分布有没有达到效果）</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># 随机选一张图片，输出最相近的图片</span></span><br><span class="line"><span class="comment"># 可以选用欧氏距离或者cos值</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">sample_knn</span><span class="params">(path)</span>:</span></span><br><span class="line">    n = <span class="number">10</span></span><br><span class="line">    topn = <span class="number">10</span></span><br><span class="line">    figure1 = np.zeros((img_dim * n, img_dim * topn, <span class="number">3</span>))</span><br><span class="line">    figure2 = np.zeros((img_dim * n, img_dim * topn, <span class="number">3</span>))</span><br><span class="line">    zs_ = zs / (zs**<span class="number">2</span>).sum(<span class="number">1</span>, keepdims=<span class="keyword">True</span>)**<span class="number">0.5</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> range(n):</span><br><span class="line">        one = np.random.choice(len(x_train))</span><br><span class="line">        idxs = ((zs**<span class="number">2</span>).sum(<span class="number">1</span>) + (zs[one]**<span class="number">2</span>).sum() - <span class="number">2</span> * np.dot(zs, zs[one])).argsort()[:topn]</span><br><span class="line">        <span class="keyword">for</span> j, k <span class="keyword">in</span> enumerate(idxs):</span><br><span class="line">            digit = x_train[k]</span><br><span class="line">            figure1[i * img_dim: (i + <span class="number">1</span>) * img_dim,</span><br><span class="line">                    j * img_dim: (j + <span class="number">1</span>) * img_dim] = digit</span><br><span class="line">        idxs = np.dot(zs_, zs_[one]).argsort()[-n:][::<span class="number">-1</span>]</span><br><span class="line">        <span class="keyword">for</span> j, k <span class="keyword">in</span> enumerate(idxs):</span><br><span class="line">            digit = x_train[k]</span><br><span class="line">            figure2[i * img_dim: (i + <span class="number">1</span>) * img_dim,</span><br><span class="line">                    j * img_dim: (j + <span class="number">1</span>) * img_dim] = digit</span><br><span class="line">    figure1 = (figure1 + <span class="number">1</span>) / <span class="number">2</span> * <span class="number">255</span></span><br><span class="line">    figure1 = np.clip(figure1, <span class="number">0</span>, <span class="number">255</span>)</span><br><span class="line">    figure2 = (figure2 + <span class="number">1</span>) / <span class="number">2</span> * <span class="number">255</span></span><br><span class="line">    figure2 = np.clip(figure2, <span class="number">0</span>, <span class="number">255</span>)</span><br><span class="line">    imageio.imwrite(path + <span class="string">'_l2.png'</span>, figure1)</span><br><span class="line">    imageio.imwrite(path + <span class="string">'_cos.png'</span>, figure2)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">sample_knn(<span class="string">'test'</span>)</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<h1 id="效果">效果</h1>
-<h2 id="余弦距离knn采样">余弦距离KNN采样</h2>
-<p><img src="/2019/08/01/infor-max/test_cos.png"></p>
-<h2 id="欧式距离knn采样">欧式距离KNN采样</h2>
-<p><img src="/2019/08/01/infor-max/test_l2.png"></p>
-<h1 id="思考">思考</h1>
-<p>我个人是想把这个使用在监督学习中，但是转念一想，其实在监督学习中不是已经在优化<span class="math inline">\(y\)</span>与对应<span class="math inline">\(x\)</span>之间的最大互信息了么？可以看到这里的这里构建正负样本对后所使用的损失函数，其实际就是交叉熵。</p>
+<h1 id="效果"><a href="#效果" class="headerlink" title="效果"></a>效果</h1><h2 id="余弦距离KNN采样"><a href="#余弦距离KNN采样" class="headerlink" title="余弦距离KNN采样"></a>余弦距离KNN采样</h2><p><img src="/2019/08/01/infor-max/test_cos.png" alt=""></p>
+<h2 id="欧式距离KNN采样"><a href="#欧式距离KNN采样" class="headerlink" title="欧式距离KNN采样"></a>欧式距离KNN采样</h2><p><img src="/2019/08/01/infor-max/test_l2.png" alt=""></p>
+<h1 id="思考"><a href="#思考" class="headerlink" title="思考"></a>思考</h1><p>我个人是想把这个使用在监督学习中，但是转念一想，其实在监督学习中不是已经在优化$y$与对应$x$之间的最大互信息了么？可以看到这里的这里构建正负样本对后所使用的损失函数，其实际就是交叉熵。</p>
 
       
     </div>
@@ -266,174 +227,135 @@ p(z|x),T(x,z)=\\
         
           <p>本文是对苏剑林的<a href="https://kexue.fm/archives/6024" target="_blank" rel="noopener">深度学习的互信息：无监督提取特征</a>的学习总结,主要是关于<code>Deep INFOMAX</code>的论文复现.</p>
 <a id="more"></a>
-<h1 id="互信息">互信息</h1>
-<p>大概是需要有一个标准来衡量<strong>两个值统一出现的概率</strong>,如果这个概率很大,说明两个值倾向于<strong>共同出现</strong>,如果这个概率很小,就代表他们<strong>刻意回避对方</strong>。这个值定义为点互信息(Pointwise Mutual Information，PMI): <span class="math display">\[
+<h1 id="互信息"><a href="#互信息" class="headerlink" title="互信息"></a>互信息</h1><p>大概是需要有一个标准来衡量<strong>两个值统一出现的概率</strong>,如果这个概率很大,说明两个值倾向于<strong>共同出现</strong>,如果这个概率很小,就代表他们<strong>刻意回避对方</strong>。这个值定义为点互信息(Pointwise Mutual Information，PMI):</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-    PMI(x,z)&amp;=p(x,z)\log\frac{p(x,z)}{p(x)p(z)}
-\end{aligned}
-\]</span></p>
-<p>因为<span class="math inline">\(\log\)</span>的原因，所以两个多元变量的相关度可以被累加：</p>
-<p><span class="math display">\[
+    PMI(x,z)&=p(x,z)\log\frac{p(x,z)}{p(x)p(z)}
+\end{aligned}</script><p>因为$\log$的原因，所以两个多元变量的相关度可以被累加：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-    I(X,Z)&amp;=\sum^k_{i=1}\sum^l_{j=1}p(x_i,z_j) \log\frac{p(x_i,z_j)}{p(x_i)p(z_j)} \ \ \ \ \text{离散型}\\
-    &amp;=\int_Z\int_X p(x,z)\log\frac{p(x,z)}{p(x)p(z)}\ dx\ dz\ \ \ \ \text{连续型}
-\end{aligned}
-\]</span></p>
-<p>细心的小伙伴可以看出，这个不就是<code>KL散度</code>么,如下： <span class="math display">\[
+    I(X,Z)&=\sum^k_{i=1}\sum^l_{j=1}p(x_i,z_j) \log\frac{p(x_i,z_j)}{p(x_i)p(z_j)} \ \ \ \ \text{离散型}\\
+    &=\int_Z\int_X p(x,z)\log\frac{p(x,z)}{p(x)p(z)}\ dx\ dz\ \ \ \ \text{连续型}
+\end{aligned}</script><p>细心的小伙伴可以看出，这个不就是<code>KL散度</code>么,如下：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-    I(X,Z)&amp;=KL(p(x,z)\|p(x)p(z))
-\end{aligned}
-\]</span> 且假设<span class="math inline">\(p(x)\)</span>和<span class="math inline">\(p(z)\)</span>相互独立时，则： <span class="math display">\[
+    I(X,Z)&=KL(p(x,z)\|p(x)p(z))
+\end{aligned}</script><p>且假设$p(x)$和$p(z)$相互独立时，则：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-    \because p(x|z)&amp;=\frac{p(x,z)}{p(z)}\\
-    \therefore I(X,Z)&amp;=\int_Z\int_X\ p(z) p(x|z)\log\frac{p(x|z)}{p(x)}\ dx\ dz\\
-    &amp;=\mathbb{E}[KL(\ p(x|z)\ \| \ p(z)\ )]\\
+    \because p(x|z)&=\frac{p(x,z)}{p(z)}\\
+    \therefore I(X,Z)&=\int_Z\int_X\ p(z) p(x|z)\log\frac{p(x|z)}{p(x)}\ dx\ dz\\
+    &=\mathbb{E}[KL(\ p(x|z)\ \| \ p(z)\ )]\\
     \text{或}\\
-    \because p(z|x)&amp;=\frac{p(x,z)}{p(x)}\\
-    \therefore I(X,Z)&amp;=\int_Z\int_X\ p(x) p(z|x)\log\frac{p(z|x)}{p(z)}\ dx\ dz\\
-    &amp;=\mathbb{E}[KL(\ p(z|x)\ \| \ p(x)\ )]
-\end{aligned}
-\]</span></p>
-<h1 id="自编码器">自编码器</h1>
-<p>通常自编码器都配有一个解码器，使用自编码对原始数据进行解析并<strong>保留尽可能多的重要特征</strong>，那么如何验证自编码器所解析的特征是<strong>最有效</strong>的呢？</p>
-<h2 id="关于重构">关于重构</h2>
-<p>传统思想是使用解码器将去重构原始图像，但使用低维编码重构原图的结果通常是很模糊的。比如我们都能轻松辨认一个物体是什么，但是让我们将他完整地画出来是很难的，这就说明对于任务来说，<strong>最合理的特征并不能一定能完成图像重构。</strong></p>
-<h1 id="最大化互信息">最大化互信息</h1>
-<h2 id="互信息引出">互信息引出</h2>
-<p>既然重构不是好特征的必要条件。那好特征的基本原则应当是<code>能够从整个数据集中辨别出该样本出来</code>，也就是说，提取出该样本（最）独特的信息。如何衡量提取出来的信息是该样本独特的呢？我们用<code>互信息</code>来衡量。</p>
-<p>用<span class="math inline">\(X\)</span>表示原始图像的集合，<span class="math inline">\(x\in X\)</span>表示其中一图像，<span class="math inline">\(\tilde{p}(x)\)</span>表示采样所得<span class="math inline">\(x\)</span>的分布，<span class="math inline">\(Z\)</span>为编码向量集合，<span class="math inline">\(z\in Z\)</span>表示其中一编码向量，<span class="math inline">\(p(z|x)\)</span>表示<span class="math inline">\(x\)</span>所产生的编码向量<span class="math inline">\(z\)</span>的分布，我们假设它为正态分布且<span class="math inline">\(\tilde{p}(x)\)</span>和<span class="math inline">\(p(z)\)</span><strong>相互独立</strong>，即 <span class="math display">\[
+    \because p(z|x)&=\frac{p(x,z)}{p(x)}\\
+    \therefore I(X,Z)&=\int_Z\int_X\ p(x) p(z|x)\log\frac{p(z|x)}{p(z)}\ dx\ dz\\
+    &=\mathbb{E}[KL(\ p(z|x)\ \| \ p(x)\ )]
+\end{aligned}</script><h1 id="自编码器"><a href="#自编码器" class="headerlink" title="自编码器"></a>自编码器</h1><p>通常自编码器都配有一个解码器，使用自编码对原始数据进行解析并<strong>保留尽可能多的重要特征</strong>，那么如何验证自编码器所解析的特征是<strong>最有效</strong>的呢？</p>
+<h2 id="关于重构"><a href="#关于重构" class="headerlink" title="关于重构"></a>关于重构</h2><p>传统思想是使用解码器将去重构原始图像，但使用低维编码重构原图的结果通常是很模糊的。比如我们都能轻松辨认一个物体是什么，但是让我们将他完整地画出来是很难的，这就说明对于任务来说，<strong>最合理的特征并不能一定能完成图像重构。</strong></p>
+<h1 id="最大化互信息"><a href="#最大化互信息" class="headerlink" title="最大化互信息"></a>最大化互信息</h1><h2 id="互信息引出"><a href="#互信息引出" class="headerlink" title="互信息引出"></a>互信息引出</h2><p>既然重构不是好特征的必要条件。那好特征的基本原则应当是<code>能够从整个数据集中辨别出该样本出来</code>，也就是说，提取出该样本（最）独特的信息。如何衡量提取出来的信息是该样本独特的呢？我们用<code>互信息</code>来衡量。</p>
+<p>用$X$表示原始图像的集合，$x\in X$表示其中一图像，$\tilde{p}(x)$表示采样所得$x$的分布，$Z$为编码向量集合，$z\in Z$表示其中一编码向量，$p(z|x)$表示$x$所产生的编码向量$z$的分布，我们假设它为正态分布且$\tilde{p}(x)$和$p(z)$<strong>相互独立</strong>，即</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
     p(z) = \int p(z|x)\tilde{p}(x)\ dx
-\end{aligned}
-\]</span></p>
-<p>接下来使用互信息来表示<span class="math inline">\(X，Z\)</span>的相关性： <span class="math display">\[
+\end{aligned}</script><p>接下来使用互信息来表示$X，Z$的相关性：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-I(X,Z) &amp;= \iint p(z,x)\log \frac{p(z,x)}{\tilde{p}(x)p(z)}\ dx\ dz \\
-&amp;= \iint p(z,x)\log \frac{p(z|x)}{p(z)}\ dx\ dz\\
-&amp;= \iint p(z|x)\tilde{p}(x)\log \frac{p(z|x)}{p(z)}\ dx\ dz
-\end{aligned}
-\]</span></p>
-<p>那么接下来我们就要使互信息尽可能的大，来得到一个好的特征编码器： <span class="math display">\[
+I(X,Z) &= \iint p(z,x)\log \frac{p(z,x)}{\tilde{p}(x)p(z)}\ dx\ dz \\
+&= \iint p(z,x)\log \frac{p(z|x)}{p(z)}\ dx\ dz\\
+&= \iint p(z|x)\tilde{p}(x)\log \frac{p(z|x)}{p(z)}\ dx\ dz
+\end{aligned}</script><p>那么接下来我们就要使互信息尽可能的大，来得到一个好的特征编码器：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
 p(z|x) = -\min_{p(z|x)} I(X,Z)
-\end{aligned}
-\]</span></p>
-<p>互信息越大就代表<span class="math inline">\(\log \frac{p(z|x)}{p(z)}\)</span>越大，说明<span class="math inline">\(p(z|x)\gg p(x)\)</span>,则此时的解码出向量<span class="math inline">\(p(z|x)\)</span>和<span class="math inline">\(p(x)\)</span><strong>同时出现</strong>的概率越大，那就代表编码器找到了专属于<span class="math inline">\(x\)</span>的那个<span class="math inline">\(z\)</span>，这不就是我们所需要的独特信息么。</p>
-<h2 id="先验分布">先验分布</h2>
-<p>前面提到，相对于自编码器，变分自编码器同时还希望隐变量服从标准正态分布的先验分布，<strong>这有利于使得编码空间更加规整，甚至有利于解耦特征，便于后续学习</strong>。因此，在这里我们同样希望加上这个约束。</p>
-<pre><code>关于服从于标准正态就可以有利于解耦特征，我暂时没有找到相关的资料，这里是摘录的原文。</code></pre>
-<p>利用在<code>VAE</code>中思路(<a href="https://zhen8838.github.io/2019/07/29/vae2/">参考VAE直观推导</a>)添加<code>KL散度</code>约束来实现，假设<span class="math inline">\(q(z)\sim N(0,1)\)</span>,则： <span class="math display">\[
-    KL(q(z)\|p(z))=\int p(z)\log\frac{p(z)}{q(z)}\ dz
-\]</span></p>
-<h2 id="化简先验分布">化简先验分布</h2>
-<p>将<code>KL散度</code>约束加权并与互信息约束混合得： <span class="math display">\[
+\end{aligned}</script><p>互信息越大就代表$\log \frac{p(z|x)}{p(z)}$越大，说明$p(z|x)\gg p(x)$,则此时的解码出向量$p(z|x)$和$p(x)$<strong>同时出现</strong>的概率越大，那就代表编码器找到了专属于$x$的那个$z$，这不就是我们所需要的独特信息么。</p>
+<h2 id="先验分布"><a href="#先验分布" class="headerlink" title="先验分布"></a>先验分布</h2><p>前面提到，相对于自编码器，变分自编码器同时还希望隐变量服从标准正态分布的先验分布，<strong>这有利于使得编码空间更加规整，甚至有利于解耦特征，便于后续学习</strong>。因此，在这里我们同样希望加上这个约束。</p>
+<pre><code>关于服从于标准正态就可以有利于解耦特征，我暂时没有找到相关的资料，这里是摘录的原文。
+</code></pre><p>利用在<code>VAE</code>中思路(<a href="https://zhen8838.github.io/2019/07/29/vae2/">参考VAE直观推导</a>)添加<code>KL散度</code>约束来实现，假设$q(z)\sim N(0,1)$,则：</p>
+<script type="math/tex; mode=display">
+    KL(q(z)\|p(z))=\int p(z)\log\frac{p(z)}{q(z)}\ dz</script><h2 id="化简先验分布"><a href="#化简先验分布" class="headerlink" title="化简先验分布"></a>化简先验分布</h2><p>将<code>KL散度</code>约束加权并与互信息约束混合得：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-    p(z|x) &amp;= \min_{p(z|x)}\left\{- I(X,Z) + \lambda KL(p(z)\Vert q(z))\right\}\\ 
-    =\min_{p(z|x)}&amp;\left\{- I(X,Z)+ \lambda\int p(z)\log \frac{p(z)}{q(z)}\ dz\right\} \\
-    =\min_{p(z|x)}&amp;\left\{- I(X,Z)+ \lambda\left(\int p(z)\log \left(\frac{p(z|x)}{q(z)}\times\frac{p(z)}{p(z|x)}\right)\ dz\right)\right\} \\
-    =\min_{p(z|x)}&amp;\left\{- I(X,Z)+ \lambda\left(\int p(z)\log\frac{p(z|x)}{q(z)} \ dz-\int p(z)\log\frac{p(z|x)}{p(z)} \ dz\right)\right\} \\
-    =\min_{p(z|x)}&amp;\left\{- \iint p(z)\log \frac{p(z|x)}{p(z)}\ dx\ dz+ \lambda\left(\int p(z)\log\frac{p(z|x)}{q(z)} \ dz-\int p(z)\log\frac{p(z|x)}{p(z)} \ dz\right)\right\} \\
-    =\min_{p(z|x)}&amp;\left\{- (1+\lambda)\iint p(z)\log \frac{p(z|x)}{p(z)}\ dx\ dz+ \lambda\int p(z)\log\frac{p(z|x)}{q(z)} \ dz\right\} \\
-    =\min_{p(z|x)}&amp;\left\{\iint p(z|x)\tilde{p}(x) \left[- (1+\lambda)\log\frac{p(z|x)}{p(z)}+\lambda\log\frac{p(z|x)}{q(x)}\right]\ dx\ dz \right\} \\
-    =\min_{p(z|x)}&amp;\left\{-(1+\lambda)\cdot I(X,Z)+\lambda\cdot \mathbb{E}_{x\sim\tilde{p}(x)}\left[KL(p(z|x)||q(z))\right] \right\} \\
-    =\min_{p(z|x)}&amp;\left\{-(1+\lambda)\cdot KL(p(z|x)\tilde{p}(x)\| p(z)\tilde{p}(x)) +\lambda\cdot \mathbb{E}_{x\sim\tilde{p}(x)}\left[KL(p(z|x)||q(z))\right] \right\}
-\end{aligned}
-\]</span></p>
-<p>现在发现先验分布在化简后被去除了，并且约束函数中后面一部分就是<code>VAE</code>中的约束，比较容易实现，接下来考虑如何构建<code>互信息约束</code>。</p>
-<h2 id="互信息转化">互信息转化</h2>
-<p>在第一部分提到了互信息可以化为<code>KL散度</code>的形式：</p>
-<p><span class="math display">\[
+    p(z|x) &= \min_{p(z|x)}\left\{- I(X,Z) + \lambda KL(p(z)\Vert q(z))\right\}\\ 
+    =\min_{p(z|x)}&\left\{- I(X,Z)+ \lambda\int p(z)\log \frac{p(z)}{q(z)}\ dz\right\} \\
+    =\min_{p(z|x)}&\left\{- I(X,Z)+ \lambda\left(\int p(z)\log \left(\frac{p(z|x)}{q(z)}\times\frac{p(z)}{p(z|x)}\right)\ dz\right)\right\} \\
+    =\min_{p(z|x)}&\left\{- I(X,Z)+ \lambda\left(\int p(z)\log\frac{p(z|x)}{q(z)} \ dz-\int p(z)\log\frac{p(z|x)}{p(z)} \ dz\right)\right\} \\
+    =\min_{p(z|x)}&\left\{- \iint p(z)\log \frac{p(z|x)}{p(z)}\ dx\ dz+ \lambda\left(\int p(z)\log\frac{p(z|x)}{q(z)} \ dz-\int p(z)\log\frac{p(z|x)}{p(z)} \ dz\right)\right\} \\
+    =\min_{p(z|x)}&\left\{- (1+\lambda)\iint p(z)\log \frac{p(z|x)}{p(z)}\ dx\ dz+ \lambda\int p(z)\log\frac{p(z|x)}{q(z)} \ dz\right\} \\
+    =\min_{p(z|x)}&\left\{\iint p(z|x)\tilde{p}(x) \left[- (1+\lambda)\log\frac{p(z|x)}{p(z)}+\lambda\log\frac{p(z|x)}{q(x)}\right]\ dx\ dz \right\} \\
+    =\min_{p(z|x)}&\left\{-(1+\lambda)\cdot I(X,Z)+\lambda\cdot \mathbb{E}_{x\sim\tilde{p}(x)}\left[KL(p(z|x)||q(z))\right] \right\} \\
+    =\min_{p(z|x)}&\left\{-(1+\lambda)\cdot KL(p(z|x)\tilde{p}(x)\| p(z)\tilde{p}(x)) +\lambda\cdot \mathbb{E}_{x\sim\tilde{p}(x)}\left[KL(p(z|x)||q(z))\right] \right\}
+\end{aligned}</script><p>现在发现先验分布在化简后被去除了，并且约束函数中后面一部分就是<code>VAE</code>中的约束，比较容易实现，接下来考虑如何构建<code>互信息约束</code>。</p>
+<h2 id="互信息转化"><a href="#互信息转化" class="headerlink" title="互信息转化"></a>互信息转化</h2><p>在第一部分提到了互信息可以化为<code>KL散度</code>的形式：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-    I(X,Z) =&amp; \iint p(z|x)\tilde{p}(x)\log \frac{p(z|x)\tilde{p}(x)}{p(z)\tilde{p}(x)}dxdz\\ 
-    =&amp; KL(p(z|x)\tilde{p}(x)\Vert p(z)\tilde{p}(x)) 
-\end{aligned}
-\]</span></p>
-<p>这个形式展示了互信息的本质含义：<span class="math inline">\(p(z|x)\tilde{p}(x)\)</span>表示变量<span class="math inline">\(x,z\)</span>的联合分布，<span class="math inline">\(p(z)\tilde{p}(x)\)</span>表示随机抽取一个<span class="math inline">\(x\)</span>和一个<span class="math inline">\(z\)</span>时的分布(假设不相关)，而互信息则是这两个分布的<code>KL散度</code>，那么最大化互信息意思就是拉大这两个分布间的距离。</p>
+    I(X,Z) =& \iint p(z|x)\tilde{p}(x)\log \frac{p(z|x)\tilde{p}(x)}{p(z)\tilde{p}(x)}dxdz\\ 
+    =& KL(p(z|x)\tilde{p}(x)\Vert p(z)\tilde{p}(x)) 
+\end{aligned}</script><p>这个形式展示了互信息的本质含义：$p(z|x)\tilde{p}(x)$表示变量$x,z$的联合分布，$p(z)\tilde{p}(x)$表示随机抽取一个$x$和一个$z$时的分布(假设不相关)，而互信息则是这两个分布的<code>KL散度</code>，那么最大化互信息意思就是拉大这两个分布间的距离。</p>
 <p><strong>一个严重问题是<code>KL散度</code>理论上是无上界的，我们不能去最大化一个无上界的量</strong>。为了有效优化，抓住</p>
 <blockquote>
-<p>最大化互信息就是拉大<span class="math inline">\(p(z|x)\tilde{p}{x}\)</span>和<span class="math inline">\(p(z)\tilde{p}(x)\)</span>之间的距离</p>
+<p>  最大化互信息就是拉大$p(z|x)\tilde{p}{x}$和$p(z)\tilde{p}(x)$之间的距离</p>
 </blockquote>
 <p>这个核心要点，我们可以选择其他的度量函数来进行约束，可以选择<code>JS散度</code>和<code>Hellinger距离</code>。这里使用<code>JS散度</code>：</p>
-<p><span class="math display">\[
+<script type="math/tex; mode=display">
 \begin{aligned}
     JS(P,Q) = \frac{1}{2}KL\left(P\left\Vert\frac{P+Q}{2}\right.\right)+\frac{1}{2}KL\left(Q\left\Vert\frac{P+Q}{2}\right.\right)
-\end{aligned}   
-\]</span></p>
-<p><code>JS散度</code>同样衡量了两个分布的距离，但他具备上界<span class="math inline">\(\frac{1}{2}\log2\)</span>，我们最大化他的时候，也可以起到最大化互信息的效果，下面将<code>JS散度</code>代入约束函数。</p>
-<p><span class="math display">\[
+\end{aligned}</script><p><code>JS散度</code>同样衡量了两个分布的距离，但他具备上界$\frac{1}{2}\log2$，我们最大化他的时候，也可以起到最大化互信息的效果，下面将<code>JS散度</code>代入约束函数。</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-    p(z|x) =\min_{p(z|x)}&amp;\left\{-(1+\lambda)\cdot JS(p(z|x)\tilde{p}(x)\| p(z)\tilde{p}(x)) +\lambda\cdot \mathbb{E}_{x\sim\tilde{p}(x)}\left[KL(p(z|x)||q(z))\right] \right\}
-\end{aligned}
-\]</span></p>
-<p>但是还是存在一个<span class="math inline">\(p(z)\)</span>让我们无法解决，下面就要把他解决：</p>
-<h2 id="变分推断">变分推断</h2>
-<p>参考<a href="https://kexue.fm/archives/6016" target="_blank" rel="noopener">f-GAN简介：GAN模型的生产车间</a>中的<code>f散度局部变分推断</code>中的距离定义为：</p>
-<p><span class="math display">\[
-\begin{aligned}\mathcal{D}_f(P\Vert Q) =&amp; \max_{T}\int q(x) \left[\frac{p(x)}{q(x)}T\left(\frac{p(x)}{q(x)}\right)-g\left(T\left(\frac{p(x)}{q(x)}\right)\right)\right]\ dx\\ 
-=&amp; \max_{T}\int\left[p(x)\cdot T\left(\frac{p(x)}{q(x)}\right)-q(x)\cdot g\left(T\left(\frac{p(x)}{q(x)}\right)\right)\right]\ dx \\
-\text{记}T\left(\frac{p(x)}{q(x)}\right)\text{为}&amp;T(x)\text{得}\\
-\mathcal{D}_f(P\Vert Q) =&amp; \max_{T}\Big(\mathbb{E}_{x\sim p(x)}[T(x)]-\mathbb{E}_{x\sim q(x)}[g(T(x))]\Big)
-\end{aligned}
-\]</span></p>
-<p>利用上面这个公式，我们可以进行<code>f散度估计</code>，意思是：分别从两个分布中采样，然后分别计算<span class="math inline">\(T(x)\)</span>和<span class="math inline">\(g(T(x))\)</span>的均值，优化函数<span class="math inline">\(T(x)\)</span>使得他们的差值尽可能的大，最终的结果即为<code>f散度</code>的近似值了。显然<span class="math inline">\(T(x)\)</span>可以用神经网络进行拟合，我们优化此函数就是优化神经网络参数。</p>
-<p>将上述公式代入<code>JS散度</code>中得： <span class="math display">\[
+    p(z|x) =\min_{p(z|x)}&\left\{-(1+\lambda)\cdot JS(p(z|x)\tilde{p}(x)\| p(z)\tilde{p}(x)) +\lambda\cdot \mathbb{E}_{x\sim\tilde{p}(x)}\left[KL(p(z|x)||q(z))\right] \right\}
+\end{aligned}</script><p>但是还是存在一个$p(z)$让我们无法解决，下面就要把他解决：</p>
+<h2 id="变分推断"><a href="#变分推断" class="headerlink" title="变分推断"></a>变分推断</h2><p>参考<a href="https://kexue.fm/archives/6016" target="_blank" rel="noopener">f-GAN简介：GAN模型的生产车间</a>中的<code>f散度局部变分推断</code>中的距离定义为：</p>
+<script type="math/tex; mode=display">
+\begin{aligned}\mathcal{D}_f(P\Vert Q) =& \max_{T}\int q(x) \left[\frac{p(x)}{q(x)}T\left(\frac{p(x)}{q(x)}\right)-g\left(T\left(\frac{p(x)}{q(x)}\right)\right)\right]\ dx\\ 
+=& \max_{T}\int\left[p(x)\cdot T\left(\frac{p(x)}{q(x)}\right)-q(x)\cdot g\left(T\left(\frac{p(x)}{q(x)}\right)\right)\right]\ dx \\
+\text{记}T\left(\frac{p(x)}{q(x)}\right)\text{为}&T(x)\text{得}\\
+\mathcal{D}_f(P\Vert Q) =& \max_{T}\Big(\mathbb{E}_{x\sim p(x)}[T(x)]-\mathbb{E}_{x\sim q(x)}[g(T(x))]\Big)
+\end{aligned}</script><p>利用上面这个公式，我们可以进行<code>f散度估计</code>，意思是：分别从两个分布中采样，然后分别计算$T(x)$和$g(T(x))$的均值，优化函数$T(x)$使得他们的差值尽可能的大，最终的结果即为<code>f散度</code>的近似值了。显然$T(x)$可以用神经网络进行拟合，我们优化此函数就是优化神经网络参数。</p>
+<p>将上述公式代入<code>JS散度</code>中得：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-    &amp;JS(P,Q) \\
-    =&amp; \max_{T}\Big(\mathbb{E}_{x\sim p(x)}[\log \sigma(T(x))] + \mathbb{E}_{x\sim q(x)}[\log(1-\sigma(T(x))]\Big) \\
+    &JS(P,Q) \\
+    =& \max_{T}\Big(\mathbb{E}_{x\sim p(x)}[\log \sigma(T(x))] + \mathbb{E}_{x\sim q(x)}[\log(1-\sigma(T(x))]\Big) \\
     \\
-    &amp;JS\big(p(z|x)\tilde{p}(x), p(z)\tilde{p}(x)\big)\\
-    =&amp; \max_{T}\Big(\mathbb{E}_{(x,z)\sim p(z|x)\tilde{p}(x)}[\log \sigma(T(x,z))] + \mathbb{E}_{(x,z)\sim p(z)\tilde{p}(x)}[\log(1-\sigma(T(x,z))]\Big)
-\end{aligned}
-\]</span></p>
-<p><strong>注意</strong>:这里的<span class="math inline">\(1-\sigma(T(x))\)</span>是根据此前文章中的变分推断所计算的激活函数<span class="math inline">\(g\)</span>，具体请参考<a href="https://kexue.fm/archives/6016" target="_blank" rel="noopener">文章</a></p>
-<p>并且现在这个约束函数可以看成<code>负采样估计</code>：引入一个判别网络<span class="math inline">\(\sigma(T(x,z))\)</span>，<span class="math inline">\(x\)</span>和对应的<span class="math inline">\(z\)</span>看成一个正样本对，<span class="math inline">\(x\)</span>与其他一个随机抽取的<span class="math inline">\(z\)</span>作为负样本对，然后最大化似然函数，等价于最小化交叉熵。终于通过负采样的方式，得到了一种估计<code>JS散度</code>的方案，从而解决了互信息的最大化问题，得到具体的<code>loss</code>为：</p>
-<p><span class="math display">\[
+    &JS\big(p(z|x)\tilde{p}(x), p(z)\tilde{p}(x)\big)\\
+    =& \max_{T}\Big(\mathbb{E}_{(x,z)\sim p(z|x)\tilde{p}(x)}[\log \sigma(T(x,z))] + \mathbb{E}_{(x,z)\sim p(z)\tilde{p}(x)}[\log(1-\sigma(T(x,z))]\Big)
+\end{aligned}</script><p><strong>注意</strong>:这里的$1-\sigma(T(x))$是根据此前文章中的变分推断所计算的激活函数$g$，具体请参考<a href="https://kexue.fm/archives/6016" target="_blank" rel="noopener">文章</a></p>
+<p>并且现在这个约束函数可以看成<code>负采样估计</code>：引入一个判别网络$\sigma(T(x,z))$，$x$和对应的$z$看成一个正样本对，$x$与其他一个随机抽取的$z$作为负样本对，然后最大化似然函数，等价于最小化交叉熵。终于通过负采样的方式，得到了一种估计<code>JS散度</code>的方案，从而解决了互信息的最大化问题，得到具体的<code>loss</code>为：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
 p(z|x),T(x,z)=\\
-\min_{p(z|x),T(x,z)}\Big\{-&amp;(1+\lambda)\cdot\Big(\mathbb{E}_{(x,z)\sim p(z|x)\tilde{p}(x)}[\log \sigma(T(x,z))] + \mathbb{E}_{(x,z)\sim p(z)\tilde{p}(x)}[\log(1-\sigma(T(x,z))]\Big)\\ 
-+&amp;\lambda\cdot \mathbb{E}_{x\sim\tilde{p}(x)}[KL(p(z|x)\Vert q(z))]\Big\}
-\end{aligned}
-\]</span></p>
-<p>下面开始实际实验。</p>
-<h1 id="从全局到局部">从全局到局部</h1>
-<p>在实际实验中，如何去践行<code>负采样</code>呢？</p>
-<h2 id="batch内负采样">batch内负采样</h2>
-<p>我们可以对这个<code>batch</code>中样本对顺序进行<code>shuffle</code>，<code>shuffle</code>前的样本对为正样本，<code>shuffle</code>之后的样本对为负样本。</p>
-<h2 id="局部负采样">局部负采样</h2>
-<p>上面的做法，实际上就是考虑了整张图片之间的关联，但是我们知道，图片的相关性更多体现在局部中（也就是因为这样所以我们才可以对图片使用CNN）。换言之，图片的识别、分类等应该是一个从局部到整体的过程。因此，有必要把“局部互信息”也考虑进来。</p>
-<p>一般的CNN编码过程： <span class="math display">\[
-\text{原始图片}x\xrightarrow{\text{多个卷积层}} h\times w\times c\text{的特征} \xrightarrow{\text{卷积和全局池化}} \text{固定长度的向量}z
-\]</span></p>
-<p>我们已经考虑到了<span class="math inline">\(x\)</span>和<span class="math inline">\(z\)</span>的关联，那么中间层特征(feature map)和<span class="math inline">\(z\)</span>的关联呢？把中间层向量记为<span class="math inline">\(\{C_{ij}(x)|i=1,2,\dots,h;j=1,2,\dots,w\}\)</span>,一共<span class="math inline">\(h\times w\)</span>个向量与<span class="math inline">\(z_x\)</span>的互信息，称为<code>局部互信息</code>。</p>
-<p>那么我们要构建出一个局部的互信息估算网络，首先把每个通道的向量与<span class="math inline">\(z_x\)</span>拼接得到<span class="math inline">\([C_{ij}(x),z_x]\)</span>,相当于得到了一个更大的feature map，然后对这个feature map用多个1x1的卷积层来作为局部互信息的估算网络<span class="math inline">\(T_{local}\)</span>。负样本的选取方法也是用在batch内随机打算的方案。</p>
-<p>加入局部互信息的总<code>loss</code>为： <span class="math display">\[
+\min_{p(z|x),T(x,z)}\Big\{-&(1+\lambda)\cdot\Big(\mathbb{E}_{(x,z)\sim p(z|x)\tilde{p}(x)}[\log \sigma(T(x,z))] + \mathbb{E}_{(x,z)\sim p(z)\tilde{p}(x)}[\log(1-\sigma(T(x,z))]\Big)\\ 
++&\lambda\cdot \mathbb{E}_{x\sim\tilde{p}(x)}[KL(p(z|x)\Vert q(z))]\Big\}
+\end{aligned}</script><p>下面开始实际实验。</p>
+<h1 id="从全局到局部"><a href="#从全局到局部" class="headerlink" title="从全局到局部"></a>从全局到局部</h1><p>在实际实验中，如何去践行<code>负采样</code>呢？</p>
+<h2 id="batch内负采样"><a href="#batch内负采样" class="headerlink" title="batch内负采样"></a>batch内负采样</h2><p>我们可以对这个<code>batch</code>中样本对顺序进行<code>shuffle</code>，<code>shuffle</code>前的样本对为正样本，<code>shuffle</code>之后的样本对为负样本。</p>
+<h2 id="局部负采样"><a href="#局部负采样" class="headerlink" title="局部负采样"></a>局部负采样</h2><p>上面的做法，实际上就是考虑了整张图片之间的关联，但是我们知道，图片的相关性更多体现在局部中（也就是因为这样所以我们才可以对图片使用CNN）。换言之，图片的识别、分类等应该是一个从局部到整体的过程。因此，有必要把“局部互信息”也考虑进来。</p>
+<p>一般的CNN编码过程：</p>
+<script type="math/tex; mode=display">
+\text{原始图片}x\xrightarrow{\text{多个卷积层}} h\times w\times c\text{的特征} \xrightarrow{\text{卷积和全局池化}} \text{固定长度的向量}z</script><p>我们已经考虑到了$x$和$z$的关联，那么中间层特征(feature map)和$z$的关联呢？把中间层向量记为$\{C_{ij}(x)|i=1,2,\dots,h;j=1,2,\dots,w\}$,一共$h\times w$个向量与$z_x$的互信息，称为<code>局部互信息</code>。</p>
+<p>那么我们要构建出一个局部的互信息估算网络，首先把每个通道的向量与$z_x$拼接得到$[C_{ij}(x),z_x]$,相当于得到了一个更大的feature map，然后对这个feature map用多个1x1的卷积层来作为局部互信息的估算网络$T_{local}$。负样本的选取方法也是用在batch内随机打算的方案。</p>
+<p>加入局部互信息的总<code>loss</code>为：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-&amp;p(z|x),T_1(x,z),T_2(C_{ij}, z) \\ 
-=&amp;\min_{p(z|x),T_1,T_2}\Big\{-\alpha\cdot\Big(\mathbb{E}_{(x,z)\sim p(z|x)\tilde{p}(x)}[\log \sigma(T_1(x,z))] + \mathbb{E}_{(x,z)\sim p(z)\tilde{p}(x)}[\log(1-\sigma(T_1(x,z))]\Big)\\ 
-&amp;\qquad-\frac{\beta}{hw}\sum_{i,j}\Big(\mathbb{E}_{(x,z)\sim p(z|x)\tilde{p}(x)}[\log \sigma(T_2(C_{ij},z))] + \mathbb{E}_{(x,z)\sim p(z)\tilde{p}(x)}[\log(1-\sigma(T_2(C_{ij},z))]\Big)\\ 
-&amp;\qquad+\gamma\cdot \mathbb{E}_{x\sim\tilde{p}(x)}[KL(p(z|x)\Vert q(z))]\Big\}
-\end{aligned}
-\]</span></p>
-<p><strong>注意</strong>：上面的几部分的损失权重分别设置为<span class="math inline">\(\alpha,\beta,\gamma\)</span>。</p>
-<h1 id="代码实现">代码实现</h1>
-<p>在<code>Tensorflow 1.14</code>下运行：</p>
+&p(z|x),T_1(x,z),T_2(C_{ij}, z) \\ 
+=&\min_{p(z|x),T_1,T_2}\Big\{-\alpha\cdot\Big(\mathbb{E}_{(x,z)\sim p(z|x)\tilde{p}(x)}[\log \sigma(T_1(x,z))] + \mathbb{E}_{(x,z)\sim p(z)\tilde{p}(x)}[\log(1-\sigma(T_1(x,z))]\Big)\\ 
+&\qquad-\frac{\beta}{hw}\sum_{i,j}\Big(\mathbb{E}_{(x,z)\sim p(z|x)\tilde{p}(x)}[\log \sigma(T_2(C_{ij},z))] + \mathbb{E}_{(x,z)\sim p(z)\tilde{p}(x)}[\log(1-\sigma(T_2(C_{ij},z))]\Big)\\ 
+&\qquad+\gamma\cdot \mathbb{E}_{x\sim\tilde{p}(x)}[KL(p(z|x)\Vert q(z))]\Big\}
+\end{aligned}</script><p><strong>注意</strong>：上面的几部分的损失权重分别设置为$\alpha,\beta,\gamma$。</p>
+<h1 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h1><p>在<code>Tensorflow 1.14</code>下运行：</p>
 <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line"><span class="keyword">import</span> glob</span><br><span class="line"><span class="keyword">import</span> imageio</span><br><span class="line"><span class="keyword">from</span> tensorflow.python.keras.models <span class="keyword">import</span> Model</span><br><span class="line"><span class="keyword">from</span> tensorflow.python.keras.layers <span class="keyword">import</span> *</span><br><span class="line"><span class="keyword">import</span> tensorflow.python <span class="keyword">as</span> tf</span><br><span class="line"><span class="keyword">from</span> tensorflow.python.keras <span class="keyword">import</span> backend <span class="keyword">as</span> K</span><br><span class="line"><span class="keyword">from</span> tensorflow.python.keras.optimizers <span class="keyword">import</span> Adam</span><br><span class="line"><span class="keyword">from</span> tensorflow.python.keras.datasets <span class="keyword">import</span> cifar10</span><br><span class="line"><span class="keyword">from</span> tensorflow.python.keras.utils <span class="keyword">import</span> plot_model</span><br><span class="line"><span class="keyword">from</span> pathlib <span class="keyword">import</span> Path</span><br><span class="line"><span class="keyword">from</span> termcolor <span class="keyword">import</span> colored</span><br><span class="line"></span><br><span class="line">config = tf.ConfigProto()</span><br><span class="line">config.gpu_options.allow_growth = <span class="keyword">True</span></span><br><span class="line">K.set_session(tf.Session(config=config))</span><br><span class="line"></span><br><span class="line">(x_train, y_train), (x_test, y_test) = cifar10.load_data()</span><br><span class="line">x_train = x_train.astype(<span class="string">'float32'</span>) / <span class="number">255</span> - <span class="number">0.5</span></span><br><span class="line">x_test = x_test.astype(<span class="string">'float32'</span>) / <span class="number">255</span> - <span class="number">0.5</span></span><br><span class="line">y_train = y_train.reshape(<span class="number">-1</span>)</span><br><span class="line">y_test = y_test.reshape(<span class="number">-1</span>)</span><br><span class="line">img_dim = x_train.shape[<span class="number">1</span>]</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">z_dim = <span class="number">256</span>  <span class="comment"># 隐变量维度</span></span><br><span class="line">α = <span class="number">0.5</span>  <span class="comment"># 全局互信息的loss比重</span></span><br><span class="line">β = <span class="number">1.5</span>  <span class="comment"># 局部互信息的loss比重</span></span><br><span class="line">γ = <span class="number">0.01</span>  <span class="comment"># 先验分布的loss比重</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># 编码器（卷积与最大池化）</span></span><br><span class="line">x_in = Input(shape=(img_dim, img_dim, <span class="number">3</span>))</span><br><span class="line">x = x_in</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">3</span>):</span><br><span class="line">    x = Conv2D(z_dim // <span class="number">2</span>**int(<span class="number">2</span> - i), kernel_size=(<span class="number">3</span>, <span class="number">3</span>), padding=<span class="string">'SAME'</span>)(x)</span><br><span class="line">    x = BatchNormalization()(x)</span><br><span class="line">    x = LeakyReLU(<span class="number">0.2</span>)(x)</span><br><span class="line">    x = MaxPooling2D((<span class="number">2</span>, <span class="number">2</span>))(x)</span><br><span class="line"></span><br><span class="line">feature_map = x  <span class="comment"># 截断到这里，认为到这里是feature_map（局部特征）</span></span><br><span class="line">feature_map_encoder = Model(x_in, x)</span><br><span class="line"></span><br><span class="line">plot_model(feature_map_encoder, to_file=<span class="string">'feature_map_encoder.png'</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">2</span>):</span><br><span class="line">    x = Conv2D(z_dim,</span><br><span class="line">               kernel_size=(<span class="number">3</span>, <span class="number">3</span>),</span><br><span class="line">               padding=<span class="string">'SAME'</span>)(x)</span><br><span class="line">    x = BatchNormalization()(x)</span><br><span class="line">    x = LeakyReLU(<span class="number">0.2</span>)(x)</span><br><span class="line"></span><br><span class="line">x = GlobalMaxPooling2D()(x)  <span class="comment"># 全局特征</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">z_μ = Dense(z_dim)(x)  <span class="comment"># 均值，也就是最终输出的编码</span></span><br><span class="line">z_log_σ = Dense(z_dim)(x)  <span class="comment"># 方差，这里都是模仿VAE的</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">encoder = Model(x_in, z_μ)  <span class="comment"># 总的编码器就是输出z_μ</span></span><br><span class="line"></span><br><span class="line">plot_model(encoder, to_file=<span class="string">'encoder.png'</span>)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># 重参数技巧</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">sampling</span><span class="params">(args)</span>:</span></span><br><span class="line">    z_μ, z_log_σ = args</span><br><span class="line">    u = K.random_normal(shape=K.shape(z_μ))</span><br><span class="line">    <span class="keyword">return</span> z_μ + K.exp(z_log_σ / <span class="number">2</span>) * u</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># 重参数层，相当于给输入加入噪声</span></span><br><span class="line">z_samples = Lambda(sampling)([z_μ, z_log_σ])</span><br><span class="line">prior_kl_loss = - <span class="number">0.5</span> * K.mean(<span class="number">1</span> + z_log_σ - K.square(z_μ) - K.exp(z_log_σ))</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># shuffle层，打乱第一个轴</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">shuffling</span><span class="params">(x)</span>:</span></span><br><span class="line">    idxs = K.arange(<span class="number">0</span>, K.shape(x)[<span class="number">0</span>])</span><br><span class="line">    idxs = tf.random_shuffle(idxs)</span><br><span class="line">    <span class="keyword">return</span> K.gather(x, idxs)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="string">""" 构建正负样本对 """</span></span><br><span class="line"><span class="comment"># 与随机采样的特征拼接（全局）</span></span><br><span class="line">z_shuffle = Lambda(shuffling)(z_samples)</span><br><span class="line">z_z_true = Concatenate()([z_samples, z_samples])  <span class="comment"># 这就是正样本对</span></span><br><span class="line">z_z_false = Concatenate()([z_samples, z_shuffle])  <span class="comment"># 这就是负样本对</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 与随机采样的特征拼接（局部）</span></span><br><span class="line">feature_map_shuffle = Lambda(shuffling)(feature_map)</span><br><span class="line">z_samples_map = Reshape((<span class="number">4</span>, <span class="number">4</span>, z_dim))(RepeatVector(<span class="number">4</span> * <span class="number">4</span>)(z_samples))  <span class="comment"># 重复z样本到H×W次并reshape</span></span><br><span class="line">z_f_true = Concatenate()([z_samples_map, feature_map])  <span class="comment"># 拼接出局部正样本</span></span><br><span class="line">z_f_false = Concatenate()([z_samples_map, feature_map_shuffle])  <span class="comment"># 拼接出局部负样本</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># 全局互信息判别器</span></span><br><span class="line">z_in = Input(shape=(z_dim * <span class="number">2</span>,))</span><br><span class="line">z = z_in</span><br><span class="line">z = Dense(z_dim, activation=<span class="string">'relu'</span>)(z)</span><br><span class="line">z = Dense(z_dim, activation=<span class="string">'relu'</span>)(z)</span><br><span class="line">z = Dense(z_dim, activation=<span class="string">'relu'</span>)(z)</span><br><span class="line">z = Dense(<span class="number">1</span>, activation=<span class="string">'sigmoid'</span>)(z)</span><br><span class="line"></span><br><span class="line">GlobalDiscriminator = Model(z_in, z)</span><br><span class="line">plot_model(GlobalDiscriminator, to_file=<span class="string">'GlobalDiscriminator.png'</span>)</span><br><span class="line"></span><br><span class="line">z_z_true_scores = GlobalDiscriminator(z_z_true)  <span class="comment"># 使用判别器判别正样本对</span></span><br><span class="line">z_z_flase_scores = GlobalDiscriminator(z_z_false)  <span class="comment"># 使用判别器判别负样本对</span></span><br><span class="line">global_info_loss = - K.mean(K.log(z_z_true_scores + <span class="number">1e-6</span>) + K.log(<span class="number">1</span> - z_z_flase_scores + <span class="number">1e-6</span>))</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># 局部互信息判别器</span></span><br><span class="line">z_in = Input(shape=(<span class="keyword">None</span>, <span class="keyword">None</span>, z_dim * <span class="number">2</span>))</span><br><span class="line">z = z_in</span><br><span class="line">z = Dense(z_dim, activation=<span class="string">'relu'</span>)(z)</span><br><span class="line">z = Dense(z_dim, activation=<span class="string">'relu'</span>)(z)</span><br><span class="line">z = Dense(z_dim, activation=<span class="string">'relu'</span>)(z)</span><br><span class="line">z = Dense(<span class="number">1</span>, activation=<span class="string">'sigmoid'</span>)(z)</span><br><span class="line"></span><br><span class="line">LocalDiscriminator = Model(z_in, z)</span><br><span class="line">plot_model(LocalDiscriminator, to_file=<span class="string">'LocalDiscriminator.png'</span>)</span><br><span class="line"></span><br><span class="line">z_f_true_scores = LocalDiscriminator(z_f_true)  <span class="comment"># 使用判别器判别正样本对</span></span><br><span class="line">z_f_false_scores = LocalDiscriminator(z_f_false)  <span class="comment"># 使用判别器判别负样本对</span></span><br><span class="line">local_info_loss = - K.mean(K.log(z_f_true_scores + <span class="number">1e-6</span>) + K.log(<span class="number">1</span> - z_f_false_scores + <span class="number">1e-6</span>))</span><br><span class="line"></span><br><span class="line"><span class="comment"># 用来训练的模型</span></span><br><span class="line">model_train = Model(x_in, [z_z_true_scores, z_z_flase_scores, z_f_true_scores, z_f_false_scores])</span><br><span class="line">model_train.add_loss(α * global_info_loss + β * local_info_loss + γ * prior_kl_loss)</span><br><span class="line">model_train.compile(optimizer=Adam(<span class="number">1e-3</span>))</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> <span class="keyword">not</span> Path(<span class="string">'cifar10.h5'</span>).exists():</span><br><span class="line">    model_train.fit(x_train, epochs=<span class="number">50</span>, batch_size=<span class="number">64</span>)</span><br><span class="line">    model_train.save_weights(<span class="string">'cifar10.h5'</span>)</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    model_train.load_weights(<span class="string">'cifar10.h5'</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 输出编码器的特征</span></span><br><span class="line">zs = encoder.predict(x_train, verbose=<span class="keyword">True</span>)</span><br><span class="line">print(colored(<span class="string">'z mean'</span>, <span class="string">'green'</span>), zs.mean())  <span class="comment"># 查看均值（简单观察先验分布有没有达到效果）</span></span><br><span class="line">print(colored(<span class="string">'z std'</span>, <span class="string">'green'</span>), zs.std())  <span class="comment"># 查看方差（简单观察先验分布有没有达到效果）</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># 随机选一张图片，输出最相近的图片</span></span><br><span class="line"><span class="comment"># 可以选用欧氏距离或者cos值</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">sample_knn</span><span class="params">(path)</span>:</span></span><br><span class="line">    n = <span class="number">10</span></span><br><span class="line">    topn = <span class="number">10</span></span><br><span class="line">    figure1 = np.zeros((img_dim * n, img_dim * topn, <span class="number">3</span>))</span><br><span class="line">    figure2 = np.zeros((img_dim * n, img_dim * topn, <span class="number">3</span>))</span><br><span class="line">    zs_ = zs / (zs**<span class="number">2</span>).sum(<span class="number">1</span>, keepdims=<span class="keyword">True</span>)**<span class="number">0.5</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> range(n):</span><br><span class="line">        one = np.random.choice(len(x_train))</span><br><span class="line">        idxs = ((zs**<span class="number">2</span>).sum(<span class="number">1</span>) + (zs[one]**<span class="number">2</span>).sum() - <span class="number">2</span> * np.dot(zs, zs[one])).argsort()[:topn]</span><br><span class="line">        <span class="keyword">for</span> j, k <span class="keyword">in</span> enumerate(idxs):</span><br><span class="line">            digit = x_train[k]</span><br><span class="line">            figure1[i * img_dim: (i + <span class="number">1</span>) * img_dim,</span><br><span class="line">                    j * img_dim: (j + <span class="number">1</span>) * img_dim] = digit</span><br><span class="line">        idxs = np.dot(zs_, zs_[one]).argsort()[-n:][::<span class="number">-1</span>]</span><br><span class="line">        <span class="keyword">for</span> j, k <span class="keyword">in</span> enumerate(idxs):</span><br><span class="line">            digit = x_train[k]</span><br><span class="line">            figure2[i * img_dim: (i + <span class="number">1</span>) * img_dim,</span><br><span class="line">                    j * img_dim: (j + <span class="number">1</span>) * img_dim] = digit</span><br><span class="line">    figure1 = (figure1 + <span class="number">1</span>) / <span class="number">2</span> * <span class="number">255</span></span><br><span class="line">    figure1 = np.clip(figure1, <span class="number">0</span>, <span class="number">255</span>)</span><br><span class="line">    figure2 = (figure2 + <span class="number">1</span>) / <span class="number">2</span> * <span class="number">255</span></span><br><span class="line">    figure2 = np.clip(figure2, <span class="number">0</span>, <span class="number">255</span>)</span><br><span class="line">    imageio.imwrite(path + <span class="string">'_l2.png'</span>, figure1)</span><br><span class="line">    imageio.imwrite(path + <span class="string">'_cos.png'</span>, figure2)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">sample_knn(<span class="string">'test'</span>)</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<h1 id="效果">效果</h1>
-<h2 id="余弦距离knn采样">余弦距离KNN采样</h2>
-<p><img src="/2019/08/01/infor-max/test_cos.png"></p>
-<h2 id="欧式距离knn采样">欧式距离KNN采样</h2>
-<p><img src="/2019/08/01/infor-max/test_l2.png"></p>
-<h1 id="思考">思考</h1>
-<p>我个人是想把这个使用在监督学习中，但是转念一想，其实在监督学习中不是已经在优化<span class="math inline">\(y\)</span>与对应<span class="math inline">\(x\)</span>之间的最大互信息了么？可以看到这里的这里构建正负样本对后所使用的损失函数，其实际就是交叉熵。</p>
+<h1 id="效果"><a href="#效果" class="headerlink" title="效果"></a>效果</h1><h2 id="余弦距离KNN采样"><a href="#余弦距离KNN采样" class="headerlink" title="余弦距离KNN采样"></a>余弦距离KNN采样</h2><p><img src="/2019/08/01/infor-max/test_cos.png" alt=""></p>
+<h2 id="欧式距离KNN采样"><a href="#欧式距离KNN采样" class="headerlink" title="欧式距离KNN采样"></a>欧式距离KNN采样</h2><p><img src="/2019/08/01/infor-max/test_l2.png" alt=""></p>
+<h1 id="思考"><a href="#思考" class="headerlink" title="思考"></a>思考</h1><p>我个人是想把这个使用在监督学习中，但是转念一想，其实在监督学习中不是已经在优化$y$与对应$x$之间的最大互信息了么？可以看到这里的这里构建正负样本对后所使用的损失函数，其实际就是交叉熵。</p>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2019/08/01/infor-max/" data-id="ck7hpl84000hngw6x0ltfufao" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2019/08/01/infor-max/" data-id="ck7w35neu00i4576x0e8q2cam" class="article-share-link">Share</a>
       
       
       
@@ -504,6 +426,10 @@ p(z|x),T(x,z)=\\
       <ul>
         
           <li>
+            <a href="/2020/03/18/h5-to-pb/">H5模型转pb模型</a>
+          </li>
+        
+          <li>
             <a href="/2020/03/08/ct-augments/">Control Theory Augment</a>
           </li>
         
@@ -517,10 +443,6 @@ p(z|x),T(x,z)=\\
         
           <li>
             <a href="/2020/02/16/tf-focal-loss/">bce focal loss</a>
-          </li>
-        
-          <li>
-            <a href="/2020/02/12/tf-all-regularizers/">tf2.0 全局添加regularizers</a>
           </li>
         
       </ul>
