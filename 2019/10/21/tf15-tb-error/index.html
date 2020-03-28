@@ -93,14 +93,12 @@
       
         <p>升级了<code>tensorflow</code>到1.15,发现一个用<code>tf.keras</code>中<code>TensorBoard</code>的时候就会报错的问题.</p>
 <a id="more"></a>
-<h1 id="问题描述">问题描述</h1>
-<p>错误信息如下: <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">TypeError: An op outside of the <span class="keyword">function</span> building code is being passed</span><br><span class="line">a <span class="string">"Graph"</span> tensor. It is possible to have Graph tensors</span><br><span class="line">leak out of the <span class="keyword">function</span> building context by including a</span><br><span class="line">tf.init_scope <span class="keyword">in</span> your <span class="keyword">function</span> building code.</span><br><span class="line">For example, the following <span class="keyword">function</span> will fail:</span><br><span class="line">  @tf.function</span><br><span class="line">  def has_init_scope():</span><br><span class="line">    my_constant = tf.constant(1.)</span><br><span class="line">    with tf.init_scope():</span><br><span class="line">      added = my_constant * 2</span><br><span class="line">The graph tensor has name: create_file_writer/SummaryWriter:0</span><br></pre></td></tr></table></figure></p>
-<h1 id="问题解决">问题解决</h1>
-<p>这个问题主要还是因为<code>tensorflow</code>要兼容两个版本的问题,也有我用<code>vscode</code>开发的原因.</p>
-<p>现在使用的<code>tensorflow.keras</code>的时候最好还是用如下的方式: <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">TensorBoard = tf.keras.callbacks.TensorBoard</span><br></pre></td></tr></table></figure></p>
-<p>我用的是如下: <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> tensorflow.python.keras.callbacks <span class="keyword">import</span> TensorBoard</span><br></pre></td></tr></table></figure></p>
+<h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>错误信息如下:<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">TypeError: An op outside of the <span class="keyword">function</span> building code is being passed</span><br><span class="line">a <span class="string">"Graph"</span> tensor. It is possible to have Graph tensors</span><br><span class="line">leak out of the <span class="keyword">function</span> building context by including a</span><br><span class="line">tf.init_scope <span class="keyword">in</span> your <span class="keyword">function</span> building code.</span><br><span class="line">For example, the following <span class="keyword">function</span> will fail:</span><br><span class="line">  @tf.function</span><br><span class="line">  def has_init_scope():</span><br><span class="line">    my_constant = tf.constant(1.)</span><br><span class="line">    with tf.init_scope():</span><br><span class="line">      added = my_constant * 2</span><br><span class="line">The graph tensor has name: create_file_writer/SummaryWriter:0</span><br></pre></td></tr></table></figure></p>
+<h1 id="问题解决"><a href="#问题解决" class="headerlink" title="问题解决"></a>问题解决</h1><p>这个问题主要还是因为<code>tensorflow</code>要兼容两个版本的问题,也有我用<code>vscode</code>开发的原因.</p>
+<p>现在使用的<code>tensorflow.keras</code>的时候最好还是用如下的方式:<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">TensorBoard = tf.keras.callbacks.TensorBoard</span><br></pre></td></tr></table></figure></p>
+<p>我用的是如下:<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> tensorflow.python.keras.callbacks <span class="keyword">import</span> TensorBoard</span><br></pre></td></tr></table></figure></p>
 <p>问题就在这里了,现在<code>tensorflow 1.15</code>默认的<code>TensorBoard</code>是使用<code>tf 2.0</code>的写法的,如果用第一个方式调用是没问题的.但因为<code>tf.keras.callbacks.TensorBoard</code>是从<code>from tensorflow.python.keras.callbacks_v1</code>导入的,所以我的写法调用的是对应<code>tf 2.0</code>的代码,导致错误.</p>
-<p>所以我的写法要改成: <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> tensorflow.python.keras.callbacks_v1 <span class="keyword">import</span> TensorBoard</span><br></pre></td></tr></table></figure></p>
+<p>所以我的写法要改成:<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> tensorflow.python.keras.callbacks_v1 <span class="keyword">import</span> TensorBoard</span><br></pre></td></tr></table></figure></p>
 
       
     </div>
@@ -110,20 +108,18 @@
         
           <p>升级了<code>tensorflow</code>到1.15,发现一个用<code>tf.keras</code>中<code>TensorBoard</code>的时候就会报错的问题.</p>
 <a id="more"></a>
-<h1 id="问题描述">问题描述</h1>
-<p>错误信息如下: <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">TypeError: An op outside of the <span class="keyword">function</span> building code is being passed</span><br><span class="line">a <span class="string">"Graph"</span> tensor. It is possible to have Graph tensors</span><br><span class="line">leak out of the <span class="keyword">function</span> building context by including a</span><br><span class="line">tf.init_scope <span class="keyword">in</span> your <span class="keyword">function</span> building code.</span><br><span class="line">For example, the following <span class="keyword">function</span> will fail:</span><br><span class="line">  @tf.function</span><br><span class="line">  def has_init_scope():</span><br><span class="line">    my_constant = tf.constant(1.)</span><br><span class="line">    with tf.init_scope():</span><br><span class="line">      added = my_constant * 2</span><br><span class="line">The graph tensor has name: create_file_writer/SummaryWriter:0</span><br></pre></td></tr></table></figure></p>
-<h1 id="问题解决">问题解决</h1>
-<p>这个问题主要还是因为<code>tensorflow</code>要兼容两个版本的问题,也有我用<code>vscode</code>开发的原因.</p>
-<p>现在使用的<code>tensorflow.keras</code>的时候最好还是用如下的方式: <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">TensorBoard = tf.keras.callbacks.TensorBoard</span><br></pre></td></tr></table></figure></p>
-<p>我用的是如下: <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> tensorflow.python.keras.callbacks <span class="keyword">import</span> TensorBoard</span><br></pre></td></tr></table></figure></p>
+<h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>错误信息如下:<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">TypeError: An op outside of the <span class="keyword">function</span> building code is being passed</span><br><span class="line">a <span class="string">"Graph"</span> tensor. It is possible to have Graph tensors</span><br><span class="line">leak out of the <span class="keyword">function</span> building context by including a</span><br><span class="line">tf.init_scope <span class="keyword">in</span> your <span class="keyword">function</span> building code.</span><br><span class="line">For example, the following <span class="keyword">function</span> will fail:</span><br><span class="line">  @tf.function</span><br><span class="line">  def has_init_scope():</span><br><span class="line">    my_constant = tf.constant(1.)</span><br><span class="line">    with tf.init_scope():</span><br><span class="line">      added = my_constant * 2</span><br><span class="line">The graph tensor has name: create_file_writer/SummaryWriter:0</span><br></pre></td></tr></table></figure></p>
+<h1 id="问题解决"><a href="#问题解决" class="headerlink" title="问题解决"></a>问题解决</h1><p>这个问题主要还是因为<code>tensorflow</code>要兼容两个版本的问题,也有我用<code>vscode</code>开发的原因.</p>
+<p>现在使用的<code>tensorflow.keras</code>的时候最好还是用如下的方式:<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">TensorBoard = tf.keras.callbacks.TensorBoard</span><br></pre></td></tr></table></figure></p>
+<p>我用的是如下:<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> tensorflow.python.keras.callbacks <span class="keyword">import</span> TensorBoard</span><br></pre></td></tr></table></figure></p>
 <p>问题就在这里了,现在<code>tensorflow 1.15</code>默认的<code>TensorBoard</code>是使用<code>tf 2.0</code>的写法的,如果用第一个方式调用是没问题的.但因为<code>tf.keras.callbacks.TensorBoard</code>是从<code>from tensorflow.python.keras.callbacks_v1</code>导入的,所以我的写法调用的是对应<code>tf 2.0</code>的代码,导致错误.</p>
-<p>所以我的写法要改成: <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> tensorflow.python.keras.callbacks_v1 <span class="keyword">import</span> TensorBoard</span><br></pre></td></tr></table></figure></p>
+<p>所以我的写法要改成:<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> tensorflow.python.keras.callbacks_v1 <span class="keyword">import</span> TensorBoard</span><br></pre></td></tr></table></figure></p>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2019/10/21/tf15-tb-error/" data-id="ck8bnmo510091r76xdirs3rma" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2019/10/21/tf15-tb-error/" data-id="ck8bnue3c0096zl6xtr40c3qk" class="article-share-link">Share</a>
       
       
       
@@ -256,6 +252,21 @@
 
 
 
-  </div><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+  </div>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><!-- hexo-inject:begin --><!-- hexo-inject:end -->
 </body>
 </html>

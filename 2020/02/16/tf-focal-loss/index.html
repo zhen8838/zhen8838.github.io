@@ -93,42 +93,33 @@
       
         <p>简单记录一下<code>bce focal loss</code>。</p>
 <a id="more"></a>
-<h1 id="bce-loss">bce loss</h1>
-<p>公式为： <span class="math display">\[
+<h1 id="bce-loss"><a href="#bce-loss" class="headerlink" title="bce loss"></a>bce loss</h1><p>公式为：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-loss=&amp;y * -\log(sigmoid(p)) + (1 - y) * -\log(1 - sigmoid(p))\\
-    =&amp;\begin{cases} -\log(\sigma(p))&amp;,\ \ \ y=1\\
-                    -\log(1-\sigma(p))&amp;,\ \ \ y=0\\
+loss=&y * -\log(sigmoid(p)) + (1 - y) * -\log(1 - sigmoid(p))\\
+    =&\begin{cases} -\log(\sigma(p))&,\ \ \ y=1\\
+                    -\log(1-\sigma(p))&,\ \ \ y=0\\
      \end{cases}
-\end{aligned}
-\]</span></p>
-<p>为了解决<strong>正负样本的不平衡问题</strong>，通常添加参数<span class="math inline">\(\alpha\)</span>平衡损失： <span class="math display">\[
+\end{aligned}</script><p>为了解决<strong>正负样本的不平衡问题</strong>，通常添加参数$\alpha$平衡损失：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-    loss=&amp;\begin{cases} -\alpha \log(\sigma(p))&amp;,\ \ \ y=1\\
-                    -(1-\alpha)\log(1-\sigma(p))&amp;,\ \ \ y=0\\
+    loss=&\begin{cases} -\alpha \log(\sigma(p))&,\ \ \ y=1\\
+                    -(1-\alpha)\log(1-\sigma(p))&,\ \ \ y=0\\
      \end{cases}
-\end{aligned}
-\]</span></p>
-<p>为了解决<strong>样本的难易程度不平衡问题</strong>，基于预测置信度平衡难易程度：</p>
-<p><span class="math display">\[
+\end{aligned}</script><p>为了解决<strong>样本的难易程度不平衡问题</strong>，基于预测置信度平衡难易程度：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-    loss=&amp;\begin{cases} -(1-\sigma(p))^\gamma \log(\sigma(p))&amp;,\ \ \ y=1\\
-                    -\sigma(p)^\gamma\log(1-\sigma(p))&amp;,\ \ \ y=0\\
+    loss=&\begin{cases} -(1-\sigma(p))^\gamma \log(\sigma(p))&,\ \ \ y=1\\
+                    -\sigma(p)^\gamma\log(1-\sigma(p))&,\ \ \ y=0\\
      \end{cases}
-\end{aligned}
-\]</span></p>
-<p>这样置信度越高的正样本和置信度高的负样本损失衰减都会较大。</p>
-<h1 id="focal-loss">focal loss</h1>
-<p>结合类别不平衡问题与难易程度不平衡问题，得到<code>focal loss</code>：</p>
-<p><span class="math display">\[
+\end{aligned}</script><p>这样置信度越高的正样本和置信度高的负样本损失衰减都会较大。</p>
+<h1 id="focal-loss"><a href="#focal-loss" class="headerlink" title="focal loss"></a>focal loss</h1><p>结合类别不平衡问题与难易程度不平衡问题，得到<code>focal loss</code>：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-    loss=&amp;\begin{cases} -\alpha(1-\sigma(p))^\gamma \log(\sigma(p))&amp;,\ \ \ y=1\\
-                    -(1-\alpha)\sigma(p)^\gamma\log(1-\sigma(p))&amp;,\ \ \ y=0\\
+    loss=&\begin{cases} -\alpha(1-\sigma(p))^\gamma \log(\sigma(p))&,\ \ \ y=1\\
+                    -(1-\alpha)\sigma(p)^\gamma\log(1-\sigma(p))&,\ \ \ y=0\\
      \end{cases}
-\end{aligned}
-\]</span></p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">focal_sigmoid_cross_entropy_with_logits</span><span class="params">(labels: tf.Tensor, logits: tf.Tensor,</span></span></span><br><span class="line"><span class="function"><span class="params">                                            gamma: float = <span class="number">2.0</span>,</span></span></span><br><span class="line"><span class="function"><span class="params">                                            alpha: float = <span class="number">0.25</span>)</span>:</span></span><br><span class="line">    pred_sigmoid = tf.nn.sigmoid(logits)</span><br><span class="line">    pt = (<span class="number">1</span> - pred_sigmoid) * labels + pred_sigmoid * (<span class="number">1</span> - labels)</span><br><span class="line">    focal_weight = (alpha * labels + (<span class="number">1</span> - alpha) * (<span class="number">1</span> - labels)) * tf.math.pow(pt, gamma)</span><br><span class="line">    loss = tf.nn.sigmoid_cross_entropy_with_logits(labels, logits) * focal_weight</span><br><span class="line">    <span class="keyword">return</span> loss</span><br></pre></td></tr></table></figure>
-
+\end{aligned}</script><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">focal_sigmoid_cross_entropy_with_logits</span><span class="params">(labels: tf.Tensor, logits: tf.Tensor,</span></span></span><br><span class="line"><span class="function"><span class="params">                                            gamma: float = <span class="number">2.0</span>,</span></span></span><br><span class="line"><span class="function"><span class="params">                                            alpha: float = <span class="number">0.25</span>)</span>:</span></span><br><span class="line">    pred_sigmoid = tf.nn.sigmoid(logits)</span><br><span class="line">    pt = (<span class="number">1</span> - pred_sigmoid) * labels + pred_sigmoid * (<span class="number">1</span> - labels)</span><br><span class="line">    focal_weight = (alpha * labels + (<span class="number">1</span> - alpha) * (<span class="number">1</span> - labels)) * tf.math.pow(pt, gamma)</span><br><span class="line">    loss = tf.nn.sigmoid_cross_entropy_with_logits(labels, logits) * focal_weight</span><br><span class="line">    <span class="keyword">return</span> loss</span><br></pre></td></tr></table></figure>
       
     </div>
     <!-- <div class="article-entry" itemprop="articleBody">
@@ -137,47 +128,38 @@ loss=&amp;y * -\log(sigmoid(p)) + (1 - y) * -\log(1 - sigmoid(p))\\
         
           <p>简单记录一下<code>bce focal loss</code>。</p>
 <a id="more"></a>
-<h1 id="bce-loss">bce loss</h1>
-<p>公式为： <span class="math display">\[
+<h1 id="bce-loss"><a href="#bce-loss" class="headerlink" title="bce loss"></a>bce loss</h1><p>公式为：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-loss=&amp;y * -\log(sigmoid(p)) + (1 - y) * -\log(1 - sigmoid(p))\\
-    =&amp;\begin{cases} -\log(\sigma(p))&amp;,\ \ \ y=1\\
-                    -\log(1-\sigma(p))&amp;,\ \ \ y=0\\
+loss=&y * -\log(sigmoid(p)) + (1 - y) * -\log(1 - sigmoid(p))\\
+    =&\begin{cases} -\log(\sigma(p))&,\ \ \ y=1\\
+                    -\log(1-\sigma(p))&,\ \ \ y=0\\
      \end{cases}
-\end{aligned}
-\]</span></p>
-<p>为了解决<strong>正负样本的不平衡问题</strong>，通常添加参数<span class="math inline">\(\alpha\)</span>平衡损失： <span class="math display">\[
+\end{aligned}</script><p>为了解决<strong>正负样本的不平衡问题</strong>，通常添加参数$\alpha$平衡损失：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-    loss=&amp;\begin{cases} -\alpha \log(\sigma(p))&amp;,\ \ \ y=1\\
-                    -(1-\alpha)\log(1-\sigma(p))&amp;,\ \ \ y=0\\
+    loss=&\begin{cases} -\alpha \log(\sigma(p))&,\ \ \ y=1\\
+                    -(1-\alpha)\log(1-\sigma(p))&,\ \ \ y=0\\
      \end{cases}
-\end{aligned}
-\]</span></p>
-<p>为了解决<strong>样本的难易程度不平衡问题</strong>，基于预测置信度平衡难易程度：</p>
-<p><span class="math display">\[
+\end{aligned}</script><p>为了解决<strong>样本的难易程度不平衡问题</strong>，基于预测置信度平衡难易程度：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-    loss=&amp;\begin{cases} -(1-\sigma(p))^\gamma \log(\sigma(p))&amp;,\ \ \ y=1\\
-                    -\sigma(p)^\gamma\log(1-\sigma(p))&amp;,\ \ \ y=0\\
+    loss=&\begin{cases} -(1-\sigma(p))^\gamma \log(\sigma(p))&,\ \ \ y=1\\
+                    -\sigma(p)^\gamma\log(1-\sigma(p))&,\ \ \ y=0\\
      \end{cases}
-\end{aligned}
-\]</span></p>
-<p>这样置信度越高的正样本和置信度高的负样本损失衰减都会较大。</p>
-<h1 id="focal-loss">focal loss</h1>
-<p>结合类别不平衡问题与难易程度不平衡问题，得到<code>focal loss</code>：</p>
-<p><span class="math display">\[
+\end{aligned}</script><p>这样置信度越高的正样本和置信度高的负样本损失衰减都会较大。</p>
+<h1 id="focal-loss"><a href="#focal-loss" class="headerlink" title="focal loss"></a>focal loss</h1><p>结合类别不平衡问题与难易程度不平衡问题，得到<code>focal loss</code>：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-    loss=&amp;\begin{cases} -\alpha(1-\sigma(p))^\gamma \log(\sigma(p))&amp;,\ \ \ y=1\\
-                    -(1-\alpha)\sigma(p)^\gamma\log(1-\sigma(p))&amp;,\ \ \ y=0\\
+    loss=&\begin{cases} -\alpha(1-\sigma(p))^\gamma \log(\sigma(p))&,\ \ \ y=1\\
+                    -(1-\alpha)\sigma(p)^\gamma\log(1-\sigma(p))&,\ \ \ y=0\\
      \end{cases}
-\end{aligned}
-\]</span></p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">focal_sigmoid_cross_entropy_with_logits</span><span class="params">(labels: tf.Tensor, logits: tf.Tensor,</span></span></span><br><span class="line"><span class="function"><span class="params">                                            gamma: float = <span class="number">2.0</span>,</span></span></span><br><span class="line"><span class="function"><span class="params">                                            alpha: float = <span class="number">0.25</span>)</span>:</span></span><br><span class="line">    pred_sigmoid = tf.nn.sigmoid(logits)</span><br><span class="line">    pt = (<span class="number">1</span> - pred_sigmoid) * labels + pred_sigmoid * (<span class="number">1</span> - labels)</span><br><span class="line">    focal_weight = (alpha * labels + (<span class="number">1</span> - alpha) * (<span class="number">1</span> - labels)) * tf.math.pow(pt, gamma)</span><br><span class="line">    loss = tf.nn.sigmoid_cross_entropy_with_logits(labels, logits) * focal_weight</span><br><span class="line">    <span class="keyword">return</span> loss</span><br></pre></td></tr></table></figure>
-
+\end{aligned}</script><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">focal_sigmoid_cross_entropy_with_logits</span><span class="params">(labels: tf.Tensor, logits: tf.Tensor,</span></span></span><br><span class="line"><span class="function"><span class="params">                                            gamma: float = <span class="number">2.0</span>,</span></span></span><br><span class="line"><span class="function"><span class="params">                                            alpha: float = <span class="number">0.25</span>)</span>:</span></span><br><span class="line">    pred_sigmoid = tf.nn.sigmoid(logits)</span><br><span class="line">    pt = (<span class="number">1</span> - pred_sigmoid) * labels + pred_sigmoid * (<span class="number">1</span> - labels)</span><br><span class="line">    focal_weight = (alpha * labels + (<span class="number">1</span> - alpha) * (<span class="number">1</span> - labels)) * tf.math.pow(pt, gamma)</span><br><span class="line">    loss = tf.nn.sigmoid_cross_entropy_with_logits(labels, logits) * focal_weight</span><br><span class="line">    <span class="keyword">return</span> loss</span><br></pre></td></tr></table></figure>
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2020/02/16/tf-focal-loss/" data-id="ck8bnmo4q0082r76x8fb4gwvk" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2020/02/16/tf-focal-loss/" data-id="ck8bnue33008azl6xofoklbbv" class="article-share-link">Share</a>
       
       
       
@@ -310,6 +292,21 @@ loss=&amp;y * -\log(sigmoid(p)) + (1 - y) * -\log(1 - sigmoid(p))\\
 
 
 
-  </div><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+  </div>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><!-- hexo-inject:begin --><!-- hexo-inject:end -->
 </body>
 </html>
