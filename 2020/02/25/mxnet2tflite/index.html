@@ -95,26 +95,29 @@
       
         <p>今天尝试把<code>insightface</code>的模型转换到<code>tflite</code>格式，在此做个记录。</p>
 <a id="more"></a>
-<h1 id="安装依赖"><a href="#安装依赖" class="headerlink" title="安装依赖"></a>安装依赖</h1><p>转换工具使用的是微软的<code>mmdnn</code>，感觉好像有段时间没更新了，还是需要手动修改一些地方才可以正常运行。</p>
+<h1 id="安装依赖">安装依赖</h1>
+<p>转换工具使用的是微软的<code>mmdnn</code>，感觉好像有段时间没更新了，还是需要手动修改一些地方才可以正常运行。</p>
 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">pip install mxnet-cu101mkl scikit-learn mmdnn tensorflow==1.15.2</span><br></pre></td></tr></table></figure>
-<ol>
+<ol type="1">
 <li><p>修改<code>np.load</code>默认参数</p>
-<p> 因为现在的<code>numpy</code>默认<code>load</code>的时候<code>allow_pickle=False</code>，所以需要进入<code>mmdnn</code>中全局搜索<code>np.load</code>，并修改其参数，我这次是<code>mxnet</code>转<code>tensorflow</code>，就只要改<code>conversion/common/DataStructure/emitter.py</code>和<code>conversion/tensorflow/tensorflow_emitter.py</code>文件就好了。</p>
-</li>
+<p>因为现在的<code>numpy</code>默认<code>load</code>的时候<code>allow_pickle=False</code>，所以需要进入<code>mmdnn</code>中全局搜索<code>np.load</code>，并修改其参数，我这次是<code>mxnet</code>转<code>tensorflow</code>，就只要改<code>conversion/common/DataStructure/emitter.py</code>和<code>conversion/tensorflow/tensorflow_emitter.py</code>文件就好了。</p></li>
 </ol>
-<h1 id="下载模型"><a href="#下载模型" class="headerlink" title="下载模型"></a>下载模型</h1><p>从<code>insightface</code>的<code>modell zoo</code>中下载一个模型，我下载的是<a href="https://uc3fb6447c5249ed356ba3872f6e.dl.dropboxusercontent.com/cd/0/get/AycBEeooWGoSc-W_dzCY47OaQLGTaYVtwgZAsORaGDfFx3mk7pyVMk7Dl6DSCX2vtM-arRRtvEFbvXLoVFuP1ykb7o7WrCfuuRkGOFtrj3kUtA/file?_download_id=39148373175258925047465484472256479451969124919058759030232633835&amp;_notify_domain=www.dropbox.com&amp;dl=1" target="_blank" rel="noopener"><code>mobilenet</code>模型</a></p>
-<h1 id="修改模型"><a href="#修改模型" class="headerlink" title="修改模型"></a>修改模型</h1><p>我下载的这个模型可能是因为之前训练的模型构建问题，有一个名为<code>pre_fc1</code>的层的权重参数却不叫<code>pre_fc1_weight</code>，会导致转换出错。</p>
-<div align="center">
-<img src="/2020/02/25/mxnet2tflite/mxnet2tfliet-1.png">
+<h1 id="下载模型">下载模型</h1>
+<p>从<code>insightface</code>的<code>modell zoo</code>中下载一个模型，我下载的是<a href="https://uc3fb6447c5249ed356ba3872f6e.dl.dropboxusercontent.com/cd/0/get/AycBEeooWGoSc-W_dzCY47OaQLGTaYVtwgZAsORaGDfFx3mk7pyVMk7Dl6DSCX2vtM-arRRtvEFbvXLoVFuP1ykb7o7WrCfuuRkGOFtrj3kUtA/file?_download_id=39148373175258925047465484472256479451969124919058759030232633835&amp;_notify_domain=www.dropbox.com&amp;dl=1" target="_blank" rel="noopener"><code>mobilenet</code>模型</a></p>
+<h1 id="修改模型">修改模型</h1>
+<p>我下载的这个模型可能是因为之前训练的模型构建问题，有一个名为<code>pre_fc1</code>的层的权重参数却不叫<code>pre_fc1_weight</code>，会导致转换出错。</p>
+<div data-align="center">
+<p><img src="/2020/02/25/mxnet2tflite/mxnet2tfliet-1.png"></p>
 </div>
-
-<p>需要修改一下模型参数名称。我网上看了下没发现有好的修改<code>param</code>参数名称的方法，直接替换<code>json</code>和<code>param</code>文件中的<code>fc1_weight</code>为<code>pre_fc1_weight</code>会导致加载失败，因此我就将<code>mmdnn/conversion/mxnet/mxnet_parser.py</code>中410行改成如下：<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> source_node.name==<span class="string">'pre_fc1'</span>:</span><br><span class="line">    weight = self.weight_data.get(<span class="string">'fc1'</span> + <span class="string">"_weight"</span>).asnumpy().transpose((<span class="number">1</span>, <span class="number">0</span>))</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    weight = self.weight_data.get(source_node.name + <span class="string">"_weight"</span>).asnumpy().transpose((<span class="number">1</span>, <span class="number">0</span>))</span><br></pre></td></tr></table></figure></p>
+<p>需要修改一下模型参数名称。我网上看了下没发现有好的修改<code>param</code>参数名称的方法，直接替换<code>json</code>和<code>param</code>文件中的<code>fc1_weight</code>为<code>pre_fc1_weight</code>会导致加载失败，因此我就将<code>mmdnn/conversion/mxnet/mxnet_parser.py</code>中410行改成如下： <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> source_node.name==<span class="string">'pre_fc1'</span>:</span><br><span class="line">    weight = self.weight_data.get(<span class="string">'fc1'</span> + <span class="string">"_weight"</span>).asnumpy().transpose((<span class="number">1</span>, <span class="number">0</span>))</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    weight = self.weight_data.get(source_node.name + <span class="string">"_weight"</span>).asnumpy().transpose((<span class="number">1</span>, <span class="number">0</span>))</span><br></pre></td></tr></table></figure></p>
 <p>同时，因为<code>insightface</code>的模型输入时的归一化操作被固定在了模型中，因此需要修改网络，我找了半天也没找到办法。。于是就直接修改<code>json</code>文件，使用下列程序删除前面两个节点：</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">s= json.load(open(<span class="string">'/home/zqh/workspace/insightface/test/model-symbol.json.bak'</span>))</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> nodes <span class="keyword">in</span> s[<span class="string">'nodes'</span>]:</span><br><span class="line">    <span class="keyword">for</span> inputs <span class="keyword">in</span> nodes[<span class="string">'inputs'</span>]:</span><br><span class="line">        inputs[<span class="number">0</span>]=inputs[<span class="number">0</span>]<span class="number">-2</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> range( len(s[<span class="string">'arg_nodes'</span>])):</span><br><span class="line">    s[<span class="string">'arg_nodes'</span>][i]=s[<span class="string">'arg_nodes'</span>][i]<span class="number">-2</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> range( len(s[<span class="string">'node_row_ptr'</span>])):</span><br><span class="line">    s[<span class="string">'node_row_ptr'</span>][i]=s[<span class="string">'node_row_ptr'</span>][i]<span class="number">-2</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> heads <span class="keyword">in</span> s[<span class="string">'heads'</span>]:</span><br><span class="line">    heads[<span class="number">0</span>]=heads[<span class="number">0</span>]<span class="number">-2</span></span><br><span class="line"></span><br><span class="line">ss=json.dumps(s)</span><br><span class="line"><span class="keyword">with</span> open(<span class="string">'/home/zqh/workspace/insightface/test/model-symbol.json'</span>,<span class="string">'w'</span>) <span class="keyword">as</span> f:</span><br><span class="line">    print(ss, file=f)</span><br></pre></td></tr></table></figure>
 <p><strong>NOTE</strong>： 上面的代码只是修改节点索引，后面需要手动把模型<code>json</code>文件不需要的节点删除。</p>
-<h1 id="转换模型"><a href="#转换模型" class="headerlink" title="转换模型"></a>转换模型</h1><p>运行命令：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mmconvert -sf mxnet -<span class="keyword">in</span> ../models/model-symbol.json -iw ../models/model-0000.params  -df tensorflow -om mbv1face --inputShape 3,112,112 --dump_tag SERVING</span><br></pre></td></tr></table></figure></p>
+<h1 id="转换模型">转换模型</h1>
+<p>运行命令： <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mmconvert -sf mxnet -<span class="keyword">in</span> ../models/model-symbol.json -iw ../models/model-0000.params  -df tensorflow -om mbv1face --inputShape 3,112,112 --dump_tag SERVING</span><br></pre></td></tr></table></figure></p>
 <p>即可得到<code>tensorflow.savemodel</code>格式的模型，再利用<code>toco</code>：</p>
 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">toco --saved_model_dir mbv1face/ ----output_format tflite --output_file mbv1face.tflite</span><br></pre></td></tr></table></figure>
+
       
     </div>
     <!-- <div class="article-entry" itemprop="articleBody">
@@ -123,31 +126,34 @@
         
           <p>今天尝试把<code>insightface</code>的模型转换到<code>tflite</code>格式，在此做个记录。</p>
 <a id="more"></a>
-<h1 id="安装依赖"><a href="#安装依赖" class="headerlink" title="安装依赖"></a>安装依赖</h1><p>转换工具使用的是微软的<code>mmdnn</code>，感觉好像有段时间没更新了，还是需要手动修改一些地方才可以正常运行。</p>
+<h1 id="安装依赖">安装依赖</h1>
+<p>转换工具使用的是微软的<code>mmdnn</code>，感觉好像有段时间没更新了，还是需要手动修改一些地方才可以正常运行。</p>
 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">pip install mxnet-cu101mkl scikit-learn mmdnn tensorflow==1.15.2</span><br></pre></td></tr></table></figure>
-<ol>
+<ol type="1">
 <li><p>修改<code>np.load</code>默认参数</p>
-<p> 因为现在的<code>numpy</code>默认<code>load</code>的时候<code>allow_pickle=False</code>，所以需要进入<code>mmdnn</code>中全局搜索<code>np.load</code>，并修改其参数，我这次是<code>mxnet</code>转<code>tensorflow</code>，就只要改<code>conversion/common/DataStructure/emitter.py</code>和<code>conversion/tensorflow/tensorflow_emitter.py</code>文件就好了。</p>
-</li>
+<p>因为现在的<code>numpy</code>默认<code>load</code>的时候<code>allow_pickle=False</code>，所以需要进入<code>mmdnn</code>中全局搜索<code>np.load</code>，并修改其参数，我这次是<code>mxnet</code>转<code>tensorflow</code>，就只要改<code>conversion/common/DataStructure/emitter.py</code>和<code>conversion/tensorflow/tensorflow_emitter.py</code>文件就好了。</p></li>
 </ol>
-<h1 id="下载模型"><a href="#下载模型" class="headerlink" title="下载模型"></a>下载模型</h1><p>从<code>insightface</code>的<code>modell zoo</code>中下载一个模型，我下载的是<a href="https://uc3fb6447c5249ed356ba3872f6e.dl.dropboxusercontent.com/cd/0/get/AycBEeooWGoSc-W_dzCY47OaQLGTaYVtwgZAsORaGDfFx3mk7pyVMk7Dl6DSCX2vtM-arRRtvEFbvXLoVFuP1ykb7o7WrCfuuRkGOFtrj3kUtA/file?_download_id=39148373175258925047465484472256479451969124919058759030232633835&amp;_notify_domain=www.dropbox.com&amp;dl=1" target="_blank" rel="noopener"><code>mobilenet</code>模型</a></p>
-<h1 id="修改模型"><a href="#修改模型" class="headerlink" title="修改模型"></a>修改模型</h1><p>我下载的这个模型可能是因为之前训练的模型构建问题，有一个名为<code>pre_fc1</code>的层的权重参数却不叫<code>pre_fc1_weight</code>，会导致转换出错。</p>
-<div align="center">
-<img src="/2020/02/25/mxnet2tflite/mxnet2tfliet-1.png">
+<h1 id="下载模型">下载模型</h1>
+<p>从<code>insightface</code>的<code>modell zoo</code>中下载一个模型，我下载的是<a href="https://uc3fb6447c5249ed356ba3872f6e.dl.dropboxusercontent.com/cd/0/get/AycBEeooWGoSc-W_dzCY47OaQLGTaYVtwgZAsORaGDfFx3mk7pyVMk7Dl6DSCX2vtM-arRRtvEFbvXLoVFuP1ykb7o7WrCfuuRkGOFtrj3kUtA/file?_download_id=39148373175258925047465484472256479451969124919058759030232633835&amp;_notify_domain=www.dropbox.com&amp;dl=1" target="_blank" rel="noopener"><code>mobilenet</code>模型</a></p>
+<h1 id="修改模型">修改模型</h1>
+<p>我下载的这个模型可能是因为之前训练的模型构建问题，有一个名为<code>pre_fc1</code>的层的权重参数却不叫<code>pre_fc1_weight</code>，会导致转换出错。</p>
+<div data-align="center">
+<p><img src="/2020/02/25/mxnet2tflite/mxnet2tfliet-1.png"></p>
 </div>
-
-<p>需要修改一下模型参数名称。我网上看了下没发现有好的修改<code>param</code>参数名称的方法，直接替换<code>json</code>和<code>param</code>文件中的<code>fc1_weight</code>为<code>pre_fc1_weight</code>会导致加载失败，因此我就将<code>mmdnn/conversion/mxnet/mxnet_parser.py</code>中410行改成如下：<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> source_node.name==<span class="string">'pre_fc1'</span>:</span><br><span class="line">    weight = self.weight_data.get(<span class="string">'fc1'</span> + <span class="string">"_weight"</span>).asnumpy().transpose((<span class="number">1</span>, <span class="number">0</span>))</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    weight = self.weight_data.get(source_node.name + <span class="string">"_weight"</span>).asnumpy().transpose((<span class="number">1</span>, <span class="number">0</span>))</span><br></pre></td></tr></table></figure></p>
+<p>需要修改一下模型参数名称。我网上看了下没发现有好的修改<code>param</code>参数名称的方法，直接替换<code>json</code>和<code>param</code>文件中的<code>fc1_weight</code>为<code>pre_fc1_weight</code>会导致加载失败，因此我就将<code>mmdnn/conversion/mxnet/mxnet_parser.py</code>中410行改成如下： <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> source_node.name==<span class="string">'pre_fc1'</span>:</span><br><span class="line">    weight = self.weight_data.get(<span class="string">'fc1'</span> + <span class="string">"_weight"</span>).asnumpy().transpose((<span class="number">1</span>, <span class="number">0</span>))</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    weight = self.weight_data.get(source_node.name + <span class="string">"_weight"</span>).asnumpy().transpose((<span class="number">1</span>, <span class="number">0</span>))</span><br></pre></td></tr></table></figure></p>
 <p>同时，因为<code>insightface</code>的模型输入时的归一化操作被固定在了模型中，因此需要修改网络，我找了半天也没找到办法。。于是就直接修改<code>json</code>文件，使用下列程序删除前面两个节点：</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">s= json.load(open(<span class="string">'/home/zqh/workspace/insightface/test/model-symbol.json.bak'</span>))</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> nodes <span class="keyword">in</span> s[<span class="string">'nodes'</span>]:</span><br><span class="line">    <span class="keyword">for</span> inputs <span class="keyword">in</span> nodes[<span class="string">'inputs'</span>]:</span><br><span class="line">        inputs[<span class="number">0</span>]=inputs[<span class="number">0</span>]<span class="number">-2</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> range( len(s[<span class="string">'arg_nodes'</span>])):</span><br><span class="line">    s[<span class="string">'arg_nodes'</span>][i]=s[<span class="string">'arg_nodes'</span>][i]<span class="number">-2</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> range( len(s[<span class="string">'node_row_ptr'</span>])):</span><br><span class="line">    s[<span class="string">'node_row_ptr'</span>][i]=s[<span class="string">'node_row_ptr'</span>][i]<span class="number">-2</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> heads <span class="keyword">in</span> s[<span class="string">'heads'</span>]:</span><br><span class="line">    heads[<span class="number">0</span>]=heads[<span class="number">0</span>]<span class="number">-2</span></span><br><span class="line"></span><br><span class="line">ss=json.dumps(s)</span><br><span class="line"><span class="keyword">with</span> open(<span class="string">'/home/zqh/workspace/insightface/test/model-symbol.json'</span>,<span class="string">'w'</span>) <span class="keyword">as</span> f:</span><br><span class="line">    print(ss, file=f)</span><br></pre></td></tr></table></figure>
 <p><strong>NOTE</strong>： 上面的代码只是修改节点索引，后面需要手动把模型<code>json</code>文件不需要的节点删除。</p>
-<h1 id="转换模型"><a href="#转换模型" class="headerlink" title="转换模型"></a>转换模型</h1><p>运行命令：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mmconvert -sf mxnet -<span class="keyword">in</span> ../models/model-symbol.json -iw ../models/model-0000.params  -df tensorflow -om mbv1face --inputShape 3,112,112 --dump_tag SERVING</span><br></pre></td></tr></table></figure></p>
+<h1 id="转换模型">转换模型</h1>
+<p>运行命令： <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mmconvert -sf mxnet -<span class="keyword">in</span> ../models/model-symbol.json -iw ../models/model-0000.params  -df tensorflow -om mbv1face --inputShape 3,112,112 --dump_tag SERVING</span><br></pre></td></tr></table></figure></p>
 <p>即可得到<code>tensorflow.savemodel</code>格式的模型，再利用<code>toco</code>：</p>
 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">toco --saved_model_dir mbv1face/ ----output_format tflite --output_file mbv1face.tflite</span><br></pre></td></tr></table></figure>
+
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2020/02/25/mxnet2tflite/" data-id="ck8bnue2i005ozl6xhxc2jdez" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2020/02/25/mxnet2tflite/" data-id="ck8bnvmwu005g4y6xuanflfud" class="article-share-link">Share</a>
       
       
       
@@ -280,21 +286,6 @@
 
 
 
-  </div>
-<script type="text/x-mathjax-config">
-    MathJax.Hub.Config({
-        tex2jax: {
-            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
-            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
-            processEscapes: true
-        }
-    });
-    MathJax.Hub.Queue(function() {
-        var all = MathJax.Hub.getAllJax();
-        for (var i = 0; i < all.length; ++i)
-            all[i].SourceElement().parentNode.className += ' has-jax';
-    });
-</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+  </div><!-- hexo-inject:begin --><!-- hexo-inject:end -->
 </body>
 </html>
