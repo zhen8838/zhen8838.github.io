@@ -106,105 +106,86 @@
       
         <p>现在要做声音相关,所以先学习声音信号处理的内容,这个将会成为一个系列.</p>
 <a id="more"></a>
-<h1 id="dft变换">DFT变换</h1>
-<p>将长度为<code>N</code>离散的时域信号变化成两个长度为<code>N/2+1</code>的实部与虚部信号 ## 标准DFT计算公式 <span class="math display">\[
+<h1 id="DFT变换"><a href="#DFT变换" class="headerlink" title="DFT变换"></a>DFT变换</h1><p>将长度为<code>N</code>离散的时域信号变化成两个长度为<code>N/2+1</code>的实部与虚部信号</p>
+<h2 id="标准DFT计算公式"><a href="#标准DFT计算公式" class="headerlink" title="标准DFT计算公式"></a>标准DFT计算公式</h2><script type="math/tex; mode=display">
 \begin{align}
-X[k] &amp; =\sum^{N-1}_{n=0}x[n]e^{-j2\pi k n / N} \ \ k=0,...,N-1 \\
-n &amp;: 离散时间索引　\\
-k &amp;: 离散频域索引 \\
-\omega_k=2 \pi k /N &amp;: 角频率 \\
-f_k = f_s k / N &amp;: 频率　(f_s : 采样率) 
-\end{align}
-\]</span></p>
-<h2 id="例子-1">例子 1</h2>
-<p><span class="math display">\[
+X[k] & =\sum^{N-1}_{n=0}x[n]e^{-j2\pi k n / N} \ \ k=0,...,N-1 \\
+n &: 离散时间索引　\\
+k &: 离散频域索引 \\
+\omega_k=2 \pi k /N &: 角频率 \\
+f_k = f_s k / N &: 频率　(f_s : 采样率) 
+\end{align}</script><h2 id="例子-1"><a href="#例子-1" class="headerlink" title="例子 1"></a>例子 1</h2><script type="math/tex; mode=display">
 \begin{align}
-s^*_k&amp;=e^{-j2\pi k n / N}=cos(2 \pi k n / N)-jsin(2 \pi k n/N) \\
-如果 N&amp;=4，那么n=0,1,2,3; k=0,1,2,3 \\
-s^*_0&amp;=cos(2\pi*0*n/4)-jsin(2\pi*0*n/4)=[1,1,1,1] \\
-s^*_1&amp;=cos(2\pi*1*n/4)-jsin(2\pi*1*n/4)=[1,-j,-1,j] \\
-s^*_2&amp;=cos(2\pi*2*n/4)-jsin(2\pi*2*n/4)=[1,-1,1,-1] \\
-s^*_3&amp;=cos(2\pi*3*n/4)-jsin(2\pi*3*n/4)=[1,j,-1,-j] \\
-\end{align}
-\]</span> 可以观察下面的图,实际上<code>DFT</code>就是每个频率点与不同正弦波进行內积.如果內积为<code>0</code>那么说明特定频率的正弦波不存在与此波形中.</p>
+s^*_k&=e^{-j2\pi k n / N}=cos(2 \pi k n / N)-jsin(2 \pi k n/N) \\
+如果 N&=4，那么n=0,1,2,3; k=0,1,2,3 \\
+s^*_0&=cos(2\pi*0*n/4)-jsin(2\pi*0*n/4)=[1,1,1,1] \\
+s^*_1&=cos(2\pi*1*n/4)-jsin(2\pi*1*n/4)=[1,-j,-1,j] \\
+s^*_2&=cos(2\pi*2*n/4)-jsin(2\pi*2*n/4)=[1,-1,1,-1] \\
+s^*_3&=cos(2\pi*3*n/4)-jsin(2\pi*3*n/4)=[1,j,-1,-j] \\
+\end{align}</script><p>可以观察下面的图,实际上<code>DFT</code>就是每个频率点与不同正弦波进行內积.如果內积为<code>0</code>那么说明特定频率的正弦波不存在与此波形中.</p>
 <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 例子 1</span></span><br><span class="line">N = <span class="number">8</span></span><br><span class="line">plt.figure(<span class="number">1</span>, figsize=(<span class="number">9.5</span>, <span class="number">6</span>))</span><br><span class="line"><span class="keyword">for</span> k <span class="keyword">in</span> range(N):</span><br><span class="line">	s = np.exp(<span class="number">-1j</span>*<span class="number">2</span>*np.pi*k/N*np.arange(N))</span><br><span class="line">	plt.subplot(N/<span class="number">2</span>, <span class="number">2</span>, k+<span class="number">1</span>)</span><br><span class="line">	plt.plot(np.real(s), <span class="string">'b'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">	plt.axis([<span class="number">0</span>,N<span class="number">-1</span>,<span class="number">-1.5</span>,<span class="number">1.5</span>])</span><br><span class="line">	plt.title(<span class="string">r"$s^&#123;*&#125;_&#123;%s&#125;$"</span>%(k), fontsize=<span class="number">18</span>)</span><br><span class="line">	plt.subplot(N/<span class="number">2</span>, <span class="number">2</span>, k+<span class="number">1</span>)</span><br><span class="line">	plt.plot(np.imag(s), <span class="string">'g'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">	plt.axis([<span class="number">0</span>,N<span class="number">-1</span>,<span class="number">-1.5</span>,<span class="number">1.5</span>])</span><br><span class="line"></span><br><span class="line">plt.tight_layout()</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<p><img src="/2019/03/25/dtf-idft/dtf-idft_3_0.png"></p>
-<h2 id="例子2-标量乘积">例子2 : 标量乘积</h2>
-<p>下面给定一个x=[1,1,1,1,-1,-1,-1,-1]进行计算</p>
+<p><img src="/2019/03/25/dtf-idft/dtf-idft_3_0.png" alt=""></p>
+<h2 id="例子2-标量乘积"><a href="#例子2-标量乘积" class="headerlink" title="例子2 : 标量乘积"></a>例子2 : 标量乘积</h2><p>下面给定一个x=[1,1,1,1,-1,-1,-1,-1]进行计算</p>
 <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">x = np.array([<span class="number">1</span>,<span class="number">1</span>,<span class="number">1</span>,<span class="number">1</span>,<span class="number">-1</span>,<span class="number">-1</span>,<span class="number">-1</span>,<span class="number">-1</span>])</span><br><span class="line">N = <span class="number">8</span></span><br><span class="line">mX = ()</span><br><span class="line">pX = ()</span><br><span class="line">plt.figure(<span class="number">1</span>, figsize=(<span class="number">9.5</span>, <span class="number">6</span>))</span><br><span class="line"></span><br><span class="line">plt.subplot(<span class="number">3</span>,<span class="number">1</span>,<span class="number">1</span>)</span><br><span class="line">plt.plot(x,marker=<span class="string">'x'</span>,color=<span class="string">'b'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.axis([<span class="number">0</span>,N<span class="number">-1</span>,<span class="number">-1.5</span>,<span class="number">1.5</span>])</span><br><span class="line">plt.title(<span class="string">'x = [1,1,1,1,-1,-1,-1,-1]'</span>, fontsize=<span class="number">18</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> k <span class="keyword">in</span> range(<span class="number">8</span>):</span><br><span class="line">    s = np.exp(<span class="number">1j</span>*<span class="number">2</span>*np.pi*k/N*np.arange(N))</span><br><span class="line">    X = sum(x*np.conjugate(s))</span><br><span class="line">    mX = np.append(mX, np.abs(X))</span><br><span class="line">    pX = np.append(pX, np.angle(X))</span><br><span class="line"></span><br><span class="line">plt.subplot(<span class="number">3</span>,<span class="number">1</span>,<span class="number">2</span>)</span><br><span class="line">plt.plot(mX, marker=<span class="string">'x'</span>, color=<span class="string">'r'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.title(<span class="string">'$abs(&lt;x,s_k&gt;)$'</span>, fontsize=<span class="number">18</span>) <span class="comment"># 幅度谱</span></span><br><span class="line"></span><br><span class="line">plt.subplot(<span class="number">3</span>,<span class="number">1</span>,<span class="number">3</span>)</span><br><span class="line">plt.plot(pX, marker=<span class="string">'x'</span>, color=<span class="string">'c'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.title(<span class="string">'$angle(&lt;x,s_k&gt;)$'</span>, fontsize=<span class="number">18</span>) <span class="comment"># 相位谱</span></span><br><span class="line"></span><br><span class="line">plt.tight_layout()</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<p><img src="/2019/03/25/dtf-idft/dtf-idft_5_0.png"></p>
-<h2 id="例子-3">例子 3</h2>
-<p>对一段音频数据进行<code>DFT</code>变换</p>
+<p><img src="/2019/03/25/dtf-idft/dtf-idft_5_0.png" alt=""></p>
+<h2 id="例子-3"><a href="#例子-3" class="headerlink" title="例子 3"></a>例子 3</h2><p>对一段音频数据进行<code>DFT</code>变换</p>
 <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> sys</span><br><span class="line"><span class="keyword">import</span> math</span><br><span class="line"></span><br><span class="line">sys.path.append(<span class="string">'../software/models'</span>)</span><br><span class="line"><span class="keyword">import</span> utilFunctions <span class="keyword">as</span> UF</span><br><span class="line"><span class="keyword">import</span> dftModel <span class="keyword">as</span> DFT</span><br><span class="line"></span><br><span class="line">(fs, x) = UF.wavread(<span class="string">'../sounds/oboe-A4.wav'</span>)</span><br><span class="line">w = np.hamming(<span class="number">511</span>)</span><br><span class="line">N = <span class="number">512</span></span><br><span class="line">pin = <span class="number">5000</span></span><br><span class="line">hM1 = int(math.floor((w.size+<span class="number">1</span>)/<span class="number">2</span>)) </span><br><span class="line">hM2 = int(math.floor(w.size/<span class="number">2</span>))  </span><br><span class="line">x1 = x[pin-hM1:pin+hM2]</span><br><span class="line">mX, pX = DFT.dftAnal(x1, w, N)</span><br><span class="line"></span><br><span class="line">plt.figure(<span class="number">1</span>, figsize=(<span class="number">9.5</span>, <span class="number">7</span>))</span><br><span class="line"></span><br><span class="line">plt.subplot(<span class="number">311</span>)</span><br><span class="line">plt.plot(np.arange(-hM1, hM2), x1, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.axis([-hM1, hM2, min(x1), max(x1)])</span><br><span class="line">plt.ylabel(<span class="string">'amplitude'</span>)</span><br><span class="line">plt.title(<span class="string">'x (oboe-A4.wav)'</span>)</span><br><span class="line"></span><br><span class="line">plt.subplot(<span class="number">3</span>,<span class="number">1</span>,<span class="number">2</span>)</span><br><span class="line">plt.plot(np.arange(mX.size), mX, <span class="string">'r'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.axis([<span class="number">0</span>,mX.size,min(mX),max(mX)])</span><br><span class="line">plt.title (<span class="string">'magnitude spectrum: mX = 20*log10(abs(X))'</span>)</span><br><span class="line">plt.ylabel(<span class="string">'amplitude (dB)'</span>)</span><br><span class="line"></span><br><span class="line">plt.subplot(<span class="number">3</span>,<span class="number">1</span>,<span class="number">3</span>)</span><br><span class="line">plt.plot(np.arange(mX.size), pX, <span class="string">'c'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.axis([<span class="number">0</span>,mX.size,min(pX),max(pX)])</span><br><span class="line">plt.title (<span class="string">'phase spectrum: pX=unwrap(angle(X))'</span>)</span><br><span class="line">plt.ylabel(<span class="string">'phase (radians)'</span>)</span><br><span class="line"></span><br><span class="line">plt.tight_layout()</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<p><img src="/2019/03/25/dtf-idft/dtf-idft_7_0.png"></p>
-<h1 id="复数sin曲线的dft">复数sin曲线的DFT</h1>
-<p>当输入的信号为复数<code>sin</code>曲线是如何进行<code>DFT</code>变换? <span class="math display">\[
+<p><img src="/2019/03/25/dtf-idft/dtf-idft_7_0.png" alt=""></p>
+<h1 id="复数sin曲线的DFT"><a href="#复数sin曲线的DFT" class="headerlink" title="复数sin曲线的DFT"></a>复数sin曲线的DFT</h1><p>当输入的信号为复数<code>sin</code>曲线是如何进行<code>DFT</code>变换?</p>
+<script type="math/tex; mode=display">
 \begin{align}
-x_1[n] &amp; = e^{j2\pi k_0 n / N} \ \ k=0,...,N-1 \\
-X_1[k] &amp; = \sum^{N-1}_{n=0} x_1[n]  e^{-j2\pi k_0 n / N} \\
-    &amp;=\sum^{N-1}_{n=0}e^{j2\pi k_0n/N}e^{-j2\pi kn/N} \\
-    &amp;=\sum^{N-1}_{n=0}e^{-j2\pi (k-k_0)n/N} \\
-    &amp;=\frac{1-e^{-j2\pi (k-k_0)}}{1-e^{-j2\pi (k-k_0)/N}} (一个几何序列的总和.)
-\end{align}
-\]</span> 如果<span class="math inline">\(k\neq k_0\)</span>,分母不为0且分子为0</p>
-<p>如果<span class="math inline">\(k=k_0\)</span>那么<span class="math inline">\(X_1[k]=N\)</span>,<span class="math inline">\(k\neq k_0\)</span>时<span class="math inline">\(X_1[k]=0\)</span></p>
+x_1[n] & = e^{j2\pi k_0 n / N} \ \ k=0,...,N-1 \\
+X_1[k] & = \sum^{N-1}_{n=0} x_1[n]  e^{-j2\pi k_0 n / N} \\
+    &=\sum^{N-1}_{n=0}e^{j2\pi k_0n/N}e^{-j2\pi kn/N} \\
+    &=\sum^{N-1}_{n=0}e^{-j2\pi (k-k_0)n/N} \\
+    &=\frac{1-e^{-j2\pi (k-k_0)}}{1-e^{-j2\pi (k-k_0)/N}} (一个几何序列的总和.)
+\end{align}</script><p>如果$k\neq k_0$,分母不为0且分子为0</p>
+<p>如果$k=k_0$那么$X_1[k]=N$,$k\neq k_0$时$X_1[k]=0$</p>
 <p>对于程序上来说还是没有很大的区别</p>
 <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line">tol = <span class="number">1e-5</span></span><br><span class="line"></span><br><span class="line">plt.figure(<span class="number">1</span>, figsize=(<span class="number">9.5</span>, <span class="number">7</span>))</span><br><span class="line">N = <span class="number">64</span></span><br><span class="line">k0 = <span class="number">7.5</span></span><br><span class="line">X = np.array([])</span><br><span class="line">x = np.exp(<span class="number">1j</span>*<span class="number">2</span>*np.pi*k0/N*np.arange(N))</span><br><span class="line"></span><br><span class="line">plt.subplot(<span class="number">311</span>)</span><br><span class="line">plt.title(<span class="string">'complex sinewave: x; k_0 = 7.5, N = 64'</span>)</span><br><span class="line">plt.plot(np.arange(N), np.real(x),<span class="string">'b'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.plot(np.arange(N), np.imag(x),<span class="string">'g'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.axis([<span class="number">0</span>,N<span class="number">-1</span>,<span class="number">-1</span>,<span class="number">1</span>])</span><br><span class="line"><span class="keyword">for</span> k <span class="keyword">in</span> range(N):</span><br><span class="line">	s = np.exp(<span class="number">1j</span>*<span class="number">2</span>*np.pi*k/N*np.arange(N))</span><br><span class="line">	X = np.append(X, sum(x*np.conjugate(s)))</span><br><span class="line"></span><br><span class="line">X.real[np.abs(X.real) &lt; tol] = <span class="number">0.0</span></span><br><span class="line">X.imag[np.abs(X.imag) &lt; tol] = <span class="number">0.0</span></span><br><span class="line"></span><br><span class="line">plt.subplot(<span class="number">312</span>)</span><br><span class="line">plt.title(<span class="string">'magnitude spectrum: abs(X)'</span>)</span><br><span class="line">plt.plot(np.arange(N), abs(X), <span class="string">'r'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.axis([<span class="number">0</span>,N<span class="number">-1</span>,<span class="number">0</span>,N])</span><br><span class="line"></span><br><span class="line">plt.subplot(<span class="number">313</span>)</span><br><span class="line">plt.title(<span class="string">'phase spectrum: angle(X)'</span>)</span><br><span class="line">plt.plot(np.arange(N), np.angle(X),<span class="string">'c'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.axis([<span class="number">0</span>,N<span class="number">-1</span>,-np.pi,np.pi])</span><br><span class="line"></span><br><span class="line">plt.tight_layout()</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<p><img src="/2019/03/25/dtf-idft/dtf-idft_9_0.png"></p>
-<h1 id="纯实sin信号的dft">纯实sin信号的DFT</h1>
-<p><span class="math display">\[
+<p><img src="/2019/03/25/dtf-idft/dtf-idft_9_0.png" alt=""></p>
+<h1 id="纯实sin信号的DFT"><a href="#纯实sin信号的DFT" class="headerlink" title="纯实sin信号的DFT"></a>纯实sin信号的DFT</h1><script type="math/tex; mode=display">
 \begin{align}
-x_3[n] &amp; = A_0cos(2\pi k_0 n/N)=A_0/2e^{j2\pi k_0n/N}+A_0/2e^{-j2\pi k_0n/N} \\
-X_3[k]&amp;=\sum^{N/2-1}_{n=-N/2}x_3[n]e^{-j2\pi kn/N}\\
-&amp;=\sum^{N/2-1}_{n=-N/2}(\frac{A_0}{2}e^{j2\pi k_0n/N}+\frac{A_0}{2}e^{-j2\pi k_0n/N})e^{-j2\pi kn/N} \\
-&amp;=\sum^{N/2-1}_{n=-N/2}\frac{A_0}{2}e^{j2\pi k_0n/N}e^{-j2\pi kn/N}+\sum^{N/2-1}_{n=-N/2}\frac{A_0}{2}e^{-j2\pi k_0n/N}e^{-j2\pi kn/N} \\
-&amp;=\sum^{N/2-1}_{n=-N/2}\frac{A_0}{2}e^{-j2\pi(k-k_0)n/N} + \sum^{N/2-1}_{n=-N/2}\frac{A_0}{2}e^{-j2\pi(k+k_0)n/N}\\
-&amp;=N\frac{A_0}{2} \ \ \ \ 当 k=k_0,-k_0 ; 0表示剩下的k
-\end{align}
-\]</span></p>
-<div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
+x_3[n] & = A_0cos(2\pi k_0 n/N)=A_0/2e^{j2\pi k_0n/N}+A_0/2e^{-j2\pi k_0n/N} \\
+X_3[k]&=\sum^{N/2-1}_{n=-N/2}x_3[n]e^{-j2\pi kn/N}\\
+&=\sum^{N/2-1}_{n=-N/2}(\frac{A_0}{2}e^{j2\pi k_0n/N}+\frac{A_0}{2}e^{-j2\pi k_0n/N})e^{-j2\pi kn/N} \\
+&=\sum^{N/2-1}_{n=-N/2}\frac{A_0}{2}e^{j2\pi k_0n/N}e^{-j2\pi kn/N}+\sum^{N/2-1}_{n=-N/2}\frac{A_0}{2}e^{-j2\pi k_0n/N}e^{-j2\pi kn/N} \\
+&=\sum^{N/2-1}_{n=-N/2}\frac{A_0}{2}e^{-j2\pi(k-k_0)n/N} + \sum^{N/2-1}_{n=-N/2}\frac{A_0}{2}e^{-j2\pi(k+k_0)n/N}\\
+&=N\frac{A_0}{2} \ \ \ \ 当 k=k_0,-k_0 ; 0表示剩下的k
+\end{align}</script><div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">tol = <span class="number">1e-5</span></span><br><span class="line"></span><br><span class="line">plt.figure(<span class="number">1</span>, figsize=(<span class="number">9.5</span>, <span class="number">7</span>))</span><br><span class="line">N = <span class="number">64</span></span><br><span class="line">k0 = <span class="number">7.5</span></span><br><span class="line">X = np.array([])</span><br><span class="line">nv = np.arange(-N/<span class="number">2</span>, N/<span class="number">2</span>)</span><br><span class="line">kv = np.arange(-N/<span class="number">2</span>, N/<span class="number">2</span>)</span><br><span class="line">x = np.cos(<span class="number">2</span>*np.pi*k0/N*nv)</span><br><span class="line"></span><br><span class="line">plt.subplot(<span class="number">311</span>)</span><br><span class="line">plt.title(<span class="string">'x; k_0 = 7.5, N = 64'</span>)</span><br><span class="line">plt.plot(nv, x,<span class="string">'b'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.axis([-N/<span class="number">2</span>,N/<span class="number">2</span><span class="number">-1</span>,<span class="number">-1</span>,<span class="number">1</span>])</span><br><span class="line"><span class="keyword">for</span> k <span class="keyword">in</span> kv:</span><br><span class="line">    s = np.exp(<span class="number">1j</span>*<span class="number">2</span>*np.pi*k/N*nv)</span><br><span class="line">    X = np.append(X, sum(x*np.conjugate(s)))</span><br><span class="line"></span><br><span class="line">X.real[np.abs(X.real) &lt; tol] = <span class="number">0.0</span></span><br><span class="line">X.imag[np.abs(X.imag) &lt; tol] = <span class="number">0.0</span></span><br><span class="line"></span><br><span class="line">plt.subplot(<span class="number">312</span>)</span><br><span class="line">plt.title(<span class="string">'magnitude spectrum: abs(X)'</span>)</span><br><span class="line">plt.plot(kv, abs(X), <span class="string">'r'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.axis([-N/<span class="number">2</span>,N/<span class="number">2</span><span class="number">-1</span>,<span class="number">0</span>,N])</span><br><span class="line"></span><br><span class="line">plt.subplot(<span class="number">313</span>)</span><br><span class="line">plt.title(<span class="string">'phase spectrum: angle(X)'</span>)</span><br><span class="line">plt.plot(kv, np.angle(X),<span class="string">'c'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.axis([-N/<span class="number">2</span>,N/<span class="number">2</span><span class="number">-1</span>,-np.pi,np.pi])</span><br><span class="line"></span><br><span class="line">plt.tight_layout()</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<p><img src="/2019/03/25/dtf-idft/dtf-idft_11_0.png"></p>
-<h1 id="idft">IDFT</h1>
-<p><span class="math display">\[
+<p><img src="/2019/03/25/dtf-idft/dtf-idft_11_0.png" alt=""></p>
+<h1 id="IDFT"><a href="#IDFT" class="headerlink" title="IDFT"></a>IDFT</h1><script type="math/tex; mode=display">
 \begin{align}
 x[n]=\frac{1}{N}X[k]s_k[n]=\frac{1}{N}\sum^{N-1}_{k=0}X[k]e^{j2\pi kn/N}\ \ \ \ n=0,...,N-1
-\end{align}
-\]</span></p>
-<h2 id="例子-1-1">例子 1</h2>
-<p><span class="math display">\[
+\end{align}</script><h2 id="例子-1-1"><a href="#例子-1-1" class="headerlink" title="例子 1"></a>例子 1</h2><script type="math/tex; mode=display">
 \begin{align}
-X[k]&amp;=[0,4,0,0];\ \ N=4 \\
-x[0]&amp;=\frac{1}{4}(X*x)[n=0]=\frac{1}{4}(0*1+4*1+0*1+0*1)=1 \\
-x[1]&amp;=\frac{1}{4}(X*x)[n=1]=\frac{1}{4}(0*1+4*1+0*(-1)+0*(-j))=j \\
-x[2]&amp;=\frac{1}{4}(X*x)[n=2]=\frac{1}{4}(0*1+4*(-1)+0*1+0*(-1))=-1 \\
-x[3]&amp;=\frac{1}{4}(X*x)[n=3]=\frac{1}{4}(0*1+4*(-j)+0*(-1)+0*j)=-j 
-\end{align}
-\]</span></p>
-<h2 id="例子-2">例子 2</h2>
-<p>真实信号的逆DFT <span class="math display">\[X[k]=|X[k]e^{j&lt;X[k]} and X[-K]=|X[k]|e^{-j&lt;X[k]}\ \ \ \ k=0,1,...,N/2-1\]</span></p>
-<div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
+X[k]&=[0,4,0,0];\ \ N=4 \\
+x[0]&=\frac{1}{4}(X*x)[n=0]=\frac{1}{4}(0*1+4*1+0*1+0*1)=1 \\
+x[1]&=\frac{1}{4}(X*x)[n=1]=\frac{1}{4}(0*1+4*1+0*(-1)+0*(-j))=j \\
+x[2]&=\frac{1}{4}(X*x)[n=2]=\frac{1}{4}(0*1+4*(-1)+0*1+0*(-1))=-1 \\
+x[3]&=\frac{1}{4}(X*x)[n=3]=\frac{1}{4}(0*1+4*(-j)+0*(-1)+0*j)=-j 
+\end{align}</script><h2 id="例子-2"><a href="#例子-2" class="headerlink" title="例子 2"></a>例子 2</h2><p>真实信号的逆DFT</p>
+<script type="math/tex; mode=display">X[k]=|X[k]e^{j<X[k]} and X[-K]=|X[k]|e^{-j<X[k]}\ \ \ \ k=0,1,...,N/2-1</script><div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> sys</span><br><span class="line"></span><br><span class="line">sys.path.append(<span class="string">'../software/models/'</span>)</span><br><span class="line"><span class="keyword">import</span> dftModel <span class="keyword">as</span> DFT</span><br><span class="line"><span class="keyword">import</span> math</span><br><span class="line"></span><br><span class="line">k0 = <span class="number">8.5</span></span><br><span class="line">N = <span class="number">64</span></span><br><span class="line">w = np.ones(N)</span><br><span class="line">x = np.cos(<span class="number">2</span>*np.pi*k0/N*np.arange(-N/<span class="number">2</span>,N/<span class="number">2</span>))</span><br><span class="line">mX, pX = DFT.dftAnal(x, w, N)</span><br><span class="line">y = DFT.dftSynth(mX, pX, N)</span><br><span class="line"></span><br><span class="line">plt.figure(<span class="number">1</span>, figsize=(<span class="number">9.5</span>, <span class="number">5</span>))</span><br><span class="line">plt.subplot(<span class="number">311</span>)</span><br><span class="line">plt.title(<span class="string">'positive freq. magnitude spectrum in dB: mX'</span>)</span><br><span class="line">plt.plot(np.arange(mX.size), mX, <span class="string">'r'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.axis([<span class="number">0</span>,mX.size, min(mX), max(mX)+<span class="number">1</span>])</span><br><span class="line"></span><br><span class="line">plt.subplot(<span class="number">312</span>)</span><br><span class="line">plt.title(<span class="string">'positive freq. phase spectrum: pX'</span>)</span><br><span class="line">plt.plot(np.arange(pX.size), pX, <span class="string">'c'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.axis([<span class="number">0</span>, pX.size,-np.pi,np.pi])</span><br><span class="line"></span><br><span class="line">plt.subplot(<span class="number">313</span>)</span><br><span class="line">plt.title(<span class="string">'inverse spectrum: IDFT(X)'</span>)</span><br><span class="line">plt.plot(np.arange(-N/<span class="number">2</span>, N/<span class="number">2</span>), y,<span class="string">'b'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.axis([-N/<span class="number">2</span>,N/<span class="number">2</span><span class="number">-1</span>,min(y), max(y)])</span><br><span class="line"></span><br><span class="line">plt.tight_layout()</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<p><img src="/2019/03/25/dtf-idft/dtf-idft_15_0.png"></p>
-<h1 id="普通的-sin函数">普通的 sin函数</h1>
-<p><span class="math display">\[x[n]=Acos(2\pi fnT+/phi)\]</span></p>
-<p>A=幅值</p>
+<p><img src="/2019/03/25/dtf-idft/dtf-idft_15_0.png" alt=""></p>
+<h1 id="普通的-sin函数"><a href="#普通的-sin函数" class="headerlink" title="普通的 sin函数"></a>普通的 sin函数</h1><script type="math/tex; mode=display">x[n]=Acos(2\pi fnT+/phi)</script><p>A=幅值</p>
 <p>f=频率</p>
 <p>n=时间索引</p>
 <p>T=抽样周期</p>
@@ -212,45 +193,35 @@ x[3]&amp;=\frac{1}{4}(X*x)[n=3]=\frac{1}{4}(0*1+4*(-j)+0*(-1)+0*j)=-j
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">A = <span class="number">.8</span> <span class="comment"># 幅值</span></span><br><span class="line">f0 = <span class="number">1000</span> <span class="comment"># 信号频率</span></span><br><span class="line">phi = np.pi/<span class="number">2</span> <span class="comment"># 初始相位</span></span><br><span class="line">fs = <span class="number">44100</span> <span class="comment"># 采样频率</span></span><br><span class="line">t = np.arange(<span class="number">-.002</span>, <span class="number">.002</span>, <span class="number">1.0</span>/fs)</span><br><span class="line">x = A*np.cos(<span class="number">2</span>*np.pi*f0*t+phi)</span><br><span class="line"></span><br><span class="line">plt.plot(t, x)</span><br><span class="line">plt.axis([<span class="number">-.002</span>, <span class="number">.002</span>, <span class="number">-.8</span>, <span class="number">.8</span>])</span><br><span class="line">plt.xlabel(<span class="string">'time'</span>)</span><br><span class="line">plt.ylabel(<span class="string">'amplitude'</span>)</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<p><img src="/2019/03/25/dtf-idft/dtf-idft_17_0.png"></p>
-<h1 id="复数形式的sin曲线">复数形式的sin曲线</h1>
-<p><span class="math display">\[
-\bar{x}=Ae^{j(\omega n T + \phi)}=Acos(\omega n T +\phi)+jAsin(\omega n T +\phi)
-\]</span></p>
-<div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
+<p><img src="/2019/03/25/dtf-idft/dtf-idft_17_0.png" alt=""></p>
+<h1 id="复数形式的sin曲线"><a href="#复数形式的sin曲线" class="headerlink" title="复数形式的sin曲线"></a>复数形式的sin曲线</h1><script type="math/tex; mode=display">
+\bar{x}=Ae^{j(\omega n T + \phi)}=Acos(\omega n T +\phi)+jAsin(\omega n T +\phi)</script><div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">N = <span class="number">500</span></span><br><span class="line">k = <span class="number">3</span></span><br><span class="line">n = np.arange(-N/<span class="number">2</span>, N/<span class="number">2</span>)</span><br><span class="line">s = np.exp(<span class="number">1j</span>*<span class="number">2</span>*np.pi*k*n/N)</span><br><span class="line"></span><br><span class="line">plt.plot(n, np.real(s))</span><br><span class="line">plt.plot(n, np.imag(s))</span><br><span class="line">plt.axis([-N/<span class="number">2</span>, N/<span class="number">2</span>, <span class="number">-1</span>, <span class="number">1</span>])</span><br><span class="line">plt.xlabel(<span class="string">'n'</span>)</span><br><span class="line">plt.ylabel(<span class="string">'amplitude'</span>)</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<p><img src="/2019/03/25/dtf-idft/dtf-idft_19_0.png"></p>
-<h1 id="dft">DFT</h1>
-<p><span class="math display">\[X[k]=\sum^{N-1}_{n=0}x[n]e^{-j2\pi kn/N}\ \ \ \ k=0,...,N-1\]</span></p>
-<h2 id="复数sin波形的dft">复数sin波形的DFT</h2>
-<div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
+<p><img src="/2019/03/25/dtf-idft/dtf-idft_19_0.png" alt=""></p>
+<h1 id="DFT"><a href="#DFT" class="headerlink" title="DFT"></a>DFT</h1><script type="math/tex; mode=display">X[k]=\sum^{N-1}_{n=0}x[n]e^{-j2\pi kn/N}\ \ \ \ k=0,...,N-1</script><h2 id="复数sin波形的DFT"><a href="#复数sin波形的DFT" class="headerlink" title="复数sin波形的DFT"></a>复数sin波形的DFT</h2><div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">N=<span class="number">64</span> <span class="comment"># 长度64</span></span><br><span class="line">k0=<span class="number">7</span> <span class="comment"># 频率7</span></span><br><span class="line">x=np.exp(<span class="number">1j</span>*<span class="number">2</span>*np.pi*k0/N*np.arange(N))<span class="comment"># 构造一个正弦信号</span></span><br><span class="line">X=np.array([])</span><br><span class="line"><span class="keyword">for</span> k <span class="keyword">in</span> range(N):</span><br><span class="line">    s=np.exp(<span class="number">1j</span>*<span class="number">2</span>*np.pi*k/N*np.arange(N)) <span class="comment"># 特定的sin曲线</span></span><br><span class="line">    X=np.append(X,sum(x*np.conjugate(s))) <span class="comment"># x * sin曲线的复数共轭</span></span><br><span class="line">    </span><br><span class="line">plt.plot(np.arange(N),np.abs(X))</span><br><span class="line">plt.axis([<span class="number">0</span>,N,<span class="number">0</span>,N])</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<p><img src="/2019/03/25/dtf-idft/dtf-idft_24_0.png"></p>
+<p><img src="/2019/03/25/dtf-idft/dtf-idft_24_0.png" alt=""></p>
 <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 设置一个频率是7的sin信号</span></span><br><span class="line">N=<span class="number">64</span></span><br><span class="line">k0=<span class="number">7</span></span><br><span class="line">x=np.cos(<span class="number">2</span>*np.pi*k0/N * np.arange(N))</span><br><span class="line">X=np.array([])</span><br><span class="line"><span class="keyword">for</span> k <span class="keyword">in</span> range(N):</span><br><span class="line">    s=np.exp(<span class="number">1j</span>*<span class="number">2</span>*np.pi*k/N*np.arange(N))</span><br><span class="line">    X=np.append(X,sum(x*np.conjugate(s))) <span class="comment"># conjugate 复数共轭</span></span><br><span class="line">plt.plot(np.arange(N),np.abs(X))</span><br><span class="line">plt.axis([<span class="number">0</span>,N,<span class="number">0</span>,N])</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<pre><code>[0, 64, 0, 64]</code></pre>
-<p><img src="/2019/03/25/dtf-idft/dtf-idft_25_1.png"></p>
-<h2 id="实数sin波形的dft">实数sin波形的DFT</h2>
-<div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
+<pre><code>[0, 64, 0, 64]
+</code></pre><p><img src="/2019/03/25/dtf-idft/dtf-idft_25_1.png" alt=""></p>
+<h2 id="实数sin波形的DFT"><a href="#实数sin波形的DFT" class="headerlink" title="实数sin波形的DFT"></a>实数sin波形的DFT</h2><div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">N=<span class="number">64</span></span><br><span class="line">k0=<span class="number">7.5</span> <span class="comment"># 频率 7.5</span></span><br><span class="line">x=np.cos(<span class="number">2</span>*np.pi*k0/N * np.arange(N))</span><br><span class="line">X=np.array([])</span><br><span class="line">kv=np.arange(-N/<span class="number">2</span>,N/<span class="number">2</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> k <span class="keyword">in</span> kv:</span><br><span class="line">    s=np.exp(<span class="number">1j</span>*<span class="number">2</span>*np.pi*k/N*np.arange(N))</span><br><span class="line">    X=np.append(X,sum(x*np.conjugate(s))) <span class="comment"># conjugate 复数共轭</span></span><br><span class="line">    </span><br><span class="line">plt.plot(kv,np.abs(X))</span><br><span class="line">plt.axis([-N/<span class="number">2</span>,N/<span class="number">2</span><span class="number">-1</span>,<span class="number">0</span>,N])</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<p><img src="/2019/03/25/dtf-idft/dtf-idft_27_0.png"></p>
-<h1 id="idft-1">IDFT</h1>
-<p><span class="math display">\[\begin{align}
-x[n]=\frac{1}{N}\sum^{N-1}_{k=0}X[k]e^{j2\pi kn/N}\ \ \ \ n=0,...,N-1
-\end{align}\]</span></p>
+<p><img src="/2019/03/25/dtf-idft/dtf-idft_27_0.png" alt=""></p>
+<h1 id="IDFT-1"><a href="#IDFT-1" class="headerlink" title="IDFT"></a>IDFT</h1><p>\begin{align}<br>x[n]=\frac{1}{N}\sum^{N-1}_{k=0}X[k]e^{j2\pi kn/N}\ \ \ \ n=0,…,N-1<br>\end{align}</p>
 <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">y=np.array([])</span><br><span class="line">nv=np.arange(-N/<span class="number">2</span>,N/<span class="number">2</span>)</span><br><span class="line"><span class="keyword">for</span> n <span class="keyword">in</span> nv:</span><br><span class="line">    s=np.exp(<span class="number">1j</span>*<span class="number">2</span>*np.pi*n/N*nv)</span><br><span class="line">    y=np.append(y,<span class="number">1</span>/N*sum(X*s))</span><br><span class="line">plt.plot(kv,y)</span><br><span class="line">plt.axis([-N/<span class="number">2</span>,N/<span class="number">2</span>,<span class="number">-1</span>,<span class="number">1</span>])</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<p><img src="/2019/03/25/dtf-idft/dtf-idft_29_0.png"></p>
+<p><img src="/2019/03/25/dtf-idft/dtf-idft_29_0.png" alt=""></p>
 
       
     </div>
@@ -260,105 +231,86 @@ x[n]=\frac{1}{N}\sum^{N-1}_{k=0}X[k]e^{j2\pi kn/N}\ \ \ \ n=0,...,N-1
         
           <p>现在要做声音相关,所以先学习声音信号处理的内容,这个将会成为一个系列.</p>
 <a id="more"></a>
-<h1 id="dft变换">DFT变换</h1>
-<p>将长度为<code>N</code>离散的时域信号变化成两个长度为<code>N/2+1</code>的实部与虚部信号 ## 标准DFT计算公式 <span class="math display">\[
+<h1 id="DFT变换"><a href="#DFT变换" class="headerlink" title="DFT变换"></a>DFT变换</h1><p>将长度为<code>N</code>离散的时域信号变化成两个长度为<code>N/2+1</code>的实部与虚部信号</p>
+<h2 id="标准DFT计算公式"><a href="#标准DFT计算公式" class="headerlink" title="标准DFT计算公式"></a>标准DFT计算公式</h2><script type="math/tex; mode=display">
 \begin{align}
-X[k] &amp; =\sum^{N-1}_{n=0}x[n]e^{-j2\pi k n / N} \ \ k=0,...,N-1 \\
-n &amp;: 离散时间索引　\\
-k &amp;: 离散频域索引 \\
-\omega_k=2 \pi k /N &amp;: 角频率 \\
-f_k = f_s k / N &amp;: 频率　(f_s : 采样率) 
-\end{align}
-\]</span></p>
-<h2 id="例子-1">例子 1</h2>
-<p><span class="math display">\[
+X[k] & =\sum^{N-1}_{n=0}x[n]e^{-j2\pi k n / N} \ \ k=0,...,N-1 \\
+n &: 离散时间索引　\\
+k &: 离散频域索引 \\
+\omega_k=2 \pi k /N &: 角频率 \\
+f_k = f_s k / N &: 频率　(f_s : 采样率) 
+\end{align}</script><h2 id="例子-1"><a href="#例子-1" class="headerlink" title="例子 1"></a>例子 1</h2><script type="math/tex; mode=display">
 \begin{align}
-s^*_k&amp;=e^{-j2\pi k n / N}=cos(2 \pi k n / N)-jsin(2 \pi k n/N) \\
-如果 N&amp;=4，那么n=0,1,2,3; k=0,1,2,3 \\
-s^*_0&amp;=cos(2\pi*0*n/4)-jsin(2\pi*0*n/4)=[1,1,1,1] \\
-s^*_1&amp;=cos(2\pi*1*n/4)-jsin(2\pi*1*n/4)=[1,-j,-1,j] \\
-s^*_2&amp;=cos(2\pi*2*n/4)-jsin(2\pi*2*n/4)=[1,-1,1,-1] \\
-s^*_3&amp;=cos(2\pi*3*n/4)-jsin(2\pi*3*n/4)=[1,j,-1,-j] \\
-\end{align}
-\]</span> 可以观察下面的图,实际上<code>DFT</code>就是每个频率点与不同正弦波进行內积.如果內积为<code>0</code>那么说明特定频率的正弦波不存在与此波形中.</p>
+s^*_k&=e^{-j2\pi k n / N}=cos(2 \pi k n / N)-jsin(2 \pi k n/N) \\
+如果 N&=4，那么n=0,1,2,3; k=0,1,2,3 \\
+s^*_0&=cos(2\pi*0*n/4)-jsin(2\pi*0*n/4)=[1,1,1,1] \\
+s^*_1&=cos(2\pi*1*n/4)-jsin(2\pi*1*n/4)=[1,-j,-1,j] \\
+s^*_2&=cos(2\pi*2*n/4)-jsin(2\pi*2*n/4)=[1,-1,1,-1] \\
+s^*_3&=cos(2\pi*3*n/4)-jsin(2\pi*3*n/4)=[1,j,-1,-j] \\
+\end{align}</script><p>可以观察下面的图,实际上<code>DFT</code>就是每个频率点与不同正弦波进行內积.如果內积为<code>0</code>那么说明特定频率的正弦波不存在与此波形中.</p>
 <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 例子 1</span></span><br><span class="line">N = <span class="number">8</span></span><br><span class="line">plt.figure(<span class="number">1</span>, figsize=(<span class="number">9.5</span>, <span class="number">6</span>))</span><br><span class="line"><span class="keyword">for</span> k <span class="keyword">in</span> range(N):</span><br><span class="line">	s = np.exp(<span class="number">-1j</span>*<span class="number">2</span>*np.pi*k/N*np.arange(N))</span><br><span class="line">	plt.subplot(N/<span class="number">2</span>, <span class="number">2</span>, k+<span class="number">1</span>)</span><br><span class="line">	plt.plot(np.real(s), <span class="string">'b'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">	plt.axis([<span class="number">0</span>,N<span class="number">-1</span>,<span class="number">-1.5</span>,<span class="number">1.5</span>])</span><br><span class="line">	plt.title(<span class="string">r"$s^&#123;*&#125;_&#123;%s&#125;$"</span>%(k), fontsize=<span class="number">18</span>)</span><br><span class="line">	plt.subplot(N/<span class="number">2</span>, <span class="number">2</span>, k+<span class="number">1</span>)</span><br><span class="line">	plt.plot(np.imag(s), <span class="string">'g'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">	plt.axis([<span class="number">0</span>,N<span class="number">-1</span>,<span class="number">-1.5</span>,<span class="number">1.5</span>])</span><br><span class="line"></span><br><span class="line">plt.tight_layout()</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<p><img src="/2019/03/25/dtf-idft/dtf-idft_3_0.png"></p>
-<h2 id="例子2-标量乘积">例子2 : 标量乘积</h2>
-<p>下面给定一个x=[1,1,1,1,-1,-1,-1,-1]进行计算</p>
+<p><img src="/2019/03/25/dtf-idft/dtf-idft_3_0.png" alt=""></p>
+<h2 id="例子2-标量乘积"><a href="#例子2-标量乘积" class="headerlink" title="例子2 : 标量乘积"></a>例子2 : 标量乘积</h2><p>下面给定一个x=[1,1,1,1,-1,-1,-1,-1]进行计算</p>
 <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">x = np.array([<span class="number">1</span>,<span class="number">1</span>,<span class="number">1</span>,<span class="number">1</span>,<span class="number">-1</span>,<span class="number">-1</span>,<span class="number">-1</span>,<span class="number">-1</span>])</span><br><span class="line">N = <span class="number">8</span></span><br><span class="line">mX = ()</span><br><span class="line">pX = ()</span><br><span class="line">plt.figure(<span class="number">1</span>, figsize=(<span class="number">9.5</span>, <span class="number">6</span>))</span><br><span class="line"></span><br><span class="line">plt.subplot(<span class="number">3</span>,<span class="number">1</span>,<span class="number">1</span>)</span><br><span class="line">plt.plot(x,marker=<span class="string">'x'</span>,color=<span class="string">'b'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.axis([<span class="number">0</span>,N<span class="number">-1</span>,<span class="number">-1.5</span>,<span class="number">1.5</span>])</span><br><span class="line">plt.title(<span class="string">'x = [1,1,1,1,-1,-1,-1,-1]'</span>, fontsize=<span class="number">18</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> k <span class="keyword">in</span> range(<span class="number">8</span>):</span><br><span class="line">    s = np.exp(<span class="number">1j</span>*<span class="number">2</span>*np.pi*k/N*np.arange(N))</span><br><span class="line">    X = sum(x*np.conjugate(s))</span><br><span class="line">    mX = np.append(mX, np.abs(X))</span><br><span class="line">    pX = np.append(pX, np.angle(X))</span><br><span class="line"></span><br><span class="line">plt.subplot(<span class="number">3</span>,<span class="number">1</span>,<span class="number">2</span>)</span><br><span class="line">plt.plot(mX, marker=<span class="string">'x'</span>, color=<span class="string">'r'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.title(<span class="string">'$abs(&lt;x,s_k&gt;)$'</span>, fontsize=<span class="number">18</span>) <span class="comment"># 幅度谱</span></span><br><span class="line"></span><br><span class="line">plt.subplot(<span class="number">3</span>,<span class="number">1</span>,<span class="number">3</span>)</span><br><span class="line">plt.plot(pX, marker=<span class="string">'x'</span>, color=<span class="string">'c'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.title(<span class="string">'$angle(&lt;x,s_k&gt;)$'</span>, fontsize=<span class="number">18</span>) <span class="comment"># 相位谱</span></span><br><span class="line"></span><br><span class="line">plt.tight_layout()</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<p><img src="/2019/03/25/dtf-idft/dtf-idft_5_0.png"></p>
-<h2 id="例子-3">例子 3</h2>
-<p>对一段音频数据进行<code>DFT</code>变换</p>
+<p><img src="/2019/03/25/dtf-idft/dtf-idft_5_0.png" alt=""></p>
+<h2 id="例子-3"><a href="#例子-3" class="headerlink" title="例子 3"></a>例子 3</h2><p>对一段音频数据进行<code>DFT</code>变换</p>
 <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> sys</span><br><span class="line"><span class="keyword">import</span> math</span><br><span class="line"></span><br><span class="line">sys.path.append(<span class="string">'../software/models'</span>)</span><br><span class="line"><span class="keyword">import</span> utilFunctions <span class="keyword">as</span> UF</span><br><span class="line"><span class="keyword">import</span> dftModel <span class="keyword">as</span> DFT</span><br><span class="line"></span><br><span class="line">(fs, x) = UF.wavread(<span class="string">'../sounds/oboe-A4.wav'</span>)</span><br><span class="line">w = np.hamming(<span class="number">511</span>)</span><br><span class="line">N = <span class="number">512</span></span><br><span class="line">pin = <span class="number">5000</span></span><br><span class="line">hM1 = int(math.floor((w.size+<span class="number">1</span>)/<span class="number">2</span>)) </span><br><span class="line">hM2 = int(math.floor(w.size/<span class="number">2</span>))  </span><br><span class="line">x1 = x[pin-hM1:pin+hM2]</span><br><span class="line">mX, pX = DFT.dftAnal(x1, w, N)</span><br><span class="line"></span><br><span class="line">plt.figure(<span class="number">1</span>, figsize=(<span class="number">9.5</span>, <span class="number">7</span>))</span><br><span class="line"></span><br><span class="line">plt.subplot(<span class="number">311</span>)</span><br><span class="line">plt.plot(np.arange(-hM1, hM2), x1, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.axis([-hM1, hM2, min(x1), max(x1)])</span><br><span class="line">plt.ylabel(<span class="string">'amplitude'</span>)</span><br><span class="line">plt.title(<span class="string">'x (oboe-A4.wav)'</span>)</span><br><span class="line"></span><br><span class="line">plt.subplot(<span class="number">3</span>,<span class="number">1</span>,<span class="number">2</span>)</span><br><span class="line">plt.plot(np.arange(mX.size), mX, <span class="string">'r'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.axis([<span class="number">0</span>,mX.size,min(mX),max(mX)])</span><br><span class="line">plt.title (<span class="string">'magnitude spectrum: mX = 20*log10(abs(X))'</span>)</span><br><span class="line">plt.ylabel(<span class="string">'amplitude (dB)'</span>)</span><br><span class="line"></span><br><span class="line">plt.subplot(<span class="number">3</span>,<span class="number">1</span>,<span class="number">3</span>)</span><br><span class="line">plt.plot(np.arange(mX.size), pX, <span class="string">'c'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.axis([<span class="number">0</span>,mX.size,min(pX),max(pX)])</span><br><span class="line">plt.title (<span class="string">'phase spectrum: pX=unwrap(angle(X))'</span>)</span><br><span class="line">plt.ylabel(<span class="string">'phase (radians)'</span>)</span><br><span class="line"></span><br><span class="line">plt.tight_layout()</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<p><img src="/2019/03/25/dtf-idft/dtf-idft_7_0.png"></p>
-<h1 id="复数sin曲线的dft">复数sin曲线的DFT</h1>
-<p>当输入的信号为复数<code>sin</code>曲线是如何进行<code>DFT</code>变换? <span class="math display">\[
+<p><img src="/2019/03/25/dtf-idft/dtf-idft_7_0.png" alt=""></p>
+<h1 id="复数sin曲线的DFT"><a href="#复数sin曲线的DFT" class="headerlink" title="复数sin曲线的DFT"></a>复数sin曲线的DFT</h1><p>当输入的信号为复数<code>sin</code>曲线是如何进行<code>DFT</code>变换?</p>
+<script type="math/tex; mode=display">
 \begin{align}
-x_1[n] &amp; = e^{j2\pi k_0 n / N} \ \ k=0,...,N-1 \\
-X_1[k] &amp; = \sum^{N-1}_{n=0} x_1[n]  e^{-j2\pi k_0 n / N} \\
-    &amp;=\sum^{N-1}_{n=0}e^{j2\pi k_0n/N}e^{-j2\pi kn/N} \\
-    &amp;=\sum^{N-1}_{n=0}e^{-j2\pi (k-k_0)n/N} \\
-    &amp;=\frac{1-e^{-j2\pi (k-k_0)}}{1-e^{-j2\pi (k-k_0)/N}} (一个几何序列的总和.)
-\end{align}
-\]</span> 如果<span class="math inline">\(k\neq k_0\)</span>,分母不为0且分子为0</p>
-<p>如果<span class="math inline">\(k=k_0\)</span>那么<span class="math inline">\(X_1[k]=N\)</span>,<span class="math inline">\(k\neq k_0\)</span>时<span class="math inline">\(X_1[k]=0\)</span></p>
+x_1[n] & = e^{j2\pi k_0 n / N} \ \ k=0,...,N-1 \\
+X_1[k] & = \sum^{N-1}_{n=0} x_1[n]  e^{-j2\pi k_0 n / N} \\
+    &=\sum^{N-1}_{n=0}e^{j2\pi k_0n/N}e^{-j2\pi kn/N} \\
+    &=\sum^{N-1}_{n=0}e^{-j2\pi (k-k_0)n/N} \\
+    &=\frac{1-e^{-j2\pi (k-k_0)}}{1-e^{-j2\pi (k-k_0)/N}} (一个几何序列的总和.)
+\end{align}</script><p>如果$k\neq k_0$,分母不为0且分子为0</p>
+<p>如果$k=k_0$那么$X_1[k]=N$,$k\neq k_0$时$X_1[k]=0$</p>
 <p>对于程序上来说还是没有很大的区别</p>
 <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line">tol = <span class="number">1e-5</span></span><br><span class="line"></span><br><span class="line">plt.figure(<span class="number">1</span>, figsize=(<span class="number">9.5</span>, <span class="number">7</span>))</span><br><span class="line">N = <span class="number">64</span></span><br><span class="line">k0 = <span class="number">7.5</span></span><br><span class="line">X = np.array([])</span><br><span class="line">x = np.exp(<span class="number">1j</span>*<span class="number">2</span>*np.pi*k0/N*np.arange(N))</span><br><span class="line"></span><br><span class="line">plt.subplot(<span class="number">311</span>)</span><br><span class="line">plt.title(<span class="string">'complex sinewave: x; k_0 = 7.5, N = 64'</span>)</span><br><span class="line">plt.plot(np.arange(N), np.real(x),<span class="string">'b'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.plot(np.arange(N), np.imag(x),<span class="string">'g'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.axis([<span class="number">0</span>,N<span class="number">-1</span>,<span class="number">-1</span>,<span class="number">1</span>])</span><br><span class="line"><span class="keyword">for</span> k <span class="keyword">in</span> range(N):</span><br><span class="line">	s = np.exp(<span class="number">1j</span>*<span class="number">2</span>*np.pi*k/N*np.arange(N))</span><br><span class="line">	X = np.append(X, sum(x*np.conjugate(s)))</span><br><span class="line"></span><br><span class="line">X.real[np.abs(X.real) &lt; tol] = <span class="number">0.0</span></span><br><span class="line">X.imag[np.abs(X.imag) &lt; tol] = <span class="number">0.0</span></span><br><span class="line"></span><br><span class="line">plt.subplot(<span class="number">312</span>)</span><br><span class="line">plt.title(<span class="string">'magnitude spectrum: abs(X)'</span>)</span><br><span class="line">plt.plot(np.arange(N), abs(X), <span class="string">'r'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.axis([<span class="number">0</span>,N<span class="number">-1</span>,<span class="number">0</span>,N])</span><br><span class="line"></span><br><span class="line">plt.subplot(<span class="number">313</span>)</span><br><span class="line">plt.title(<span class="string">'phase spectrum: angle(X)'</span>)</span><br><span class="line">plt.plot(np.arange(N), np.angle(X),<span class="string">'c'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.axis([<span class="number">0</span>,N<span class="number">-1</span>,-np.pi,np.pi])</span><br><span class="line"></span><br><span class="line">plt.tight_layout()</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<p><img src="/2019/03/25/dtf-idft/dtf-idft_9_0.png"></p>
-<h1 id="纯实sin信号的dft">纯实sin信号的DFT</h1>
-<p><span class="math display">\[
+<p><img src="/2019/03/25/dtf-idft/dtf-idft_9_0.png" alt=""></p>
+<h1 id="纯实sin信号的DFT"><a href="#纯实sin信号的DFT" class="headerlink" title="纯实sin信号的DFT"></a>纯实sin信号的DFT</h1><script type="math/tex; mode=display">
 \begin{align}
-x_3[n] &amp; = A_0cos(2\pi k_0 n/N)=A_0/2e^{j2\pi k_0n/N}+A_0/2e^{-j2\pi k_0n/N} \\
-X_3[k]&amp;=\sum^{N/2-1}_{n=-N/2}x_3[n]e^{-j2\pi kn/N}\\
-&amp;=\sum^{N/2-1}_{n=-N/2}(\frac{A_0}{2}e^{j2\pi k_0n/N}+\frac{A_0}{2}e^{-j2\pi k_0n/N})e^{-j2\pi kn/N} \\
-&amp;=\sum^{N/2-1}_{n=-N/2}\frac{A_0}{2}e^{j2\pi k_0n/N}e^{-j2\pi kn/N}+\sum^{N/2-1}_{n=-N/2}\frac{A_0}{2}e^{-j2\pi k_0n/N}e^{-j2\pi kn/N} \\
-&amp;=\sum^{N/2-1}_{n=-N/2}\frac{A_0}{2}e^{-j2\pi(k-k_0)n/N} + \sum^{N/2-1}_{n=-N/2}\frac{A_0}{2}e^{-j2\pi(k+k_0)n/N}\\
-&amp;=N\frac{A_0}{2} \ \ \ \ 当 k=k_0,-k_0 ; 0表示剩下的k
-\end{align}
-\]</span></p>
-<div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
+x_3[n] & = A_0cos(2\pi k_0 n/N)=A_0/2e^{j2\pi k_0n/N}+A_0/2e^{-j2\pi k_0n/N} \\
+X_3[k]&=\sum^{N/2-1}_{n=-N/2}x_3[n]e^{-j2\pi kn/N}\\
+&=\sum^{N/2-1}_{n=-N/2}(\frac{A_0}{2}e^{j2\pi k_0n/N}+\frac{A_0}{2}e^{-j2\pi k_0n/N})e^{-j2\pi kn/N} \\
+&=\sum^{N/2-1}_{n=-N/2}\frac{A_0}{2}e^{j2\pi k_0n/N}e^{-j2\pi kn/N}+\sum^{N/2-1}_{n=-N/2}\frac{A_0}{2}e^{-j2\pi k_0n/N}e^{-j2\pi kn/N} \\
+&=\sum^{N/2-1}_{n=-N/2}\frac{A_0}{2}e^{-j2\pi(k-k_0)n/N} + \sum^{N/2-1}_{n=-N/2}\frac{A_0}{2}e^{-j2\pi(k+k_0)n/N}\\
+&=N\frac{A_0}{2} \ \ \ \ 当 k=k_0,-k_0 ; 0表示剩下的k
+\end{align}</script><div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">tol = <span class="number">1e-5</span></span><br><span class="line"></span><br><span class="line">plt.figure(<span class="number">1</span>, figsize=(<span class="number">9.5</span>, <span class="number">7</span>))</span><br><span class="line">N = <span class="number">64</span></span><br><span class="line">k0 = <span class="number">7.5</span></span><br><span class="line">X = np.array([])</span><br><span class="line">nv = np.arange(-N/<span class="number">2</span>, N/<span class="number">2</span>)</span><br><span class="line">kv = np.arange(-N/<span class="number">2</span>, N/<span class="number">2</span>)</span><br><span class="line">x = np.cos(<span class="number">2</span>*np.pi*k0/N*nv)</span><br><span class="line"></span><br><span class="line">plt.subplot(<span class="number">311</span>)</span><br><span class="line">plt.title(<span class="string">'x; k_0 = 7.5, N = 64'</span>)</span><br><span class="line">plt.plot(nv, x,<span class="string">'b'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.axis([-N/<span class="number">2</span>,N/<span class="number">2</span><span class="number">-1</span>,<span class="number">-1</span>,<span class="number">1</span>])</span><br><span class="line"><span class="keyword">for</span> k <span class="keyword">in</span> kv:</span><br><span class="line">    s = np.exp(<span class="number">1j</span>*<span class="number">2</span>*np.pi*k/N*nv)</span><br><span class="line">    X = np.append(X, sum(x*np.conjugate(s)))</span><br><span class="line"></span><br><span class="line">X.real[np.abs(X.real) &lt; tol] = <span class="number">0.0</span></span><br><span class="line">X.imag[np.abs(X.imag) &lt; tol] = <span class="number">0.0</span></span><br><span class="line"></span><br><span class="line">plt.subplot(<span class="number">312</span>)</span><br><span class="line">plt.title(<span class="string">'magnitude spectrum: abs(X)'</span>)</span><br><span class="line">plt.plot(kv, abs(X), <span class="string">'r'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.axis([-N/<span class="number">2</span>,N/<span class="number">2</span><span class="number">-1</span>,<span class="number">0</span>,N])</span><br><span class="line"></span><br><span class="line">plt.subplot(<span class="number">313</span>)</span><br><span class="line">plt.title(<span class="string">'phase spectrum: angle(X)'</span>)</span><br><span class="line">plt.plot(kv, np.angle(X),<span class="string">'c'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.axis([-N/<span class="number">2</span>,N/<span class="number">2</span><span class="number">-1</span>,-np.pi,np.pi])</span><br><span class="line"></span><br><span class="line">plt.tight_layout()</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<p><img src="/2019/03/25/dtf-idft/dtf-idft_11_0.png"></p>
-<h1 id="idft">IDFT</h1>
-<p><span class="math display">\[
+<p><img src="/2019/03/25/dtf-idft/dtf-idft_11_0.png" alt=""></p>
+<h1 id="IDFT"><a href="#IDFT" class="headerlink" title="IDFT"></a>IDFT</h1><script type="math/tex; mode=display">
 \begin{align}
 x[n]=\frac{1}{N}X[k]s_k[n]=\frac{1}{N}\sum^{N-1}_{k=0}X[k]e^{j2\pi kn/N}\ \ \ \ n=0,...,N-1
-\end{align}
-\]</span></p>
-<h2 id="例子-1-1">例子 1</h2>
-<p><span class="math display">\[
+\end{align}</script><h2 id="例子-1-1"><a href="#例子-1-1" class="headerlink" title="例子 1"></a>例子 1</h2><script type="math/tex; mode=display">
 \begin{align}
-X[k]&amp;=[0,4,0,0];\ \ N=4 \\
-x[0]&amp;=\frac{1}{4}(X*x)[n=0]=\frac{1}{4}(0*1+4*1+0*1+0*1)=1 \\
-x[1]&amp;=\frac{1}{4}(X*x)[n=1]=\frac{1}{4}(0*1+4*1+0*(-1)+0*(-j))=j \\
-x[2]&amp;=\frac{1}{4}(X*x)[n=2]=\frac{1}{4}(0*1+4*(-1)+0*1+0*(-1))=-1 \\
-x[3]&amp;=\frac{1}{4}(X*x)[n=3]=\frac{1}{4}(0*1+4*(-j)+0*(-1)+0*j)=-j 
-\end{align}
-\]</span></p>
-<h2 id="例子-2">例子 2</h2>
-<p>真实信号的逆DFT <span class="math display">\[X[k]=|X[k]e^{j&lt;X[k]} and X[-K]=|X[k]|e^{-j&lt;X[k]}\ \ \ \ k=0,1,...,N/2-1\]</span></p>
-<div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
+X[k]&=[0,4,0,0];\ \ N=4 \\
+x[0]&=\frac{1}{4}(X*x)[n=0]=\frac{1}{4}(0*1+4*1+0*1+0*1)=1 \\
+x[1]&=\frac{1}{4}(X*x)[n=1]=\frac{1}{4}(0*1+4*1+0*(-1)+0*(-j))=j \\
+x[2]&=\frac{1}{4}(X*x)[n=2]=\frac{1}{4}(0*1+4*(-1)+0*1+0*(-1))=-1 \\
+x[3]&=\frac{1}{4}(X*x)[n=3]=\frac{1}{4}(0*1+4*(-j)+0*(-1)+0*j)=-j 
+\end{align}</script><h2 id="例子-2"><a href="#例子-2" class="headerlink" title="例子 2"></a>例子 2</h2><p>真实信号的逆DFT</p>
+<script type="math/tex; mode=display">X[k]=|X[k]e^{j<X[k]} and X[-K]=|X[k]|e^{-j<X[k]}\ \ \ \ k=0,1,...,N/2-1</script><div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> sys</span><br><span class="line"></span><br><span class="line">sys.path.append(<span class="string">'../software/models/'</span>)</span><br><span class="line"><span class="keyword">import</span> dftModel <span class="keyword">as</span> DFT</span><br><span class="line"><span class="keyword">import</span> math</span><br><span class="line"></span><br><span class="line">k0 = <span class="number">8.5</span></span><br><span class="line">N = <span class="number">64</span></span><br><span class="line">w = np.ones(N)</span><br><span class="line">x = np.cos(<span class="number">2</span>*np.pi*k0/N*np.arange(-N/<span class="number">2</span>,N/<span class="number">2</span>))</span><br><span class="line">mX, pX = DFT.dftAnal(x, w, N)</span><br><span class="line">y = DFT.dftSynth(mX, pX, N)</span><br><span class="line"></span><br><span class="line">plt.figure(<span class="number">1</span>, figsize=(<span class="number">9.5</span>, <span class="number">5</span>))</span><br><span class="line">plt.subplot(<span class="number">311</span>)</span><br><span class="line">plt.title(<span class="string">'positive freq. magnitude spectrum in dB: mX'</span>)</span><br><span class="line">plt.plot(np.arange(mX.size), mX, <span class="string">'r'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.axis([<span class="number">0</span>,mX.size, min(mX), max(mX)+<span class="number">1</span>])</span><br><span class="line"></span><br><span class="line">plt.subplot(<span class="number">312</span>)</span><br><span class="line">plt.title(<span class="string">'positive freq. phase spectrum: pX'</span>)</span><br><span class="line">plt.plot(np.arange(pX.size), pX, <span class="string">'c'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.axis([<span class="number">0</span>, pX.size,-np.pi,np.pi])</span><br><span class="line"></span><br><span class="line">plt.subplot(<span class="number">313</span>)</span><br><span class="line">plt.title(<span class="string">'inverse spectrum: IDFT(X)'</span>)</span><br><span class="line">plt.plot(np.arange(-N/<span class="number">2</span>, N/<span class="number">2</span>), y,<span class="string">'b'</span>, lw=<span class="number">1.5</span>)</span><br><span class="line">plt.axis([-N/<span class="number">2</span>,N/<span class="number">2</span><span class="number">-1</span>,min(y), max(y)])</span><br><span class="line"></span><br><span class="line">plt.tight_layout()</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<p><img src="/2019/03/25/dtf-idft/dtf-idft_15_0.png"></p>
-<h1 id="普通的-sin函数">普通的 sin函数</h1>
-<p><span class="math display">\[x[n]=Acos(2\pi fnT+/phi)\]</span></p>
-<p>A=幅值</p>
+<p><img src="/2019/03/25/dtf-idft/dtf-idft_15_0.png" alt=""></p>
+<h1 id="普通的-sin函数"><a href="#普通的-sin函数" class="headerlink" title="普通的 sin函数"></a>普通的 sin函数</h1><script type="math/tex; mode=display">x[n]=Acos(2\pi fnT+/phi)</script><p>A=幅值</p>
 <p>f=频率</p>
 <p>n=时间索引</p>
 <p>T=抽样周期</p>
@@ -366,51 +318,41 @@ x[3]&amp;=\frac{1}{4}(X*x)[n=3]=\frac{1}{4}(0*1+4*(-j)+0*(-1)+0*j)=-j
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">A = <span class="number">.8</span> <span class="comment"># 幅值</span></span><br><span class="line">f0 = <span class="number">1000</span> <span class="comment"># 信号频率</span></span><br><span class="line">phi = np.pi/<span class="number">2</span> <span class="comment"># 初始相位</span></span><br><span class="line">fs = <span class="number">44100</span> <span class="comment"># 采样频率</span></span><br><span class="line">t = np.arange(<span class="number">-.002</span>, <span class="number">.002</span>, <span class="number">1.0</span>/fs)</span><br><span class="line">x = A*np.cos(<span class="number">2</span>*np.pi*f0*t+phi)</span><br><span class="line"></span><br><span class="line">plt.plot(t, x)</span><br><span class="line">plt.axis([<span class="number">-.002</span>, <span class="number">.002</span>, <span class="number">-.8</span>, <span class="number">.8</span>])</span><br><span class="line">plt.xlabel(<span class="string">'time'</span>)</span><br><span class="line">plt.ylabel(<span class="string">'amplitude'</span>)</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<p><img src="/2019/03/25/dtf-idft/dtf-idft_17_0.png"></p>
-<h1 id="复数形式的sin曲线">复数形式的sin曲线</h1>
-<p><span class="math display">\[
-\bar{x}=Ae^{j(\omega n T + \phi)}=Acos(\omega n T +\phi)+jAsin(\omega n T +\phi)
-\]</span></p>
-<div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
+<p><img src="/2019/03/25/dtf-idft/dtf-idft_17_0.png" alt=""></p>
+<h1 id="复数形式的sin曲线"><a href="#复数形式的sin曲线" class="headerlink" title="复数形式的sin曲线"></a>复数形式的sin曲线</h1><script type="math/tex; mode=display">
+\bar{x}=Ae^{j(\omega n T + \phi)}=Acos(\omega n T +\phi)+jAsin(\omega n T +\phi)</script><div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">N = <span class="number">500</span></span><br><span class="line">k = <span class="number">3</span></span><br><span class="line">n = np.arange(-N/<span class="number">2</span>, N/<span class="number">2</span>)</span><br><span class="line">s = np.exp(<span class="number">1j</span>*<span class="number">2</span>*np.pi*k*n/N)</span><br><span class="line"></span><br><span class="line">plt.plot(n, np.real(s))</span><br><span class="line">plt.plot(n, np.imag(s))</span><br><span class="line">plt.axis([-N/<span class="number">2</span>, N/<span class="number">2</span>, <span class="number">-1</span>, <span class="number">1</span>])</span><br><span class="line">plt.xlabel(<span class="string">'n'</span>)</span><br><span class="line">plt.ylabel(<span class="string">'amplitude'</span>)</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<p><img src="/2019/03/25/dtf-idft/dtf-idft_19_0.png"></p>
-<h1 id="dft">DFT</h1>
-<p><span class="math display">\[X[k]=\sum^{N-1}_{n=0}x[n]e^{-j2\pi kn/N}\ \ \ \ k=0,...,N-1\]</span></p>
-<h2 id="复数sin波形的dft">复数sin波形的DFT</h2>
-<div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
+<p><img src="/2019/03/25/dtf-idft/dtf-idft_19_0.png" alt=""></p>
+<h1 id="DFT"><a href="#DFT" class="headerlink" title="DFT"></a>DFT</h1><script type="math/tex; mode=display">X[k]=\sum^{N-1}_{n=0}x[n]e^{-j2\pi kn/N}\ \ \ \ k=0,...,N-1</script><h2 id="复数sin波形的DFT"><a href="#复数sin波形的DFT" class="headerlink" title="复数sin波形的DFT"></a>复数sin波形的DFT</h2><div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">N=<span class="number">64</span> <span class="comment"># 长度64</span></span><br><span class="line">k0=<span class="number">7</span> <span class="comment"># 频率7</span></span><br><span class="line">x=np.exp(<span class="number">1j</span>*<span class="number">2</span>*np.pi*k0/N*np.arange(N))<span class="comment"># 构造一个正弦信号</span></span><br><span class="line">X=np.array([])</span><br><span class="line"><span class="keyword">for</span> k <span class="keyword">in</span> range(N):</span><br><span class="line">    s=np.exp(<span class="number">1j</span>*<span class="number">2</span>*np.pi*k/N*np.arange(N)) <span class="comment"># 特定的sin曲线</span></span><br><span class="line">    X=np.append(X,sum(x*np.conjugate(s))) <span class="comment"># x * sin曲线的复数共轭</span></span><br><span class="line">    </span><br><span class="line">plt.plot(np.arange(N),np.abs(X))</span><br><span class="line">plt.axis([<span class="number">0</span>,N,<span class="number">0</span>,N])</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<p><img src="/2019/03/25/dtf-idft/dtf-idft_24_0.png"></p>
+<p><img src="/2019/03/25/dtf-idft/dtf-idft_24_0.png" alt=""></p>
 <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 设置一个频率是7的sin信号</span></span><br><span class="line">N=<span class="number">64</span></span><br><span class="line">k0=<span class="number">7</span></span><br><span class="line">x=np.cos(<span class="number">2</span>*np.pi*k0/N * np.arange(N))</span><br><span class="line">X=np.array([])</span><br><span class="line"><span class="keyword">for</span> k <span class="keyword">in</span> range(N):</span><br><span class="line">    s=np.exp(<span class="number">1j</span>*<span class="number">2</span>*np.pi*k/N*np.arange(N))</span><br><span class="line">    X=np.append(X,sum(x*np.conjugate(s))) <span class="comment"># conjugate 复数共轭</span></span><br><span class="line">plt.plot(np.arange(N),np.abs(X))</span><br><span class="line">plt.axis([<span class="number">0</span>,N,<span class="number">0</span>,N])</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<pre><code>[0, 64, 0, 64]</code></pre>
-<p><img src="/2019/03/25/dtf-idft/dtf-idft_25_1.png"></p>
-<h2 id="实数sin波形的dft">实数sin波形的DFT</h2>
-<div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
+<pre><code>[0, 64, 0, 64]
+</code></pre><p><img src="/2019/03/25/dtf-idft/dtf-idft_25_1.png" alt=""></p>
+<h2 id="实数sin波形的DFT"><a href="#实数sin波形的DFT" class="headerlink" title="实数sin波形的DFT"></a>实数sin波形的DFT</h2><div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">N=<span class="number">64</span></span><br><span class="line">k0=<span class="number">7.5</span> <span class="comment"># 频率 7.5</span></span><br><span class="line">x=np.cos(<span class="number">2</span>*np.pi*k0/N * np.arange(N))</span><br><span class="line">X=np.array([])</span><br><span class="line">kv=np.arange(-N/<span class="number">2</span>,N/<span class="number">2</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> k <span class="keyword">in</span> kv:</span><br><span class="line">    s=np.exp(<span class="number">1j</span>*<span class="number">2</span>*np.pi*k/N*np.arange(N))</span><br><span class="line">    X=np.append(X,sum(x*np.conjugate(s))) <span class="comment"># conjugate 复数共轭</span></span><br><span class="line">    </span><br><span class="line">plt.plot(kv,np.abs(X))</span><br><span class="line">plt.axis([-N/<span class="number">2</span>,N/<span class="number">2</span><span class="number">-1</span>,<span class="number">0</span>,N])</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<p><img src="/2019/03/25/dtf-idft/dtf-idft_27_0.png"></p>
-<h1 id="idft-1">IDFT</h1>
-<p><span class="math display">\[\begin{align}
-x[n]=\frac{1}{N}\sum^{N-1}_{k=0}X[k]e^{j2\pi kn/N}\ \ \ \ n=0,...,N-1
-\end{align}\]</span></p>
+<p><img src="/2019/03/25/dtf-idft/dtf-idft_27_0.png" alt=""></p>
+<h1 id="IDFT-1"><a href="#IDFT-1" class="headerlink" title="IDFT"></a>IDFT</h1><p>\begin{align}<br>x[n]=\frac{1}{N}\sum^{N-1}_{k=0}X[k]e^{j2\pi kn/N}\ \ \ \ n=0,…,N-1<br>\end{align}</p>
 <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">y=np.array([])</span><br><span class="line">nv=np.arange(-N/<span class="number">2</span>,N/<span class="number">2</span>)</span><br><span class="line"><span class="keyword">for</span> n <span class="keyword">in</span> nv:</span><br><span class="line">    s=np.exp(<span class="number">1j</span>*<span class="number">2</span>*np.pi*n/N*nv)</span><br><span class="line">    y=np.append(y,<span class="number">1</span>/N*sum(X*s))</span><br><span class="line">plt.plot(kv,y)</span><br><span class="line">plt.axis([-N/<span class="number">2</span>,N/<span class="number">2</span>,<span class="number">-1</span>,<span class="number">1</span>])</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<p><img src="/2019/03/25/dtf-idft/dtf-idft_29_0.png"></p>
+<p><img src="/2019/03/25/dtf-idft/dtf-idft_29_0.png" alt=""></p>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2019/03/25/dtf-idft/" data-id="ck8qw4x5q00f30w6xy0wyr998" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2019/03/25/dtf-idft/" data-id="ck8qwj21v00e7s36xgo83w5zy" class="article-share-link">Share</a>
       
       
       
