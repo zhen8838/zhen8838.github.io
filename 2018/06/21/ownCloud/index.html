@@ -7,20 +7,20 @@
   
   <title>ubuntu18.04安装owncloud | </title>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta name="description" content="最近实验室闲置了一台主机，就将这个主机搭建成一个公有云给大家使用。系统版本是ubuntu server。">
+  <meta name="description" content="最近实验室闲置了一台主机，就将这个主机搭建成一个公有云给大家使用。 系统版本是ubuntu server。">
 <meta name="keywords" content="Linux">
 <meta property="og:type" content="article">
 <meta property="og:title" content="ubuntu18.04安装owncloud">
 <meta property="og:url" content="https://zhen8838.github.io/2018/06/21/ownCloud/index.html">
 <meta property="og:site_name">
-<meta property="og:description" content="最近实验室闲置了一台主机，就将这个主机搭建成一个公有云给大家使用。系统版本是ubuntu server。">
+<meta property="og:description" content="最近实验室闲置了一台主机，就将这个主机搭建成一个公有云给大家使用。 系统版本是ubuntu server。">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https://zhen8838.github.io/2018/06/21/ownCloud/finsh.png">
 <meta property="og:image" content="https://zhen8838.github.io/2018/06/21/ownCloud/end.png">
 <meta property="og:updated_time" content="2019-03-22T08:58:12.770Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="ubuntu18.04安装owncloud">
-<meta name="twitter:description" content="最近实验室闲置了一台主机，就将这个主机搭建成一个公有云给大家使用。系统版本是ubuntu server。">
+<meta name="twitter:description" content="最近实验室闲置了一台主机，就将这个主机搭建成一个公有云给大家使用。 系统版本是ubuntu server。">
 <meta name="twitter:image" content="https://zhen8838.github.io/2018/06/21/ownCloud/finsh.png">
   
   
@@ -94,69 +94,83 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <p>最近实验室闲置了一台主机，就将这个主机搭建成一个公有云给大家使用。<br>系统版本是ubuntu server。</p>
+        <p>最近实验室闲置了一台主机，就将这个主机搭建成一个公有云给大家使用。 系统版本是ubuntu server。</p>
 <a id="more"></a>
-<h1 id="安装Apache"><a href="#安装Apache" class="headerlink" title="安装Apache"></a>安装Apache</h1><p>首先安装apache以供owncloud使用：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt install apache2</span><br></pre></td></tr></table></figure></p>
-<p>需要禁用apache目录列表<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo a2dismod autoindex</span><br></pre></td></tr></table></figure></p>
-<p>开启额外模块<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">sudo a2enmod rewrite</span><br><span class="line">sudo a2enmod headers</span><br><span class="line">sudo a2enmod env</span><br><span class="line">sudo a2enmod dir</span><br><span class="line">sudo a2enmod mime</span><br></pre></td></tr></table></figure></p>
-<p>重启apache<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo systemctl restart apache2</span><br></pre></td></tr></table></figure></p>
-<h1 id="安装MariaDB-Server"><a href="#安装MariaDB-Server" class="headerlink" title="安装MariaDB Server"></a>安装MariaDB Server</h1><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get install mariadb-server mariadb-client</span><br></pre></td></tr></table></figure>
-<p>安装完成后添加密码<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo mysql_secure_installation</span><br></pre></td></tr></table></figure></p>
-<p>执行后设置密码、移除匿名用户、不允许root登录、删除测试数据库。<br>接下来登录MariaDB并创建数据库<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo mysql -u root -p</span><br></pre></td></tr></table></figure></p>
-<p>下面的命令是建立数据库，其中的用户名和密码需要替换成自己的。<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">CREATE DATABASE owncloud;</span><br><span class="line">CREATE USER <span class="string">'oc_user'</span>@<span class="string">'localhost'</span> IDENTIFIED BY <span class="string">'PASSWORD'</span>;</span><br><span class="line">GRANT ALL ON owncloud.* TO <span class="string">'oc_user'</span>@<span class="string">'localhost'</span> IDENTIFIED BY <span class="string">'PASSWORD'</span> WITH GRANT OPTION; </span><br><span class="line">FLUSH PRIVILEGES;</span><br><span class="line">EXIT;</span><br></pre></td></tr></table></figure></p>
-<h1 id="安装php"><a href="#安装php" class="headerlink" title="安装php"></a>安装php</h1><p>现在owncloud只支持php7.1：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get install software-properties-common</span><br><span class="line">sudo add-apt-repository ppa:ondrej/php</span><br><span class="line">sudo apt update</span><br><span class="line">sudo apt install php7.1</span><br></pre></td></tr></table></figure></p>
-<p>接着安装php模块：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get install php7.1-cli php7.1-common php7.1-mbstring php7.1-gd php7.1-intl php7.1-xml php7.1-mysql php7.1-zip php7.1-curl php7.1-xmlrpc</span><br></pre></td></tr></table></figure></p>
-<p>安装完成后配置一下：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo vi /etc/php/7.1/apache2/php.ini</span><br></pre></td></tr></table></figure></p>
-<p>修改以下内容<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">file_uploads = On</span><br><span class="line">allow_url_fopen = On</span><br><span class="line">memory_limit = 256M</span><br><span class="line">upload_max_file_size = 100M</span><br></pre></td></tr></table></figure></p>
-<p>重启apache<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo systemctl restart apache2</span><br></pre></td></tr></table></figure></p>
-<h1 id="下载owncloud"><a href="#下载owncloud" class="headerlink" title="下载owncloud"></a>下载owncloud</h1><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> /tmp </span><br><span class="line">wget https://download.owncloud.org/community/owncloud-10.0.3.zip</span><br></pre></td></tr></table></figure>
-<p>解压并移动文件：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">unzip owncloud-10.0.3.zip</span><br><span class="line">sudo mv owncloud /var/www/html/owncloud/</span><br></pre></td></tr></table></figure></p>
-<h1 id="设置目录和权限"><a href="#设置目录和权限" class="headerlink" title="设置目录和权限"></a>设置目录和权限</h1><p>为了保证owncloud工作，需要设置操作权限：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sudo chown -R www-data:www-data /var/www/html/owncloud/</span><br><span class="line">sudo chmod -R 755 /var/www/html/owncloud/</span><br></pre></td></tr></table></figure></p>
-<h1 id="完成安装"><a href="#完成安装" class="headerlink" title="完成安装"></a>完成安装</h1><p>需要登录到对应的网址(<a href="http://ipadress/owncloud)进行最后的设置：" target="_blank" rel="noopener">http://ipadress/owncloud)进行最后的设置：</a><br>输入你想要的账户名与密码，以及配置数据库的名字。</p>
-<div align="center">
-<img src="/2018/06/21/ownCloud/finsh.png">
+<h1 id="安装apache">安装Apache</h1>
+<p>首先安装apache以供owncloud使用： <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt install apache2</span><br></pre></td></tr></table></figure></p>
+<p>需要禁用apache目录列表 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo a2dismod autoindex</span><br></pre></td></tr></table></figure></p>
+<p>开启额外模块 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">sudo a2enmod rewrite</span><br><span class="line">sudo a2enmod headers</span><br><span class="line">sudo a2enmod env</span><br><span class="line">sudo a2enmod dir</span><br><span class="line">sudo a2enmod mime</span><br></pre></td></tr></table></figure></p>
+<p>重启apache <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo systemctl restart apache2</span><br></pre></td></tr></table></figure></p>
+<h1 id="安装mariadb-server">安装MariaDB Server</h1>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get install mariadb-server mariadb-client</span><br></pre></td></tr></table></figure>
+<p>安装完成后添加密码 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo mysql_secure_installation</span><br></pre></td></tr></table></figure></p>
+<p>执行后设置密码、移除匿名用户、不允许root登录、删除测试数据库。 接下来登录MariaDB并创建数据库 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo mysql -u root -p</span><br></pre></td></tr></table></figure></p>
+<p>下面的命令是建立数据库，其中的用户名和密码需要替换成自己的。 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">CREATE DATABASE owncloud;</span><br><span class="line">CREATE USER <span class="string">'oc_user'</span>@<span class="string">'localhost'</span> IDENTIFIED BY <span class="string">'PASSWORD'</span>;</span><br><span class="line">GRANT ALL ON owncloud.* TO <span class="string">'oc_user'</span>@<span class="string">'localhost'</span> IDENTIFIED BY <span class="string">'PASSWORD'</span> WITH GRANT OPTION; </span><br><span class="line">FLUSH PRIVILEGES;</span><br><span class="line">EXIT;</span><br></pre></td></tr></table></figure></p>
+<h1 id="安装php">安装php</h1>
+<p>现在owncloud只支持php7.1： <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get install software-properties-common</span><br><span class="line">sudo add-apt-repository ppa:ondrej/php</span><br><span class="line">sudo apt update</span><br><span class="line">sudo apt install php7.1</span><br></pre></td></tr></table></figure></p>
+<p>接着安装php模块： <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get install php7.1-cli php7.1-common php7.1-mbstring php7.1-gd php7.1-intl php7.1-xml php7.1-mysql php7.1-zip php7.1-curl php7.1-xmlrpc</span><br></pre></td></tr></table></figure></p>
+<p>安装完成后配置一下： <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo vi /etc/php/7.1/apache2/php.ini</span><br></pre></td></tr></table></figure></p>
+<p>修改以下内容 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">file_uploads = On</span><br><span class="line">allow_url_fopen = On</span><br><span class="line">memory_limit = 256M</span><br><span class="line">upload_max_file_size = 100M</span><br></pre></td></tr></table></figure></p>
+<p>重启apache <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo systemctl restart apache2</span><br></pre></td></tr></table></figure></p>
+<h1 id="下载owncloud">下载owncloud</h1>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> /tmp </span><br><span class="line">wget https://download.owncloud.org/community/owncloud-10.0.3.zip</span><br></pre></td></tr></table></figure>
+<p>解压并移动文件： <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">unzip owncloud-10.0.3.zip</span><br><span class="line">sudo mv owncloud /var/www/html/owncloud/</span><br></pre></td></tr></table></figure></p>
+<h1 id="设置目录和权限">设置目录和权限</h1>
+<p>为了保证owncloud工作，需要设置操作权限： <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sudo chown -R www-data:www-data /var/www/html/owncloud/</span><br><span class="line">sudo chmod -R 755 /var/www/html/owncloud/</span><br></pre></td></tr></table></figure></p>
+<h1 id="完成安装">完成安装</h1>
+需要登录到对应的网址(http://ipadress/owncloud)进行最后的设置： 输入你想要的账户名与密码，以及配置数据库的名字。
+<div data-align="center">
+<p><img src="/2018/06/21/ownCloud/finsh.png"></p>
+</div>
+<h1 id="完成后的界面">完成后的界面</h1>
+<div data-align="center">
+<p><img src="/2018/06/21/ownCloud/end.png"></p>
 </div>
 
-<h1 id="完成后的界面"><a href="#完成后的界面" class="headerlink" title="完成后的界面"></a>完成后的界面</h1><div align="center">
-<img src="/2018/06/21/ownCloud/end.png">
-</div>
       
     </div>
     <!-- <div class="article-entry" itemprop="articleBody">
       
         
         
-          <p>最近实验室闲置了一台主机，就将这个主机搭建成一个公有云给大家使用。<br>系统版本是ubuntu server。</p>
+          <p>最近实验室闲置了一台主机，就将这个主机搭建成一个公有云给大家使用。 系统版本是ubuntu server。</p>
 <a id="more"></a>
-<h1 id="安装Apache"><a href="#安装Apache" class="headerlink" title="安装Apache"></a>安装Apache</h1><p>首先安装apache以供owncloud使用：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt install apache2</span><br></pre></td></tr></table></figure></p>
-<p>需要禁用apache目录列表<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo a2dismod autoindex</span><br></pre></td></tr></table></figure></p>
-<p>开启额外模块<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">sudo a2enmod rewrite</span><br><span class="line">sudo a2enmod headers</span><br><span class="line">sudo a2enmod env</span><br><span class="line">sudo a2enmod dir</span><br><span class="line">sudo a2enmod mime</span><br></pre></td></tr></table></figure></p>
-<p>重启apache<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo systemctl restart apache2</span><br></pre></td></tr></table></figure></p>
-<h1 id="安装MariaDB-Server"><a href="#安装MariaDB-Server" class="headerlink" title="安装MariaDB Server"></a>安装MariaDB Server</h1><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get install mariadb-server mariadb-client</span><br></pre></td></tr></table></figure>
-<p>安装完成后添加密码<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo mysql_secure_installation</span><br></pre></td></tr></table></figure></p>
-<p>执行后设置密码、移除匿名用户、不允许root登录、删除测试数据库。<br>接下来登录MariaDB并创建数据库<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo mysql -u root -p</span><br></pre></td></tr></table></figure></p>
-<p>下面的命令是建立数据库，其中的用户名和密码需要替换成自己的。<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">CREATE DATABASE owncloud;</span><br><span class="line">CREATE USER <span class="string">'oc_user'</span>@<span class="string">'localhost'</span> IDENTIFIED BY <span class="string">'PASSWORD'</span>;</span><br><span class="line">GRANT ALL ON owncloud.* TO <span class="string">'oc_user'</span>@<span class="string">'localhost'</span> IDENTIFIED BY <span class="string">'PASSWORD'</span> WITH GRANT OPTION; </span><br><span class="line">FLUSH PRIVILEGES;</span><br><span class="line">EXIT;</span><br></pre></td></tr></table></figure></p>
-<h1 id="安装php"><a href="#安装php" class="headerlink" title="安装php"></a>安装php</h1><p>现在owncloud只支持php7.1：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get install software-properties-common</span><br><span class="line">sudo add-apt-repository ppa:ondrej/php</span><br><span class="line">sudo apt update</span><br><span class="line">sudo apt install php7.1</span><br></pre></td></tr></table></figure></p>
-<p>接着安装php模块：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get install php7.1-cli php7.1-common php7.1-mbstring php7.1-gd php7.1-intl php7.1-xml php7.1-mysql php7.1-zip php7.1-curl php7.1-xmlrpc</span><br></pre></td></tr></table></figure></p>
-<p>安装完成后配置一下：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo vi /etc/php/7.1/apache2/php.ini</span><br></pre></td></tr></table></figure></p>
-<p>修改以下内容<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">file_uploads = On</span><br><span class="line">allow_url_fopen = On</span><br><span class="line">memory_limit = 256M</span><br><span class="line">upload_max_file_size = 100M</span><br></pre></td></tr></table></figure></p>
-<p>重启apache<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo systemctl restart apache2</span><br></pre></td></tr></table></figure></p>
-<h1 id="下载owncloud"><a href="#下载owncloud" class="headerlink" title="下载owncloud"></a>下载owncloud</h1><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> /tmp </span><br><span class="line">wget https://download.owncloud.org/community/owncloud-10.0.3.zip</span><br></pre></td></tr></table></figure>
-<p>解压并移动文件：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">unzip owncloud-10.0.3.zip</span><br><span class="line">sudo mv owncloud /var/www/html/owncloud/</span><br></pre></td></tr></table></figure></p>
-<h1 id="设置目录和权限"><a href="#设置目录和权限" class="headerlink" title="设置目录和权限"></a>设置目录和权限</h1><p>为了保证owncloud工作，需要设置操作权限：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sudo chown -R www-data:www-data /var/www/html/owncloud/</span><br><span class="line">sudo chmod -R 755 /var/www/html/owncloud/</span><br></pre></td></tr></table></figure></p>
-<h1 id="完成安装"><a href="#完成安装" class="headerlink" title="完成安装"></a>完成安装</h1><p>需要登录到对应的网址(<a href="http://ipadress/owncloud)进行最后的设置：" target="_blank" rel="noopener">http://ipadress/owncloud)进行最后的设置：</a><br>输入你想要的账户名与密码，以及配置数据库的名字。</p>
-<div align="center">
-<img src="/2018/06/21/ownCloud/finsh.png">
+<h1 id="安装apache">安装Apache</h1>
+<p>首先安装apache以供owncloud使用： <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt install apache2</span><br></pre></td></tr></table></figure></p>
+<p>需要禁用apache目录列表 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo a2dismod autoindex</span><br></pre></td></tr></table></figure></p>
+<p>开启额外模块 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">sudo a2enmod rewrite</span><br><span class="line">sudo a2enmod headers</span><br><span class="line">sudo a2enmod env</span><br><span class="line">sudo a2enmod dir</span><br><span class="line">sudo a2enmod mime</span><br></pre></td></tr></table></figure></p>
+<p>重启apache <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo systemctl restart apache2</span><br></pre></td></tr></table></figure></p>
+<h1 id="安装mariadb-server">安装MariaDB Server</h1>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get install mariadb-server mariadb-client</span><br></pre></td></tr></table></figure>
+<p>安装完成后添加密码 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo mysql_secure_installation</span><br></pre></td></tr></table></figure></p>
+<p>执行后设置密码、移除匿名用户、不允许root登录、删除测试数据库。 接下来登录MariaDB并创建数据库 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo mysql -u root -p</span><br></pre></td></tr></table></figure></p>
+<p>下面的命令是建立数据库，其中的用户名和密码需要替换成自己的。 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">CREATE DATABASE owncloud;</span><br><span class="line">CREATE USER <span class="string">'oc_user'</span>@<span class="string">'localhost'</span> IDENTIFIED BY <span class="string">'PASSWORD'</span>;</span><br><span class="line">GRANT ALL ON owncloud.* TO <span class="string">'oc_user'</span>@<span class="string">'localhost'</span> IDENTIFIED BY <span class="string">'PASSWORD'</span> WITH GRANT OPTION; </span><br><span class="line">FLUSH PRIVILEGES;</span><br><span class="line">EXIT;</span><br></pre></td></tr></table></figure></p>
+<h1 id="安装php">安装php</h1>
+<p>现在owncloud只支持php7.1： <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get install software-properties-common</span><br><span class="line">sudo add-apt-repository ppa:ondrej/php</span><br><span class="line">sudo apt update</span><br><span class="line">sudo apt install php7.1</span><br></pre></td></tr></table></figure></p>
+<p>接着安装php模块： <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get install php7.1-cli php7.1-common php7.1-mbstring php7.1-gd php7.1-intl php7.1-xml php7.1-mysql php7.1-zip php7.1-curl php7.1-xmlrpc</span><br></pre></td></tr></table></figure></p>
+<p>安装完成后配置一下： <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo vi /etc/php/7.1/apache2/php.ini</span><br></pre></td></tr></table></figure></p>
+<p>修改以下内容 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">file_uploads = On</span><br><span class="line">allow_url_fopen = On</span><br><span class="line">memory_limit = 256M</span><br><span class="line">upload_max_file_size = 100M</span><br></pre></td></tr></table></figure></p>
+<p>重启apache <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo systemctl restart apache2</span><br></pre></td></tr></table></figure></p>
+<h1 id="下载owncloud">下载owncloud</h1>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> /tmp </span><br><span class="line">wget https://download.owncloud.org/community/owncloud-10.0.3.zip</span><br></pre></td></tr></table></figure>
+<p>解压并移动文件： <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">unzip owncloud-10.0.3.zip</span><br><span class="line">sudo mv owncloud /var/www/html/owncloud/</span><br></pre></td></tr></table></figure></p>
+<h1 id="设置目录和权限">设置目录和权限</h1>
+<p>为了保证owncloud工作，需要设置操作权限： <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sudo chown -R www-data:www-data /var/www/html/owncloud/</span><br><span class="line">sudo chmod -R 755 /var/www/html/owncloud/</span><br></pre></td></tr></table></figure></p>
+<h1 id="完成安装">完成安装</h1>
+需要登录到对应的网址(http://ipadress/owncloud)进行最后的设置： 输入你想要的账户名与密码，以及配置数据库的名字。
+<div data-align="center">
+<p><img src="/2018/06/21/ownCloud/finsh.png"></p>
+</div>
+<h1 id="完成后的界面">完成后的界面</h1>
+<div data-align="center">
+<p><img src="/2018/06/21/ownCloud/end.png"></p>
 </div>
 
-<h1 id="完成后的界面"><a href="#完成后的界面" class="headerlink" title="完成后的界面"></a>完成后的界面</h1><div align="center">
-<img src="/2018/06/21/ownCloud/end.png">
-</div>
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2018/06/21/ownCloud/" data-id="ck8qwj1zn0066s36x9whp9gh2" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2018/06/21/ownCloud/" data-id="ck97btofv0061yg6xxznmcbqs" class="article-share-link">Share</a>
       
       
       
@@ -207,7 +221,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">标签云</h3>
     <div class="widget tagcloud">
-      <a href="/tags/C/" style="font-size: 13.08px;">C</a> <a href="/tags/C/" style="font-size: 12.31px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10px;">CNN</a> <a href="/tags/Eigen/" style="font-size: 10px;">Eigen</a> <a href="/tags/Linux/" style="font-size: 19.23px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12.31px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12.31px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.77px;">PCB</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 15.38px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 10.77px;">linux</a> <a href="/tags/mxnet/" style="font-size: 10px;">mxnet</a> <a href="/tags/pfld/" style="font-size: 10px;">pfld</a> <a href="/tags/python/" style="font-size: 18.46px;">python</a> <a href="/tags/pytorch/" style="font-size: 10px;">pytorch</a> <a href="/tags/retinaface/" style="font-size: 10px;">retinaface</a> <a href="/tags/stm32/" style="font-size: 11.54px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 20px;">tensorflow</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/yolo/" style="font-size: 13.08px;">yolo</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 14.62px;">作业</a> <a href="/tags/半监督学习/" style="font-size: 16.15px;">半监督学习</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/图像处理/" style="font-size: 10px;">图像处理</a> <a href="/tags/堆栈/" style="font-size: 10.77px;">堆栈</a> <a href="/tags/声音信号处理/" style="font-size: 12.31px;">声音信号处理</a> <a href="/tags/小工具/" style="font-size: 12.31px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 16.92px;">嵌入式</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 17.69px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 17.69px;">机器学习</a> <a href="/tags/树/" style="font-size: 12.31px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/概率论/" style="font-size: 13.08px;">概率论</a> <a href="/tags/深度学习/" style="font-size: 16.92px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 11.54px;">神经网络</a> <a href="/tags/算法/" style="font-size: 12.31px;">算法</a> <a href="/tags/聚类/" style="font-size: 12.31px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13.85px;">蓝牙</a> <a href="/tags/调参/" style="font-size: 10px;">调参</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/路由/" style="font-size: 10px;">路由</a> <a href="/tags/链表/" style="font-size: 11.54px;">链表</a> <a href="/tags/错误记录/" style="font-size: 19.23px;">错误记录</a>
+      <a href="/tags/C/" style="font-size: 13.08px;">C</a> <a href="/tags/C/" style="font-size: 12.31px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10px;">CNN</a> <a href="/tags/Eigen/" style="font-size: 10px;">Eigen</a> <a href="/tags/GAN/" style="font-size: 10px;">GAN</a> <a href="/tags/Linux/" style="font-size: 19.23px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12.31px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12.31px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.77px;">PCB</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 15.38px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 10.77px;">linux</a> <a href="/tags/mxnet/" style="font-size: 10px;">mxnet</a> <a href="/tags/pfld/" style="font-size: 10px;">pfld</a> <a href="/tags/python/" style="font-size: 18.46px;">python</a> <a href="/tags/pytorch/" style="font-size: 10px;">pytorch</a> <a href="/tags/retinaface/" style="font-size: 10px;">retinaface</a> <a href="/tags/stm32/" style="font-size: 11.54px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 20px;">tensorflow</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/yolo/" style="font-size: 13.08px;">yolo</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 14.62px;">作业</a> <a href="/tags/半监督学习/" style="font-size: 16.15px;">半监督学习</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/图像处理/" style="font-size: 10px;">图像处理</a> <a href="/tags/堆栈/" style="font-size: 10.77px;">堆栈</a> <a href="/tags/声音信号处理/" style="font-size: 12.31px;">声音信号处理</a> <a href="/tags/小工具/" style="font-size: 12.31px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 16.92px;">嵌入式</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 17.69px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 17.69px;">机器学习</a> <a href="/tags/树/" style="font-size: 12.31px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/概率论/" style="font-size: 13.08px;">概率论</a> <a href="/tags/深度学习/" style="font-size: 16.92px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 11.54px;">神经网络</a> <a href="/tags/算法/" style="font-size: 12.31px;">算法</a> <a href="/tags/聚类/" style="font-size: 12.31px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13.85px;">蓝牙</a> <a href="/tags/调参/" style="font-size: 10px;">调参</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/路由/" style="font-size: 10px;">路由</a> <a href="/tags/链表/" style="font-size: 11.54px;">链表</a> <a href="/tags/错误记录/" style="font-size: 19.23px;">错误记录</a>
     </div>
   </div>
 
@@ -229,6 +243,10 @@
       <ul>
         
           <li>
+            <a href="/2020/04/20/animegan/">Anime GAN</a>
+          </li>
+        
+          <li>
             <a href="/2020/04/07/circle-loss/">Circle Loss</a>
           </li>
         
@@ -242,10 +260,6 @@
         
           <li>
             <a href="/2020/03/29/ssl-simclr/">半监督学习：SimCLR</a>
-          </li>
-        
-          <li>
-            <a href="/2020/03/18/h5-to-pb/">H5模型转pb模型</a>
           </li>
         
       </ul>
