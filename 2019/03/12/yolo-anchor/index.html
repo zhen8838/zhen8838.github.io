@@ -96,41 +96,38 @@
       
         <p><code>anchor</code>意味着先验思想，是为了给神经网络拟合<code>box</code>减轻负担。下面就来讲解一下<code>anchor</code>的计算。</p>
 <a id="more"></a>
-<h1 id="公式">公式</h1>
-<p>首先我们得先理解<code>yolo</code>输出<code>boundary box</code>的计算过程： <span class="math display">\[ 
+<h1 id="公式"><a href="#公式" class="headerlink" title="公式"></a>公式</h1><p>首先我们得先理解<code>yolo</code>输出<code>boundary box</code>的计算过程：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-    b_x&amp;=\sigma(t_x)+c_x \\
-    b_y&amp;=\sigma(t_y)+c_y \\
-    b_w&amp;=p_w e^{t_w} \\
-    b_h&amp;=p_h e^{t_h} 
-\end{aligned}
-\]</span> 解释： <span class="math inline">\(t_x,t_y,t_w,t_h\)</span>为<code>yolo</code>预测输出结果。</p>
-<p><span class="math inline">\(c_x,c_y\)</span>为当前<code>cell</code>右上角的坐标。</p>
-<p><span class="math inline">\(p_w,p_h\)</span>是当前<code>anchor</code>的宽高。</p>
-<p><span class="math inline">\(b_x,b_y,b_w,b_h\)</span>则是最终<code>yolo</code>预测出的<code>boundary box</code>。</p>
-<p><img src="/2019/03/12/yolo-anchor/2.jpeg"></p>
-<h1 id="分析">分析</h1>
-<p>通过上图我们知道,实际上<code>anchor</code>存在的意义就在于调节网络输出与真实<code>box</code>的比例关系.</p>
-<p>制作<code>label</code>的过程: <span class="math display">\[ \begin{aligned}
-Label_w&amp;= \frac{True_w}{p_w} \\
-Label_h&amp;= \frac{True_h}{p_h} \\
-\end{aligned} \]</span></p>
-<p>然后我们训练的时候就是拟合<span class="math inline">\(e^{t_w}\)</span>到<span class="math inline">\(Label_w\)</span> <span class="math display">\[\begin{aligned}
-   \because b_w&amp;=p_w e^{t_w} \\
-            b_h&amp;=p_h e^{t_h}  \\
+    b_x&=\sigma(t_x)+c_x \\
+    b_y&=\sigma(t_y)+c_y \\
+    b_w&=p_w e^{t_w} \\
+    b_h&=p_h e^{t_h} 
+\end{aligned}</script><p>解释：<br>$t_x,t_y,t_w,t_h$为<code>yolo</code>预测输出结果。</p>
+<p>$c_x,c_y$为当前<code>cell</code>右上角的坐标。</p>
+<p>$p_w,p_h$是当前<code>anchor</code>的宽高。</p>
+<p>$b_x,b_y,b_w,b_h$则是最终<code>yolo</code>预测出的<code>boundary box</code>。</p>
+<p><img src="/2019/03/12/yolo-anchor/2.jpeg" alt=""></p>
+<h1 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h1><p>通过上图我们知道,实际上<code>anchor</code>存在的意义就在于调节网络输出与真实<code>box</code>的比例关系.</p>
+<p>制作<code>label</code>的过程:</p>
+<script type="math/tex; mode=display">\begin{aligned}
+Label_w&= \frac{True_w}{p_w} \\
+Label_h&= \frac{True_h}{p_h} \\
+\end{aligned}</script><p>然后我们训练的时候就是拟合$e^{t_w}$到$Label_w$</p>
+<script type="math/tex; mode=display">\begin{aligned}
+   \because b_w&=p_w e^{t_w} \\
+            b_h&=p_h e^{t_h}  \\
   \therefore
-            e^{t_w} &amp;\rightarrow Label_w \\
-            e^{t_h} &amp;\rightarrow Label_h  \\
-\end{aligned} \]</span></p>
-<p>所以通过设置合适的<span class="math inline">\(p_w,p_h\)</span>值,我们可以把<span class="math inline">\(Label_w,Label_h\)</span>控制在<span class="math inline">\(1\)</span>左右.这样使得神经网络只需要在预测<span class="math inline">\(w,h\)</span>时只需要接近<span class="math inline">\(1\)</span>就可以取得较好的效果.</p>
-<h1 id="制作anchor">制作anchor</h1>
-<p>知道了原理,我们就可以来选取合适的<code>anchor</code>,我这里是自己写了个<code>kmeans</code>,然后将其中的距离计算改成了<code>iou</code>的函数:</p>
-<p><img src="/2019/03/12/yolo-anchor/3.png"></p>
+            e^{t_w} &\rightarrow Label_w \\
+            e^{t_h} &\rightarrow Label_h  \\
+\end{aligned}</script><p>所以通过设置合适的$p_w,p_h$值,我们可以把$Label_w,Label_h$控制在$1$左右.这样使得神经网络只需要在预测$w,h$时只需要接近$1$就可以取得较好的效果.</p>
+<h1 id="制作anchor"><a href="#制作anchor" class="headerlink" title="制作anchor"></a>制作anchor</h1><p>知道了原理,我们就可以来选取合适的<code>anchor</code>,我这里是自己写了个<code>kmeans</code>,然后将其中的距离计算改成了<code>iou</code>的函数:</p>
+<p><img src="/2019/03/12/yolo-anchor/3.png" alt=""></p>
 <p>现在我们加载了自己的<code>anchor list</code>,然后测试一下:</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">test_label_wh</span><span class="params">()</span>:</span></span><br><span class="line">    gl = helper.generator(is_make_lable=<span class="keyword">True</span>, is_training=<span class="keyword">False</span>)</span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">20</span>):</span><br><span class="line">        imgl, label = next(gl)</span><br><span class="line">        print(<span class="string">"w_max: &#123;:.3f&#125; ,w_min: &#123;:.3f&#125; ,h_max: &#123;:.3f&#125; ,h_min: &#123;:.3f&#125;"</span>.format(</span><br><span class="line">            np.max(label[np.where(label[..., <span class="number">4</span>] &gt; <span class="number">.7</span>)][:, <span class="number">2</span>]),</span><br><span class="line">            np.min(label[np.where(label[..., <span class="number">4</span>] &gt; <span class="number">.7</span>)][:, <span class="number">2</span>]),</span><br><span class="line">            np.max(label[np.where(label[..., <span class="number">4</span>] &gt; <span class="number">.7</span>)][:, <span class="number">3</span>]),</span><br><span class="line">            np.min(label[np.where(label[..., <span class="number">4</span>] &gt; <span class="number">.7</span>)][:, <span class="number">3</span>])))</span><br></pre></td></tr></table></figure>
 <p>输出:</p>
 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">w_max: 1.159 ,w_min: 1.159 ,h_max: 0.906 ,h_min: 0.906</span><br><span class="line">w_max: 0.944 ,w_min: 0.944 ,h_max: 1.223 ,h_min: 1.223</span><br><span class="line">w_max: 1.299 ,w_min: 1.055 ,h_max: 0.864 ,h_min: 0.751</span><br><span class="line">w_max: 0.939 ,w_min: 0.939 ,h_max: 1.294 ,h_min: 1.294</span><br><span class="line">w_max: 0.992 ,w_min: 0.918 ,h_max: 1.289 ,h_min: 1.257</span><br><span class="line">w_max: 1.346 ,w_min: 1.346 ,h_max: 0.965 ,h_min: 0.965</span><br><span class="line">w_max: 1.225 ,w_min: 0.986 ,h_max: 0.905 ,h_min: 0.780</span><br><span class="line">w_max: 1.139 ,w_min: 0.851 ,h_max: 0.961 ,h_min: 0.939</span><br><span class="line">w_max: 0.979 ,w_min: 0.979 ,h_max: 0.941 ,h_min: 0.941</span><br><span class="line">w_max: 1.062 ,w_min: 1.062 ,h_max: 0.957 ,h_min: 0.957</span><br><span class="line">w_max: 1.399 ,w_min: 1.399 ,h_max: 0.831 ,h_min: 0.831</span><br><span class="line">w_max: 0.945 ,w_min: 0.729 ,h_max: 1.102 ,h_min: 0.744</span><br><span class="line">w_max: 0.921 ,w_min: 0.921 ,h_max: 0.867 ,h_min: 0.867</span><br><span class="line">w_max: 0.854 ,w_min: 0.668 ,h_max: 1.298 ,h_min: 1.039</span><br><span class="line">w_max: 1.060 ,w_min: 1.060 ,h_max: 0.648 ,h_min: 0.648</span><br><span class="line">w_max: 0.972 ,w_min: 0.972 ,h_max: 0.925 ,h_min: 0.925</span><br><span class="line">w_max: 0.805 ,w_min: 0.805 ,h_max: 1.126 ,h_min: 1.126</span><br><span class="line">w_max: 0.809 ,w_min: 0.809 ,h_max: 0.958 ,h_min: 0.958</span><br><span class="line">w_max: 1.134 ,w_min: 1.027 ,h_max: 1.502 ,h_min: 1.429</span><br><span class="line">w_max: 1.629 ,w_min: 0.915 ,h_max: 1.208 ,h_min: 0.690</span><br></pre></td></tr></table></figure>
-<p>我们的<code>label</code>中<span class="math inline">\(w,h\)</span>值都在<span class="math inline">\(1\)</span>左右了,说明这个<code>anchor list</code>是合适的~</p>
+<p>我们的<code>label</code>中$w,h$值都在$1$左右了,说明这个<code>anchor list</code>是合适的~</p>
 
       
     </div>
@@ -140,47 +137,44 @@ Label_h&amp;= \frac{True_h}{p_h} \\
         
           <p><code>anchor</code>意味着先验思想，是为了给神经网络拟合<code>box</code>减轻负担。下面就来讲解一下<code>anchor</code>的计算。</p>
 <a id="more"></a>
-<h1 id="公式">公式</h1>
-<p>首先我们得先理解<code>yolo</code>输出<code>boundary box</code>的计算过程： <span class="math display">\[ 
+<h1 id="公式"><a href="#公式" class="headerlink" title="公式"></a>公式</h1><p>首先我们得先理解<code>yolo</code>输出<code>boundary box</code>的计算过程：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-    b_x&amp;=\sigma(t_x)+c_x \\
-    b_y&amp;=\sigma(t_y)+c_y \\
-    b_w&amp;=p_w e^{t_w} \\
-    b_h&amp;=p_h e^{t_h} 
-\end{aligned}
-\]</span> 解释： <span class="math inline">\(t_x,t_y,t_w,t_h\)</span>为<code>yolo</code>预测输出结果。</p>
-<p><span class="math inline">\(c_x,c_y\)</span>为当前<code>cell</code>右上角的坐标。</p>
-<p><span class="math inline">\(p_w,p_h\)</span>是当前<code>anchor</code>的宽高。</p>
-<p><span class="math inline">\(b_x,b_y,b_w,b_h\)</span>则是最终<code>yolo</code>预测出的<code>boundary box</code>。</p>
-<p><img src="/2019/03/12/yolo-anchor/2.jpeg"></p>
-<h1 id="分析">分析</h1>
-<p>通过上图我们知道,实际上<code>anchor</code>存在的意义就在于调节网络输出与真实<code>box</code>的比例关系.</p>
-<p>制作<code>label</code>的过程: <span class="math display">\[ \begin{aligned}
-Label_w&amp;= \frac{True_w}{p_w} \\
-Label_h&amp;= \frac{True_h}{p_h} \\
-\end{aligned} \]</span></p>
-<p>然后我们训练的时候就是拟合<span class="math inline">\(e^{t_w}\)</span>到<span class="math inline">\(Label_w\)</span> <span class="math display">\[\begin{aligned}
-   \because b_w&amp;=p_w e^{t_w} \\
-            b_h&amp;=p_h e^{t_h}  \\
+    b_x&=\sigma(t_x)+c_x \\
+    b_y&=\sigma(t_y)+c_y \\
+    b_w&=p_w e^{t_w} \\
+    b_h&=p_h e^{t_h} 
+\end{aligned}</script><p>解释：<br>$t_x,t_y,t_w,t_h$为<code>yolo</code>预测输出结果。</p>
+<p>$c_x,c_y$为当前<code>cell</code>右上角的坐标。</p>
+<p>$p_w,p_h$是当前<code>anchor</code>的宽高。</p>
+<p>$b_x,b_y,b_w,b_h$则是最终<code>yolo</code>预测出的<code>boundary box</code>。</p>
+<p><img src="/2019/03/12/yolo-anchor/2.jpeg" alt=""></p>
+<h1 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h1><p>通过上图我们知道,实际上<code>anchor</code>存在的意义就在于调节网络输出与真实<code>box</code>的比例关系.</p>
+<p>制作<code>label</code>的过程:</p>
+<script type="math/tex; mode=display">\begin{aligned}
+Label_w&= \frac{True_w}{p_w} \\
+Label_h&= \frac{True_h}{p_h} \\
+\end{aligned}</script><p>然后我们训练的时候就是拟合$e^{t_w}$到$Label_w$</p>
+<script type="math/tex; mode=display">\begin{aligned}
+   \because b_w&=p_w e^{t_w} \\
+            b_h&=p_h e^{t_h}  \\
   \therefore
-            e^{t_w} &amp;\rightarrow Label_w \\
-            e^{t_h} &amp;\rightarrow Label_h  \\
-\end{aligned} \]</span></p>
-<p>所以通过设置合适的<span class="math inline">\(p_w,p_h\)</span>值,我们可以把<span class="math inline">\(Label_w,Label_h\)</span>控制在<span class="math inline">\(1\)</span>左右.这样使得神经网络只需要在预测<span class="math inline">\(w,h\)</span>时只需要接近<span class="math inline">\(1\)</span>就可以取得较好的效果.</p>
-<h1 id="制作anchor">制作anchor</h1>
-<p>知道了原理,我们就可以来选取合适的<code>anchor</code>,我这里是自己写了个<code>kmeans</code>,然后将其中的距离计算改成了<code>iou</code>的函数:</p>
-<p><img src="/2019/03/12/yolo-anchor/3.png"></p>
+            e^{t_w} &\rightarrow Label_w \\
+            e^{t_h} &\rightarrow Label_h  \\
+\end{aligned}</script><p>所以通过设置合适的$p_w,p_h$值,我们可以把$Label_w,Label_h$控制在$1$左右.这样使得神经网络只需要在预测$w,h$时只需要接近$1$就可以取得较好的效果.</p>
+<h1 id="制作anchor"><a href="#制作anchor" class="headerlink" title="制作anchor"></a>制作anchor</h1><p>知道了原理,我们就可以来选取合适的<code>anchor</code>,我这里是自己写了个<code>kmeans</code>,然后将其中的距离计算改成了<code>iou</code>的函数:</p>
+<p><img src="/2019/03/12/yolo-anchor/3.png" alt=""></p>
 <p>现在我们加载了自己的<code>anchor list</code>,然后测试一下:</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">test_label_wh</span><span class="params">()</span>:</span></span><br><span class="line">    gl = helper.generator(is_make_lable=<span class="keyword">True</span>, is_training=<span class="keyword">False</span>)</span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">20</span>):</span><br><span class="line">        imgl, label = next(gl)</span><br><span class="line">        print(<span class="string">"w_max: &#123;:.3f&#125; ,w_min: &#123;:.3f&#125; ,h_max: &#123;:.3f&#125; ,h_min: &#123;:.3f&#125;"</span>.format(</span><br><span class="line">            np.max(label[np.where(label[..., <span class="number">4</span>] &gt; <span class="number">.7</span>)][:, <span class="number">2</span>]),</span><br><span class="line">            np.min(label[np.where(label[..., <span class="number">4</span>] &gt; <span class="number">.7</span>)][:, <span class="number">2</span>]),</span><br><span class="line">            np.max(label[np.where(label[..., <span class="number">4</span>] &gt; <span class="number">.7</span>)][:, <span class="number">3</span>]),</span><br><span class="line">            np.min(label[np.where(label[..., <span class="number">4</span>] &gt; <span class="number">.7</span>)][:, <span class="number">3</span>])))</span><br></pre></td></tr></table></figure>
 <p>输出:</p>
 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">w_max: 1.159 ,w_min: 1.159 ,h_max: 0.906 ,h_min: 0.906</span><br><span class="line">w_max: 0.944 ,w_min: 0.944 ,h_max: 1.223 ,h_min: 1.223</span><br><span class="line">w_max: 1.299 ,w_min: 1.055 ,h_max: 0.864 ,h_min: 0.751</span><br><span class="line">w_max: 0.939 ,w_min: 0.939 ,h_max: 1.294 ,h_min: 1.294</span><br><span class="line">w_max: 0.992 ,w_min: 0.918 ,h_max: 1.289 ,h_min: 1.257</span><br><span class="line">w_max: 1.346 ,w_min: 1.346 ,h_max: 0.965 ,h_min: 0.965</span><br><span class="line">w_max: 1.225 ,w_min: 0.986 ,h_max: 0.905 ,h_min: 0.780</span><br><span class="line">w_max: 1.139 ,w_min: 0.851 ,h_max: 0.961 ,h_min: 0.939</span><br><span class="line">w_max: 0.979 ,w_min: 0.979 ,h_max: 0.941 ,h_min: 0.941</span><br><span class="line">w_max: 1.062 ,w_min: 1.062 ,h_max: 0.957 ,h_min: 0.957</span><br><span class="line">w_max: 1.399 ,w_min: 1.399 ,h_max: 0.831 ,h_min: 0.831</span><br><span class="line">w_max: 0.945 ,w_min: 0.729 ,h_max: 1.102 ,h_min: 0.744</span><br><span class="line">w_max: 0.921 ,w_min: 0.921 ,h_max: 0.867 ,h_min: 0.867</span><br><span class="line">w_max: 0.854 ,w_min: 0.668 ,h_max: 1.298 ,h_min: 1.039</span><br><span class="line">w_max: 1.060 ,w_min: 1.060 ,h_max: 0.648 ,h_min: 0.648</span><br><span class="line">w_max: 0.972 ,w_min: 0.972 ,h_max: 0.925 ,h_min: 0.925</span><br><span class="line">w_max: 0.805 ,w_min: 0.805 ,h_max: 1.126 ,h_min: 1.126</span><br><span class="line">w_max: 0.809 ,w_min: 0.809 ,h_max: 0.958 ,h_min: 0.958</span><br><span class="line">w_max: 1.134 ,w_min: 1.027 ,h_max: 1.502 ,h_min: 1.429</span><br><span class="line">w_max: 1.629 ,w_min: 0.915 ,h_max: 1.208 ,h_min: 0.690</span><br></pre></td></tr></table></figure>
-<p>我们的<code>label</code>中<span class="math inline">\(w,h\)</span>值都在<span class="math inline">\(1\)</span>左右了,说明这个<code>anchor list</code>是合适的~</p>
+<p>我们的<code>label</code>中$w,h$值都在$1$左右了,说明这个<code>anchor list</code>是合适的~</p>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2019/03/12/yolo-anchor/" data-id="ck9h9w4gm00gp0b6xhnnmf2ey" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2019/03/12/yolo-anchor/" data-id="ck9mfyb0d00evew6xalx95o7w" class="article-share-link">Share</a>
       
       
       
@@ -313,21 +307,6 @@ Label_h&amp;= \frac{True_h}{p_h} \\
 
 
 
-  </div>
-<script type="text/x-mathjax-config">
-    MathJax.Hub.Config({
-        tex2jax: {
-            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
-            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
-            processEscapes: true
-        }
-    });
-    MathJax.Hub.Queue(function() {
-        var all = MathJax.Hub.getAllJax();
-        for (var i = 0; i < all.length; ++i)
-            all[i].SourceElement().parentNode.className += ' has-jax';
-    });
-</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+  </div><!-- hexo-inject:begin --><!-- hexo-inject:end -->
 </body>
 </html>
