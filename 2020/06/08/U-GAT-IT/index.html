@@ -19,7 +19,7 @@
 <meta property="og:image" content="https://zhen8838.github.io/2020/06/08/U-GAT-IT/decode.svg">
 <meta property="og:image" content="https://zhen8838.github.io/2020/06/08/U-GAT-IT/exp1_1.png">
 <meta property="og:image" content="https://zhen8838.github.io/2020/06/08/U-GAT-IT/exp1_2.png">
-<meta property="og:updated_time" content="2020-06-08T10:35:46.707Z">
+<meta property="og:updated_time" content="2020-06-17T08:45:57.589Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="U-GAT-IT论文解读">
 <meta name="twitter:description" content="这个论文是基于CycleGan的一个改进，论文中的典型应用是将自拍转换为卡通风格。我参考了小视科技开源的代码，这里对这个论文做一个详细描述。 我尝试用tensorflow 2.x复现这个项目，这个项目成功地把我从tensorflow劝退。。先吐槽一下，因为这个项目需要同时训练7个模型，我开启jit时用tf2.X的tf.function，autograph转换一下居然需要20分钟以上！每次启动训练得">
@@ -100,6 +100,15 @@
 <p>我尝试用<code>tensorflow 2.x</code>复现这个项目，这个项目成功地把我从<code>tensorflow</code>劝退。。先吐槽一下，因为这个项目需要同时训练7个模型，我开启<code>jit</code>时用<code>tf2.X</code>的<code>tf.function</code>，<code>autograph</code>转换一下居然需要20分钟以上！每次启动训练得等20分钟，实在是受不了，不过转换之后的速度比<code>pytorch</code>实现快50%让我还可以接受。第二点是最不能忍受的，在<code>pytorch</code>中用8G显存即可训练，<code>tensorflow</code>中我降低了判别器的的层数还需要12G显存才能训练，直接劝退。</p>
 <p>PS. 再提一句，他的生成器中间特征处理有两种做法，轻量级的方法是<code>GMP</code>再生成，否则直接生成。直接生成的话模型参数200MB往上了..我看了下他们po的图训练时显存需要22G..☹</p>
 <a id="more"></a>
+<h1 id="总结">总结</h1>
+<ol type="1">
+<li>我使用<code>TF2.1</code>和小视科技提供的数据集,训练不完全的模型是可以达到他的效果.但是使用<code>JOJO</code>的图像很难达到效果,转换后太接近真实图像,如果有人知道怎么解决可以告诉我.</li>
+<li>我对截取动漫图像写了一个<a href="https://github.com/zhen8838/playground/blob/master/tools/screen_crop.py" target="_blank" rel="noopener">脚本</a>,安装<code>wxpython</code>和<code>mss</code>之后即可以开始点击截屏.上下键控制截屏区域大小,<code>esc</code>退出.记得点击后停顿一秒钟再松开.这里感谢我的学弟帮我截图..</li>
+<li>图像截取好了之后去除背景最麻烦的!我在网上找了一圈没有找到免费的抠图软件,全都要收费.搞得我都想先弄个自动抠图的模型...花了30块钱处理了一百来张图像,另外几百张图像都没有处理.这个可能就是我没有成功的原因.</li>
+<li>然后我用<code>pytorch</code>的代码去训练,训练调试了接近半个月,今天想了结这个事情了,最后一次昨天到今天训练了一天半..效果也就这样.</li>
+<li>真实图像我用的是<code>celeba-H mask</code>,写了个去除背景的<a href="https://github.com/zhen8838/playground/blob/master/tools/face_crop_and_mask.py" target="_blank" rel="noopener">脚本</a>处理的.</li>
+</ol>
+<p>截取好的动漫图像放在<a href="https://drive.google.com/file/d/1dxJCkMATwxROliNI9YG91JxwfeVXUwl4/view?usp=sharing" target="_blank" rel="noopener">这里</a>.如果有兴趣的话,可以把背景去除后进行训练,那样效果会比较好.</p>
 <h1 id="模型结构">模型结构</h1>
 <p>他的论文图画的有点难懂，所以我重新画了一下。整个模型还是比较对称的，中间有点类似于<code>U-Net</code>的结构，将编码器生成的特征进行<code>global Avg pool</code>之后称为<code>Content feature</code>。全部<code>Encode</code>之后得到的特征<code>X</code>分别进行<code>global Avg pool</code>与<code>global Max pool</code>的<code>CAM</code>层，得到新的特征后，经过卷积得到<code>heatmap</code>，同时经过一个全连接得到<code>Style feature</code>。最后将新的特征通过解码器与上采样层得到输出。</p>
 <div data-align="center">
@@ -181,6 +190,15 @@ L_{c a m}^{D_{t}}=\mathbb{E}_{x \sim X_{t}}\left[\left(\eta_{D_{t}}(x)\right)^{2
 <p>我尝试用<code>tensorflow 2.x</code>复现这个项目，这个项目成功地把我从<code>tensorflow</code>劝退。。先吐槽一下，因为这个项目需要同时训练7个模型，我开启<code>jit</code>时用<code>tf2.X</code>的<code>tf.function</code>，<code>autograph</code>转换一下居然需要20分钟以上！每次启动训练得等20分钟，实在是受不了，不过转换之后的速度比<code>pytorch</code>实现快50%让我还可以接受。第二点是最不能忍受的，在<code>pytorch</code>中用8G显存即可训练，<code>tensorflow</code>中我降低了判别器的的层数还需要12G显存才能训练，直接劝退。</p>
 <p>PS. 再提一句，他的生成器中间特征处理有两种做法，轻量级的方法是<code>GMP</code>再生成，否则直接生成。直接生成的话模型参数200MB往上了..我看了下他们po的图训练时显存需要22G..☹</p>
 <a id="more"></a>
+<h1 id="总结">总结</h1>
+<ol type="1">
+<li>我使用<code>TF2.1</code>和小视科技提供的数据集,训练不完全的模型是可以达到他的效果.但是使用<code>JOJO</code>的图像很难达到效果,转换后太接近真实图像,如果有人知道怎么解决可以告诉我.</li>
+<li>我对截取动漫图像写了一个<a href="https://github.com/zhen8838/playground/blob/master/tools/screen_crop.py" target="_blank" rel="noopener">脚本</a>,安装<code>wxpython</code>和<code>mss</code>之后即可以开始点击截屏.上下键控制截屏区域大小,<code>esc</code>退出.记得点击后停顿一秒钟再松开.这里感谢我的学弟帮我截图..</li>
+<li>图像截取好了之后去除背景最麻烦的!我在网上找了一圈没有找到免费的抠图软件,全都要收费.搞得我都想先弄个自动抠图的模型...花了30块钱处理了一百来张图像,另外几百张图像都没有处理.这个可能就是我没有成功的原因.</li>
+<li>然后我用<code>pytorch</code>的代码去训练,训练调试了接近半个月,今天想了结这个事情了,最后一次昨天到今天训练了一天半..效果也就这样.</li>
+<li>真实图像我用的是<code>celeba-H mask</code>,写了个去除背景的<a href="https://github.com/zhen8838/playground/blob/master/tools/face_crop_and_mask.py" target="_blank" rel="noopener">脚本</a>处理的.</li>
+</ol>
+<p>截取好的动漫图像放在<a href="https://drive.google.com/file/d/1dxJCkMATwxROliNI9YG91JxwfeVXUwl4/view?usp=sharing" target="_blank" rel="noopener">这里</a>.如果有兴趣的话,可以把背景去除后进行训练,那样效果会比较好.</p>
 <h1 id="模型结构">模型结构</h1>
 <p>他的论文图画的有点难懂，所以我重新画了一下。整个模型还是比较对称的，中间有点类似于<code>U-Net</code>的结构，将编码器生成的特征进行<code>global Avg pool</code>之后称为<code>Content feature</code>。全部<code>Encode</code>之后得到的特征<code>X</code>分别进行<code>global Avg pool</code>与<code>global Max pool</code>的<code>CAM</code>层，得到新的特征后，经过卷积得到<code>heatmap</code>，同时经过一个全连接得到<code>Style feature</code>。最后将新的特征通过解码器与上采样层得到输出。</p>
 <div data-align="center">
@@ -256,7 +274,7 @@ L_{c a m}^{D_{t}}=\mathbb{E}_{x \sim X_{t}}\left[\left(\eta_{D_{t}}(x)\right)^{2
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2020/06/08/U-GAT-IT/" data-id="ckbiy76hg0019lx6xqolryimj" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2020/06/08/U-GAT-IT/" data-id="ckbj42hhv000yoh6xigw7cxua" class="article-share-link">Share</a>
       
       
       
