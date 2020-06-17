@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html>
+<head><meta name="generator" content="Hexo 3.8.0">
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><meta charset="utf-8">
+  
+
+  
+  <title>Proxy Anchor Loss for Deep Metric Learning论文解读 | </title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="这是CVPR2020的一篇度量学习的论文.来自韩国.我觉得还蛮有意思的,因此学习一番. 他的图画的是真好看,虽然做的事情其实就是把amsoftmax换个皮...">
+<meta name="keywords" content="深度学习,tensorflow">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Proxy Anchor Loss for Deep Metric Learning论文解读">
+<meta property="og:url" content="https://zhen8838.github.io/2020/06/17/proxy-anchor/index.html">
+<meta property="og:site_name">
+<meta property="og:description" content="这是CVPR2020的一篇度量学习的论文.来自韩国.我觉得还蛮有意思的,因此学习一番. 他的图画的是真好看,虽然做的事情其实就是把amsoftmax换个皮...">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://zhen8838.github.io/2020/06/17/proxy-anchor/proxy_1.png">
+<meta property="og:updated_time" content="2020-06-17T06:01:47.698Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Proxy Anchor Loss for Deep Metric Learning论文解读">
+<meta name="twitter:description" content="这是CVPR2020的一篇度量学习的论文.来自韩国.我觉得还蛮有意思的,因此学习一番. 他的图画的是真好看,虽然做的事情其实就是把amsoftmax换个皮...">
+<meta name="twitter:image" content="https://zhen8838.github.io/2020/06/17/proxy-anchor/proxy_1.png">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.lug.ustc.edu.cn/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+    <!-- <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css"> -->
+    <!-- <link href="//fonts.useso.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css"> -->
+  
+  <link rel="stylesheet" href="/css/style.css"><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+</head>
+</html>
+<body>
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo"></a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+          <a class="main-nav-link" href="/about">about</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+        <a id="nav-search-btn" class="nav-icon" title="搜索"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="https://zhen8838.github.io"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-proxy-anchor" class="article article-type-post" itemscope="" itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2020/06/17/proxy-anchor/" class="article-date">
+  <time datetime="2020-06-17T09:36:38.000Z" itemprop="datePublished">2020-06-17</time>
+</a>
+    
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/学习/">学习</a>
+  </div>
+
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      Proxy Anchor Loss for Deep Metric Learning论文解读
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>这是<code>CVPR2020</code>的一篇度量学习的论文.来自韩国.我觉得还蛮有意思的,因此学习一番.</p>
+<p>他的图画的是真好看,虽然做的事情其实就是把<code>amsoftmax</code>换个皮...</p>
+<a id="more"></a>
+<h1 id="原理">原理</h1>
+<div data-align="center">
+<p><img src="/2020/06/17/proxy-anchor/proxy_1.png"></p>
+</div>
+<p>论文主要提出了一个名为<code>Proxy Anchor</code>的损失函数.他相比于上图中<code>a,b,c,d</code>的方法.同时考虑了间距的大小作为损失的系数,且利用了整个<code>batch</code>中所有的数据,并用<code>anchor</code>作为<code>proxy</code>使得聚类中心更加明确.</p>
+<h3 id="基于pair的损失">基于pair的损失</h3>
+<p>对于一些没有利用整个<code>batch</code>所有数据的方法,那就需要依赖采样来取得<code>triplet pair</code>,<code>N-pair</code>等等,这样实际上引用了额外的复杂度.因此使用基于<code>proxy</code>的方法,不需要<code>pair</code>采样的方式.</p>
+<h3 id="基于proxy的损失">基于proxy的损失</h3>
+<p>基于<code>proxy</code>的度量学习是一种相对较新的方法，可以解决基于<code>pair</code>的损失的复杂性问题。<code>proxy</code>表示训练数据子集的代表，并被估计为嵌入网络参数的一部分。此类别中方法的共同思想是推断一小组的<code>proxy</code>，这些<code>proxy</code>捕获嵌入空间的全局结构，并将每个数据点与<code>proxy</code>相关联，而不是训练过程中的其他数据点。由于<code>proxy</code>的数量明显少于训练数据的数量，因此可以大大减少训练的复杂性.</p>
+<p>第一个基于<code>proxy</code>的方法为<code>Proxy-NCA</code>,他使用<code>proxies</code>的<code>Neighborhood Component Analysis</code>作为一种近似,首先为每个类别设置一个<code>proxy</code>,将数据点与<code>proxy</code>关联,拉近正类的距离,拉开负类的距离.</p>
+<p>使用<code>proxy</code>有助于极大地提高训练的收敛性，但有一个固有的局限性：由于每个数据点仅与<code>proxy</code>相关联，因此基于<code>pair</code>的方法的丰富的数据间关系不再可用。因此提出<code>Proxy Anchor</code>损失可以克服此问题，因为它的梯度可以反映数据的相对联系，这允许它们的嵌入向量在训练过程中相互影响.</p>
+<h3 id="proxy-nca-loss">Proxy-NCA Loss</h3>
+<p>首先介绍原本的损失.<code>Proxy-NCA</code>损失将<code>proxy</code>分配给每个类别，<code>proxy</code>的数量与类别标签的数量相同。给定一个输入数据点作为<code>anchor</code>，将同一类输入的<code>proxy</code>视为正，其他<code>proxy</code>为负。令<span class="math inline">\(x\)</span>表示输入的嵌入向量，<span class="math inline">\(p^+\)</span>为正<code>proxy</code>，<span class="math inline">\(p^-\)</span>为负<code>proxy</code>。损失则为如下:</p>
+<p><span class="math display">\[
+\begin{aligned}
+\ell(X) &amp;=\sum_{x \in X}-\log \frac{e^{s\left(x, p^{+}\right)}}{\sum\limits_{p^{-} \in P^{-}} e^{s\left(x, p^{-}\right)}} \\
+&amp;=\sum_{x \in X}\left\{-s\left(x, p^{+}\right)+\underset{p^{-} \in P^{-}}{\operatorname{LSE}} s\left(x, p^{-}\right)\right\}
+\end{aligned}
+\]</span></p>
+<p>其中<span class="math inline">\(X\)</span>为整个<code>batch</code>的嵌入向量,<span class="math inline">\(P^-\)</span>为负<code>proxy</code>的集合,<span class="math inline">\(s(\cdot,\cdot)\)</span>表示余弦相似度.其中<span class="math inline">\(\operatorname{LSE}\)</span>为<code>log sum exp</code>.熟悉基于<code>softmax</code>损失的同学应该已经看出来了,这里其实就是交叉熵换了个皮.</p>
+<p>对于此损失的梯度如下: <span class="math display">\[
+\frac{\partial \ell(X)}{\partial s(x, p)}=\left\{\begin{array}{ll}
+-1, &amp; \text { if } p=p^{+} \\
+\frac{e^{s(x, p)}}{\sum\limits_{p^{-} \in P^{-}} e^{s\left(x, p^{-}\right)}}, &amp; \text {otherwise }
+\end{array}\right.
+\]</span></p>
+<p>训练时会使得<span class="math inline">\(x\)</span>与<span class="math inline">\(p^+\)</span>尽量接近,使得<span class="math inline">\(x\)</span>与<span class="math inline">\(p^-\)</span>远离.不过注意到对于正类的梯度是恒定的,对于负类的梯度是有考虑到相似度的.此损失还是比较鲁棒的,但是由于损失仅使每个嵌入向量与<code>proxy</code>相关联，因此它无法利用细粒度的数据间关系。这种缺点限制了通过<code>Proxy-NCA</code>嵌入的能力.</p>
+<h3 id="proxy-anchor-loss">Proxy-Anchor Loss</h3>
+<p><code>Proxy-Anchor</code>损失旨在克服<code>Proxy-NCA</code>的局限性，同时保持较低的训练复杂性。主要思想是将每个<code>proxy</code>作为锚，并将其与整个数据批关联，以便在训练过程中数据通过<code>proxy anchor</code>彼此交互。此损失先按照<code>Proxy-NCA</code>的标准设置为每个类别分配一个<code>proxy</code>，公式为:</p>
+<p><span class="math display">\[
+\begin{aligned}
+\ell(X)=&amp; \frac{1}{|P+|} \sum_{p \in P^{+}} \log \left(1+\sum_{x \in X_{p}^{+}} e^{-\alpha(s(x, p)-\delta)}\right) \\
+&amp;+\frac{1}{|P|} \sum_{p \in P} \log \left(1+\sum_{x \in X_{p}^{-}} e^{\alpha(s(x, p)+\delta)}\right)
+\end{aligned}
+\]</span></p>
+<p>这个也是比较老套的设置方法,其中<span class="math inline">\(\delta\)</span>为<code>margin</code>,<span class="math inline">\(\alpha\)</span>为尺度系数.将一个<code>batch</code>中所有的嵌入向量<span class="math inline">\(X\)</span>分成两个子集<span class="math inline">\(X_p^+,X_p^-\)</span>,其中<span class="math inline">\(X_p^+\)</span>表示<code>proxy</code><span class="math inline">\(p\)</span>的正样本嵌入向量,<span class="math inline">\(X_p^-\)</span>则是剩下的所有向量.</p>
+<p>将损失换一个形式: <span class="math display">\[
+\begin{aligned}
+\ell(X)=&amp; \frac{1}{\left|P^{+}\right|} \sum_{p \in P^{+}}[\text {Softplus }(\mathop{\operatorname{LSE}}\limits_{x \in X_{p}^{+}} -\alpha(s(x, p)-\delta))] \\
+&amp;+\frac{1}{|P|} \sum_{x \in X_{p}^{+}}\left[\text {Softplus }\left(\mathop{\operatorname{LSE}}\limits_{x \in X_{p}^{-}} \alpha(s(x, p)+\delta)\right)\right]
+\end{aligned}
+\]</span></p>
+<p>这样更加符合<code>circle loss</code>中所提出的统一形式了.其中这里的<span class="math inline">\(|P^+|\)</span>是正样本的统计数量,<span class="math inline">\(|P|\)</span>是总类别数.这个系数我觉得不加也没关系...</p>
+<p><strong>NOTE</strong> 我看了下他官方的代码,实际上什么基于<code>proxy</code>的方法就是额外再加一个可训练的聚类中心...我之前的各种损失函数的实现是直接把最后一层作为聚类中心(也就是他们所说的<code>proxy</code>),这么看来把<code>circle loss</code>拉到度量学习的标准任务里肯定也是很能打的.</p>
+
+      
+    </div>
+    <!-- <div class="article-entry" itemprop="articleBody">
+      
+        
+        
+          <p>这是<code>CVPR2020</code>的一篇度量学习的论文.来自韩国.我觉得还蛮有意思的,因此学习一番.</p>
+<p>他的图画的是真好看,虽然做的事情其实就是把<code>amsoftmax</code>换个皮...</p>
+<a id="more"></a>
+<h1 id="原理">原理</h1>
+<div data-align="center">
+<p><img src="/2020/06/17/proxy-anchor/proxy_1.png"></p>
+</div>
+<p>论文主要提出了一个名为<code>Proxy Anchor</code>的损失函数.他相比于上图中<code>a,b,c,d</code>的方法.同时考虑了间距的大小作为损失的系数,且利用了整个<code>batch</code>中所有的数据,并用<code>anchor</code>作为<code>proxy</code>使得聚类中心更加明确.</p>
+<h3 id="基于pair的损失">基于pair的损失</h3>
+<p>对于一些没有利用整个<code>batch</code>所有数据的方法,那就需要依赖采样来取得<code>triplet pair</code>,<code>N-pair</code>等等,这样实际上引用了额外的复杂度.因此使用基于<code>proxy</code>的方法,不需要<code>pair</code>采样的方式.</p>
+<h3 id="基于proxy的损失">基于proxy的损失</h3>
+<p>基于<code>proxy</code>的度量学习是一种相对较新的方法，可以解决基于<code>pair</code>的损失的复杂性问题。<code>proxy</code>表示训练数据子集的代表，并被估计为嵌入网络参数的一部分。此类别中方法的共同思想是推断一小组的<code>proxy</code>，这些<code>proxy</code>捕获嵌入空间的全局结构，并将每个数据点与<code>proxy</code>相关联，而不是训练过程中的其他数据点。由于<code>proxy</code>的数量明显少于训练数据的数量，因此可以大大减少训练的复杂性.</p>
+<p>第一个基于<code>proxy</code>的方法为<code>Proxy-NCA</code>,他使用<code>proxies</code>的<code>Neighborhood Component Analysis</code>作为一种近似,首先为每个类别设置一个<code>proxy</code>,将数据点与<code>proxy</code>关联,拉近正类的距离,拉开负类的距离.</p>
+<p>使用<code>proxy</code>有助于极大地提高训练的收敛性，但有一个固有的局限性：由于每个数据点仅与<code>proxy</code>相关联，因此基于<code>pair</code>的方法的丰富的数据间关系不再可用。因此提出<code>Proxy Anchor</code>损失可以克服此问题，因为它的梯度可以反映数据的相对联系，这允许它们的嵌入向量在训练过程中相互影响.</p>
+<h3 id="proxy-nca-loss">Proxy-NCA Loss</h3>
+<p>首先介绍原本的损失.<code>Proxy-NCA</code>损失将<code>proxy</code>分配给每个类别，<code>proxy</code>的数量与类别标签的数量相同。给定一个输入数据点作为<code>anchor</code>，将同一类输入的<code>proxy</code>视为正，其他<code>proxy</code>为负。令<span class="math inline">\(x\)</span>表示输入的嵌入向量，<span class="math inline">\(p^+\)</span>为正<code>proxy</code>，<span class="math inline">\(p^-\)</span>为负<code>proxy</code>。损失则为如下:</p>
+<p><span class="math display">\[
+\begin{aligned}
+\ell(X) &amp;=\sum_{x \in X}-\log \frac{e^{s\left(x, p^{+}\right)}}{\sum\limits_{p^{-} \in P^{-}} e^{s\left(x, p^{-}\right)}} \\
+&amp;=\sum_{x \in X}\left\{-s\left(x, p^{+}\right)+\underset{p^{-} \in P^{-}}{\operatorname{LSE}} s\left(x, p^{-}\right)\right\}
+\end{aligned}
+\]</span></p>
+<p>其中<span class="math inline">\(X\)</span>为整个<code>batch</code>的嵌入向量,<span class="math inline">\(P^-\)</span>为负<code>proxy</code>的集合,<span class="math inline">\(s(\cdot,\cdot)\)</span>表示余弦相似度.其中<span class="math inline">\(\operatorname{LSE}\)</span>为<code>log sum exp</code>.熟悉基于<code>softmax</code>损失的同学应该已经看出来了,这里其实就是交叉熵换了个皮.</p>
+<p>对于此损失的梯度如下: <span class="math display">\[
+\frac{\partial \ell(X)}{\partial s(x, p)}=\left\{\begin{array}{ll}
+-1, &amp; \text { if } p=p^{+} \\
+\frac{e^{s(x, p)}}{\sum\limits_{p^{-} \in P^{-}} e^{s\left(x, p^{-}\right)}}, &amp; \text {otherwise }
+\end{array}\right.
+\]</span></p>
+<p>训练时会使得<span class="math inline">\(x\)</span>与<span class="math inline">\(p^+\)</span>尽量接近,使得<span class="math inline">\(x\)</span>与<span class="math inline">\(p^-\)</span>远离.不过注意到对于正类的梯度是恒定的,对于负类的梯度是有考虑到相似度的.此损失还是比较鲁棒的,但是由于损失仅使每个嵌入向量与<code>proxy</code>相关联，因此它无法利用细粒度的数据间关系。这种缺点限制了通过<code>Proxy-NCA</code>嵌入的能力.</p>
+<h3 id="proxy-anchor-loss">Proxy-Anchor Loss</h3>
+<p><code>Proxy-Anchor</code>损失旨在克服<code>Proxy-NCA</code>的局限性，同时保持较低的训练复杂性。主要思想是将每个<code>proxy</code>作为锚，并将其与整个数据批关联，以便在训练过程中数据通过<code>proxy anchor</code>彼此交互。此损失先按照<code>Proxy-NCA</code>的标准设置为每个类别分配一个<code>proxy</code>，公式为:</p>
+<p><span class="math display">\[
+\begin{aligned}
+\ell(X)=&amp; \frac{1}{|P+|} \sum_{p \in P^{+}} \log \left(1+\sum_{x \in X_{p}^{+}} e^{-\alpha(s(x, p)-\delta)}\right) \\
+&amp;+\frac{1}{|P|} \sum_{p \in P} \log \left(1+\sum_{x \in X_{p}^{-}} e^{\alpha(s(x, p)+\delta)}\right)
+\end{aligned}
+\]</span></p>
+<p>这个也是比较老套的设置方法,其中<span class="math inline">\(\delta\)</span>为<code>margin</code>,<span class="math inline">\(\alpha\)</span>为尺度系数.将一个<code>batch</code>中所有的嵌入向量<span class="math inline">\(X\)</span>分成两个子集<span class="math inline">\(X_p^+,X_p^-\)</span>,其中<span class="math inline">\(X_p^+\)</span>表示<code>proxy</code><span class="math inline">\(p\)</span>的正样本嵌入向量,<span class="math inline">\(X_p^-\)</span>则是剩下的所有向量.</p>
+<p>将损失换一个形式: <span class="math display">\[
+\begin{aligned}
+\ell(X)=&amp; \frac{1}{\left|P^{+}\right|} \sum_{p \in P^{+}}[\text {Softplus }(\mathop{\operatorname{LSE}}\limits_{x \in X_{p}^{+}} -\alpha(s(x, p)-\delta))] \\
+&amp;+\frac{1}{|P|} \sum_{x \in X_{p}^{+}}\left[\text {Softplus }\left(\mathop{\operatorname{LSE}}\limits_{x \in X_{p}^{-}} \alpha(s(x, p)+\delta)\right)\right]
+\end{aligned}
+\]</span></p>
+<p>这样更加符合<code>circle loss</code>中所提出的统一形式了.其中这里的<span class="math inline">\(|P^+|\)</span>是正样本的统计数量,<span class="math inline">\(|P|\)</span>是总类别数.这个系数我觉得不加也没关系...</p>
+<p><strong>NOTE</strong> 我看了下他官方的代码,实际上什么基于<code>proxy</code>的方法就是额外再加一个可训练的聚类中心...我之前的各种损失函数的实现是直接把最后一层作为聚类中心(也就是他们所说的<code>proxy</code>),这么看来把<code>circle loss</code>拉到度量学习的标准任务里肯定也是很能打的.</p>
+
+        
+      
+    </div> -->
+    <footer class="article-footer">
+      <a data-url="https://zhen8838.github.io/2020/06/17/proxy-anchor/" data-id="ckbiy76js006wlx6xqe3axwi9" class="article-share-link">Share</a>
+      
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/tensorflow/">tensorflow</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/深度学习/">深度学习</a></li></ul>
+
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+  
+    <a href="/2020/06/16/statis-learn-cp11/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">统计学习方法:聚类方法</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">分类</h3>
+    <div class="widget">
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/学习/">学习</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">标签云</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/C/" style="font-size: 12.86px;">C</a> <a href="/tags/C/" style="font-size: 12.14px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10px;">CNN</a> <a href="/tags/Eigen/" style="font-size: 10px;">Eigen</a> <a href="/tags/GAN/" style="font-size: 10px;">GAN</a> <a href="/tags/Linux/" style="font-size: 19.29px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12.14px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12.14px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.71px;">PCB</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 15px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 11.43px;">linux</a> <a href="/tags/mxnet/" style="font-size: 10px;">mxnet</a> <a href="/tags/pfld/" style="font-size: 10px;">pfld</a> <a href="/tags/python/" style="font-size: 18.57px;">python</a> <a href="/tags/pytorch/" style="font-size: 10px;">pytorch</a> <a href="/tags/retinaface/" style="font-size: 10px;">retinaface</a> <a href="/tags/stm32/" style="font-size: 11.43px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 20px;">tensorflow</a> <a href="/tags/vscode/" style="font-size: 10px;">vscode</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/yolo/" style="font-size: 12.86px;">yolo</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 14.29px;">作业</a> <a href="/tags/半监督学习/" style="font-size: 15.71px;">半监督学习</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/图像处理/" style="font-size: 10px;">图像处理</a> <a href="/tags/堆栈/" style="font-size: 10.71px;">堆栈</a> <a href="/tags/声音信号处理/" style="font-size: 12.14px;">声音信号处理</a> <a href="/tags/小工具/" style="font-size: 12.14px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 16.43px;">嵌入式</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 17.86px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 17.86px;">机器学习</a> <a href="/tags/树/" style="font-size: 12.14px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/概率论/" style="font-size: 17.86px;">概率论</a> <a href="/tags/深度学习/" style="font-size: 17.14px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 11.43px;">神经网络</a> <a href="/tags/算法/" style="font-size: 12.14px;">算法</a> <a href="/tags/统计学习方法/" style="font-size: 15px;">统计学习方法</a> <a href="/tags/聚类/" style="font-size: 12.14px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13.57px;">蓝牙</a> <a href="/tags/调参/" style="font-size: 10px;">调参</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/路由/" style="font-size: 10px;">路由</a> <a href="/tags/链表/" style="font-size: 11.43px;">链表</a> <a href="/tags/错误记录/" style="font-size: 19.29px;">错误记录</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">归档</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/05/">五月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/04/">四月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/12/">十二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/09/">九月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/08/">八月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/07/">七月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/06/">六月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/05/">五月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">三月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">最新文章</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2020/06/17/proxy-anchor/">Proxy Anchor Loss for Deep Metric Learning论文解读</a>
+          </li>
+        
+          <li>
+            <a href="/2020/06/16/statis-learn-cp11/">统计学习方法:聚类方法</a>
+          </li>
+        
+          <li>
+            <a href="/2020/06/13/statis-learn-cp10/">统计学习方法:条件随机场</a>
+          </li>
+        
+          <li>
+            <a href="/2020/06/10/statis-learn-cp9/">统计学习方法:隐马尔可夫模型</a>
+          </li>
+        
+          <li>
+            <a href="/2020/06/08/U-GAT-IT/">U-GAT-IT论文解读</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2020 NAke<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+    <a href="/about" class="mobile-nav-link">about</a>
+  
+</nav>
+    
+
+<script src="//cdn.staticfile.org/jquery/2.0.3/jquery.min.js"></script>
+
+
+  <link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
+  <script src="/fancybox/jquery.fancybox.pack.js"></script>
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+  </div>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+</body>
+</html>
