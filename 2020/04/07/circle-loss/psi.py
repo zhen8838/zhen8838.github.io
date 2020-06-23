@@ -104,7 +104,7 @@ Z = psi_sn_ - psi_sp_
 
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
-fig:plt.Figure = plt.figure()
+fig: plt.Figure = plt.figure()
 ax: Axes3D = fig.gca(projection='3d')
 fig.set_tight_layout(True)
 surf = ax.plot_surface(X, Y, Z, cmap=cm.coolwarm,
