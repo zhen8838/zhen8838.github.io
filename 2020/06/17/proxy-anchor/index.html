@@ -16,7 +16,8 @@
 <meta property="og:description" content="这是CVPR2020的一篇度量学习的论文.来自韩国.我觉得还蛮有意思的,因此学习一番. 他的图画的是真好看,虽然做的事情其实就是把amsoftmax换个皮...">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https://zhen8838.github.io/2020/06/17/proxy-anchor/proxy_1.png">
-<meta property="og:updated_time" content="2020-06-22T13:37:07.948Z">
+<meta property="og:image" content="https://zhen8838.github.io/2020/06/17/proxy-anchor/circle-loss-5.png">
+<meta property="og:updated_time" content="2020-06-23T07:05:12.730Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Proxy Anchor Loss for Deep Metric Learning论文解读">
 <meta name="twitter:description" content="这是CVPR2020的一篇度量学习的论文.来自韩国.我觉得还蛮有意思的,因此学习一番. 他的图画的是真好看,虽然做的事情其实就是把amsoftmax换个皮...">
@@ -145,6 +146,12 @@
 <h2 id="额外实验2">额外实验2</h2>
 <p>后面我又做了一下关于<span class="math inline">\(margin\)</span>的实验，实际上我们考虑<code>softmax</code>分类的过程，要使他分类难度增强应该是降低正确类别的数值，因此应该是<span class="math inline">\(s_p=cos(\theta_{y_i})-m\)</span>，这样才会强制正确类别的向量夹角更小。那么对于不正确的的分类类别，应该是加大他的数值，<span class="math inline">\(s_n=cos(\theta_{j\neq y_i})+m\)</span>,这样会强制降低向量更加接近垂直。</p>
 <p>这里留个小坑，对于<code>circle loss</code>里面的<span class="math inline">\(margin\)</span>设置我还是得重新仔细看看。</p>
+<p><strong>NOTE</strong> 2020-6-23日更新，因为<code>circle loss</code>设置了<code>自定义pace</code>，因此他计算决策面的时候将<span class="math inline">\(\alpha\)</span>考虑进去了，所以他得到的<span class="math inline">\(margin\)</span>和我之前设想的不一样。然后我又做了一下他的间距分布图，其实这个损失还是可以继续改进的，大家可以看到当<span class="math inline">\(\cos(\theta_p)=0，\cos(\theta_n)\in(\pi,\frac{\pi}{2})\)</span>时，对于负<code>pair</code>的损失是较小的。他所说的<code>circle</code>区域实际上是在<span class="math inline">\(\cos(\theta_p)=0，\cos(\theta_n)=\frac{\pi}{2}\)</span>有一个更小的凹槽，这里是我们的<code>ideal</code>区域。</p>
+<p>接下来如果有老哥可以把<span class="math inline">\(\cos(\theta_p)=0，\cos(\theta_n)\in(\pi,\frac{\pi}{2})\)</span>这块区域的损失重新设计一下，应该可以得到更好的收敛效果。</p>
+<p>等等。。这样判断太武断了，应该还需要分析一下梯度的变化。我这里就不继续深入了。</p>
+<div data-align="center">
+<p><img src="/2020/06/17/proxy-anchor/circle-loss-5.png"></p>
+</div>
 
       
     </div>
@@ -204,12 +211,18 @@
 <h2 id="额外实验2">额外实验2</h2>
 <p>后面我又做了一下关于<span class="math inline">\(margin\)</span>的实验，实际上我们考虑<code>softmax</code>分类的过程，要使他分类难度增强应该是降低正确类别的数值，因此应该是<span class="math inline">\(s_p=cos(\theta_{y_i})-m\)</span>，这样才会强制正确类别的向量夹角更小。那么对于不正确的的分类类别，应该是加大他的数值，<span class="math inline">\(s_n=cos(\theta_{j\neq y_i})+m\)</span>,这样会强制降低向量更加接近垂直。</p>
 <p>这里留个小坑，对于<code>circle loss</code>里面的<span class="math inline">\(margin\)</span>设置我还是得重新仔细看看。</p>
+<p><strong>NOTE</strong> 2020-6-23日更新，因为<code>circle loss</code>设置了<code>自定义pace</code>，因此他计算决策面的时候将<span class="math inline">\(\alpha\)</span>考虑进去了，所以他得到的<span class="math inline">\(margin\)</span>和我之前设想的不一样。然后我又做了一下他的间距分布图，其实这个损失还是可以继续改进的，大家可以看到当<span class="math inline">\(\cos(\theta_p)=0，\cos(\theta_n)\in(\pi,\frac{\pi}{2})\)</span>时，对于负<code>pair</code>的损失是较小的。他所说的<code>circle</code>区域实际上是在<span class="math inline">\(\cos(\theta_p)=0，\cos(\theta_n)=\frac{\pi}{2}\)</span>有一个更小的凹槽，这里是我们的<code>ideal</code>区域。</p>
+<p>接下来如果有老哥可以把<span class="math inline">\(\cos(\theta_p)=0，\cos(\theta_n)\in(\pi,\frac{\pi}{2})\)</span>这块区域的损失重新设计一下，应该可以得到更好的收敛效果。</p>
+<p>等等。。这样判断太武断了，应该还需要分析一下梯度的变化。我这里就不继续深入了。</p>
+<div data-align="center">
+<p><img src="/2020/06/17/proxy-anchor/circle-loss-5.png"></p>
+</div>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2020/06/17/proxy-anchor/" data-id="ckbqjntud0079wz6x2mhoq901" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2020/06/17/proxy-anchor/" data-id="ckbrl3y03007bfc6xgmvyl564" class="article-share-link">Share</a>
       
       
       
