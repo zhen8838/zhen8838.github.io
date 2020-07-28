@@ -96,29 +96,23 @@
       
         <p>第十个算法<code>FixMatch: Simplifying Semi-Supervised Learning withConsistency and Confidence</code>，这依旧是谷歌研究组的作者提出的，是对<code>MixMatch</code>的改进。</p>
 <a id="more"></a>
-<h1 id="算法理论">算法理论</h1>
-<p><code>FixMatch</code>简而言之是一致性正则与伪标签的简单组合，他的主要创新点在于如何结合，以及在执行一致性正则是单独使用弱增强与强增强。这里的符号还是和之前的文章一样，新添加强增强符号为<span class="math inline">\(\mathcal{A}(\cdot)\)</span>和弱增强<span class="math inline">\(\alpha(\cdot)\)</span>。他的损失函数只由两个交叉熵组成：有监督的交叉熵<span class="math inline">\(\ell_{s}\)</span>和无监督交叉熵<span class="math inline">\(\ell_{u}\)</span>。对于有标签数据只使用弱增强并计算交叉熵：</p>
-<p><span class="math display">\[
+<h1 id="算法理论"><a href="#算法理论" class="headerlink" title="算法理论"></a>算法理论</h1><p><code>FixMatch</code>简而言之是一致性正则与伪标签的简单组合，他的主要创新点在于如何结合，以及在执行一致性正则是单独使用弱增强与强增强。这里的符号还是和之前的文章一样，新添加强增强符号为$\mathcal{A}(\cdot)$和弱增强$\alpha(\cdot)$。他的损失函数只由两个交叉熵组成：有监督的交叉熵$\ell_{s}$和无监督交叉熵$\ell_{u}$。对于有标签数据只使用弱增强并计算交叉熵：</p>
+<script type="math/tex; mode=display">
 \begin{align}
 \ell_{s}=\frac{1}{B} \sum_{b=1}^{B} \mathrm{H}\left(p_{b}, p_{\mathrm{m}}\left(y | \alpha\left(x_{b}\right)\right)\right)
-\end{align}
-\]</span></p>
-<p>对于无标签数据，首先计算人工标签再用它来计算交叉熵。为了获得人工标签，首先计算给定的弱增强无标签图像的分布：<span class="math inline">\(q_b=\_m(y|\alpha(u_b))\)</span>。然后使用<span class="math inline">\(\hat{q}_{b}=\arg \max \left(q_{b}\right)\)</span>作为伪标签，接着使模型学习强增强的无标签样本的分类类别： <span class="math display">\[
+\end{align}</script><p>对于无标签数据，首先计算人工标签再用它来计算交叉熵。为了获得人工标签，首先计算给定的弱增强无标签图像的分布：$q_b=_m(y|\alpha(u_b))$。然后使用$\hat{q}_{b}=\arg \max \left(q_{b}\right)$作为伪标签，接着使模型学习强增强的无标签样本的分类类别：</p>
+<script type="math/tex; mode=display">
 \begin{align}
 \ell_{u}=\frac{1}{\mu B} \sum_{b=1}^{\mu B} \mathbb{1}\left(\max \left(q_{b}\right) \geq \tau\right) \mathrm{H}\left(\hat{q}_{b}, p_{\mathrm{m}}\left(y | \mathcal{A}\left(u_{b}\right)\right)\right)
-\end{align}
-\]</span></p>
-<p>其中<span class="math inline">\(\tau\)</span>为保留阈值，如果伪标签的置信度不够高，那么需要丢弃这部分损失。综合损失为如下：<span class="math inline">\(\ell_s+\lambda_u\ell_u\)</span>，其中<span class="math inline">\(\lambda_u\)</span>为权重参数。</p>
-<h2 id="fixmatch中的增强">FixMatch中的增强</h2>
-<p>其中弱增强为50%随机水平翻转，12.5%随机上下翻转，并添加一部分水平平移。对于强增强，使用了<code>RandAugment</code>和<code>CTAugment</code>。</p>
+\end{align}</script><p>其中$\tau$为保留阈值，如果伪标签的置信度不够高，那么需要丢弃这部分损失。综合损失为如下：$\ell_s+\lambda_u\ell_u$，其中$\lambda_u$为权重参数。</p>
+<h2 id="FixMatch中的增强"><a href="#FixMatch中的增强" class="headerlink" title="FixMatch中的增强"></a>FixMatch中的增强</h2><p>其中弱增强为50%随机水平翻转，12.5%随机上下翻转，并添加一部分水平平移。对于强增强，使用了<code>RandAugment</code>和<code>CTAugment</code>。</p>
 <p>对于<code>RandAugment</code>他使用一个全局的幅度来控制增强，幅度是通过验证集来优化的。不过论文中发现每个<code>step</code>直接从预定义范围中随机采样幅度即可获得良好的效果，方法类似与<code>UDA</code>。</p>
 <p>对于<code>CTAugment</code>，在<code>ReMixMatch</code>讲过了。</p>
-<h2 id="其他重要因素">其他重要因素</h2>
-<p>发现对于优化器，使用<code>Adam</code>反而效果不好。对于学习率衰减，使用余弦衰减比较好。</p>
-<h2 id="相关工作总结">相关工作总结</h2>
+<h2 id="其他重要因素"><a href="#其他重要因素" class="headerlink" title="其他重要因素"></a>其他重要因素</h2><p>发现对于优化器，使用<code>Adam</code>反而效果不好。对于学习率衰减，使用余弦衰减比较好。</p>
+<h2 id="相关工作总结"><a href="#相关工作总结" class="headerlink" title="相关工作总结"></a>相关工作总结</h2><div class="table-container">
 <table>
 <thead>
-<tr class="header">
+<tr>
 <th>算法</th>
 <th>人工标签增强</th>
 <th>预测增强</th>
@@ -127,79 +121,79 @@
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td>Π-Model</td>
 <td>弱</td>
 <td>弱</td>
 <td>无</td>
 <td></td>
 </tr>
-<tr class="even">
+<tr>
 <td>Temporal Ensembling</td>
 <td>弱</td>
 <td>弱</td>
 <td>无</td>
 <td>使用较早训练的模型</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>Mean Teacher</td>
 <td>弱</td>
 <td>弱</td>
 <td>无</td>
 <td>使用参数指数移动平滑</td>
 </tr>
-<tr class="even">
+<tr>
 <td>Virtual Adversarial Training</td>
 <td>无</td>
 <td>对抗</td>
 <td>无</td>
 <td></td>
 </tr>
-<tr class="odd">
+<tr>
 <td>UDA</td>
 <td>无</td>
 <td>强</td>
 <td>锐化</td>
 <td>忽略低置信度的人工标签</td>
 </tr>
-<tr class="even">
+<tr>
 <td>MixMatch</td>
 <td>弱</td>
 <td>弱</td>
 <td>锐化</td>
 <td>平均多个人工标签</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>ReMixMatch</td>
 <td>弱</td>
 <td>强</td>
 <td>锐化</td>
 <td>汇总多个预测的损失</td>
 </tr>
-<tr class="even">
+<tr>
 <td>FixMatch</td>
 <td>弱</td>
 <td>强</td>
 <td>伪标签</td>
-<td></td>
 </tr>
 </tbody>
 </table>
+</div>
 <p>实际上经过<code>MixMatch</code>，<code>ReMixMatch</code>中大量的消融测试，作者应该已经找到了其中最重要的几个因素，所以这篇论文的理论部分比较少，因为之前的论文都已经介绍过了。实际上我认为主要加强点还是在于如何更好的使用一致性正则化，弱增强与弱增强间的所能学习到的一致性还不够，需要在弱增强与强增强间学习。同时对于人工标签的处理方式相当于选择如何进行熵最小化，也是次重要的。</p>
-<h2 id="实验结果">实验结果</h2>
-<div data-align="center">
-<p><img src="/2020/02/06/ssl-fixmatch/fixmatch-1.png"></p>
+<h2 id="实验结果"><a href="#实验结果" class="headerlink" title="实验结果"></a>实验结果</h2><div align="center">
+<img src="/2020/02/06/ssl-fixmatch/fixmatch-1.png">
 </div>
-<h2 id="消融测试">消融测试</h2>
-<p>这里的消融测试主要就是在优化器上的了。</p>
-<div data-align="center">
-<p><img src="/2020/02/06/ssl-fixmatch/fixmatch-2.png"></p>
+
+
+<h2 id="消融测试"><a href="#消融测试" class="headerlink" title="消融测试"></a>消融测试</h2><p>这里的消融测试主要就是在优化器上的了。</p>
+<div align="center">
+<img src="/2020/02/06/ssl-fixmatch/fixmatch-2.png">
 </div>
-<h1 id="代码">代码</h1>
-<p>实际上他这里的训练流程代码不算复杂，但是他的数据增强部分我暂时也没有搞懂，需要花点时间仔细看看。</p>
+
+
+<h1 id="代码"><a href="#代码" class="headerlink" title="代码"></a>代码</h1><p>实际上他这里的训练流程代码不算复杂，但是他的数据增强部分我暂时也没有搞懂，需要花点时间仔细看看。</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br></pre></td><td class="code"><pre><span class="line">AUGMENT_POOL_CLASS = AugmentPoolCTACutOut</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">train</span><span class="params">(self, train_nimg, report_nimg)</span>:</span></span><br><span class="line">    <span class="keyword">if</span> FLAGS.eval_ckpt:</span><br><span class="line">        self.eval_checkpoint(FLAGS.eval_ckpt)</span><br><span class="line">        <span class="keyword">return</span></span><br><span class="line">    batch = FLAGS.batch</span><br><span class="line">    train_labeled = self.dataset.train_labeled.repeat().shuffle(FLAGS.shuffle).parse().augment()</span><br><span class="line">    train_labeled = train_labeled.batch(batch).prefetch(<span class="number">16</span>).make_one_shot_iterator().get_next()</span><br><span class="line">    train_unlabeled = self.dataset.train_unlabeled.repeat().shuffle(FLAGS.shuffle).parse().augment()</span><br><span class="line">    train_unlabeled = train_unlabeled.batch(batch * self.params[<span class="string">'uratio'</span>]).prefetch(<span class="number">16</span>)</span><br><span class="line">    train_unlabeled = train_unlabeled.make_one_shot_iterator().get_next()</span><br><span class="line">    scaffold = tf.train.Scaffold(saver=tf.train.Saver(max_to_keep=FLAGS.keep_ckpt,</span><br><span class="line">                                                      pad_step_number=<span class="number">10</span>))</span><br><span class="line"></span><br><span class="line">    <span class="keyword">with</span> tf.Session(config=utils.get_config()) <span class="keyword">as</span> sess:</span><br><span class="line">        self.session = sess</span><br><span class="line">        self.cache_eval()</span><br><span class="line"></span><br><span class="line">    <span class="keyword">with</span> tf.train.MonitoredTrainingSession(</span><br><span class="line">            scaffold=scaffold,</span><br><span class="line">            checkpoint_dir=self.checkpoint_dir,</span><br><span class="line">            config=utils.get_config(),</span><br><span class="line">            save_checkpoint_steps=FLAGS.save_kimg &lt;&lt; <span class="number">10</span>,</span><br><span class="line">            save_summaries_steps=report_nimg - batch) <span class="keyword">as</span> train_session:</span><br><span class="line">        self.session = train_session._tf_sess()</span><br><span class="line">        gen_labeled = self.gen_labeled_fn(train_labeled)</span><br><span class="line">        gen_unlabeled = self.gen_unlabeled_fn(train_unlabeled)</span><br><span class="line">        self.tmp.step = self.session.run(self.step)</span><br><span class="line">        <span class="keyword">while</span> self.tmp.step &lt; train_nimg:</span><br><span class="line">            loop = trange(self.tmp.step % report_nimg, report_nimg, batch,</span><br><span class="line">                          leave=<span class="keyword">False</span>, unit=<span class="string">'img'</span>, unit_scale=batch,</span><br><span class="line">                          desc=<span class="string">'Epoch %d/%d'</span> % (<span class="number">1</span> + (self.tmp.step // report_nimg), train_nimg // report_nimg))</span><br><span class="line">            <span class="keyword">for</span> _ <span class="keyword">in</span> loop:</span><br><span class="line">                self.train_step(train_session, gen_labeled, gen_unlabeled)</span><br><span class="line">                <span class="keyword">while</span> self.tmp.print_queue:</span><br><span class="line">                    loop.write(self.tmp.print_queue.pop(<span class="number">0</span>))</span><br><span class="line">        <span class="keyword">while</span> self.tmp.print_queue:</span><br><span class="line">            print(self.tmp.print_queue.pop(<span class="number">0</span>))</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">model</span><span class="params">(self, batch, lr, wd, wu, confidence, uratio, ema=<span class="number">0.999</span>, **kwargs)</span>:</span></span><br><span class="line">    hwc = [self.dataset.height, self.dataset.width, self.dataset.colors]</span><br><span class="line">    xt_in = tf.placeholder(tf.float32, [batch] + hwc, <span class="string">'xt'</span>)  <span class="comment"># Training labeled</span></span><br><span class="line">    x_in = tf.placeholder(tf.float32, [<span class="keyword">None</span>] + hwc, <span class="string">'x'</span>)  <span class="comment"># Eval images</span></span><br><span class="line">    y_in = tf.placeholder(tf.float32, [batch * uratio, <span class="number">2</span>] + hwc, <span class="string">'y'</span>)  <span class="comment"># Training unlabeled (weak, strong)</span></span><br><span class="line">    l_in = tf.placeholder(tf.int32, [batch], <span class="string">'labels'</span>)  <span class="comment"># Labels</span></span><br><span class="line"></span><br><span class="line">    lrate = tf.clip_by_value(tf.to_float(self.step) / (FLAGS.train_kimg &lt;&lt; <span class="number">10</span>), <span class="number">0</span>, <span class="number">1</span>)</span><br><span class="line">    lr *= tf.cos(lrate * (<span class="number">7</span> * np.pi) / (<span class="number">2</span> * <span class="number">8</span>))</span><br><span class="line">    tf.summary.scalar(<span class="string">'monitors/lr'</span>, lr)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># Compute logits for xt_in and y_in</span></span><br><span class="line">    classifier = <span class="keyword">lambda</span> x, **kw: self.classifier(x, **kw, **kwargs).logits</span><br><span class="line">    skip_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)</span><br><span class="line">    logits = utils.para_cat(<span class="keyword">lambda</span> x: classifier(x, training=<span class="keyword">True</span>), tf.concat([xt_in, y_in[:, <span class="number">0</span>], y_in[:, <span class="number">1</span>]], <span class="number">0</span>))</span><br><span class="line">    post_ops = [v <span class="keyword">for</span> v <span class="keyword">in</span> tf.get_collection(tf.GraphKeys.UPDATE_OPS) <span class="keyword">if</span> v <span class="keyword">not</span> <span class="keyword">in</span> skip_ops]</span><br><span class="line">    logits_x = logits[:batch]</span><br><span class="line">    logits_weak, logits_strong = tf.split(logits[batch:], <span class="number">2</span>)</span><br><span class="line">    <span class="keyword">del</span> logits, skip_ops</span><br><span class="line"></span><br><span class="line">    <span class="comment"># Labeled cross-entropy</span></span><br><span class="line">    loss_xe = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=l_in, logits=logits_x)</span><br><span class="line">    loss_xe = tf.reduce_mean(loss_xe)</span><br><span class="line">    tf.summary.scalar(<span class="string">'losses/xe'</span>, loss_xe)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># Pseudo-label cross entropy for unlabeled data</span></span><br><span class="line">    pseudo_labels = tf.stop_gradient(tf.nn.softmax(logits_weak))</span><br><span class="line">    loss_xeu = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.argmax(pseudo_labels, axis=<span class="number">1</span>),</span><br><span class="line">                                                              logits=logits_strong)</span><br><span class="line">    pseudo_mask = tf.to_float(tf.reduce_max(pseudo_labels, axis=<span class="number">1</span>) &gt;= confidence)</span><br><span class="line">    tf.summary.scalar(<span class="string">'monitors/mask'</span>, tf.reduce_mean(pseudo_mask))</span><br><span class="line">    loss_xeu = tf.reduce_mean(loss_xeu * pseudo_mask)</span><br><span class="line">    tf.summary.scalar(<span class="string">'losses/xeu'</span>, loss_xeu)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># L2 regularization</span></span><br><span class="line">    loss_wd = sum(tf.nn.l2_loss(v) <span class="keyword">for</span> v <span class="keyword">in</span> utils.model_vars(<span class="string">'classify'</span>) <span class="keyword">if</span> <span class="string">'kernel'</span> <span class="keyword">in</span> v.name)</span><br><span class="line">    tf.summary.scalar(<span class="string">'losses/wd'</span>, loss_wd)</span><br><span class="line"></span><br><span class="line">    ema = tf.train.ExponentialMovingAverage(decay=ema)</span><br><span class="line">    ema_op = ema.apply(utils.model_vars())</span><br><span class="line">    ema_getter = functools.partial(utils.getter_ema, ema)</span><br><span class="line">    post_ops.append(ema_op)</span><br><span class="line"></span><br><span class="line">    train_op = tf.train.MomentumOptimizer(lr, <span class="number">0.9</span>, use_nesterov=<span class="keyword">True</span>).minimize(</span><br><span class="line">        loss_xe + wu * loss_xeu + wd * loss_wd, colocate_gradients_with_ops=<span class="keyword">True</span>)</span><br><span class="line">    <span class="keyword">with</span> tf.control_dependencies([train_op]):</span><br><span class="line">        train_op = tf.group(*post_ops)</span><br></pre></td></tr></table></figure>
-<h1 id="测试结果">测试结果</h1>
-<p>使用默认参数以及cifar10中250张标注样本训练128个epoch，得到测试集准确率如下，比<code>UDA</code>高一些：</p>
+<h1 id="测试结果"><a href="#测试结果" class="headerlink" title="测试结果"></a>测试结果</h1><p>使用默认参数以及cifar10中250张标注样本训练128个epoch，得到测试集准确率如下，比<code>UDA</code>高一些：</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&quot;last01&quot;: 84.94000244140625,</span><br><span class="line">&quot;last10&quot;: 84.79999923706055,</span><br><span class="line">&quot;last20&quot;: 84.40499877929688,</span><br><span class="line">&quot;last50&quot;: 83.69499969482422</span><br></pre></td></tr></table></figure>
 <p>相比于<code>MixMatch</code>是又快又好。</p>
 
@@ -211,29 +205,23 @@
         
           <p>第十个算法<code>FixMatch: Simplifying Semi-Supervised Learning withConsistency and Confidence</code>，这依旧是谷歌研究组的作者提出的，是对<code>MixMatch</code>的改进。</p>
 <a id="more"></a>
-<h1 id="算法理论">算法理论</h1>
-<p><code>FixMatch</code>简而言之是一致性正则与伪标签的简单组合，他的主要创新点在于如何结合，以及在执行一致性正则是单独使用弱增强与强增强。这里的符号还是和之前的文章一样，新添加强增强符号为<span class="math inline">\(\mathcal{A}(\cdot)\)</span>和弱增强<span class="math inline">\(\alpha(\cdot)\)</span>。他的损失函数只由两个交叉熵组成：有监督的交叉熵<span class="math inline">\(\ell_{s}\)</span>和无监督交叉熵<span class="math inline">\(\ell_{u}\)</span>。对于有标签数据只使用弱增强并计算交叉熵：</p>
-<p><span class="math display">\[
+<h1 id="算法理论"><a href="#算法理论" class="headerlink" title="算法理论"></a>算法理论</h1><p><code>FixMatch</code>简而言之是一致性正则与伪标签的简单组合，他的主要创新点在于如何结合，以及在执行一致性正则是单独使用弱增强与强增强。这里的符号还是和之前的文章一样，新添加强增强符号为$\mathcal{A}(\cdot)$和弱增强$\alpha(\cdot)$。他的损失函数只由两个交叉熵组成：有监督的交叉熵$\ell_{s}$和无监督交叉熵$\ell_{u}$。对于有标签数据只使用弱增强并计算交叉熵：</p>
+<script type="math/tex; mode=display">
 \begin{align}
 \ell_{s}=\frac{1}{B} \sum_{b=1}^{B} \mathrm{H}\left(p_{b}, p_{\mathrm{m}}\left(y | \alpha\left(x_{b}\right)\right)\right)
-\end{align}
-\]</span></p>
-<p>对于无标签数据，首先计算人工标签再用它来计算交叉熵。为了获得人工标签，首先计算给定的弱增强无标签图像的分布：<span class="math inline">\(q_b=\_m(y|\alpha(u_b))\)</span>。然后使用<span class="math inline">\(\hat{q}_{b}=\arg \max \left(q_{b}\right)\)</span>作为伪标签，接着使模型学习强增强的无标签样本的分类类别： <span class="math display">\[
+\end{align}</script><p>对于无标签数据，首先计算人工标签再用它来计算交叉熵。为了获得人工标签，首先计算给定的弱增强无标签图像的分布：$q_b=_m(y|\alpha(u_b))$。然后使用$\hat{q}_{b}=\arg \max \left(q_{b}\right)$作为伪标签，接着使模型学习强增强的无标签样本的分类类别：</p>
+<script type="math/tex; mode=display">
 \begin{align}
 \ell_{u}=\frac{1}{\mu B} \sum_{b=1}^{\mu B} \mathbb{1}\left(\max \left(q_{b}\right) \geq \tau\right) \mathrm{H}\left(\hat{q}_{b}, p_{\mathrm{m}}\left(y | \mathcal{A}\left(u_{b}\right)\right)\right)
-\end{align}
-\]</span></p>
-<p>其中<span class="math inline">\(\tau\)</span>为保留阈值，如果伪标签的置信度不够高，那么需要丢弃这部分损失。综合损失为如下：<span class="math inline">\(\ell_s+\lambda_u\ell_u\)</span>，其中<span class="math inline">\(\lambda_u\)</span>为权重参数。</p>
-<h2 id="fixmatch中的增强">FixMatch中的增强</h2>
-<p>其中弱增强为50%随机水平翻转，12.5%随机上下翻转，并添加一部分水平平移。对于强增强，使用了<code>RandAugment</code>和<code>CTAugment</code>。</p>
+\end{align}</script><p>其中$\tau$为保留阈值，如果伪标签的置信度不够高，那么需要丢弃这部分损失。综合损失为如下：$\ell_s+\lambda_u\ell_u$，其中$\lambda_u$为权重参数。</p>
+<h2 id="FixMatch中的增强"><a href="#FixMatch中的增强" class="headerlink" title="FixMatch中的增强"></a>FixMatch中的增强</h2><p>其中弱增强为50%随机水平翻转，12.5%随机上下翻转，并添加一部分水平平移。对于强增强，使用了<code>RandAugment</code>和<code>CTAugment</code>。</p>
 <p>对于<code>RandAugment</code>他使用一个全局的幅度来控制增强，幅度是通过验证集来优化的。不过论文中发现每个<code>step</code>直接从预定义范围中随机采样幅度即可获得良好的效果，方法类似与<code>UDA</code>。</p>
 <p>对于<code>CTAugment</code>，在<code>ReMixMatch</code>讲过了。</p>
-<h2 id="其他重要因素">其他重要因素</h2>
-<p>发现对于优化器，使用<code>Adam</code>反而效果不好。对于学习率衰减，使用余弦衰减比较好。</p>
-<h2 id="相关工作总结">相关工作总结</h2>
+<h2 id="其他重要因素"><a href="#其他重要因素" class="headerlink" title="其他重要因素"></a>其他重要因素</h2><p>发现对于优化器，使用<code>Adam</code>反而效果不好。对于学习率衰减，使用余弦衰减比较好。</p>
+<h2 id="相关工作总结"><a href="#相关工作总结" class="headerlink" title="相关工作总结"></a>相关工作总结</h2><div class="table-container">
 <table>
 <thead>
-<tr class="header">
+<tr>
 <th>算法</th>
 <th>人工标签增强</th>
 <th>预测增强</th>
@@ -242,79 +230,79 @@
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td>Π-Model</td>
 <td>弱</td>
 <td>弱</td>
 <td>无</td>
 <td></td>
 </tr>
-<tr class="even">
+<tr>
 <td>Temporal Ensembling</td>
 <td>弱</td>
 <td>弱</td>
 <td>无</td>
 <td>使用较早训练的模型</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>Mean Teacher</td>
 <td>弱</td>
 <td>弱</td>
 <td>无</td>
 <td>使用参数指数移动平滑</td>
 </tr>
-<tr class="even">
+<tr>
 <td>Virtual Adversarial Training</td>
 <td>无</td>
 <td>对抗</td>
 <td>无</td>
 <td></td>
 </tr>
-<tr class="odd">
+<tr>
 <td>UDA</td>
 <td>无</td>
 <td>强</td>
 <td>锐化</td>
 <td>忽略低置信度的人工标签</td>
 </tr>
-<tr class="even">
+<tr>
 <td>MixMatch</td>
 <td>弱</td>
 <td>弱</td>
 <td>锐化</td>
 <td>平均多个人工标签</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>ReMixMatch</td>
 <td>弱</td>
 <td>强</td>
 <td>锐化</td>
 <td>汇总多个预测的损失</td>
 </tr>
-<tr class="even">
+<tr>
 <td>FixMatch</td>
 <td>弱</td>
 <td>强</td>
 <td>伪标签</td>
-<td></td>
 </tr>
 </tbody>
 </table>
+</div>
 <p>实际上经过<code>MixMatch</code>，<code>ReMixMatch</code>中大量的消融测试，作者应该已经找到了其中最重要的几个因素，所以这篇论文的理论部分比较少，因为之前的论文都已经介绍过了。实际上我认为主要加强点还是在于如何更好的使用一致性正则化，弱增强与弱增强间的所能学习到的一致性还不够，需要在弱增强与强增强间学习。同时对于人工标签的处理方式相当于选择如何进行熵最小化，也是次重要的。</p>
-<h2 id="实验结果">实验结果</h2>
-<div data-align="center">
-<p><img src="/2020/02/06/ssl-fixmatch/fixmatch-1.png"></p>
+<h2 id="实验结果"><a href="#实验结果" class="headerlink" title="实验结果"></a>实验结果</h2><div align="center">
+<img src="/2020/02/06/ssl-fixmatch/fixmatch-1.png">
 </div>
-<h2 id="消融测试">消融测试</h2>
-<p>这里的消融测试主要就是在优化器上的了。</p>
-<div data-align="center">
-<p><img src="/2020/02/06/ssl-fixmatch/fixmatch-2.png"></p>
+
+
+<h2 id="消融测试"><a href="#消融测试" class="headerlink" title="消融测试"></a>消融测试</h2><p>这里的消融测试主要就是在优化器上的了。</p>
+<div align="center">
+<img src="/2020/02/06/ssl-fixmatch/fixmatch-2.png">
 </div>
-<h1 id="代码">代码</h1>
-<p>实际上他这里的训练流程代码不算复杂，但是他的数据增强部分我暂时也没有搞懂，需要花点时间仔细看看。</p>
+
+
+<h1 id="代码"><a href="#代码" class="headerlink" title="代码"></a>代码</h1><p>实际上他这里的训练流程代码不算复杂，但是他的数据增强部分我暂时也没有搞懂，需要花点时间仔细看看。</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br></pre></td><td class="code"><pre><span class="line">AUGMENT_POOL_CLASS = AugmentPoolCTACutOut</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">train</span><span class="params">(self, train_nimg, report_nimg)</span>:</span></span><br><span class="line">    <span class="keyword">if</span> FLAGS.eval_ckpt:</span><br><span class="line">        self.eval_checkpoint(FLAGS.eval_ckpt)</span><br><span class="line">        <span class="keyword">return</span></span><br><span class="line">    batch = FLAGS.batch</span><br><span class="line">    train_labeled = self.dataset.train_labeled.repeat().shuffle(FLAGS.shuffle).parse().augment()</span><br><span class="line">    train_labeled = train_labeled.batch(batch).prefetch(<span class="number">16</span>).make_one_shot_iterator().get_next()</span><br><span class="line">    train_unlabeled = self.dataset.train_unlabeled.repeat().shuffle(FLAGS.shuffle).parse().augment()</span><br><span class="line">    train_unlabeled = train_unlabeled.batch(batch * self.params[<span class="string">'uratio'</span>]).prefetch(<span class="number">16</span>)</span><br><span class="line">    train_unlabeled = train_unlabeled.make_one_shot_iterator().get_next()</span><br><span class="line">    scaffold = tf.train.Scaffold(saver=tf.train.Saver(max_to_keep=FLAGS.keep_ckpt,</span><br><span class="line">                                                      pad_step_number=<span class="number">10</span>))</span><br><span class="line"></span><br><span class="line">    <span class="keyword">with</span> tf.Session(config=utils.get_config()) <span class="keyword">as</span> sess:</span><br><span class="line">        self.session = sess</span><br><span class="line">        self.cache_eval()</span><br><span class="line"></span><br><span class="line">    <span class="keyword">with</span> tf.train.MonitoredTrainingSession(</span><br><span class="line">            scaffold=scaffold,</span><br><span class="line">            checkpoint_dir=self.checkpoint_dir,</span><br><span class="line">            config=utils.get_config(),</span><br><span class="line">            save_checkpoint_steps=FLAGS.save_kimg &lt;&lt; <span class="number">10</span>,</span><br><span class="line">            save_summaries_steps=report_nimg - batch) <span class="keyword">as</span> train_session:</span><br><span class="line">        self.session = train_session._tf_sess()</span><br><span class="line">        gen_labeled = self.gen_labeled_fn(train_labeled)</span><br><span class="line">        gen_unlabeled = self.gen_unlabeled_fn(train_unlabeled)</span><br><span class="line">        self.tmp.step = self.session.run(self.step)</span><br><span class="line">        <span class="keyword">while</span> self.tmp.step &lt; train_nimg:</span><br><span class="line">            loop = trange(self.tmp.step % report_nimg, report_nimg, batch,</span><br><span class="line">                          leave=<span class="keyword">False</span>, unit=<span class="string">'img'</span>, unit_scale=batch,</span><br><span class="line">                          desc=<span class="string">'Epoch %d/%d'</span> % (<span class="number">1</span> + (self.tmp.step // report_nimg), train_nimg // report_nimg))</span><br><span class="line">            <span class="keyword">for</span> _ <span class="keyword">in</span> loop:</span><br><span class="line">                self.train_step(train_session, gen_labeled, gen_unlabeled)</span><br><span class="line">                <span class="keyword">while</span> self.tmp.print_queue:</span><br><span class="line">                    loop.write(self.tmp.print_queue.pop(<span class="number">0</span>))</span><br><span class="line">        <span class="keyword">while</span> self.tmp.print_queue:</span><br><span class="line">            print(self.tmp.print_queue.pop(<span class="number">0</span>))</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">model</span><span class="params">(self, batch, lr, wd, wu, confidence, uratio, ema=<span class="number">0.999</span>, **kwargs)</span>:</span></span><br><span class="line">    hwc = [self.dataset.height, self.dataset.width, self.dataset.colors]</span><br><span class="line">    xt_in = tf.placeholder(tf.float32, [batch] + hwc, <span class="string">'xt'</span>)  <span class="comment"># Training labeled</span></span><br><span class="line">    x_in = tf.placeholder(tf.float32, [<span class="keyword">None</span>] + hwc, <span class="string">'x'</span>)  <span class="comment"># Eval images</span></span><br><span class="line">    y_in = tf.placeholder(tf.float32, [batch * uratio, <span class="number">2</span>] + hwc, <span class="string">'y'</span>)  <span class="comment"># Training unlabeled (weak, strong)</span></span><br><span class="line">    l_in = tf.placeholder(tf.int32, [batch], <span class="string">'labels'</span>)  <span class="comment"># Labels</span></span><br><span class="line"></span><br><span class="line">    lrate = tf.clip_by_value(tf.to_float(self.step) / (FLAGS.train_kimg &lt;&lt; <span class="number">10</span>), <span class="number">0</span>, <span class="number">1</span>)</span><br><span class="line">    lr *= tf.cos(lrate * (<span class="number">7</span> * np.pi) / (<span class="number">2</span> * <span class="number">8</span>))</span><br><span class="line">    tf.summary.scalar(<span class="string">'monitors/lr'</span>, lr)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># Compute logits for xt_in and y_in</span></span><br><span class="line">    classifier = <span class="keyword">lambda</span> x, **kw: self.classifier(x, **kw, **kwargs).logits</span><br><span class="line">    skip_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)</span><br><span class="line">    logits = utils.para_cat(<span class="keyword">lambda</span> x: classifier(x, training=<span class="keyword">True</span>), tf.concat([xt_in, y_in[:, <span class="number">0</span>], y_in[:, <span class="number">1</span>]], <span class="number">0</span>))</span><br><span class="line">    post_ops = [v <span class="keyword">for</span> v <span class="keyword">in</span> tf.get_collection(tf.GraphKeys.UPDATE_OPS) <span class="keyword">if</span> v <span class="keyword">not</span> <span class="keyword">in</span> skip_ops]</span><br><span class="line">    logits_x = logits[:batch]</span><br><span class="line">    logits_weak, logits_strong = tf.split(logits[batch:], <span class="number">2</span>)</span><br><span class="line">    <span class="keyword">del</span> logits, skip_ops</span><br><span class="line"></span><br><span class="line">    <span class="comment"># Labeled cross-entropy</span></span><br><span class="line">    loss_xe = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=l_in, logits=logits_x)</span><br><span class="line">    loss_xe = tf.reduce_mean(loss_xe)</span><br><span class="line">    tf.summary.scalar(<span class="string">'losses/xe'</span>, loss_xe)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># Pseudo-label cross entropy for unlabeled data</span></span><br><span class="line">    pseudo_labels = tf.stop_gradient(tf.nn.softmax(logits_weak))</span><br><span class="line">    loss_xeu = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.argmax(pseudo_labels, axis=<span class="number">1</span>),</span><br><span class="line">                                                              logits=logits_strong)</span><br><span class="line">    pseudo_mask = tf.to_float(tf.reduce_max(pseudo_labels, axis=<span class="number">1</span>) &gt;= confidence)</span><br><span class="line">    tf.summary.scalar(<span class="string">'monitors/mask'</span>, tf.reduce_mean(pseudo_mask))</span><br><span class="line">    loss_xeu = tf.reduce_mean(loss_xeu * pseudo_mask)</span><br><span class="line">    tf.summary.scalar(<span class="string">'losses/xeu'</span>, loss_xeu)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># L2 regularization</span></span><br><span class="line">    loss_wd = sum(tf.nn.l2_loss(v) <span class="keyword">for</span> v <span class="keyword">in</span> utils.model_vars(<span class="string">'classify'</span>) <span class="keyword">if</span> <span class="string">'kernel'</span> <span class="keyword">in</span> v.name)</span><br><span class="line">    tf.summary.scalar(<span class="string">'losses/wd'</span>, loss_wd)</span><br><span class="line"></span><br><span class="line">    ema = tf.train.ExponentialMovingAverage(decay=ema)</span><br><span class="line">    ema_op = ema.apply(utils.model_vars())</span><br><span class="line">    ema_getter = functools.partial(utils.getter_ema, ema)</span><br><span class="line">    post_ops.append(ema_op)</span><br><span class="line"></span><br><span class="line">    train_op = tf.train.MomentumOptimizer(lr, <span class="number">0.9</span>, use_nesterov=<span class="keyword">True</span>).minimize(</span><br><span class="line">        loss_xe + wu * loss_xeu + wd * loss_wd, colocate_gradients_with_ops=<span class="keyword">True</span>)</span><br><span class="line">    <span class="keyword">with</span> tf.control_dependencies([train_op]):</span><br><span class="line">        train_op = tf.group(*post_ops)</span><br></pre></td></tr></table></figure>
-<h1 id="测试结果">测试结果</h1>
-<p>使用默认参数以及cifar10中250张标注样本训练128个epoch，得到测试集准确率如下，比<code>UDA</code>高一些：</p>
+<h1 id="测试结果"><a href="#测试结果" class="headerlink" title="测试结果"></a>测试结果</h1><p>使用默认参数以及cifar10中250张标注样本训练128个epoch，得到测试集准确率如下，比<code>UDA</code>高一些：</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&quot;last01&quot;: 84.94000244140625,</span><br><span class="line">&quot;last10&quot;: 84.79999923706055,</span><br><span class="line">&quot;last20&quot;: 84.40499877929688,</span><br><span class="line">&quot;last50&quot;: 83.69499969482422</span><br></pre></td></tr></table></figure>
 <p>相比于<code>MixMatch</code>是又快又好。</p>
 
@@ -322,7 +310,7 @@
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2020/02/06/ssl-fixmatch/" data-id="ckcvcl5t900fndz6xg99iin2o" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2020/02/06/ssl-fixmatch/" data-id="ckd5x9u4d00ee6t6xmt9aogil" class="article-share-link">Share</a>
       
       
       
@@ -373,7 +361,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">标签云</h3>
     <div class="widget tagcloud">
-      <a href="/tags/C/" style="font-size: 12.67px;">C</a> <a href="/tags/C/" style="font-size: 12px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10px;">CNN</a> <a href="/tags/Eigen/" style="font-size: 10px;">Eigen</a> <a href="/tags/GAN/" style="font-size: 10px;">GAN</a> <a href="/tags/Linux/" style="font-size: 19.33px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.67px;">PCB</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 14.67px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 11.33px;">linux</a> <a href="/tags/mxnet/" style="font-size: 10px;">mxnet</a> <a href="/tags/pfld/" style="font-size: 10px;">pfld</a> <a href="/tags/python/" style="font-size: 18.67px;">python</a> <a href="/tags/pytorch/" style="font-size: 10px;">pytorch</a> <a href="/tags/retinaface/" style="font-size: 10px;">retinaface</a> <a href="/tags/stm32/" style="font-size: 11.33px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 20px;">tensorflow</a> <a href="/tags/vscode/" style="font-size: 10px;">vscode</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/yolo/" style="font-size: 12.67px;">yolo</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 14px;">作业</a> <a href="/tags/半监督学习/" style="font-size: 16px;">半监督学习</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/图像处理/" style="font-size: 10px;">图像处理</a> <a href="/tags/堆栈/" style="font-size: 10.67px;">堆栈</a> <a href="/tags/声音信号处理/" style="font-size: 12px;">声音信号处理</a> <a href="/tags/小工具/" style="font-size: 12px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 16px;">嵌入式</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 17.33px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 17.33px;">机器学习</a> <a href="/tags/树/" style="font-size: 12px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/概率论/" style="font-size: 18px;">概率论</a> <a href="/tags/深度学习/" style="font-size: 16.67px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 11.33px;">神经网络</a> <a href="/tags/算法/" style="font-size: 12px;">算法</a> <a href="/tags/统计学习方法/" style="font-size: 15.33px;">统计学习方法</a> <a href="/tags/聚类/" style="font-size: 12px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13.33px;">蓝牙</a> <a href="/tags/调参/" style="font-size: 10px;">调参</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/路由/" style="font-size: 10px;">路由</a> <a href="/tags/链表/" style="font-size: 11.33px;">链表</a> <a href="/tags/错误记录/" style="font-size: 19.33px;">错误记录</a>
+      <a href="/tags/C/" style="font-size: 12.86px;">C</a> <a href="/tags/C/" style="font-size: 12.14px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10px;">CNN</a> <a href="/tags/Eigen/" style="font-size: 10px;">Eigen</a> <a href="/tags/GAN/" style="font-size: 10px;">GAN</a> <a href="/tags/Linux/" style="font-size: 19.29px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12.14px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12.14px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.71px;">PCB</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 15px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 11.43px;">linux</a> <a href="/tags/mxnet/" style="font-size: 10px;">mxnet</a> <a href="/tags/pfld/" style="font-size: 10px;">pfld</a> <a href="/tags/python/" style="font-size: 18.57px;">python</a> <a href="/tags/pytorch/" style="font-size: 10px;">pytorch</a> <a href="/tags/retinaface/" style="font-size: 10px;">retinaface</a> <a href="/tags/stm32/" style="font-size: 11.43px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 20px;">tensorflow</a> <a href="/tags/vscode/" style="font-size: 10px;">vscode</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/yolo/" style="font-size: 12.86px;">yolo</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 14.29px;">作业</a> <a href="/tags/半监督学习/" style="font-size: 15.71px;">半监督学习</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/图像处理/" style="font-size: 10px;">图像处理</a> <a href="/tags/堆栈/" style="font-size: 10.71px;">堆栈</a> <a href="/tags/声音信号处理/" style="font-size: 12.14px;">声音信号处理</a> <a href="/tags/小工具/" style="font-size: 12.14px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 15.71px;">嵌入式</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 17.14px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 17.14px;">机器学习</a> <a href="/tags/树/" style="font-size: 12.14px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/概率论/" style="font-size: 17.86px;">概率论</a> <a href="/tags/深度学习/" style="font-size: 16.43px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 11.43px;">神经网络</a> <a href="/tags/算法/" style="font-size: 12.14px;">算法</a> <a href="/tags/统计学习方法/" style="font-size: 15.71px;">统计学习方法</a> <a href="/tags/聚类/" style="font-size: 12.14px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13.57px;">蓝牙</a> <a href="/tags/调参/" style="font-size: 10px;">调参</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/路由/" style="font-size: 10px;">路由</a> <a href="/tags/链表/" style="font-size: 11.43px;">链表</a> <a href="/tags/错误记录/" style="font-size: 19.29px;">错误记录</a>
     </div>
   </div>
 
@@ -395,6 +383,10 @@
       <ul>
         
           <li>
+            <a href="/2020/07/28/statis-learn-cp16/">统计学习方法:马尔科夫链蒙特卡洛法</a>
+          </li>
+        
+          <li>
             <a href="/2020/07/21/statis-learn-cp15/">统计学习方法:概率潜在语义模型</a>
           </li>
         
@@ -408,10 +400,6 @@
         
           <li>
             <a href="/2020/06/17/proxy-anchor/">Proxy Anchor Loss for Deep Metric Learning论文解读</a>
-          </li>
-        
-          <li>
-            <a href="/2020/06/16/statis-learn-cp11/">统计学习方法:聚类方法</a>
           </li>
         
       </ul>
