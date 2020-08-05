@@ -59,7 +59,7 @@ make_plots(X, Y, prior, likelihood, posterior)
 plt.title(f"原始分布", fontsize=20)
 plt.tight_layout(True)
 plt.savefig('/home/zqh/Documents/gitio/source/_posts/statis-learn-cp16/gibbs_1.png')
-
+plt.show()
 """ M-H采样 """
 
 
@@ -99,13 +99,37 @@ make_plots(X, Y, prior(X, Y), lik(X, Y), posterior_metroplis)
 plt.title(f"M-H采样", fontsize=20)
 plt.tight_layout(True)
 plt.savefig('/home/zqh/Documents/gitio/source/_posts/statis-learn-cp16/gibbs_2.png')
-
+plt.show()
 
 """ gibbs """
 
 theta = np.array([0.5, 0.5])
 niters = 10000
 burnin = 500
+
+
+def proposal(theta):
+  """ 
+  假设当前proposal分布为:
+  multivariate_normal(mean=[m1, m2],
+                      cov=[[s1, rho],
+                      [rho, s2]])
+  """
+  rho = 0.2
+  m1, m2 = 0, 0
+  s1, s2 = 1, 1
+
+  def p_y_x(x):
+    return norm(m2 + rho * s2 / s1 * (x - m1),
+                np.sqrt(1 - rho**2) * s2).rvs()
+
+  def p_x_y(y):
+    return norm(m1 + rho * s1 / s2 * (y - m2),
+                np.sqrt(1 - rho**2) * s1).rvs()
+
+  theta = [p_y_x(theta[1]), theta[1]]
+  theta = [theta[0], p_x_y(theta[0])]
+  return theta
 
 
 def gibbs(niters: int, burnin: int,
@@ -115,10 +139,11 @@ def gibbs(niters: int, burnin: int,
   for i in range(niters):
     theta = [beta(a + k1, b + N1 - k1).rvs(), theta[1]]
     theta = [theta[0], beta(a + k2, b + N2 - k2).rvs()]
-
+    
     if i >= burnin:
       thetas[i - burnin] = theta
   return thetas
+
 
 thetas = gibbs(niters, burnin, init_theta, proposal, target)
 kde = gaussian_kde(thetas.T)
@@ -128,3 +153,4 @@ make_plots(X, Y, prior(X, Y), lik(X, Y), posterior_metroplis)
 plt.title(f"Gibbs采样", fontsize=20)
 plt.tight_layout(True)
 plt.savefig('/home/zqh/Documents/gitio/source/_posts/statis-learn-cp16/gibbs_3.png')
+plt.show()

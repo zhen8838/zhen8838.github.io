@@ -7,13 +7,13 @@
   
   <title>i2c之总结 | </title>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta name="description" content="最近在linux下移植i2c的传感器驱动。移植了才发现各个设备的i2c读写都不太一样，对于这几个方式我做一个小总结。首先我使用的是linux应用层通用的i2c读写，我的读写默认是使用smbus协议进行读写的。">
+  <meta name="description" content="最近在linux下移植i2c的传感器驱动。移植了才发现各个设备的i2c读写都不太一样，对于这几个方式我做一个小总结。 首先我使用的是linux应用层通用的i2c读写，我的读写默认是使用smbus协议进行读写的。">
 <meta name="keywords" content="嵌入式,错误记录,PCB">
 <meta property="og:type" content="article">
 <meta property="og:title" content="i2c之总结">
 <meta property="og:url" content="https://zhen8838.github.io/2018/07/25/i2candspi/index.html">
 <meta property="og:site_name">
-<meta property="og:description" content="最近在linux下移植i2c的传感器驱动。移植了才发现各个设备的i2c读写都不太一样，对于这几个方式我做一个小总结。首先我使用的是linux应用层通用的i2c读写，我的读写默认是使用smbus协议进行读写的。">
+<meta property="og:description" content="最近在linux下移植i2c的传感器驱动。移植了才发现各个设备的i2c读写都不太一样，对于这几个方式我做一个小总结。 首先我使用的是linux应用层通用的i2c读写，我的读写默认是使用smbus协议进行读写的。">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https://zhen8838.github.io/2018/07/25/i2candspi/1.png">
 <meta property="og:image" content="https://zhen8838.github.io/2018/07/25/i2candspi/2.png">
@@ -21,7 +21,7 @@
 <meta property="og:updated_time" content="2019-03-22T08:58:12.774Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="i2c之总结">
-<meta name="twitter:description" content="最近在linux下移植i2c的传感器驱动。移植了才发现各个设备的i2c读写都不太一样，对于这几个方式我做一个小总结。首先我使用的是linux应用层通用的i2c读写，我的读写默认是使用smbus协议进行读写的。">
+<meta name="twitter:description" content="最近在linux下移植i2c的传感器驱动。移植了才发现各个设备的i2c读写都不太一样，对于这几个方式我做一个小总结。 首先我使用的是linux应用层通用的i2c读写，我的读写默认是使用smbus协议进行读写的。">
 <meta name="twitter:image" content="https://zhen8838.github.io/2018/07/25/i2candspi/1.png">
   
   
@@ -95,42 +95,44 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <p>最近在linux下移植i2c的传感器驱动。移植了才发现各个设备的i2c读写都不太一样，对于这几个方式我做一个小总结。<br>首先我使用的是linux应用层通用的i2c读写，我的读写默认是使用smbus协议进行读写的。</p>
+        <p>最近在linux下移植i2c的传感器驱动。移植了才发现各个设备的i2c读写都不太一样，对于这几个方式我做一个小总结。 首先我使用的是linux应用层通用的i2c读写，我的读写默认是使用smbus协议进行读写的。</p>
 <a id="more"></a>
-<h1 id="smbus协议"><a href="#smbus协议" class="headerlink" title="smbus协议"></a>smbus协议</h1><p>先放一张图片合集，接下来就逐一看看这几种方式。</p>
-<div align="center">
-<img src="/2018/07/25/i2candspi/1.png" width="80%">
+<h1 id="smbus协议">smbus协议</h1>
+先放一张图片合集，接下来就逐一看看这几种方式。
+<div data-align="center">
+<p><img src="/2018/07/25/i2candspi/1.png" width="80%"></p>
 </div>
-
-
-<h1 id="smbus-Send-Byte"><a href="#smbus-Send-Byte" class="headerlink" title="smbus Send Byte"></a>smbus Send Byte</h1><p>这个方式比较少用到，一般我们的传感器都有地址位以及数据位，所以至少传输两位。但是我在使用SHT31这个传感器的就需要用到此方式。先看看SHT31寄存器的读写：</p>
-<div align="center">
-<img src="/2018/07/25/i2candspi/2.png" width="80%">
+<h1 id="smbus-send-byte">smbus Send Byte</h1>
+<p>这个方式比较少用到，一般我们的传感器都有地址位以及数据位，所以至少传输两位。但是我在使用SHT31这个传感器的就需要用到此方式。先看看SHT31寄存器的读写：</p>
+<div data-align="center">
+<p><img src="/2018/07/25/i2candspi/2.png" width="80%"></p>
 </div>
-
-<p>这里发现这个传感器没有寄存器地址，但是也要发两位数据，而且是高位先行。<br>所以这个时候就需要改写对应的读写函数如下：</p>
-<pre><code>直接按高低位写两位数据即可。
-</code></pre><p>当然这里我也存在一个疑问，直接调用write函数，对应的i2c输出应该是一个地址位，一个数据位，但是我两次调用write函数，应该会有四个byte信号输出，但是按照读写情况，还是十分正常的。</p>
+<p>这里发现这个传感器没有寄存器地址，但是也要发两位数据，而且是高位先行。 所以这个时候就需要改写对应的读写函数如下：</p>
+<pre><code>直接按高低位写两位数据即可。</code></pre>
+<p>当然这里我也存在一个疑问，直接调用write函数，对应的i2c输出应该是一个地址位，一个数据位，但是我两次调用write函数，应该会有四个byte信号输出，但是按照读写情况，还是十分正常的。</p>
 <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">DrvStatus_t <span class="title">SHT31_writeCommand</span><span class="params">(<span class="keyword">uint16_t</span> cmd)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">uint8_t</span> data[<span class="number">2</span>];</span><br><span class="line">    data[<span class="number">0</span>] = cmd &gt;&gt; <span class="number">8</span>, data[<span class="number">1</span>] = cmd &amp; <span class="number">0x00FF</span>;</span><br><span class="line">    <span class="keyword">if</span> (write(sht31Fd, data, <span class="number">2</span>) &lt; <span class="number">0</span>)</span><br><span class="line">        <span class="keyword">return</span> COMPONENT_ERROR;</span><br><span class="line">    <span class="keyword">return</span> COMPONENT_OK;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<h1 id="smbus-Write-Byte"><a href="#smbus-Write-Byte" class="headerlink" title="smbus Write Byte"></a>smbus Write Byte</h1><p>这个应该是使用最多的的了。写一个数据到对应的寄存器中。这个就不赘述了。</p>
-<h1 id="smbus-Write-Word"><a href="#smbus-Write-Word" class="headerlink" title="smbus Write Word"></a>smbus Write Word</h1><p>对于smbus的读取和写入16位都应该算是上一操作的扩展，但是有时候也有不按常理出牌的地方。<br>因为标准的smbus协议读取16位数据是，都是默认先读到的为低8位，之后读取到的是高8位。<br>在使用smbus协议读取fdc2214传感器设备id就会出现问题。</p>
+<h1 id="smbus-write-byte">smbus Write Byte</h1>
+<p>这个应该是使用最多的的了。写一个数据到对应的寄存器中。这个就不赘述了。</p>
+<h1 id="smbus-write-word">smbus Write Word</h1>
+<p>对于smbus的读取和写入16位都应该算是上一操作的扩展，但是有时候也有不按常理出牌的地方。 因为标准的smbus协议读取16位数据是，都是默认先读到的为低8位，之后读取到的是高8位。 在使用smbus协议读取fdc2214传感器设备id就会出现问题。</p>
 <p>fdc2214传感器读取协议：</p>
-<div align="center">
-<img src="/2018/07/25/i2candspi/3.png" width="80%">
+<div data-align="center">
+<p><img src="/2018/07/25/i2candspi/3.png" width="80%"></p>
 </div>
-
 <p>可以发现他的读取是默认先高位，再低位。</p>
 <p>所以我们在使用smbus协议读取到数据后要做好数据高低转换的措施：</p>
 <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* 读取16位 先读高8位再读低8位 */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> uint16_t <span class="title">read16</span><span class="params">(<span class="keyword">uint8_t</span> reg)</span> </span>&#123;</span><br><span class="line">    <span class="comment">/* 读取两字节 bmp280默认先输出高位再输出低位  */</span></span><br><span class="line">    <span class="comment">/* smbus协议默认先低位再高位 所以需要转换  */</span></span><br><span class="line">    <span class="keyword">uint16_t</span> temp = (<span class="keyword">uint16_t</span>)i2c_smbus_read_word_data(bmp280fd, reg);</span><br><span class="line">    <span class="keyword">return</span> temp &gt;&gt; <span class="number">8</span> | temp &lt;&lt; <span class="number">8</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<h1 id="i2c传输位顺序"><a href="#i2c传输位顺序" class="headerlink" title="i2c传输位顺序"></a>i2c传输位顺序</h1><p>值得一提的是i2c传输中的每一位都是高位先行的,也只有这样我们接收到msb的数据后直接8位交换位置即可。</p>
-<p>比如设备id为 <code>0x3055</code><br>其二进制为:<code>0011 0000 0101 0101</code><br>发送顺序为:<code>0011 0000 0101 0101</code></p>
-<p>smbus接收到后为:<br>高八位 <code>0011 0000</code> -&gt; 低八位 <code>0011 0000</code><br>低八位 <code>0101 0101</code> -&gt; 高八位 <code>0101 0101</code>  </p>
+<h1 id="i2c传输位顺序">i2c传输位顺序</h1>
+<p>值得一提的是i2c传输中的每一位都是高位先行的,也只有这样我们接收到msb的数据后直接8位交换位置即可。</p>
+<p>比如设备id为 <code>0x3055</code> 其二进制为:<code>0011 0000 0101 0101</code> 发送顺序为:<code>0011 0000 0101 0101</code></p>
+<p>smbus接收到后为: 高八位 <code>0011 0000</code> -&gt; 低八位 <code>0011 0000</code><br>
+低八位 <code>0101 0101</code> -&gt; 高八位 <code>0101 0101</code></p>
 <p>拼接==&gt; <code>0101 0101 0011 0000</code> = <code>0x5530</code></p>
 <p>交换==&gt; <code>0x5530</code> = <code>0x3055</code></p>
 
@@ -140,42 +142,44 @@
       
         
         
-          <p>最近在linux下移植i2c的传感器驱动。移植了才发现各个设备的i2c读写都不太一样，对于这几个方式我做一个小总结。<br>首先我使用的是linux应用层通用的i2c读写，我的读写默认是使用smbus协议进行读写的。</p>
+          <p>最近在linux下移植i2c的传感器驱动。移植了才发现各个设备的i2c读写都不太一样，对于这几个方式我做一个小总结。 首先我使用的是linux应用层通用的i2c读写，我的读写默认是使用smbus协议进行读写的。</p>
 <a id="more"></a>
-<h1 id="smbus协议"><a href="#smbus协议" class="headerlink" title="smbus协议"></a>smbus协议</h1><p>先放一张图片合集，接下来就逐一看看这几种方式。</p>
-<div align="center">
-<img src="/2018/07/25/i2candspi/1.png" width="80%">
+<h1 id="smbus协议">smbus协议</h1>
+先放一张图片合集，接下来就逐一看看这几种方式。
+<div data-align="center">
+<p><img src="/2018/07/25/i2candspi/1.png" width="80%"></p>
 </div>
-
-
-<h1 id="smbus-Send-Byte"><a href="#smbus-Send-Byte" class="headerlink" title="smbus Send Byte"></a>smbus Send Byte</h1><p>这个方式比较少用到，一般我们的传感器都有地址位以及数据位，所以至少传输两位。但是我在使用SHT31这个传感器的就需要用到此方式。先看看SHT31寄存器的读写：</p>
-<div align="center">
-<img src="/2018/07/25/i2candspi/2.png" width="80%">
+<h1 id="smbus-send-byte">smbus Send Byte</h1>
+<p>这个方式比较少用到，一般我们的传感器都有地址位以及数据位，所以至少传输两位。但是我在使用SHT31这个传感器的就需要用到此方式。先看看SHT31寄存器的读写：</p>
+<div data-align="center">
+<p><img src="/2018/07/25/i2candspi/2.png" width="80%"></p>
 </div>
-
-<p>这里发现这个传感器没有寄存器地址，但是也要发两位数据，而且是高位先行。<br>所以这个时候就需要改写对应的读写函数如下：</p>
-<pre><code>直接按高低位写两位数据即可。
-</code></pre><p>当然这里我也存在一个疑问，直接调用write函数，对应的i2c输出应该是一个地址位，一个数据位，但是我两次调用write函数，应该会有四个byte信号输出，但是按照读写情况，还是十分正常的。</p>
+<p>这里发现这个传感器没有寄存器地址，但是也要发两位数据，而且是高位先行。 所以这个时候就需要改写对应的读写函数如下：</p>
+<pre><code>直接按高低位写两位数据即可。</code></pre>
+<p>当然这里我也存在一个疑问，直接调用write函数，对应的i2c输出应该是一个地址位，一个数据位，但是我两次调用write函数，应该会有四个byte信号输出，但是按照读写情况，还是十分正常的。</p>
 <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">DrvStatus_t <span class="title">SHT31_writeCommand</span><span class="params">(<span class="keyword">uint16_t</span> cmd)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">uint8_t</span> data[<span class="number">2</span>];</span><br><span class="line">    data[<span class="number">0</span>] = cmd &gt;&gt; <span class="number">8</span>, data[<span class="number">1</span>] = cmd &amp; <span class="number">0x00FF</span>;</span><br><span class="line">    <span class="keyword">if</span> (write(sht31Fd, data, <span class="number">2</span>) &lt; <span class="number">0</span>)</span><br><span class="line">        <span class="keyword">return</span> COMPONENT_ERROR;</span><br><span class="line">    <span class="keyword">return</span> COMPONENT_OK;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<h1 id="smbus-Write-Byte"><a href="#smbus-Write-Byte" class="headerlink" title="smbus Write Byte"></a>smbus Write Byte</h1><p>这个应该是使用最多的的了。写一个数据到对应的寄存器中。这个就不赘述了。</p>
-<h1 id="smbus-Write-Word"><a href="#smbus-Write-Word" class="headerlink" title="smbus Write Word"></a>smbus Write Word</h1><p>对于smbus的读取和写入16位都应该算是上一操作的扩展，但是有时候也有不按常理出牌的地方。<br>因为标准的smbus协议读取16位数据是，都是默认先读到的为低8位，之后读取到的是高8位。<br>在使用smbus协议读取fdc2214传感器设备id就会出现问题。</p>
+<h1 id="smbus-write-byte">smbus Write Byte</h1>
+<p>这个应该是使用最多的的了。写一个数据到对应的寄存器中。这个就不赘述了。</p>
+<h1 id="smbus-write-word">smbus Write Word</h1>
+<p>对于smbus的读取和写入16位都应该算是上一操作的扩展，但是有时候也有不按常理出牌的地方。 因为标准的smbus协议读取16位数据是，都是默认先读到的为低8位，之后读取到的是高8位。 在使用smbus协议读取fdc2214传感器设备id就会出现问题。</p>
 <p>fdc2214传感器读取协议：</p>
-<div align="center">
-<img src="/2018/07/25/i2candspi/3.png" width="80%">
+<div data-align="center">
+<p><img src="/2018/07/25/i2candspi/3.png" width="80%"></p>
 </div>
-
 <p>可以发现他的读取是默认先高位，再低位。</p>
 <p>所以我们在使用smbus协议读取到数据后要做好数据高低转换的措施：</p>
 <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* 读取16位 先读高8位再读低8位 */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> uint16_t <span class="title">read16</span><span class="params">(<span class="keyword">uint8_t</span> reg)</span> </span>&#123;</span><br><span class="line">    <span class="comment">/* 读取两字节 bmp280默认先输出高位再输出低位  */</span></span><br><span class="line">    <span class="comment">/* smbus协议默认先低位再高位 所以需要转换  */</span></span><br><span class="line">    <span class="keyword">uint16_t</span> temp = (<span class="keyword">uint16_t</span>)i2c_smbus_read_word_data(bmp280fd, reg);</span><br><span class="line">    <span class="keyword">return</span> temp &gt;&gt; <span class="number">8</span> | temp &lt;&lt; <span class="number">8</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 </div></div>
-<h1 id="i2c传输位顺序"><a href="#i2c传输位顺序" class="headerlink" title="i2c传输位顺序"></a>i2c传输位顺序</h1><p>值得一提的是i2c传输中的每一位都是高位先行的,也只有这样我们接收到msb的数据后直接8位交换位置即可。</p>
-<p>比如设备id为 <code>0x3055</code><br>其二进制为:<code>0011 0000 0101 0101</code><br>发送顺序为:<code>0011 0000 0101 0101</code></p>
-<p>smbus接收到后为:<br>高八位 <code>0011 0000</code> -&gt; 低八位 <code>0011 0000</code><br>低八位 <code>0101 0101</code> -&gt; 高八位 <code>0101 0101</code>  </p>
+<h1 id="i2c传输位顺序">i2c传输位顺序</h1>
+<p>值得一提的是i2c传输中的每一位都是高位先行的,也只有这样我们接收到msb的数据后直接8位交换位置即可。</p>
+<p>比如设备id为 <code>0x3055</code> 其二进制为:<code>0011 0000 0101 0101</code> 发送顺序为:<code>0011 0000 0101 0101</code></p>
+<p>smbus接收到后为: 高八位 <code>0011 0000</code> -&gt; 低八位 <code>0011 0000</code><br>
+低八位 <code>0101 0101</code> -&gt; 高八位 <code>0101 0101</code></p>
 <p>拼接==&gt; <code>0101 0101 0011 0000</code> = <code>0x5530</code></p>
 <p>交换==&gt; <code>0x5530</code> = <code>0x3055</code></p>
 
@@ -183,7 +187,7 @@
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2018/07/25/i2candspi/" data-id="ckd5x9u0m003m6t6x947er02c" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2018/07/25/i2candspi/" data-id="ckdhohxoc0053c56xn0u2qt3y" class="article-share-link">Share</a>
       
       
       
@@ -234,7 +238,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">标签云</h3>
     <div class="widget tagcloud">
-      <a href="/tags/C/" style="font-size: 12.86px;">C</a> <a href="/tags/C/" style="font-size: 12.14px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10px;">CNN</a> <a href="/tags/Eigen/" style="font-size: 10px;">Eigen</a> <a href="/tags/GAN/" style="font-size: 10px;">GAN</a> <a href="/tags/Linux/" style="font-size: 19.29px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12.14px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12.14px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.71px;">PCB</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 15px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 11.43px;">linux</a> <a href="/tags/mxnet/" style="font-size: 10px;">mxnet</a> <a href="/tags/pfld/" style="font-size: 10px;">pfld</a> <a href="/tags/python/" style="font-size: 18.57px;">python</a> <a href="/tags/pytorch/" style="font-size: 10px;">pytorch</a> <a href="/tags/retinaface/" style="font-size: 10px;">retinaface</a> <a href="/tags/stm32/" style="font-size: 11.43px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 20px;">tensorflow</a> <a href="/tags/vscode/" style="font-size: 10px;">vscode</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/yolo/" style="font-size: 12.86px;">yolo</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 14.29px;">作业</a> <a href="/tags/半监督学习/" style="font-size: 15.71px;">半监督学习</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/图像处理/" style="font-size: 10px;">图像处理</a> <a href="/tags/堆栈/" style="font-size: 10.71px;">堆栈</a> <a href="/tags/声音信号处理/" style="font-size: 12.14px;">声音信号处理</a> <a href="/tags/小工具/" style="font-size: 12.14px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 15.71px;">嵌入式</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 17.14px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 17.14px;">机器学习</a> <a href="/tags/树/" style="font-size: 12.14px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/概率论/" style="font-size: 17.86px;">概率论</a> <a href="/tags/深度学习/" style="font-size: 16.43px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 11.43px;">神经网络</a> <a href="/tags/算法/" style="font-size: 12.14px;">算法</a> <a href="/tags/统计学习方法/" style="font-size: 15.71px;">统计学习方法</a> <a href="/tags/聚类/" style="font-size: 12.14px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13.57px;">蓝牙</a> <a href="/tags/调参/" style="font-size: 10px;">调参</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/路由/" style="font-size: 10px;">路由</a> <a href="/tags/链表/" style="font-size: 11.43px;">链表</a> <a href="/tags/错误记录/" style="font-size: 19.29px;">错误记录</a>
+      <a href="/tags/C/" style="font-size: 13.08px;">C</a> <a href="/tags/C/" style="font-size: 12.31px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10px;">CNN</a> <a href="/tags/Eigen/" style="font-size: 10px;">Eigen</a> <a href="/tags/GAN/" style="font-size: 10px;">GAN</a> <a href="/tags/Linux/" style="font-size: 19.23px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12.31px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12.31px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.77px;">PCB</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 15.38px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 11.54px;">linux</a> <a href="/tags/mxnet/" style="font-size: 10px;">mxnet</a> <a href="/tags/pfld/" style="font-size: 10px;">pfld</a> <a href="/tags/python/" style="font-size: 18.46px;">python</a> <a href="/tags/pytorch/" style="font-size: 10px;">pytorch</a> <a href="/tags/retinaface/" style="font-size: 10px;">retinaface</a> <a href="/tags/stm32/" style="font-size: 11.54px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 20px;">tensorflow</a> <a href="/tags/vscode/" style="font-size: 10px;">vscode</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/yolo/" style="font-size: 13.08px;">yolo</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 14.62px;">作业</a> <a href="/tags/半监督学习/" style="font-size: 16.15px;">半监督学习</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/图像处理/" style="font-size: 10px;">图像处理</a> <a href="/tags/堆栈/" style="font-size: 10.77px;">堆栈</a> <a href="/tags/声音信号处理/" style="font-size: 12.31px;">声音信号处理</a> <a href="/tags/小工具/" style="font-size: 12.31px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 16.15px;">嵌入式</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 17.69px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 17.69px;">机器学习</a> <a href="/tags/树/" style="font-size: 12.31px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/概率论/" style="font-size: 18.46px;">概率论</a> <a href="/tags/深度学习/" style="font-size: 16.92px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 11.54px;">神经网络</a> <a href="/tags/算法/" style="font-size: 12.31px;">算法</a> <a href="/tags/统计学习方法/" style="font-size: 16.92px;">统计学习方法</a> <a href="/tags/聚类/" style="font-size: 12.31px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13.85px;">蓝牙</a> <a href="/tags/调参/" style="font-size: 10px;">调参</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/路由/" style="font-size: 10px;">路由</a> <a href="/tags/链表/" style="font-size: 11.54px;">链表</a> <a href="/tags/错误记录/" style="font-size: 19.23px;">错误记录</a>
     </div>
   </div>
 
@@ -243,7 +247,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">归档</h3>
     <div class="widget">
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/07/">七月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/05/">五月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/04/">四月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/12/">十二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/09/">九月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/08/">八月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/07/">七月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/06/">六月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/05/">五月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">三月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/08/">八月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/07/">七月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/05/">五月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/04/">四月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/12/">十二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/09/">九月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/08/">八月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/07/">七月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/06/">六月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/05/">五月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">三月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a></li></ul>
     </div>
   </div>
 
@@ -254,6 +258,10 @@
     <h3 class="widget-title">最新文章</h3>
     <div class="widget">
       <ul>
+        
+          <li>
+            <a href="/2020/08/04/statis-learn-cp17/">统计学习方法:潜在狄利克雷分配模型</a>
+          </li>
         
           <li>
             <a href="/2020/07/28/statis-learn-cp16/">统计学习方法:马尔科夫链蒙特卡洛法</a>
@@ -269,10 +277,6 @@
         
           <li>
             <a href="/2020/06/19/RealMix-EnAET/">半监督学习：RealMix与EnAET</a>
-          </li>
-        
-          <li>
-            <a href="/2020/06/17/proxy-anchor/">Proxy Anchor Loss for Deep Metric Learning论文解读</a>
           </li>
         
       </ul>

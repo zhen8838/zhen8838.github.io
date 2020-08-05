@@ -93,22 +93,32 @@
       
         <p>由于时间关系我没有实现决策树的剪枝与<code>CART</code>算法.</p>
 <a id="more"></a>
-<h1 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h1><h2 id="熵"><a href="#熵" class="headerlink" title="熵"></a>熵</h2><p>熵度量了不确定性,具体参考书中给出例子进行理解.</p>
-<script type="math/tex; mode=display">
+<h1 id="原理">原理</h1>
+<h2 id="熵">熵</h2>
+<p>熵度量了不确定性,具体参考书中给出例子进行理解. <span class="math display">\[
 \begin{aligned}
   H(x) = -\sum_{i=1}^{n}p_i\log{p_i}
-\end{aligned}</script><h2 id="条件熵"><a href="#条件熵" class="headerlink" title="条件熵"></a>条件熵</h2><p>既然熵度量了不确定性,引用条件概率后,可以得到条件熵,即给定条件下的不确定性.</p>
-<p><strong>注意:</strong> 公式第二行对应实际计算的情况,因为分类问题中$Y$的类别必然大于1.</p>
-<script type="math/tex; mode=display">
+\end{aligned}
+\]</span></p>
+<h2 id="条件熵">条件熵</h2>
+<p>既然熵度量了不确定性,引用条件概率后,可以得到条件熵,即给定条件下的不确定性.</p>
+<p><strong>注意:</strong> 公式第二行对应实际计算的情况,因为分类问题中<span class="math inline">\(Y\)</span>的类别必然大于1.</p>
+<p><span class="math display">\[
 \begin{aligned}
-  H(Y|X)&=\sum_{i=1}^{n}{P(X=x_i)}H(Y|X=x_i)\\
-  &=\sum_{i=1}^{n}\left[{P(X=x_i)}\sum_{j=1}^{k}\left[P(Y=y_j|X=x_i)\log{P(Y=y_j|X=x_i)}\right]\right]
-\end{aligned}</script><h2 id="信息增益"><a href="#信息增益" class="headerlink" title="信息增益"></a>信息增益</h2><p>在极大似然估计中的得到的熵与条件熵称为<code>经验熵</code>与<code>经验条件熵</code>.将<code>经验熵</code>减去<code>经验条件熵</code>即可表示得知到$X$后对分类$Y$的不确定性减少的程度,也就是信息增益.一般地$H(Y)-H(Y|X)$被称为互信息,决策树中的信息增益等价于最大化特征与标签的互信息,只不过这里的概率都是统计出来的,结合到深度学习中还是有很大用武之地的,我个人觉得比如可以用互信息做度量代替<code>attention</code>机制选择特征的激活概率,当然互信息的估计没有<code>attention</code>那么方便.</p>
-<script type="math/tex; mode=display">
+  H(Y|X)&amp;=\sum_{i=1}^{n}{P(X=x_i)}H(Y|X=x_i)\\
+  &amp;=\sum_{i=1}^{n}\left[{P(X=x_i)}\sum_{j=1}^{k}\left[P(Y=y_j|X=x_i)\log{P(Y=y_j|X=x_i)}\right]\right]
+\end{aligned}
+\]</span></p>
+<h2 id="信息增益">信息增益</h2>
+<p>在极大似然估计中的得到的熵与条件熵称为<code>经验熵</code>与<code>经验条件熵</code>.将<code>经验熵</code>减去<code>经验条件熵</code>即可表示得知到<span class="math inline">\(X\)</span>后对分类<span class="math inline">\(Y\)</span>的不确定性减少的程度,也就是信息增益.一般地<span class="math inline">\(H(Y)-H(Y|X)\)</span>被称为互信息,决策树中的信息增益等价于最大化特征与标签的互信息,只不过这里的概率都是统计出来的,结合到深度学习中还是有很大用武之地的,我个人觉得比如可以用互信息做度量代替<code>attention</code>机制选择特征的激活概率,当然互信息的估计没有<code>attention</code>那么方便.</p>
+<p><span class="math display">\[
 \begin{aligned}
   g(D, A)=H(D)-H(D|A)
-\end{aligned}</script><h1 id="实现过程"><a href="#实现过程" class="headerlink" title="实现过程"></a>实现过程</h1><p>实现过程中我还是依据朴素贝叶斯的思路,先统计出多项式分布的概率再逐一求熵与条件熵.这样做比较麻烦,我其实是为了制作$P(Y=y_j|X=x_i)$的概率分布动画…对于条件概率分布差距越大的特征表明他的熵越小,那么信息增益就越大.</p>
-<p>这里我还踩了个小坑,朴素贝叶斯的条件概率是$P(X|Y)$,这里的条件概率是$P(Y|X)$…由于时间关系也没有实现高斯分布的条件概率计算,如果需要可以参考我在朴素贝叶斯的实现.</p>
+\end{aligned}
+\]</span></p>
+<h1 id="实现过程">实现过程</h1>
+<p>实现过程中我还是依据朴素贝叶斯的思路,先统计出多项式分布的概率再逐一求熵与条件熵.这样做比较麻烦,我其实是为了制作<span class="math inline">\(P(Y=y_j|X=x_i)\)</span>的概率分布动画...对于条件概率分布差距越大的特征表明他的熵越小,那么信息增益就越大.</p>
+<p>这里我还踩了个小坑,朴素贝叶斯的条件概率是<span class="math inline">\(P(X|Y)\)</span>,这里的条件概率是<span class="math inline">\(P(Y|X)\)</span>...由于时间关系也没有实现高斯分布的条件概率计算,如果需要可以参考我在朴素贝叶斯的实现.</p>
 <p>后面考虑了下,这种概率方法的编程模型还是先弄个<code>distribution</code>类,然后继承各种分布,输入数据后可以计算概率分布函数和熵.这样后续实现会比较方便.</p>
 <p>简单的做法是直接把算熵和条件熵就好了.可以看<code>ID3</code>的实现.</p>
 
@@ -120,22 +130,32 @@
         
           <p>由于时间关系我没有实现决策树的剪枝与<code>CART</code>算法.</p>
 <a id="more"></a>
-<h1 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h1><h2 id="熵"><a href="#熵" class="headerlink" title="熵"></a>熵</h2><p>熵度量了不确定性,具体参考书中给出例子进行理解.</p>
-<script type="math/tex; mode=display">
+<h1 id="原理">原理</h1>
+<h2 id="熵">熵</h2>
+<p>熵度量了不确定性,具体参考书中给出例子进行理解. <span class="math display">\[
 \begin{aligned}
   H(x) = -\sum_{i=1}^{n}p_i\log{p_i}
-\end{aligned}</script><h2 id="条件熵"><a href="#条件熵" class="headerlink" title="条件熵"></a>条件熵</h2><p>既然熵度量了不确定性,引用条件概率后,可以得到条件熵,即给定条件下的不确定性.</p>
-<p><strong>注意:</strong> 公式第二行对应实际计算的情况,因为分类问题中$Y$的类别必然大于1.</p>
-<script type="math/tex; mode=display">
+\end{aligned}
+\]</span></p>
+<h2 id="条件熵">条件熵</h2>
+<p>既然熵度量了不确定性,引用条件概率后,可以得到条件熵,即给定条件下的不确定性.</p>
+<p><strong>注意:</strong> 公式第二行对应实际计算的情况,因为分类问题中<span class="math inline">\(Y\)</span>的类别必然大于1.</p>
+<p><span class="math display">\[
 \begin{aligned}
-  H(Y|X)&=\sum_{i=1}^{n}{P(X=x_i)}H(Y|X=x_i)\\
-  &=\sum_{i=1}^{n}\left[{P(X=x_i)}\sum_{j=1}^{k}\left[P(Y=y_j|X=x_i)\log{P(Y=y_j|X=x_i)}\right]\right]
-\end{aligned}</script><h2 id="信息增益"><a href="#信息增益" class="headerlink" title="信息增益"></a>信息增益</h2><p>在极大似然估计中的得到的熵与条件熵称为<code>经验熵</code>与<code>经验条件熵</code>.将<code>经验熵</code>减去<code>经验条件熵</code>即可表示得知到$X$后对分类$Y$的不确定性减少的程度,也就是信息增益.一般地$H(Y)-H(Y|X)$被称为互信息,决策树中的信息增益等价于最大化特征与标签的互信息,只不过这里的概率都是统计出来的,结合到深度学习中还是有很大用武之地的,我个人觉得比如可以用互信息做度量代替<code>attention</code>机制选择特征的激活概率,当然互信息的估计没有<code>attention</code>那么方便.</p>
-<script type="math/tex; mode=display">
+  H(Y|X)&amp;=\sum_{i=1}^{n}{P(X=x_i)}H(Y|X=x_i)\\
+  &amp;=\sum_{i=1}^{n}\left[{P(X=x_i)}\sum_{j=1}^{k}\left[P(Y=y_j|X=x_i)\log{P(Y=y_j|X=x_i)}\right]\right]
+\end{aligned}
+\]</span></p>
+<h2 id="信息增益">信息增益</h2>
+<p>在极大似然估计中的得到的熵与条件熵称为<code>经验熵</code>与<code>经验条件熵</code>.将<code>经验熵</code>减去<code>经验条件熵</code>即可表示得知到<span class="math inline">\(X\)</span>后对分类<span class="math inline">\(Y\)</span>的不确定性减少的程度,也就是信息增益.一般地<span class="math inline">\(H(Y)-H(Y|X)\)</span>被称为互信息,决策树中的信息增益等价于最大化特征与标签的互信息,只不过这里的概率都是统计出来的,结合到深度学习中还是有很大用武之地的,我个人觉得比如可以用互信息做度量代替<code>attention</code>机制选择特征的激活概率,当然互信息的估计没有<code>attention</code>那么方便.</p>
+<p><span class="math display">\[
 \begin{aligned}
   g(D, A)=H(D)-H(D|A)
-\end{aligned}</script><h1 id="实现过程"><a href="#实现过程" class="headerlink" title="实现过程"></a>实现过程</h1><p>实现过程中我还是依据朴素贝叶斯的思路,先统计出多项式分布的概率再逐一求熵与条件熵.这样做比较麻烦,我其实是为了制作$P(Y=y_j|X=x_i)$的概率分布动画…对于条件概率分布差距越大的特征表明他的熵越小,那么信息增益就越大.</p>
-<p>这里我还踩了个小坑,朴素贝叶斯的条件概率是$P(X|Y)$,这里的条件概率是$P(Y|X)$…由于时间关系也没有实现高斯分布的条件概率计算,如果需要可以参考我在朴素贝叶斯的实现.</p>
+\end{aligned}
+\]</span></p>
+<h1 id="实现过程">实现过程</h1>
+<p>实现过程中我还是依据朴素贝叶斯的思路,先统计出多项式分布的概率再逐一求熵与条件熵.这样做比较麻烦,我其实是为了制作<span class="math inline">\(P(Y=y_j|X=x_i)\)</span>的概率分布动画...对于条件概率分布差距越大的特征表明他的熵越小,那么信息增益就越大.</p>
+<p>这里我还踩了个小坑,朴素贝叶斯的条件概率是<span class="math inline">\(P(X|Y)\)</span>,这里的条件概率是<span class="math inline">\(P(Y|X)\)</span>...由于时间关系也没有实现高斯分布的条件概率计算,如果需要可以参考我在朴素贝叶斯的实现.</p>
 <p>后面考虑了下,这种概率方法的编程模型还是先弄个<code>distribution</code>类,然后继承各种分布,输入数据后可以计算概率分布函数和熵.这样后续实现会比较方便.</p>
 <p>简单的做法是直接把算熵和条件熵就好了.可以看<code>ID3</code>的实现.</p>
 
@@ -143,7 +163,7 @@
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2020/05/27/statis-learn-cp4/" data-id="ckd5x9u4n00f36t6xx8g5ym5x" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2020/05/27/statis-learn-cp4/" data-id="ckdhohxq800avc56xlt6efiwf" class="article-share-link">Share</a>
       
       
       
@@ -194,7 +214,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">标签云</h3>
     <div class="widget tagcloud">
-      <a href="/tags/C/" style="font-size: 12.86px;">C</a> <a href="/tags/C/" style="font-size: 12.14px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10px;">CNN</a> <a href="/tags/Eigen/" style="font-size: 10px;">Eigen</a> <a href="/tags/GAN/" style="font-size: 10px;">GAN</a> <a href="/tags/Linux/" style="font-size: 19.29px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12.14px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12.14px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.71px;">PCB</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 15px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 11.43px;">linux</a> <a href="/tags/mxnet/" style="font-size: 10px;">mxnet</a> <a href="/tags/pfld/" style="font-size: 10px;">pfld</a> <a href="/tags/python/" style="font-size: 18.57px;">python</a> <a href="/tags/pytorch/" style="font-size: 10px;">pytorch</a> <a href="/tags/retinaface/" style="font-size: 10px;">retinaface</a> <a href="/tags/stm32/" style="font-size: 11.43px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 20px;">tensorflow</a> <a href="/tags/vscode/" style="font-size: 10px;">vscode</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/yolo/" style="font-size: 12.86px;">yolo</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 14.29px;">作业</a> <a href="/tags/半监督学习/" style="font-size: 15.71px;">半监督学习</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/图像处理/" style="font-size: 10px;">图像处理</a> <a href="/tags/堆栈/" style="font-size: 10.71px;">堆栈</a> <a href="/tags/声音信号处理/" style="font-size: 12.14px;">声音信号处理</a> <a href="/tags/小工具/" style="font-size: 12.14px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 15.71px;">嵌入式</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 17.14px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 17.14px;">机器学习</a> <a href="/tags/树/" style="font-size: 12.14px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/概率论/" style="font-size: 17.86px;">概率论</a> <a href="/tags/深度学习/" style="font-size: 16.43px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 11.43px;">神经网络</a> <a href="/tags/算法/" style="font-size: 12.14px;">算法</a> <a href="/tags/统计学习方法/" style="font-size: 15.71px;">统计学习方法</a> <a href="/tags/聚类/" style="font-size: 12.14px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13.57px;">蓝牙</a> <a href="/tags/调参/" style="font-size: 10px;">调参</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/路由/" style="font-size: 10px;">路由</a> <a href="/tags/链表/" style="font-size: 11.43px;">链表</a> <a href="/tags/错误记录/" style="font-size: 19.29px;">错误记录</a>
+      <a href="/tags/C/" style="font-size: 13.08px;">C</a> <a href="/tags/C/" style="font-size: 12.31px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10px;">CNN</a> <a href="/tags/Eigen/" style="font-size: 10px;">Eigen</a> <a href="/tags/GAN/" style="font-size: 10px;">GAN</a> <a href="/tags/Linux/" style="font-size: 19.23px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12.31px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12.31px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.77px;">PCB</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 15.38px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 11.54px;">linux</a> <a href="/tags/mxnet/" style="font-size: 10px;">mxnet</a> <a href="/tags/pfld/" style="font-size: 10px;">pfld</a> <a href="/tags/python/" style="font-size: 18.46px;">python</a> <a href="/tags/pytorch/" style="font-size: 10px;">pytorch</a> <a href="/tags/retinaface/" style="font-size: 10px;">retinaface</a> <a href="/tags/stm32/" style="font-size: 11.54px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 20px;">tensorflow</a> <a href="/tags/vscode/" style="font-size: 10px;">vscode</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/yolo/" style="font-size: 13.08px;">yolo</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 14.62px;">作业</a> <a href="/tags/半监督学习/" style="font-size: 16.15px;">半监督学习</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/图像处理/" style="font-size: 10px;">图像处理</a> <a href="/tags/堆栈/" style="font-size: 10.77px;">堆栈</a> <a href="/tags/声音信号处理/" style="font-size: 12.31px;">声音信号处理</a> <a href="/tags/小工具/" style="font-size: 12.31px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 16.15px;">嵌入式</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 17.69px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 17.69px;">机器学习</a> <a href="/tags/树/" style="font-size: 12.31px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/概率论/" style="font-size: 18.46px;">概率论</a> <a href="/tags/深度学习/" style="font-size: 16.92px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 11.54px;">神经网络</a> <a href="/tags/算法/" style="font-size: 12.31px;">算法</a> <a href="/tags/统计学习方法/" style="font-size: 16.92px;">统计学习方法</a> <a href="/tags/聚类/" style="font-size: 12.31px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13.85px;">蓝牙</a> <a href="/tags/调参/" style="font-size: 10px;">调参</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/路由/" style="font-size: 10px;">路由</a> <a href="/tags/链表/" style="font-size: 11.54px;">链表</a> <a href="/tags/错误记录/" style="font-size: 19.23px;">错误记录</a>
     </div>
   </div>
 
@@ -203,7 +223,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">归档</h3>
     <div class="widget">
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/07/">七月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/05/">五月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/04/">四月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/12/">十二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/09/">九月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/08/">八月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/07/">七月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/06/">六月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/05/">五月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">三月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/08/">八月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/07/">七月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/05/">五月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/04/">四月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/12/">十二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/09/">九月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/08/">八月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/07/">七月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/06/">六月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/05/">五月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">三月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a></li></ul>
     </div>
   </div>
 
@@ -214,6 +234,10 @@
     <h3 class="widget-title">最新文章</h3>
     <div class="widget">
       <ul>
+        
+          <li>
+            <a href="/2020/08/04/statis-learn-cp17/">统计学习方法:潜在狄利克雷分配模型</a>
+          </li>
         
           <li>
             <a href="/2020/07/28/statis-learn-cp16/">统计学习方法:马尔科夫链蒙特卡洛法</a>
@@ -229,10 +253,6 @@
         
           <li>
             <a href="/2020/06/19/RealMix-EnAET/">半监督学习：RealMix与EnAET</a>
-          </li>
-        
-          <li>
-            <a href="/2020/06/17/proxy-anchor/">Proxy Anchor Loss for Deep Metric Learning论文解读</a>
           </li>
         
       </ul>
