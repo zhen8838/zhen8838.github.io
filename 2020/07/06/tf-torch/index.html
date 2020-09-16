@@ -93,12 +93,15 @@
       
         <p>可能会长期更新,因为经常需要从<code>pytorch</code>偷代码翻译成<code>tensorflow</code>😑因此记录一下差异的地方.</p>
 <a id="more"></a>
-<h4 id="torch中nn.conv2d的groups参数">1. <code>torch</code>中<code>nn.Conv2d</code>的<code>groups</code>参数</h4>
-<p><code>torch</code>中<code>groups</code>控制输入和输出之间的连接,<code>in_channels</code>和<code>out_channels</code>必须都可以被组整除. - <code>groups=1</code> 传统的卷积方式. - <code>groups=2</code> 等效于并排设置两个<code>conv</code>层，每个<code>conv</code>层看到一半的输入通道，并产生一半的输出通道，并且随后将它们都连接在一起. - <code>groups=in_channels</code> 每个输入通道都有自己的滤波器.</p>
-<p>等价写法: <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">nn.Conv2d(expand_size, expand_size, kernel_size=kernel_size, </span><br><span class="line">          stride=stride, padding=kernel_size//<span class="number">2</span>, groups=expand_size, bias=<span class="keyword">False</span>)</span><br><span class="line"></span><br><span class="line">kl.DepthwiseConv2D(kernel_size=kernel_size,</span><br><span class="line">                  strides=stride, padding=<span class="string">'same'</span>, use_bias=<span class="keyword">False</span>)</span><br></pre></td></tr></table></figure></p>
-<h4 id="nn.adaptiveavgpool2d与kl.globalaveragepooling2d">2. <code>nn.AdaptiveAvgPool2d</code>与<code>kl.GlobalAveragePooling2D</code></h4>
-<p>当<code>nn.AdaptiveAvgPool2d(1)</code>时和<code>kl.GlobalAveragePooling2D()</code>相同,但是注意<code>torch</code>的输出是保持<code>4</code>维的,而<code>tensorflow</code>不保持维度.</p>
-<p>等价写法: <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">x=nn.AdaptiveAvgPool2d(<span class="number">1</span>)(x)</span><br><span class="line"><span class="comment"># -----------------------------</span></span><br><span class="line">pool=kl.GlobalAveragePooling2D()</span><br><span class="line">x=k.backend.expand_dims(k.backend.expand_dims(pool(x),<span class="number">1</span>),<span class="number">1</span>)</span><br></pre></td></tr></table></figure></p>
+<h4 id="1-torch中nn-Conv2d的groups参数"><a href="#1-torch中nn-Conv2d的groups参数" class="headerlink" title="1. torch中nn.Conv2d的groups参数"></a>1. <code>torch</code>中<code>nn.Conv2d</code>的<code>groups</code>参数</h4><p><code>torch</code>中<code>groups</code>控制输入和输出之间的连接,<code>in_channels</code>和<code>out_channels</code>必须都可以被组整除.</p>
+<ul>
+<li><code>groups=1</code> 传统的卷积方式.</li>
+<li><code>groups=2</code> 等效于并排设置两个<code>conv</code>层，每个<code>conv</code>层看到一半的输入通道，并产生一半的输出通道，并且随后将它们都连接在一起.</li>
+<li><code>groups=in_channels</code> 每个输入通道都有自己的滤波器.</li>
+</ul>
+<p>等价写法:<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">nn.Conv2d(expand_size, expand_size, kernel_size=kernel_size, </span><br><span class="line">          stride=stride, padding=kernel_size//<span class="number">2</span>, groups=expand_size, bias=<span class="keyword">False</span>)</span><br><span class="line"></span><br><span class="line">kl.DepthwiseConv2D(kernel_size=kernel_size,</span><br><span class="line">                  strides=stride, padding=<span class="string">'same'</span>, use_bias=<span class="keyword">False</span>)</span><br></pre></td></tr></table></figure></p>
+<h4 id="2-nn-AdaptiveAvgPool2d与kl-GlobalAveragePooling2D"><a href="#2-nn-AdaptiveAvgPool2d与kl-GlobalAveragePooling2D" class="headerlink" title="2. nn.AdaptiveAvgPool2d与kl.GlobalAveragePooling2D"></a>2. <code>nn.AdaptiveAvgPool2d</code>与<code>kl.GlobalAveragePooling2D</code></h4><p>当<code>nn.AdaptiveAvgPool2d(1)</code>时和<code>kl.GlobalAveragePooling2D()</code>相同,但是注意<code>torch</code>的输出是保持<code>4</code>维的,而<code>tensorflow</code>不保持维度.</p>
+<p>等价写法:<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">x=nn.AdaptiveAvgPool2d(<span class="number">1</span>)(x)</span><br><span class="line"><span class="comment"># -----------------------------</span></span><br><span class="line">pool=kl.GlobalAveragePooling2D()</span><br><span class="line">x=k.backend.expand_dims(k.backend.expand_dims(pool(x),<span class="number">1</span>),<span class="number">1</span>)</span><br></pre></td></tr></table></figure></p>
 <p>当然直接修改<code>GlobalAveragePooling2D</code>里,添加<code>keepdims=true</code>参数也可以.</p>
 
       
@@ -109,19 +112,22 @@
         
           <p>可能会长期更新,因为经常需要从<code>pytorch</code>偷代码翻译成<code>tensorflow</code>😑因此记录一下差异的地方.</p>
 <a id="more"></a>
-<h4 id="torch中nn.conv2d的groups参数">1. <code>torch</code>中<code>nn.Conv2d</code>的<code>groups</code>参数</h4>
-<p><code>torch</code>中<code>groups</code>控制输入和输出之间的连接,<code>in_channels</code>和<code>out_channels</code>必须都可以被组整除. - <code>groups=1</code> 传统的卷积方式. - <code>groups=2</code> 等效于并排设置两个<code>conv</code>层，每个<code>conv</code>层看到一半的输入通道，并产生一半的输出通道，并且随后将它们都连接在一起. - <code>groups=in_channels</code> 每个输入通道都有自己的滤波器.</p>
-<p>等价写法: <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">nn.Conv2d(expand_size, expand_size, kernel_size=kernel_size, </span><br><span class="line">          stride=stride, padding=kernel_size//<span class="number">2</span>, groups=expand_size, bias=<span class="keyword">False</span>)</span><br><span class="line"></span><br><span class="line">kl.DepthwiseConv2D(kernel_size=kernel_size,</span><br><span class="line">                  strides=stride, padding=<span class="string">'same'</span>, use_bias=<span class="keyword">False</span>)</span><br></pre></td></tr></table></figure></p>
-<h4 id="nn.adaptiveavgpool2d与kl.globalaveragepooling2d">2. <code>nn.AdaptiveAvgPool2d</code>与<code>kl.GlobalAveragePooling2D</code></h4>
-<p>当<code>nn.AdaptiveAvgPool2d(1)</code>时和<code>kl.GlobalAveragePooling2D()</code>相同,但是注意<code>torch</code>的输出是保持<code>4</code>维的,而<code>tensorflow</code>不保持维度.</p>
-<p>等价写法: <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">x=nn.AdaptiveAvgPool2d(<span class="number">1</span>)(x)</span><br><span class="line"><span class="comment"># -----------------------------</span></span><br><span class="line">pool=kl.GlobalAveragePooling2D()</span><br><span class="line">x=k.backend.expand_dims(k.backend.expand_dims(pool(x),<span class="number">1</span>),<span class="number">1</span>)</span><br></pre></td></tr></table></figure></p>
+<h4 id="1-torch中nn-Conv2d的groups参数"><a href="#1-torch中nn-Conv2d的groups参数" class="headerlink" title="1. torch中nn.Conv2d的groups参数"></a>1. <code>torch</code>中<code>nn.Conv2d</code>的<code>groups</code>参数</h4><p><code>torch</code>中<code>groups</code>控制输入和输出之间的连接,<code>in_channels</code>和<code>out_channels</code>必须都可以被组整除.</p>
+<ul>
+<li><code>groups=1</code> 传统的卷积方式.</li>
+<li><code>groups=2</code> 等效于并排设置两个<code>conv</code>层，每个<code>conv</code>层看到一半的输入通道，并产生一半的输出通道，并且随后将它们都连接在一起.</li>
+<li><code>groups=in_channels</code> 每个输入通道都有自己的滤波器.</li>
+</ul>
+<p>等价写法:<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">nn.Conv2d(expand_size, expand_size, kernel_size=kernel_size, </span><br><span class="line">          stride=stride, padding=kernel_size//<span class="number">2</span>, groups=expand_size, bias=<span class="keyword">False</span>)</span><br><span class="line"></span><br><span class="line">kl.DepthwiseConv2D(kernel_size=kernel_size,</span><br><span class="line">                  strides=stride, padding=<span class="string">'same'</span>, use_bias=<span class="keyword">False</span>)</span><br></pre></td></tr></table></figure></p>
+<h4 id="2-nn-AdaptiveAvgPool2d与kl-GlobalAveragePooling2D"><a href="#2-nn-AdaptiveAvgPool2d与kl-GlobalAveragePooling2D" class="headerlink" title="2. nn.AdaptiveAvgPool2d与kl.GlobalAveragePooling2D"></a>2. <code>nn.AdaptiveAvgPool2d</code>与<code>kl.GlobalAveragePooling2D</code></h4><p>当<code>nn.AdaptiveAvgPool2d(1)</code>时和<code>kl.GlobalAveragePooling2D()</code>相同,但是注意<code>torch</code>的输出是保持<code>4</code>维的,而<code>tensorflow</code>不保持维度.</p>
+<p>等价写法:<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">x=nn.AdaptiveAvgPool2d(<span class="number">1</span>)(x)</span><br><span class="line"><span class="comment"># -----------------------------</span></span><br><span class="line">pool=kl.GlobalAveragePooling2D()</span><br><span class="line">x=k.backend.expand_dims(k.backend.expand_dims(pool(x),<span class="number">1</span>),<span class="number">1</span>)</span><br></pre></td></tr></table></figure></p>
 <p>当然直接修改<code>GlobalAveragePooling2D</code>里,添加<code>keepdims=true</code>参数也可以.</p>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2020/07/06/tf-torch/" data-id="ckf27g2j100hpw66xyz3be23w" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2020/07/06/tf-torch/" data-id="ckf5fsx0800hdjk6xjuuowh6b" class="article-share-link">Share</a>
       
       
       
@@ -194,6 +200,10 @@
       <ul>
         
           <li>
+            <a href="/2020/09/15/Uncertainty-Weigh-Loss/">Uncertainty-Weigh-Loss</a>
+          </li>
+        
+          <li>
             <a href="/2020/09/14/ai-matting/">基于Qt的抠图工具</a>
           </li>
         
@@ -207,10 +217,6 @@
         
           <li>
             <a href="/2020/08/04/statis-learn-cp17/">统计学习方法:潜在狄利克雷分配模型</a>
-          </li>
-        
-          <li>
-            <a href="/2020/07/28/statis-learn-cp16/">统计学习方法:马尔科夫链蒙特卡洛法</a>
           </li>
         
       </ul>

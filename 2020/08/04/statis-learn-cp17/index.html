@@ -7,19 +7,19 @@
   
   <title>统计学习方法:潜在狄利克雷分配模型 | </title>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta name="description" content="潜在狄利克雷分配模型其实就是一个确定结构的概率图模型，他主要做两件事情:  学习到话题的单词分布\(p(w|z_k)\),意为给定对应话题得到对应的单词. 学习到文本的话题分布\(p(z|\mathbf{w}_m)\),意为给定对应文本得到对应的话题.  如下图所示:  \(\varphi_k\sim \text{Dir}(\beta)\)控制了多项分布\(p(w|z_k)\)根据主题随机生成当前">
+  <meta name="description" content="潜在狄利克雷分配模型其实就是一个确定结构的概率图模型，他主要做两件事情:  学习到话题的单词分布$p(w|z_k)$,意为给定对应话题得到对应的单词.  学习到文本的话题分布$p(z|\mathbf{w}_m)$,意为给定对应文本得到对应的话题.   如下图所示:  $\varphi_k\sim \text{Dir}(\beta)$控制了多项分布$p(w|z_k)$根据主题随机生成当前文本下的单词">
 <meta name="keywords" content="统计学习方法,概率论">
 <meta property="og:type" content="article">
 <meta property="og:title" content="统计学习方法:潜在狄利克雷分配模型">
 <meta property="og:url" content="https://zhen8838.github.io/2020/08/04/statis-learn-cp17/index.html">
 <meta property="og:site_name">
-<meta property="og:description" content="潜在狄利克雷分配模型其实就是一个确定结构的概率图模型，他主要做两件事情:  学习到话题的单词分布\(p(w|z_k)\),意为给定对应话题得到对应的单词. 学习到文本的话题分布\(p(z|\mathbf{w}_m)\),意为给定对应文本得到对应的话题.  如下图所示:  \(\varphi_k\sim \text{Dir}(\beta)\)控制了多项分布\(p(w|z_k)\)根据主题随机生成当前">
+<meta property="og:description" content="潜在狄利克雷分配模型其实就是一个确定结构的概率图模型，他主要做两件事情:  学习到话题的单词分布$p(w|z_k)$,意为给定对应话题得到对应的单词.  学习到文本的话题分布$p(z|\mathbf{w}_m)$,意为给定对应文本得到对应的话题.   如下图所示:  $\varphi_k\sim \text{Dir}(\beta)$控制了多项分布$p(w|z_k)$根据主题随机生成当前文本下的单词">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https://zhen8838.github.io/2020/08/04/statis-learn-cp17/lda_1.png">
 <meta property="og:updated_time" content="2020-08-09T17:10:44.188Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="统计学习方法:潜在狄利克雷分配模型">
-<meta name="twitter:description" content="潜在狄利克雷分配模型其实就是一个确定结构的概率图模型，他主要做两件事情:  学习到话题的单词分布\(p(w|z_k)\),意为给定对应话题得到对应的单词. 学习到文本的话题分布\(p(z|\mathbf{w}_m)\),意为给定对应文本得到对应的话题.  如下图所示:  \(\varphi_k\sim \text{Dir}(\beta)\)控制了多项分布\(p(w|z_k)\)根据主题随机生成当前">
+<meta name="twitter:description" content="潜在狄利克雷分配模型其实就是一个确定结构的概率图模型，他主要做两件事情:  学习到话题的单词分布$p(w|z_k)$,意为给定对应话题得到对应的单词.  学习到文本的话题分布$p(z|\mathbf{w}_m)$,意为给定对应文本得到对应的话题.   如下图所示:  $\varphi_k\sim \text{Dir}(\beta)$控制了多项分布$p(w|z_k)$根据主题随机生成当前文本下的单词">
 <meta name="twitter:image" content="https://zhen8838.github.io/2020/08/04/statis-learn-cp17/lda_1.png">
   
   
@@ -94,32 +94,36 @@
     <div class="article-entry" itemprop="articleBody">
       
         <p>潜在狄利克雷分配模型其实就是一个确定结构的概率图模型，他主要做两件事情:</p>
-<ol type="1">
-<li><p>学习到话题的单词分布<span class="math inline">\(p(w|z_k)\)</span>,意为<strong>给定对应话题得到对应的单词</strong>.</p></li>
-<li><p>学习到文本的话题分布<span class="math inline">\(p(z|\mathbf{w}_m)\)</span>,意为<strong>给定对应文本得到对应的话题</strong>.</p></li>
+<ol>
+<li><p>学习到话题的单词分布$p(w|z_k)$,意为<strong>给定对应话题得到对应的单词</strong>.</p>
+</li>
+<li><p>学习到文本的话题分布$p(z|\mathbf{w}_m)$,意为<strong>给定对应文本得到对应的话题</strong>.</p>
+</li>
 </ol>
 <p>如下图所示:</p>
-<ol type="1">
-<li><p><span class="math inline">\(\varphi_k\sim \text{Dir}(\beta)\)</span>控制了多项分布<span class="math inline">\(p(w|z_k)\)</span>根据主题随机生成当前文本下的单词分布<span class="math inline">\(\mathbf{w}\)</span>.</p></li>
-<li><p><span class="math inline">\(\theta_{m}\sim \text{Dir}(\alpha)\)</span>控制了多项分布<span class="math inline">\(p(z|\mathbf{w}_m)\)</span>根据当前文本得到所对应主题的概率分布.</p></li>
+<ol>
+<li><p>$\varphi_k\sim \text{Dir}(\beta)$控制了多项分布$p(w|z_k)$根据主题随机生成当前文本下的单词分布$\mathbf{w}$.</p>
+</li>
+<li><p>$\theta_{m}\sim \text{Dir}(\alpha)$控制了多项分布$p(z|\mathbf{w}_m)$根据当前文本得到所对应主题的概率分布.</p>
+</li>
 </ol>
-<div data-align="center">
-<p><img src="/2020/08/04/statis-learn-cp17/lda_1.png"></p>
+<div align="center">
+<img src="/2020/08/04/statis-learn-cp17/lda_1.png">
 </div>
+
+
+
 <a id="more"></a>
-<h1 id="lda的生成过程">LDA的生成过程</h1>
-<p>流程见书本图20.3:</p>
-<ol type="1">
-<li>从<span class="math inline">\(\theta_m\sim Dir(\alpha)\)</span>中随机采样,确定文本的话题分布<span class="math inline">\(p(z|\mathbf{w}_m)\)</span>,这个分布是一个多项分布.</li>
-<li>在文本的话题分布<span class="math inline">\(p(z|\mathbf{w}_m)\)</span>中采样,一篇文章一共<span class="math inline">\(N\)</span>个单词,因此采样每个单词对应的<span class="math inline">\(N\)</span>个主题,即<span class="math inline">\(z_{mn}\sim p(z|\mathbf{w}_m)\)</span>.</li>
-<li>从<span class="math inline">\(\varphi_k\sim Dir{\beta}\)</span>中随机采样,确定话题的单词分布<span class="math inline">\(p(w|z_k)\)</span>,这个分布也是一个多项分布.</li>
-<li>一共有<span class="math inline">\(M\)</span>篇文章,每个文章有<span class="math inline">\(N\)</span>个单词,因此对之前采样得到单词对应的主题<span class="math inline">\(z_{mn}\)</span>可以在话题的单词分布<span class="math inline">\(p(w|z_k)\)</span>中采样,代入<span class="math inline">\(z_{mn}\)</span>后,得到生成的单词<span class="math inline">\(w_{mn}\)</span>.</li>
+<h1 id="LDA的生成过程"><a href="#LDA的生成过程" class="headerlink" title="LDA的生成过程"></a>LDA的生成过程</h1><p>流程见书本图20.3:</p>
+<ol>
+<li>从$\theta_m\sim Dir(\alpha)$中随机采样,确定文本的话题分布$p(z|\mathbf{w}_m)$,这个分布是一个多项分布.</li>
+<li>在文本的话题分布$p(z|\mathbf{w}_m)$中采样,一篇文章一共$N$个单词,因此采样每个单词对应的$N$个主题,即$z_{mn}\sim p(z|\mathbf{w}_m)$.</li>
+<li>从$\varphi_k\sim Dir{\beta}$中随机采样,确定话题的单词分布$p(w|z_k)$,这个分布也是一个多项分布.</li>
+<li>一共有$M$篇文章,每个文章有$N$个单词,因此对之前采样得到单词对应的主题$z_{mn}$可以在话题的单词分布$p(w|z_k)$中采样,代入$z_{mn}$后,得到生成的单词$w_{mn}$.</li>
 </ol>
-<p>实际上如果我们生成的整个数据集的单词<span class="math inline">\(w_{mn}\)</span>恰巧符合于真实的单词分布,那么LDA模型的参数<span class="math inline">\(\alpha,\beta\)</span>就确定了.</p>
-<h1 id="lda的gibbs抽样算法">LDA的Gibbs抽样算法</h1>
-<p>具体推导流程见书本.gibbs抽样的缺点就是效率太低，一个step就需要遍历所有的文本内容，并且需要非常多的step才能进入收敛状态。因此我的代码实现减小了文章个数和特征个数。</p>
-<h1 id="lda的变分em算法">LDA的变分EM算法</h1>
-<p>TODO，此方法效率较高，sklearn中也是使用变分EM进行计算的。太过复杂所以我就没有准备复现。</p>
+<p>实际上如果我们生成的整个数据集的单词$w_{mn}$恰巧符合于真实的单词分布,那么LDA模型的参数$\alpha,\beta$就确定了.</p>
+<h1 id="LDA的Gibbs抽样算法"><a href="#LDA的Gibbs抽样算法" class="headerlink" title="LDA的Gibbs抽样算法"></a>LDA的Gibbs抽样算法</h1><p>具体推导流程见书本.gibbs抽样的缺点就是效率太低，一个step就需要遍历所有的文本内容，并且需要非常多的step才能进入收敛状态。因此我的代码实现减小了文章个数和特征个数。</p>
+<h1 id="LDA的变分EM算法"><a href="#LDA的变分EM算法" class="headerlink" title="LDA的变分EM算法"></a>LDA的变分EM算法</h1><p>TODO，此方法效率较高，sklearn中也是使用变分EM进行计算的。太过复杂所以我就没有准备复现。</p>
 
       
     </div>
@@ -128,38 +132,42 @@
         
         
           <p>潜在狄利克雷分配模型其实就是一个确定结构的概率图模型，他主要做两件事情:</p>
-<ol type="1">
-<li><p>学习到话题的单词分布<span class="math inline">\(p(w|z_k)\)</span>,意为<strong>给定对应话题得到对应的单词</strong>.</p></li>
-<li><p>学习到文本的话题分布<span class="math inline">\(p(z|\mathbf{w}_m)\)</span>,意为<strong>给定对应文本得到对应的话题</strong>.</p></li>
+<ol>
+<li><p>学习到话题的单词分布$p(w|z_k)$,意为<strong>给定对应话题得到对应的单词</strong>.</p>
+</li>
+<li><p>学习到文本的话题分布$p(z|\mathbf{w}_m)$,意为<strong>给定对应文本得到对应的话题</strong>.</p>
+</li>
 </ol>
 <p>如下图所示:</p>
-<ol type="1">
-<li><p><span class="math inline">\(\varphi_k\sim \text{Dir}(\beta)\)</span>控制了多项分布<span class="math inline">\(p(w|z_k)\)</span>根据主题随机生成当前文本下的单词分布<span class="math inline">\(\mathbf{w}\)</span>.</p></li>
-<li><p><span class="math inline">\(\theta_{m}\sim \text{Dir}(\alpha)\)</span>控制了多项分布<span class="math inline">\(p(z|\mathbf{w}_m)\)</span>根据当前文本得到所对应主题的概率分布.</p></li>
+<ol>
+<li><p>$\varphi_k\sim \text{Dir}(\beta)$控制了多项分布$p(w|z_k)$根据主题随机生成当前文本下的单词分布$\mathbf{w}$.</p>
+</li>
+<li><p>$\theta_{m}\sim \text{Dir}(\alpha)$控制了多项分布$p(z|\mathbf{w}_m)$根据当前文本得到所对应主题的概率分布.</p>
+</li>
 </ol>
-<div data-align="center">
-<p><img src="/2020/08/04/statis-learn-cp17/lda_1.png"></p>
+<div align="center">
+<img src="/2020/08/04/statis-learn-cp17/lda_1.png">
 </div>
+
+
+
 <a id="more"></a>
-<h1 id="lda的生成过程">LDA的生成过程</h1>
-<p>流程见书本图20.3:</p>
-<ol type="1">
-<li>从<span class="math inline">\(\theta_m\sim Dir(\alpha)\)</span>中随机采样,确定文本的话题分布<span class="math inline">\(p(z|\mathbf{w}_m)\)</span>,这个分布是一个多项分布.</li>
-<li>在文本的话题分布<span class="math inline">\(p(z|\mathbf{w}_m)\)</span>中采样,一篇文章一共<span class="math inline">\(N\)</span>个单词,因此采样每个单词对应的<span class="math inline">\(N\)</span>个主题,即<span class="math inline">\(z_{mn}\sim p(z|\mathbf{w}_m)\)</span>.</li>
-<li>从<span class="math inline">\(\varphi_k\sim Dir{\beta}\)</span>中随机采样,确定话题的单词分布<span class="math inline">\(p(w|z_k)\)</span>,这个分布也是一个多项分布.</li>
-<li>一共有<span class="math inline">\(M\)</span>篇文章,每个文章有<span class="math inline">\(N\)</span>个单词,因此对之前采样得到单词对应的主题<span class="math inline">\(z_{mn}\)</span>可以在话题的单词分布<span class="math inline">\(p(w|z_k)\)</span>中采样,代入<span class="math inline">\(z_{mn}\)</span>后,得到生成的单词<span class="math inline">\(w_{mn}\)</span>.</li>
+<h1 id="LDA的生成过程"><a href="#LDA的生成过程" class="headerlink" title="LDA的生成过程"></a>LDA的生成过程</h1><p>流程见书本图20.3:</p>
+<ol>
+<li>从$\theta_m\sim Dir(\alpha)$中随机采样,确定文本的话题分布$p(z|\mathbf{w}_m)$,这个分布是一个多项分布.</li>
+<li>在文本的话题分布$p(z|\mathbf{w}_m)$中采样,一篇文章一共$N$个单词,因此采样每个单词对应的$N$个主题,即$z_{mn}\sim p(z|\mathbf{w}_m)$.</li>
+<li>从$\varphi_k\sim Dir{\beta}$中随机采样,确定话题的单词分布$p(w|z_k)$,这个分布也是一个多项分布.</li>
+<li>一共有$M$篇文章,每个文章有$N$个单词,因此对之前采样得到单词对应的主题$z_{mn}$可以在话题的单词分布$p(w|z_k)$中采样,代入$z_{mn}$后,得到生成的单词$w_{mn}$.</li>
 </ol>
-<p>实际上如果我们生成的整个数据集的单词<span class="math inline">\(w_{mn}\)</span>恰巧符合于真实的单词分布,那么LDA模型的参数<span class="math inline">\(\alpha,\beta\)</span>就确定了.</p>
-<h1 id="lda的gibbs抽样算法">LDA的Gibbs抽样算法</h1>
-<p>具体推导流程见书本.gibbs抽样的缺点就是效率太低，一个step就需要遍历所有的文本内容，并且需要非常多的step才能进入收敛状态。因此我的代码实现减小了文章个数和特征个数。</p>
-<h1 id="lda的变分em算法">LDA的变分EM算法</h1>
-<p>TODO，此方法效率较高，sklearn中也是使用变分EM进行计算的。太过复杂所以我就没有准备复现。</p>
+<p>实际上如果我们生成的整个数据集的单词$w_{mn}$恰巧符合于真实的单词分布,那么LDA模型的参数$\alpha,\beta$就确定了.</p>
+<h1 id="LDA的Gibbs抽样算法"><a href="#LDA的Gibbs抽样算法" class="headerlink" title="LDA的Gibbs抽样算法"></a>LDA的Gibbs抽样算法</h1><p>具体推导流程见书本.gibbs抽样的缺点就是效率太低，一个step就需要遍历所有的文本内容，并且需要非常多的step才能进入收敛状态。因此我的代码实现减小了文章个数和特征个数。</p>
+<h1 id="LDA的变分EM算法"><a href="#LDA的变分EM算法" class="headerlink" title="LDA的变分EM算法"></a>LDA的变分EM算法</h1><p>TODO，此方法效率较高，sklearn中也是使用变分EM进行计算的。太过复杂所以我就没有准备复现。</p>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2020/08/04/statis-learn-cp17/" data-id="ckf27g2e2008yw66x76dfopgz" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2020/08/04/statis-learn-cp17/" data-id="ckf5fswuz0094jk6xzkolj6up" class="article-share-link">Share</a>
       
       
       
@@ -232,6 +240,10 @@
       <ul>
         
           <li>
+            <a href="/2020/09/15/Uncertainty-Weigh-Loss/">Uncertainty-Weigh-Loss</a>
+          </li>
+        
+          <li>
             <a href="/2020/09/14/ai-matting/">基于Qt的抠图工具</a>
           </li>
         
@@ -245,10 +257,6 @@
         
           <li>
             <a href="/2020/08/04/statis-learn-cp17/">统计学习方法:潜在狄利克雷分配模型</a>
-          </li>
-        
-          <li>
-            <a href="/2020/07/28/statis-learn-cp16/">统计学习方法:马尔科夫链蒙特卡洛法</a>
           </li>
         
       </ul>
