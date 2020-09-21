@@ -7,18 +7,18 @@
   
   <title>统计学习方法:感知机 | </title>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta name="description" content="我觉得自己对于概率视角下的机器学习方法还是不够清晰,因此开个新坑(其实这个基础就应该上上学期打好),现在准备两个月之内把统计学习方法第二版撸完(flag是不是太…).不管了,今天是第一章感知机,为了节约记录的时间,我都只写我觉得比较重要的地方.">
+  <meta name="description" content="我觉得自己对于概率视角下的机器学习方法还是不够清晰,因此开个新坑(其实这个基础就应该上上学期打好),现在准备两个月之内把统计学习方法第二版撸完(flag是不是太...).不管了,今天是第一章感知机,为了节约记录的时间,我都只写我觉得比较重要的地方.">
 <meta name="keywords" content="统计学习方法,概率论">
 <meta property="og:type" content="article">
 <meta property="og:title" content="统计学习方法:感知机">
 <meta property="og:url" content="https://zhen8838.github.io/2020/05/19/statis-learn-cp1/index.html">
 <meta property="og:site_name">
-<meta property="og:description" content="我觉得自己对于概率视角下的机器学习方法还是不够清晰,因此开个新坑(其实这个基础就应该上上学期打好),现在准备两个月之内把统计学习方法第二版撸完(flag是不是太…).不管了,今天是第一章感知机,为了节约记录的时间,我都只写我觉得比较重要的地方.">
+<meta property="og:description" content="我觉得自己对于概率视角下的机器学习方法还是不够清晰,因此开个新坑(其实这个基础就应该上上学期打好),现在准备两个月之内把统计学习方法第二版撸完(flag是不是太...).不管了,今天是第一章感知机,为了节约记录的时间,我都只写我觉得比较重要的地方.">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:updated_time" content="2020-05-19T02:35:35.547Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="统计学习方法:感知机">
-<meta name="twitter:description" content="我觉得自己对于概率视角下的机器学习方法还是不够清晰,因此开个新坑(其实这个基础就应该上上学期打好),现在准备两个月之内把统计学习方法第二版撸完(flag是不是太…).不管了,今天是第一章感知机,为了节约记录的时间,我都只写我觉得比较重要的地方.">
+<meta name="twitter:description" content="我觉得自己对于概率视角下的机器学习方法还是不够清晰,因此开个新坑(其实这个基础就应该上上学期打好),现在准备两个月之内把统计学习方法第二版撸完(flag是不是太...).不管了,今天是第一章感知机,为了节约记录的时间,我都只写我觉得比较重要的地方.">
   
   
     <link rel="icon" href="/favicon.png">
@@ -91,71 +91,87 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <p>我觉得自己对于概率视角下的机器学习方法还是不够清晰,因此开个新坑(其实这个基础就应该上上学期打好),现在准备两个月之内把统计学习方法第二版撸完(<del>flag是不是太…</del>).不管了,今天是第一章感知机,为了节约记录的时间,我都只写我觉得比较重要的地方.</p>
+        <p>我觉得自己对于概率视角下的机器学习方法还是不够清晰,因此开个新坑(其实这个基础就应该上上学期打好),现在准备两个月之内把统计学习方法第二版撸完(<del>flag是不是太...</del>).不管了,今天是第一章感知机,为了节约记录的时间,我都只写我觉得比较重要的地方.</p>
 <a id="more"></a>
-<h1 id="一般形式"><a href="#一般形式" class="headerlink" title="一般形式"></a>一般形式</h1><h2 id="模型"><a href="#模型" class="headerlink" title="模型"></a>模型</h2><script type="math/tex; mode=display">
+<h1 id="一般形式">一般形式</h1>
+<h2 id="模型">模型</h2>
+<p><span class="math display">\[
 \begin{aligned}
   f(x)=sign(w\cdot x+b)\\
-  sign(x)=\begin{cases}+1,x\geq0\\-1,x< 0 \end{cases}
-\end{aligned}</script><h2 id="学习策略"><a href="#学习策略" class="headerlink" title="学习策略"></a>学习策略</h2><p>因为是要对所有数据点进行二分类,所以直观的想法是根据误分类点到决策面$S$的距离作为损失:</p>
-<script type="math/tex; mode=display">
+  sign(x)=\begin{cases}+1,x\geq0\\-1,x&lt; 0 \end{cases}
+\end{aligned}
+\]</span></p>
+<h2 id="学习策略">学习策略</h2>
+<p>因为是要对所有数据点进行二分类,所以直观的想法是根据误分类点到决策面<span class="math inline">\(S\)</span>的距离作为损失: <span class="math display">\[
 \begin{aligned}
   -\frac{1}{\parallel w\parallel}y_i(w\cdot x_i+b)
-\end{aligned}</script><p>因为感知机想法比较简单,不需要考虑决策面距离分类点有多远,所以舍去$\frac{1}{\parallel w\parallel}$得到损失函数:</p>
-<script type="math/tex; mode=display">
+\end{aligned}
+\]</span></p>
+<p>因为感知机想法比较简单,不需要考虑决策面距离分类点有多远,所以舍去<span class="math inline">\(\frac{1}{\parallel w\parallel}\)</span>得到损失函数:</p>
+<p><span class="math display">\[
 \begin{aligned}
   -y_i(w\cdot x_i+b)
-\end{aligned}</script><h2 id="训练"><a href="#训练" class="headerlink" title="训练"></a>训练</h2><p>感知机虽然是通过求导反向传播更新的,但是要注意直接用<code>batch</code>的方式学习是没有用的!这里我踩了个坑,他的更新方式是选择分类错误的点的<code>loss</code>进行反向传播.</p>
-<ol>
-<li><p>定义初值$w_0,b_0$</p>
-</li>
-<li><p>输入$x_i,y_i$</p>
-</li>
-<li><p>如果$-y_i(w\cdot x_i +b)&gt;0$</p>
-</li>
+\end{aligned}
+\]</span></p>
+<h2 id="训练">训练</h2>
+<p>感知机虽然是通过求导反向传播更新的,但是要注意直接用<code>batch</code>的方式学习是没有用的!这里我踩了个坑,他的更新方式是选择分类错误的点的<code>loss</code>进行反向传播.</p>
+<ol type="1">
+<li><p>定义初值<span class="math inline">\(w_0,b_0\)</span></p></li>
+<li><p>输入<span class="math inline">\(x_i,y_i\)</span></p></li>
+<li><p>如果<span class="math inline">\(-y_i(w\cdot x_i +b)&gt;0\)</span></p></li>
 </ol>
-<script type="math/tex; mode=display">
+<p><span class="math display">\[
 \begin{aligned}
   w\leftarrow w+\eta y_i x_i\\
   b\leftarrow b+\eta y_i 
-\end{aligned}</script><ol>
+\end{aligned}
+\]</span></p>
+<ol start="4" type="1">
 <li>重复2,3</li>
 </ol>
-<h1 id="对偶形式"><a href="#对偶形式" class="headerlink" title="对偶形式"></a>对偶形式</h1><h2 id="模型-1"><a href="#模型-1" class="headerlink" title="模型"></a>模型</h2><p>我们注意到$w$在经过多次更新后,他的增量实际上等于如下:</p>
-<script type="math/tex; mode=display">
+<h1 id="对偶形式">对偶形式</h1>
+<h2 id="模型-1">模型</h2>
+<p>我们注意到<span class="math inline">\(w\)</span>在经过多次更新后,他的增量实际上等于如下: <span class="math display">\[
 \begin{aligned}
   \text{Let}\ \ \ \ \alpha_i= n_i \eta\\
   w=\sum_{i=1}^N \alpha_i y_i x_i\\
   b=\sum_{i=1}^N \alpha_i y_i \\
-\end{aligned}</script><p>将原始感知机中的替换为如下:</p>
-<script type="math/tex; mode=display">
+\end{aligned}
+\]</span></p>
+<p>将原始感知机中的替换为如下: <span class="math display">\[
 \begin{aligned}
   f(x)=sign(\sum_{j=1}^N \alpha_j y_j x_j \cdot x +b)
-\end{aligned}</script><h2 id="训练-1"><a href="#训练-1" class="headerlink" title="训练"></a>训练</h2><ol>
+\end{aligned}
+\]</span></p>
+<h2 id="训练-1">训练</h2>
+<ol type="1">
 <li>模型定义</li>
 </ol>
-<script type="math/tex; mode=display">
+<p><span class="math display">\[
 \begin{aligned}
   f(x)=sign(\sum_{j=1}^N \alpha_j y_j x_j \cdot x +b)\\
   \alpha=(\alpha_1,\alpha_2,...\alpha_N)^T
-\end{aligned}</script><ol>
-<li><p>初始化参数$\alpha,b$</p>
-</li>
-<li><p>输入$x_i,y_i$</p>
-</li>
+\end{aligned}
+\]</span></p>
+<ol start="2" type="1">
+<li><p>初始化参数<span class="math inline">\(\alpha,b\)</span></p></li>
+<li><p>输入<span class="math inline">\(x_i,y_i\)</span></p></li>
 </ol>
-<p><strong>NOTE</strong> 这里为了加速计算,首先将所有的$\sum_{j=1}^N \sum_{i=1}^N x_j \cdot x_i$(称为<code>Gram矩阵</code>)计算出来,训练的时候直接取值即可:</p>
-<script type="math/tex; mode=display">
+<p><strong>NOTE</strong> 这里为了加速计算,首先将所有的<span class="math inline">\(\sum_{j=1}^N \sum_{i=1}^N x_j \cdot x_i\)</span>(称为<code>Gram矩阵</code>)计算出来,训练的时候直接取值即可: <span class="math display">\[
 \begin{aligned}
   \boldsymbol{G}=[x_i\cdot x_j]_{N\times N}
-\end{aligned}</script><ol>
-<li>如果$-y_i(\sum_{j=1}^N \alpha_j y_j x_j \cdot x_i +b)&gt;0$</li>
+\end{aligned}
+\]</span></p>
+<ol start="4" type="1">
+<li>如果<span class="math inline">\(-y_i(\sum_{j=1}^N \alpha_j y_j x_j \cdot x_i +b)&gt;0\)</span></li>
 </ol>
-<script type="math/tex; mode=display">
+<p><span class="math display">\[
 \begin{aligned}
   \alpha_i\leftarrow \alpha_i+\eta\\
   b\leftarrow b+\eta y_i 
-\end{aligned}</script><ol>
+\end{aligned}
+\]</span></p>
+<ol start="5" type="1">
 <li>重复3,4</li>
 </ol>
 
@@ -165,71 +181,87 @@
       
         
         
-          <p>我觉得自己对于概率视角下的机器学习方法还是不够清晰,因此开个新坑(其实这个基础就应该上上学期打好),现在准备两个月之内把统计学习方法第二版撸完(<del>flag是不是太…</del>).不管了,今天是第一章感知机,为了节约记录的时间,我都只写我觉得比较重要的地方.</p>
+          <p>我觉得自己对于概率视角下的机器学习方法还是不够清晰,因此开个新坑(其实这个基础就应该上上学期打好),现在准备两个月之内把统计学习方法第二版撸完(<del>flag是不是太...</del>).不管了,今天是第一章感知机,为了节约记录的时间,我都只写我觉得比较重要的地方.</p>
 <a id="more"></a>
-<h1 id="一般形式"><a href="#一般形式" class="headerlink" title="一般形式"></a>一般形式</h1><h2 id="模型"><a href="#模型" class="headerlink" title="模型"></a>模型</h2><script type="math/tex; mode=display">
+<h1 id="一般形式">一般形式</h1>
+<h2 id="模型">模型</h2>
+<p><span class="math display">\[
 \begin{aligned}
   f(x)=sign(w\cdot x+b)\\
-  sign(x)=\begin{cases}+1,x\geq0\\-1,x< 0 \end{cases}
-\end{aligned}</script><h2 id="学习策略"><a href="#学习策略" class="headerlink" title="学习策略"></a>学习策略</h2><p>因为是要对所有数据点进行二分类,所以直观的想法是根据误分类点到决策面$S$的距离作为损失:</p>
-<script type="math/tex; mode=display">
+  sign(x)=\begin{cases}+1,x\geq0\\-1,x&lt; 0 \end{cases}
+\end{aligned}
+\]</span></p>
+<h2 id="学习策略">学习策略</h2>
+<p>因为是要对所有数据点进行二分类,所以直观的想法是根据误分类点到决策面<span class="math inline">\(S\)</span>的距离作为损失: <span class="math display">\[
 \begin{aligned}
   -\frac{1}{\parallel w\parallel}y_i(w\cdot x_i+b)
-\end{aligned}</script><p>因为感知机想法比较简单,不需要考虑决策面距离分类点有多远,所以舍去$\frac{1}{\parallel w\parallel}$得到损失函数:</p>
-<script type="math/tex; mode=display">
+\end{aligned}
+\]</span></p>
+<p>因为感知机想法比较简单,不需要考虑决策面距离分类点有多远,所以舍去<span class="math inline">\(\frac{1}{\parallel w\parallel}\)</span>得到损失函数:</p>
+<p><span class="math display">\[
 \begin{aligned}
   -y_i(w\cdot x_i+b)
-\end{aligned}</script><h2 id="训练"><a href="#训练" class="headerlink" title="训练"></a>训练</h2><p>感知机虽然是通过求导反向传播更新的,但是要注意直接用<code>batch</code>的方式学习是没有用的!这里我踩了个坑,他的更新方式是选择分类错误的点的<code>loss</code>进行反向传播.</p>
-<ol>
-<li><p>定义初值$w_0,b_0$</p>
-</li>
-<li><p>输入$x_i,y_i$</p>
-</li>
-<li><p>如果$-y_i(w\cdot x_i +b)&gt;0$</p>
-</li>
+\end{aligned}
+\]</span></p>
+<h2 id="训练">训练</h2>
+<p>感知机虽然是通过求导反向传播更新的,但是要注意直接用<code>batch</code>的方式学习是没有用的!这里我踩了个坑,他的更新方式是选择分类错误的点的<code>loss</code>进行反向传播.</p>
+<ol type="1">
+<li><p>定义初值<span class="math inline">\(w_0,b_0\)</span></p></li>
+<li><p>输入<span class="math inline">\(x_i,y_i\)</span></p></li>
+<li><p>如果<span class="math inline">\(-y_i(w\cdot x_i +b)&gt;0\)</span></p></li>
 </ol>
-<script type="math/tex; mode=display">
+<p><span class="math display">\[
 \begin{aligned}
   w\leftarrow w+\eta y_i x_i\\
   b\leftarrow b+\eta y_i 
-\end{aligned}</script><ol>
+\end{aligned}
+\]</span></p>
+<ol start="4" type="1">
 <li>重复2,3</li>
 </ol>
-<h1 id="对偶形式"><a href="#对偶形式" class="headerlink" title="对偶形式"></a>对偶形式</h1><h2 id="模型-1"><a href="#模型-1" class="headerlink" title="模型"></a>模型</h2><p>我们注意到$w$在经过多次更新后,他的增量实际上等于如下:</p>
-<script type="math/tex; mode=display">
+<h1 id="对偶形式">对偶形式</h1>
+<h2 id="模型-1">模型</h2>
+<p>我们注意到<span class="math inline">\(w\)</span>在经过多次更新后,他的增量实际上等于如下: <span class="math display">\[
 \begin{aligned}
   \text{Let}\ \ \ \ \alpha_i= n_i \eta\\
   w=\sum_{i=1}^N \alpha_i y_i x_i\\
   b=\sum_{i=1}^N \alpha_i y_i \\
-\end{aligned}</script><p>将原始感知机中的替换为如下:</p>
-<script type="math/tex; mode=display">
+\end{aligned}
+\]</span></p>
+<p>将原始感知机中的替换为如下: <span class="math display">\[
 \begin{aligned}
   f(x)=sign(\sum_{j=1}^N \alpha_j y_j x_j \cdot x +b)
-\end{aligned}</script><h2 id="训练-1"><a href="#训练-1" class="headerlink" title="训练"></a>训练</h2><ol>
+\end{aligned}
+\]</span></p>
+<h2 id="训练-1">训练</h2>
+<ol type="1">
 <li>模型定义</li>
 </ol>
-<script type="math/tex; mode=display">
+<p><span class="math display">\[
 \begin{aligned}
   f(x)=sign(\sum_{j=1}^N \alpha_j y_j x_j \cdot x +b)\\
   \alpha=(\alpha_1,\alpha_2,...\alpha_N)^T
-\end{aligned}</script><ol>
-<li><p>初始化参数$\alpha,b$</p>
-</li>
-<li><p>输入$x_i,y_i$</p>
-</li>
+\end{aligned}
+\]</span></p>
+<ol start="2" type="1">
+<li><p>初始化参数<span class="math inline">\(\alpha,b\)</span></p></li>
+<li><p>输入<span class="math inline">\(x_i,y_i\)</span></p></li>
 </ol>
-<p><strong>NOTE</strong> 这里为了加速计算,首先将所有的$\sum_{j=1}^N \sum_{i=1}^N x_j \cdot x_i$(称为<code>Gram矩阵</code>)计算出来,训练的时候直接取值即可:</p>
-<script type="math/tex; mode=display">
+<p><strong>NOTE</strong> 这里为了加速计算,首先将所有的<span class="math inline">\(\sum_{j=1}^N \sum_{i=1}^N x_j \cdot x_i\)</span>(称为<code>Gram矩阵</code>)计算出来,训练的时候直接取值即可: <span class="math display">\[
 \begin{aligned}
   \boldsymbol{G}=[x_i\cdot x_j]_{N\times N}
-\end{aligned}</script><ol>
-<li>如果$-y_i(\sum_{j=1}^N \alpha_j y_j x_j \cdot x_i +b)&gt;0$</li>
+\end{aligned}
+\]</span></p>
+<ol start="4" type="1">
+<li>如果<span class="math inline">\(-y_i(\sum_{j=1}^N \alpha_j y_j x_j \cdot x_i +b)&gt;0\)</span></li>
 </ol>
-<script type="math/tex; mode=display">
+<p><span class="math display">\[
 \begin{aligned}
   \alpha_i\leftarrow \alpha_i+\eta\\
   b\leftarrow b+\eta y_i 
-\end{aligned}</script><ol>
+\end{aligned}
+\]</span></p>
+<ol start="5" type="1">
 <li>重复3,4</li>
 </ol>
 
@@ -237,7 +269,7 @@
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2020/05/19/statis-learn-cp1/" data-id="ckf5fswuw008tjk6x8nmljfra" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2020/05/19/statis-learn-cp1/" data-id="ckfcf83mz008q7s6xfqnf8c81" class="article-share-link">Share</a>
       
       
       
@@ -288,7 +320,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">标签云</h3>
     <div class="widget tagcloud">
-      <a href="/tags/C/" style="font-size: 12.67px;">C</a> <a href="/tags/C/" style="font-size: 12px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10px;">CNN</a> <a href="/tags/Eigen/" style="font-size: 10px;">Eigen</a> <a href="/tags/GAN/" style="font-size: 10px;">GAN</a> <a href="/tags/Linux/" style="font-size: 19.33px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.67px;">PCB</a> <a href="/tags/Qt/" style="font-size: 10px;">Qt</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 14.67px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 11.33px;">linux</a> <a href="/tags/mxnet/" style="font-size: 10px;">mxnet</a> <a href="/tags/pfld/" style="font-size: 10px;">pfld</a> <a href="/tags/python/" style="font-size: 18px;">python</a> <a href="/tags/pytorch/" style="font-size: 10px;">pytorch</a> <a href="/tags/retinaface/" style="font-size: 10px;">retinaface</a> <a href="/tags/stm32/" style="font-size: 11.33px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 20px;">tensorflow</a> <a href="/tags/vscode/" style="font-size: 10px;">vscode</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/yolo/" style="font-size: 12.67px;">yolo</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 14px;">作业</a> <a href="/tags/半监督学习/" style="font-size: 15.33px;">半监督学习</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/图像处理/" style="font-size: 10px;">图像处理</a> <a href="/tags/堆栈/" style="font-size: 10.67px;">堆栈</a> <a href="/tags/声音信号处理/" style="font-size: 12px;">声音信号处理</a> <a href="/tags/小工具/" style="font-size: 12px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 15.33px;">嵌入式</a> <a href="/tags/总结/" style="font-size: 10px;">总结</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 17.33px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 17.33px;">机器学习</a> <a href="/tags/树/" style="font-size: 12px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/概率论/" style="font-size: 18.67px;">概率论</a> <a href="/tags/深度学习/" style="font-size: 16px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 11.33px;">神经网络</a> <a href="/tags/算法/" style="font-size: 12px;">算法</a> <a href="/tags/统计学习方法/" style="font-size: 16.67px;">统计学习方法</a> <a href="/tags/聚类/" style="font-size: 12px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13.33px;">蓝牙</a> <a href="/tags/调参/" style="font-size: 10px;">调参</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/路由/" style="font-size: 10px;">路由</a> <a href="/tags/链表/" style="font-size: 11.33px;">链表</a> <a href="/tags/错误记录/" style="font-size: 19.33px;">错误记录</a>
+      <a href="/tags/C/" style="font-size: 12.67px;">C</a> <a href="/tags/C/" style="font-size: 12px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10px;">CNN</a> <a href="/tags/Eigen/" style="font-size: 10px;">Eigen</a> <a href="/tags/GAN/" style="font-size: 10px;">GAN</a> <a href="/tags/Linux/" style="font-size: 19.33px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.67px;">PCB</a> <a href="/tags/Qt/" style="font-size: 10px;">Qt</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 14.67px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 11.33px;">linux</a> <a href="/tags/mindspore/" style="font-size: 10.67px;">mindspore</a> <a href="/tags/mxnet/" style="font-size: 10px;">mxnet</a> <a href="/tags/pfld/" style="font-size: 10px;">pfld</a> <a href="/tags/python/" style="font-size: 18px;">python</a> <a href="/tags/pytorch/" style="font-size: 10px;">pytorch</a> <a href="/tags/retinaface/" style="font-size: 10px;">retinaface</a> <a href="/tags/stm32/" style="font-size: 11.33px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 20px;">tensorflow</a> <a href="/tags/vscode/" style="font-size: 10px;">vscode</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/yolo/" style="font-size: 12.67px;">yolo</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 14px;">作业</a> <a href="/tags/半监督学习/" style="font-size: 15.33px;">半监督学习</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/图像处理/" style="font-size: 10px;">图像处理</a> <a href="/tags/堆栈/" style="font-size: 10.67px;">堆栈</a> <a href="/tags/声音信号处理/" style="font-size: 12px;">声音信号处理</a> <a href="/tags/小工具/" style="font-size: 12px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 15.33px;">嵌入式</a> <a href="/tags/总结/" style="font-size: 10px;">总结</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 17.33px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 17.33px;">机器学习</a> <a href="/tags/树/" style="font-size: 12px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/概率论/" style="font-size: 18.67px;">概率论</a> <a href="/tags/深度学习/" style="font-size: 16px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 11.33px;">神经网络</a> <a href="/tags/算法/" style="font-size: 12px;">算法</a> <a href="/tags/统计学习方法/" style="font-size: 16.67px;">统计学习方法</a> <a href="/tags/聚类/" style="font-size: 12px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13.33px;">蓝牙</a> <a href="/tags/调参/" style="font-size: 10px;">调参</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/路由/" style="font-size: 10px;">路由</a> <a href="/tags/链表/" style="font-size: 11.33px;">链表</a> <a href="/tags/错误记录/" style="font-size: 19.33px;">错误记录</a>
     </div>
   </div>
 
@@ -310,6 +342,14 @@
       <ul>
         
           <li>
+            <a href="/2020/09/22/mindspore-tf/">mindspore vs tensorflow</a>
+          </li>
+        
+          <li>
+            <a href="/2020/09/20/mindspore-detail/">关于mindspore</a>
+          </li>
+        
+          <li>
             <a href="/2020/09/15/Uncertainty-Weigh-Loss/">Uncertainty-Weigh-Loss</a>
           </li>
         
@@ -319,14 +359,6 @@
         
           <li>
             <a href="/2020/08/29/august/">8月总结&amp;淋巴结发炎预防与治疗</a>
-          </li>
-        
-          <li>
-            <a href="/2020/08/10/statis-learn-cp18/">统计学习方法:PageRank</a>
-          </li>
-        
-          <li>
-            <a href="/2020/08/04/statis-learn-cp17/">统计学习方法:潜在狄利克雷分配模型</a>
           </li>
         
       </ul>
