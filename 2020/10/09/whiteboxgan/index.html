@@ -95,52 +95,42 @@
       
         <p>关于论文 Learning to Cartoonize Using White-box Cartoon Representations</p>
 <a id="more"></a>
-<h1 id="数据集">数据集</h1>
-<p>为了使得模型能对人像与景物生成均有较好的效果，训练时需要<code>[photo_face,photo_scenery,cartoon_face,cartoon_scenery]</code>四种类型的图像。他每采样5次风景图像采样一次人物图像。</p>
-<h1 id="损失函数">损失函数</h1>
-<p>首先给出整体的流程图，有一个宏观的概念。</p>
-<p><img src="/2020/10/09/whiteboxgan/process.svg"></p>
-<p>作者通过观察动画图像认为： * 动画图像主要包括整体的结构特征 * 轮廓细节使用的清晰和锐化的线 * 平滑与平坦的表面颜色</p>
+<h1 id="数据集"><a href="#数据集" class="headerlink" title="数据集"></a>数据集</h1><p>为了使得模型能对人像与景物生成均有较好的效果，训练时需要<code>[photo_face,photo_scenery,cartoon_face,cartoon_scenery]</code>四种类型的图像。他每采样5次风景图像采样一次人物图像。</p>
+<h1 id="损失函数"><a href="#损失函数" class="headerlink" title="损失函数"></a>损失函数</h1><p>首先给出整体的流程图，有一个宏观的概念。</p>
+<p><img src="/2020/10/09/whiteboxgan/process.svg" alt=""></p>
+<p>作者通过观察动画图像认为：</p>
+<ul>
+<li>动画图像主要包括整体的结构特征</li>
+<li>轮廓细节使用的清晰和锐化的线</li>
+<li>平滑与平坦的表面颜色</li>
+</ul>
 <p>因此提出三种损失函数</p>
-<h2 id="learning-from-the-surface-representation">Learning From the Surface Representation</h2>
-<p>论文中提出要提取<code>Surface Representation</code>特征，即图像的平滑表面特征。作者通过调研使用<code>differentiable guided filter</code>对图像进行平滑处理。</p>
+<h2 id="Learning-From-the-Surface-Representation"><a href="#Learning-From-the-Surface-Representation" class="headerlink" title="Learning From the Surface Representation"></a>Learning From the Surface Representation</h2><p>论文中提出要提取<code>Surface Representation</code>特征，即图像的平滑表面特征。作者通过调研使用<code>differentiable guided filter</code>对图像进行平滑处理。</p>
 <p><strong>NOTE：</strong> 这里滤波器方法的原论文为<code>Fast end-to-end trainable guided filter</code>，但作者在使用时将滤波器权重进行了固定。</p>
-<p>定义滤波器为<span class="math inline">\(\mathcal{F}_{dgf}\)</span>，输入真实图像为<span class="math inline">\(\mathcal{I}_p\)</span>，输入动画图像为<span class="math inline">\(\mathcal{I}_c\)</span>，将生成图像的滤波结果与卡通图像的滤波结果进行判别器判别。</p>
-<p><span class="math display">\[
+<p>定义滤波器为$\mathcal{F}_{dgf}$，输入真实图像为$\mathcal{I}_p$，输入动画图像为$\mathcal{I}_c$，将生成图像的滤波结果与卡通图像的滤波结果进行判别器判别。</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-\mathcal{L}_{\text {surface}}\left(G, D_{s}\right) &amp;=\log D_{s}\left(\mathcal{F}_{\text {dgf}}\left(\boldsymbol{I}_{c}, \boldsymbol{I}_{c}\right)\right) \\
-&amp;+\log \left(1-D_{s}\left(\mathcal{F}_{\text {dgf}}\left(G\left(\boldsymbol{I}_{p}\right), G\left(\boldsymbol{I}_{p}\right)\right)\right)\right)
-\end{aligned}\tag{1}
-\]</span></p>
-<h2 id="learning-from-the-structure-representation">Learning From the Structure representation</h2>
-<p>这点我觉得比较好，作者想到<code>superpixel</code>后的图像具备较大的图像块以及清晰的边界，从结果上来看<code>superpixel</code>后的图像已经初步具备动画图像的一些特征了，因此很时候来学习原始图像的结构特征。作者在原始的的<code>superpixel</code>基础上加入了选择性搜索来合并一些超像素区域，这样可以获得更加大块的像素，并且考虑到传统的超像素算法是利用平均的方法来合成大像素的，对于图像将会降低部分的亮度与对比度，因此再提出自适应着色算法，提升<code>superpixel</code>的对比度。</p>
-<p>对于结构特征的损失实际上是预训练模型的编码差异损失： <span class="math display">\[
+\mathcal{L}_{\text {surface}}\left(G, D_{s}\right) &=\log D_{s}\left(\mathcal{F}_{\text {dgf}}\left(\boldsymbol{I}_{c}, \boldsymbol{I}_{c}\right)\right) \\
+&+\log \left(1-D_{s}\left(\mathcal{F}_{\text {dgf}}\left(G\left(\boldsymbol{I}_{p}\right), G\left(\boldsymbol{I}_{p}\right)\right)\right)\right)
+\end{aligned}\tag{1}</script><h2 id="Learning-From-the-Structure-representation"><a href="#Learning-From-the-Structure-representation" class="headerlink" title="Learning From the Structure representation"></a>Learning From the Structure representation</h2><p>这点我觉得比较好，作者想到<code>superpixel</code>后的图像具备较大的图像块以及清晰的边界，从结果上来看<code>superpixel</code>后的图像已经初步具备动画图像的一些特征了，因此很时候来学习原始图像的结构特征。作者在原始的的<code>superpixel</code>基础上加入了选择性搜索来合并一些超像素区域，这样可以获得更加大块的像素，并且考虑到传统的超像素算法是利用平均的方法来合成大像素的，对于图像将会降低部分的亮度与对比度，因此再提出自适应着色算法，提升<code>superpixel</code>的对比度。</p>
+<p>对于结构特征的损失实际上是预训练模型的编码差异损失：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
 \mathcal{L}_{\text {structure}}=\left\|\operatorname{VGG}_{n}\left(G\left(\boldsymbol{I}_{p}\right)\right)-\operatorname{VGG}_{n}\left(\mathcal{F}_{\text {st}}\left(G\left(\boldsymbol{I}_{p}\right)\right)\right)\right\|
-\end{aligned}\tag{2}
-\]</span></p>
-<h2 id="learning-from-the-textural-representation">Learning From the Textural Representation</h2>
-<p>学习纹理特征，考虑到判别器可以通过颜色亮度等特征很容易的区别出真实图像与动画图像，因此使用灰度化的图像去除其颜色信息，提取其单通道的纹理特征来进行判别。 <span class="math display">\[
+\end{aligned}\tag{2}</script><h2 id="Learning-From-the-Textural-Representation"><a href="#Learning-From-the-Textural-Representation" class="headerlink" title="Learning From the Textural Representation"></a>Learning From the Textural Representation</h2><p>学习纹理特征，考虑到判别器可以通过颜色亮度等特征很容易的区别出真实图像与动画图像，因此使用灰度化的图像去除其颜色信息，提取其单通道的纹理特征来进行判别。</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
   \mathcal{F}_{r c s}\left(\boldsymbol{I}_{r g b}\right)=(1-\alpha)\left(\beta_{1} * \boldsymbol{I}_{r}+\beta_2 * \boldsymbol{I}_{g}+\beta_{3} * \boldsymbol{I}_{b}\right)+\alpha * \boldsymbol{Y}
-\end{aligned}\tag{3}
-\]</span></p>
-<p><strong>NOTE:</strong> 这里和我之前学习过得<code>AnimeGan</code>有相似之处，不过这里的灰度化使用的是随机灰度化，即<span class="math inline">\(\beta\)</span>的值是从均匀分布中选取的。值得一提的是论文提到的<span class="math inline">\(\alpha\)</span>在开源代码中并没有出现，作者直接将均匀分布的范围控制在<span class="math inline">\((0,1-\alpha)\)</span>完成了相同的目标。</p>
-<h2 id="image-up-sampling-using-total-variation-regularization-with-a-new-observation-model.">Image up-sampling using total-variation regularization with a new observation model.</h2>
-<p>作者使用此论文中的<code>total-variation</code>损失强制生成结果更加平滑： <span class="math display">\[
+\end{aligned}\tag{3}</script><p><strong>NOTE:</strong> 这里和我之前学习过得<code>AnimeGan</code>有相似之处，不过这里的灰度化使用的是随机灰度化，即$\beta$的值是从均匀分布中选取的。值得一提的是论文提到的$\alpha$在开源代码中并没有出现，作者直接将均匀分布的范围控制在$(0,1-\alpha)$完成了相同的目标。</p>
+<h2 id="Image-up-sampling-using-total-variation-regularization-with-a-new-observation-model"><a href="#Image-up-sampling-using-total-variation-regularization-with-a-new-observation-model" class="headerlink" title="Image up-sampling using total-variation regularization with a new observation model."></a>Image up-sampling using total-variation regularization with a new observation model.</h2><p>作者使用此论文中的<code>total-variation</code>损失强制生成结果更加平滑：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
   \mathcal{L}_{t v}=\frac{1}{H * W * C}\left\|\nabla_{x}\left(G\left(\boldsymbol{I}_{p}\right)\right)+\nabla_{y}\left(G\left(\boldsymbol{I}_{p}\right)\right)\right\|
-\end{aligned}\tag{4}
-\]</span></p>
-<h2 id="内容一致性损失">内容一致性损失</h2>
-<p>这里也和<code>AnimeGan</code>有相似之处，不过<code>AnimeGan</code>里还使用了生成图像和当前动画图像的<code>style loss</code>。</p>
-<p><span class="math display">\[
+\end{aligned}\tag{4}</script><h2 id="内容一致性损失"><a href="#内容一致性损失" class="headerlink" title="内容一致性损失"></a>内容一致性损失</h2><p>这里也和<code>AnimeGan</code>有相似之处，不过<code>AnimeGan</code>里还使用了生成图像和当前动画图像的<code>style loss</code>。</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
   \mathcal{L}_{\text {content}}=\left\|\operatorname{VGG}_{n}\left(G\left(\boldsymbol{I}_{p}\right)\right)-\operatorname{VGG}_{n}\left(\boldsymbol{I}_{p}\right)\right\|
-\end{aligned}\tag{5}
-\]</span></p>
-<h2 id="一些问题">一些问题</h2>
-<p>我发现原论文开源代码中，貌似<span class="math inline">\(G\left(\boldsymbol{I}_{p}\right)\)</span>其实都被替换成了<span class="math inline">\(\mathcal{F}_{\text {st}}\left(G\left(\boldsymbol{I}_{p}\right)\right)\)</span>，先问问论文作者看看。</p>
+\end{aligned}\tag{5}</script><h2 id="一些问题"><a href="#一些问题" class="headerlink" title="一些问题"></a>一些问题</h2><p>我发现原论文开源代码中，貌似$G\left(\boldsymbol{I}_{p}\right)$其实都被替换成了$\mathcal{F}_{\text {st}}\left(G\left(\boldsymbol{I}_{p}\right)\right)$，先问问论文作者看看。</p>
 
       
     </div>
@@ -150,58 +140,48 @@
         
           <p>关于论文 Learning to Cartoonize Using White-box Cartoon Representations</p>
 <a id="more"></a>
-<h1 id="数据集">数据集</h1>
-<p>为了使得模型能对人像与景物生成均有较好的效果，训练时需要<code>[photo_face,photo_scenery,cartoon_face,cartoon_scenery]</code>四种类型的图像。他每采样5次风景图像采样一次人物图像。</p>
-<h1 id="损失函数">损失函数</h1>
-<p>首先给出整体的流程图，有一个宏观的概念。</p>
-<p><img src="/2020/10/09/whiteboxgan/process.svg"></p>
-<p>作者通过观察动画图像认为： * 动画图像主要包括整体的结构特征 * 轮廓细节使用的清晰和锐化的线 * 平滑与平坦的表面颜色</p>
+<h1 id="数据集"><a href="#数据集" class="headerlink" title="数据集"></a>数据集</h1><p>为了使得模型能对人像与景物生成均有较好的效果，训练时需要<code>[photo_face,photo_scenery,cartoon_face,cartoon_scenery]</code>四种类型的图像。他每采样5次风景图像采样一次人物图像。</p>
+<h1 id="损失函数"><a href="#损失函数" class="headerlink" title="损失函数"></a>损失函数</h1><p>首先给出整体的流程图，有一个宏观的概念。</p>
+<p><img src="/2020/10/09/whiteboxgan/process.svg" alt=""></p>
+<p>作者通过观察动画图像认为：</p>
+<ul>
+<li>动画图像主要包括整体的结构特征</li>
+<li>轮廓细节使用的清晰和锐化的线</li>
+<li>平滑与平坦的表面颜色</li>
+</ul>
 <p>因此提出三种损失函数</p>
-<h2 id="learning-from-the-surface-representation">Learning From the Surface Representation</h2>
-<p>论文中提出要提取<code>Surface Representation</code>特征，即图像的平滑表面特征。作者通过调研使用<code>differentiable guided filter</code>对图像进行平滑处理。</p>
+<h2 id="Learning-From-the-Surface-Representation"><a href="#Learning-From-the-Surface-Representation" class="headerlink" title="Learning From the Surface Representation"></a>Learning From the Surface Representation</h2><p>论文中提出要提取<code>Surface Representation</code>特征，即图像的平滑表面特征。作者通过调研使用<code>differentiable guided filter</code>对图像进行平滑处理。</p>
 <p><strong>NOTE：</strong> 这里滤波器方法的原论文为<code>Fast end-to-end trainable guided filter</code>，但作者在使用时将滤波器权重进行了固定。</p>
-<p>定义滤波器为<span class="math inline">\(\mathcal{F}_{dgf}\)</span>，输入真实图像为<span class="math inline">\(\mathcal{I}_p\)</span>，输入动画图像为<span class="math inline">\(\mathcal{I}_c\)</span>，将生成图像的滤波结果与卡通图像的滤波结果进行判别器判别。</p>
-<p><span class="math display">\[
+<p>定义滤波器为$\mathcal{F}_{dgf}$，输入真实图像为$\mathcal{I}_p$，输入动画图像为$\mathcal{I}_c$，将生成图像的滤波结果与卡通图像的滤波结果进行判别器判别。</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-\mathcal{L}_{\text {surface}}\left(G, D_{s}\right) &amp;=\log D_{s}\left(\mathcal{F}_{\text {dgf}}\left(\boldsymbol{I}_{c}, \boldsymbol{I}_{c}\right)\right) \\
-&amp;+\log \left(1-D_{s}\left(\mathcal{F}_{\text {dgf}}\left(G\left(\boldsymbol{I}_{p}\right), G\left(\boldsymbol{I}_{p}\right)\right)\right)\right)
-\end{aligned}\tag{1}
-\]</span></p>
-<h2 id="learning-from-the-structure-representation">Learning From the Structure representation</h2>
-<p>这点我觉得比较好，作者想到<code>superpixel</code>后的图像具备较大的图像块以及清晰的边界，从结果上来看<code>superpixel</code>后的图像已经初步具备动画图像的一些特征了，因此很时候来学习原始图像的结构特征。作者在原始的的<code>superpixel</code>基础上加入了选择性搜索来合并一些超像素区域，这样可以获得更加大块的像素，并且考虑到传统的超像素算法是利用平均的方法来合成大像素的，对于图像将会降低部分的亮度与对比度，因此再提出自适应着色算法，提升<code>superpixel</code>的对比度。</p>
-<p>对于结构特征的损失实际上是预训练模型的编码差异损失： <span class="math display">\[
+\mathcal{L}_{\text {surface}}\left(G, D_{s}\right) &=\log D_{s}\left(\mathcal{F}_{\text {dgf}}\left(\boldsymbol{I}_{c}, \boldsymbol{I}_{c}\right)\right) \\
+&+\log \left(1-D_{s}\left(\mathcal{F}_{\text {dgf}}\left(G\left(\boldsymbol{I}_{p}\right), G\left(\boldsymbol{I}_{p}\right)\right)\right)\right)
+\end{aligned}\tag{1}</script><h2 id="Learning-From-the-Structure-representation"><a href="#Learning-From-the-Structure-representation" class="headerlink" title="Learning From the Structure representation"></a>Learning From the Structure representation</h2><p>这点我觉得比较好，作者想到<code>superpixel</code>后的图像具备较大的图像块以及清晰的边界，从结果上来看<code>superpixel</code>后的图像已经初步具备动画图像的一些特征了，因此很时候来学习原始图像的结构特征。作者在原始的的<code>superpixel</code>基础上加入了选择性搜索来合并一些超像素区域，这样可以获得更加大块的像素，并且考虑到传统的超像素算法是利用平均的方法来合成大像素的，对于图像将会降低部分的亮度与对比度，因此再提出自适应着色算法，提升<code>superpixel</code>的对比度。</p>
+<p>对于结构特征的损失实际上是预训练模型的编码差异损失：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
 \mathcal{L}_{\text {structure}}=\left\|\operatorname{VGG}_{n}\left(G\left(\boldsymbol{I}_{p}\right)\right)-\operatorname{VGG}_{n}\left(\mathcal{F}_{\text {st}}\left(G\left(\boldsymbol{I}_{p}\right)\right)\right)\right\|
-\end{aligned}\tag{2}
-\]</span></p>
-<h2 id="learning-from-the-textural-representation">Learning From the Textural Representation</h2>
-<p>学习纹理特征，考虑到判别器可以通过颜色亮度等特征很容易的区别出真实图像与动画图像，因此使用灰度化的图像去除其颜色信息，提取其单通道的纹理特征来进行判别。 <span class="math display">\[
+\end{aligned}\tag{2}</script><h2 id="Learning-From-the-Textural-Representation"><a href="#Learning-From-the-Textural-Representation" class="headerlink" title="Learning From the Textural Representation"></a>Learning From the Textural Representation</h2><p>学习纹理特征，考虑到判别器可以通过颜色亮度等特征很容易的区别出真实图像与动画图像，因此使用灰度化的图像去除其颜色信息，提取其单通道的纹理特征来进行判别。</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
   \mathcal{F}_{r c s}\left(\boldsymbol{I}_{r g b}\right)=(1-\alpha)\left(\beta_{1} * \boldsymbol{I}_{r}+\beta_2 * \boldsymbol{I}_{g}+\beta_{3} * \boldsymbol{I}_{b}\right)+\alpha * \boldsymbol{Y}
-\end{aligned}\tag{3}
-\]</span></p>
-<p><strong>NOTE:</strong> 这里和我之前学习过得<code>AnimeGan</code>有相似之处，不过这里的灰度化使用的是随机灰度化，即<span class="math inline">\(\beta\)</span>的值是从均匀分布中选取的。值得一提的是论文提到的<span class="math inline">\(\alpha\)</span>在开源代码中并没有出现，作者直接将均匀分布的范围控制在<span class="math inline">\((0,1-\alpha)\)</span>完成了相同的目标。</p>
-<h2 id="image-up-sampling-using-total-variation-regularization-with-a-new-observation-model.">Image up-sampling using total-variation regularization with a new observation model.</h2>
-<p>作者使用此论文中的<code>total-variation</code>损失强制生成结果更加平滑： <span class="math display">\[
+\end{aligned}\tag{3}</script><p><strong>NOTE:</strong> 这里和我之前学习过得<code>AnimeGan</code>有相似之处，不过这里的灰度化使用的是随机灰度化，即$\beta$的值是从均匀分布中选取的。值得一提的是论文提到的$\alpha$在开源代码中并没有出现，作者直接将均匀分布的范围控制在$(0,1-\alpha)$完成了相同的目标。</p>
+<h2 id="Image-up-sampling-using-total-variation-regularization-with-a-new-observation-model"><a href="#Image-up-sampling-using-total-variation-regularization-with-a-new-observation-model" class="headerlink" title="Image up-sampling using total-variation regularization with a new observation model."></a>Image up-sampling using total-variation regularization with a new observation model.</h2><p>作者使用此论文中的<code>total-variation</code>损失强制生成结果更加平滑：</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
   \mathcal{L}_{t v}=\frac{1}{H * W * C}\left\|\nabla_{x}\left(G\left(\boldsymbol{I}_{p}\right)\right)+\nabla_{y}\left(G\left(\boldsymbol{I}_{p}\right)\right)\right\|
-\end{aligned}\tag{4}
-\]</span></p>
-<h2 id="内容一致性损失">内容一致性损失</h2>
-<p>这里也和<code>AnimeGan</code>有相似之处，不过<code>AnimeGan</code>里还使用了生成图像和当前动画图像的<code>style loss</code>。</p>
-<p><span class="math display">\[
+\end{aligned}\tag{4}</script><h2 id="内容一致性损失"><a href="#内容一致性损失" class="headerlink" title="内容一致性损失"></a>内容一致性损失</h2><p>这里也和<code>AnimeGan</code>有相似之处，不过<code>AnimeGan</code>里还使用了生成图像和当前动画图像的<code>style loss</code>。</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
   \mathcal{L}_{\text {content}}=\left\|\operatorname{VGG}_{n}\left(G\left(\boldsymbol{I}_{p}\right)\right)-\operatorname{VGG}_{n}\left(\boldsymbol{I}_{p}\right)\right\|
-\end{aligned}\tag{5}
-\]</span></p>
-<h2 id="一些问题">一些问题</h2>
-<p>我发现原论文开源代码中，貌似<span class="math inline">\(G\left(\boldsymbol{I}_{p}\right)\)</span>其实都被替换成了<span class="math inline">\(\mathcal{F}_{\text {st}}\left(G\left(\boldsymbol{I}_{p}\right)\right)\)</span>，先问问论文作者看看。</p>
+\end{aligned}\tag{5}</script><h2 id="一些问题"><a href="#一些问题" class="headerlink" title="一些问题"></a>一些问题</h2><p>我发现原论文开源代码中，貌似$G\left(\boldsymbol{I}_{p}\right)$其实都被替换成了$\mathcal{F}_{\text {st}}\left(G\left(\boldsymbol{I}_{p}\right)\right)$，先问问论文作者看看。</p>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2020/10/09/whiteboxgan/" data-id="ckhe9aw2z00frxe6xae0i9rew" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2020/10/09/whiteboxgan/" data-id="ckhhqhd4o00ijl76xrhzmfvk1" class="article-share-link">Share</a>
       
       
       
@@ -252,7 +232,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">标签云</h3>
     <div class="widget tagcloud">
-      <a href="/tags/C/" style="font-size: 12.67px;">C</a> <a href="/tags/C/" style="font-size: 12px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10px;">CNN</a> <a href="/tags/Eigen/" style="font-size: 10px;">Eigen</a> <a href="/tags/GAN/" style="font-size: 10.67px;">GAN</a> <a href="/tags/Linux/" style="font-size: 19.33px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.67px;">PCB</a> <a href="/tags/Qt/" style="font-size: 10px;">Qt</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/gan/" style="font-size: 10px;">gan</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 14.67px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 11.33px;">linux</a> <a href="/tags/mindspore/" style="font-size: 10.67px;">mindspore</a> <a href="/tags/mxnet/" style="font-size: 10px;">mxnet</a> <a href="/tags/pfld/" style="font-size: 10px;">pfld</a> <a href="/tags/python/" style="font-size: 18px;">python</a> <a href="/tags/pytorch/" style="font-size: 11.33px;">pytorch</a> <a href="/tags/retinaface/" style="font-size: 10px;">retinaface</a> <a href="/tags/stm32/" style="font-size: 11.33px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 20px;">tensorflow</a> <a href="/tags/vscode/" style="font-size: 10px;">vscode</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/yolo/" style="font-size: 12.67px;">yolo</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 14px;">作业</a> <a href="/tags/元学习/" style="font-size: 10px;">元学习</a> <a href="/tags/半监督学习/" style="font-size: 15.33px;">半监督学习</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/图像处理/" style="font-size: 10px;">图像处理</a> <a href="/tags/堆栈/" style="font-size: 10.67px;">堆栈</a> <a href="/tags/声音信号处理/" style="font-size: 12px;">声音信号处理</a> <a href="/tags/小工具/" style="font-size: 12px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 15.33px;">嵌入式</a> <a href="/tags/总结/" style="font-size: 10px;">总结</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 17.33px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 17.33px;">机器学习</a> <a href="/tags/树/" style="font-size: 12px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/概率论/" style="font-size: 18.67px;">概率论</a> <a href="/tags/深度学习/" style="font-size: 16px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 11.33px;">神经网络</a> <a href="/tags/算法/" style="font-size: 12px;">算法</a> <a href="/tags/统计学习方法/" style="font-size: 16.67px;">统计学习方法</a> <a href="/tags/聚类/" style="font-size: 12px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13.33px;">蓝牙</a> <a href="/tags/调参/" style="font-size: 10px;">调参</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/路由/" style="font-size: 10px;">路由</a> <a href="/tags/链表/" style="font-size: 11.33px;">链表</a> <a href="/tags/错误记录/" style="font-size: 19.33px;">错误记录</a>
+      <a href="/tags/C/" style="font-size: 12.67px;">C</a> <a href="/tags/C/" style="font-size: 12px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10px;">CNN</a> <a href="/tags/Eigen/" style="font-size: 10px;">Eigen</a> <a href="/tags/GAN/" style="font-size: 10.67px;">GAN</a> <a href="/tags/Linux/" style="font-size: 19.33px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.67px;">PCB</a> <a href="/tags/Qt/" style="font-size: 10px;">Qt</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/gan/" style="font-size: 10px;">gan</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 14.67px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 11.33px;">linux</a> <a href="/tags/mindspore/" style="font-size: 10.67px;">mindspore</a> <a href="/tags/mxnet/" style="font-size: 10px;">mxnet</a> <a href="/tags/pfld/" style="font-size: 10px;">pfld</a> <a href="/tags/python/" style="font-size: 18px;">python</a> <a href="/tags/pytorch/" style="font-size: 12px;">pytorch</a> <a href="/tags/retinaface/" style="font-size: 10px;">retinaface</a> <a href="/tags/stm32/" style="font-size: 11.33px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 20px;">tensorflow</a> <a href="/tags/vscode/" style="font-size: 10px;">vscode</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/yolo/" style="font-size: 12.67px;">yolo</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 14px;">作业</a> <a href="/tags/元学习/" style="font-size: 10px;">元学习</a> <a href="/tags/半监督学习/" style="font-size: 15.33px;">半监督学习</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/图像处理/" style="font-size: 10px;">图像处理</a> <a href="/tags/堆栈/" style="font-size: 10.67px;">堆栈</a> <a href="/tags/声音信号处理/" style="font-size: 12px;">声音信号处理</a> <a href="/tags/小工具/" style="font-size: 12px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 15.33px;">嵌入式</a> <a href="/tags/总结/" style="font-size: 10px;">总结</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 17.33px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 17.33px;">机器学习</a> <a href="/tags/树/" style="font-size: 12px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/概率论/" style="font-size: 18.67px;">概率论</a> <a href="/tags/深度学习/" style="font-size: 16px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 11.33px;">神经网络</a> <a href="/tags/算法/" style="font-size: 12px;">算法</a> <a href="/tags/统计学习方法/" style="font-size: 16.67px;">统计学习方法</a> <a href="/tags/聚类/" style="font-size: 12px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13.33px;">蓝牙</a> <a href="/tags/调参/" style="font-size: 10px;">调参</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/路由/" style="font-size: 10px;">路由</a> <a href="/tags/链表/" style="font-size: 11.33px;">链表</a> <a href="/tags/错误记录/" style="font-size: 19.33px;">错误记录</a>
     </div>
   </div>
 
@@ -274,6 +254,10 @@
       <ul>
         
           <li>
+            <a href="/2020/11/15/pytorch-feature-extract/">pytorch从任意层截断并提取数据</a>
+          </li>
+        
+          <li>
             <a href="/2020/11/12/webdataset/">Pytorch Webdataset初体验</a>
           </li>
         
@@ -287,10 +271,6 @@
         
           <li>
             <a href="/2020/10/09/whiteboxgan/">whiteboxgan</a>
-          </li>
-        
-          <li>
-            <a href="/2020/10/03/maml/">Model-Agnostic Meta-Learning</a>
           </li>
         
       </ul>

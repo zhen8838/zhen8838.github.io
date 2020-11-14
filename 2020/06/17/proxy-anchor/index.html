@@ -7,20 +7,20 @@
   
   <title>Proxy Anchor Loss for Deep Metric Learning论文解读 | </title>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta name="description" content="这是CVPR2020的一篇度量学习的论文.来自韩国.我觉得还蛮有意思的,因此学习一番. 他的图画的是真好看,虽然做的事情其实就是把amsoftmax换个皮...">
+  <meta name="description" content="这是CVPR2020的一篇度量学习的论文.来自韩国.我觉得还蛮有意思的,因此学习一番. 他的图画的是真好看,虽然做的事情其实就是把amsoftmax换个皮…">
 <meta name="keywords" content="深度学习,tensorflow">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Proxy Anchor Loss for Deep Metric Learning论文解读">
 <meta property="og:url" content="https://zhen8838.github.io/2020/06/17/proxy-anchor/index.html">
 <meta property="og:site_name">
-<meta property="og:description" content="这是CVPR2020的一篇度量学习的论文.来自韩国.我觉得还蛮有意思的,因此学习一番. 他的图画的是真好看,虽然做的事情其实就是把amsoftmax换个皮...">
+<meta property="og:description" content="这是CVPR2020的一篇度量学习的论文.来自韩国.我觉得还蛮有意思的,因此学习一番. 他的图画的是真好看,虽然做的事情其实就是把amsoftmax换个皮…">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https://zhen8838.github.io/2020/06/17/proxy-anchor/proxy_1.png">
 <meta property="og:image" content="https://zhen8838.github.io/2020/06/17/proxy-anchor/proxy_2.png">
 <meta property="og:updated_time" content="2020-07-05T13:27:26.697Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Proxy Anchor Loss for Deep Metric Learning论文解读">
-<meta name="twitter:description" content="这是CVPR2020的一篇度量学习的论文.来自韩国.我觉得还蛮有意思的,因此学习一番. 他的图画的是真好看,虽然做的事情其实就是把amsoftmax换个皮...">
+<meta name="twitter:description" content="这是CVPR2020的一篇度量学习的论文.来自韩国.我觉得还蛮有意思的,因此学习一番. 他的图画的是真好看,虽然做的事情其实就是把amsoftmax换个皮…">
 <meta name="twitter:image" content="https://zhen8838.github.io/2020/06/17/proxy-anchor/proxy_1.png">
   
   
@@ -95,64 +95,51 @@
     <div class="article-entry" itemprop="articleBody">
       
         <p>这是<code>CVPR2020</code>的一篇度量学习的论文.来自韩国.我觉得还蛮有意思的,因此学习一番.</p>
-<p>他的图画的是真好看,虽然做的事情其实就是把<code>amsoftmax</code>换个皮...</p>
+<p>他的图画的是真好看,虽然做的事情其实就是把<code>amsoftmax</code>换个皮…</p>
 <a id="more"></a>
-<h1 id="原理">原理</h1>
-<div data-align="center">
-<p><img src="/2020/06/17/proxy-anchor/proxy_1.png"></p>
-</div>
-<p>论文主要提出了一个名为<code>Proxy Anchor</code>的损失函数.他相比于上图中<code>a,b,c,d</code>的方法.同时考虑了间距的大小作为损失的系数,且利用了整个<code>batch</code>中所有的数据,并用<code>anchor</code>作为<code>proxy</code>使得聚类中心更加明确.</p>
-<h3 id="基于pair的损失">基于pair的损失</h3>
-<p>对于一些没有利用整个<code>batch</code>所有数据的方法,那就需要依赖采样来取得<code>triplet pair</code>,<code>N-pair</code>等等,这样实际上引用了额外的复杂度.因此使用基于<code>proxy</code>的方法,不需要<code>pair</code>采样的方式.</p>
-<h3 id="基于proxy的损失">基于proxy的损失</h3>
-<p>基于<code>proxy</code>的度量学习是一种相对较新的方法，可以解决基于<code>pair</code>的损失的复杂性问题。<code>proxy</code>表示训练数据子集的代表，并被估计为嵌入网络参数的一部分。此类别中方法的共同思想是推断一小组的<code>proxy</code>，这些<code>proxy</code>捕获嵌入空间的全局结构，并将每个数据点与<code>proxy</code>相关联，而不是训练过程中的其他数据点。由于<code>proxy</code>的数量明显少于训练数据的数量，因此可以大大减少训练的复杂性.</p>
-<p>第一个基于<code>proxy</code>的方法为<code>Proxy-NCA</code>,他使用<code>proxies</code>的<code>Neighborhood Component Analysis</code>作为一种近似,首先为每个类别设置一个<code>proxy</code>,将数据点与<code>proxy</code>关联,拉近正类的距离,拉开负类的距离.</p>
-<p>使用<code>proxy</code>有助于极大地提高训练的收敛性，但有一个固有的局限性：由于每个数据点仅与<code>proxy</code>相关联，因此基于<code>pair</code>的方法的丰富的数据间关系不再可用。因此提出<code>Proxy Anchor</code>损失可以克服此问题，因为它的梯度可以反映数据的相对联系，这允许它们的嵌入向量在训练过程中相互影响.</p>
-<h3 id="proxy-nca-loss">Proxy-NCA Loss</h3>
-<p>首先介绍原本的损失.<code>Proxy-NCA</code>损失将<code>proxy</code>分配给每个类别，<code>proxy</code>的数量与类别标签的数量相同。给定一个输入数据点作为<code>anchor</code>，将同一类输入的<code>proxy</code>视为正，其他<code>proxy</code>为负。令<span class="math inline">\(x\)</span>表示输入的嵌入向量，<span class="math inline">\(p^+\)</span>为正<code>proxy</code>，<span class="math inline">\(p^-\)</span>为负<code>proxy</code>。损失则为如下:</p>
-<p><span class="math display">\[
-\begin{aligned}
-\ell(X) &amp;=\sum_{x \in X}-\log \frac{e^{s\left(x, p^{+}\right)}}{\sum\limits_{p^{-} \in P^{-}} e^{s\left(x, p^{-}\right)}} \\
-&amp;=\sum_{x \in X}\left\{-s\left(x, p^{+}\right)+\underset{p^{-} \in P^{-}}{\operatorname{LSE}} s\left(x, p^{-}\right)\right\}
-\end{aligned}
-\]</span></p>
-<p>其中<span class="math inline">\(X\)</span>为整个<code>batch</code>的嵌入向量,<span class="math inline">\(P^-\)</span>为负<code>proxy</code>的集合,<span class="math inline">\(s(\cdot,\cdot)\)</span>表示余弦相似度.其中<span class="math inline">\(\operatorname{LSE}\)</span>为<code>log sum exp</code>.熟悉基于<code>softmax</code>损失的同学应该已经看出来了,这里其实就是交叉熵换了个皮.</p>
-<p>对于此损失的梯度如下: <span class="math display">\[
-\frac{\partial \ell(X)}{\partial s(x, p)}=\left\{\begin{array}{ll}
--1, &amp; \text { if } p=p^{+} \\
-\frac{e^{s(x, p)}}{\sum\limits_{p^{-} \in P^{-}} e^{s\left(x, p^{-}\right)}}, &amp; \text {otherwise }
-\end{array}\right.
-\]</span></p>
-<p>训练时会使得<span class="math inline">\(x\)</span>与<span class="math inline">\(p^+\)</span>尽量接近,使得<span class="math inline">\(x\)</span>与<span class="math inline">\(p^-\)</span>远离.不过注意到对于正类的梯度是恒定的,对于负类的梯度是有考虑到相似度的.此损失还是比较鲁棒的,但是由于损失仅使每个嵌入向量与<code>proxy</code>相关联，因此它无法利用细粒度的数据间关系。这种缺点限制了通过<code>Proxy-NCA</code>嵌入的能力.</p>
-<h3 id="proxy-anchor-loss">Proxy-Anchor Loss</h3>
-<p><code>Proxy-Anchor</code>损失旨在克服<code>Proxy-NCA</code>的局限性，同时保持较低的训练复杂性。主要思想是将每个<code>proxy</code>作为锚，并将其与整个数据批关联，以便在训练过程中数据通过<code>proxy anchor</code>彼此交互。此损失先按照<code>Proxy-NCA</code>的标准设置为每个类别分配一个<code>proxy</code>，公式为:</p>
-<p><span class="math display">\[
-\begin{aligned}
-\ell(X)=&amp; \frac{1}{|P+|} \sum_{p \in P^{+}} \log \left(1+\sum_{x \in X_{p}^{+}} e^{-\alpha(s(x, p)-\delta)}\right) \\
-&amp;+\frac{1}{|P|} \sum_{p \in P} \log \left(1+\sum_{x \in X_{p}^{-}} e^{\alpha(s(x, p)+\delta)}\right)
-\end{aligned}
-\]</span></p>
-<p>这个也是比较老套的设置方法,其中<span class="math inline">\(\delta\)</span>为<code>margin</code>,<span class="math inline">\(\alpha\)</span>为尺度系数.将一个<code>batch</code>中所有的嵌入向量<span class="math inline">\(X\)</span>分成两个子集<span class="math inline">\(X_p^+,X_p^-\)</span>,其中<span class="math inline">\(X_p^+\)</span>表示<code>proxy</code><span class="math inline">\(p\)</span>的正样本嵌入向量,<span class="math inline">\(X_p^-\)</span>则是剩下的所有向量.</p>
-<p>将损失换一个形式: <span class="math display">\[
-\begin{aligned}
-\ell(X)=&amp; \frac{1}{\left|P^{+}\right|} \sum_{p \in P^{+}}[\text {Softplus }(\mathop{\operatorname{LSE}}\limits_{x \in X_{p}^{+}} -\alpha(s(x, p)-\delta))] \\
-&amp;+\frac{1}{|P|} \sum_{p \in P}\left[\text {Softplus }\left(\mathop{\operatorname{LSE}}\limits_{p \in X_{p}^{-}} \alpha(s(x, p)+\delta)\right)\right]
-\end{aligned}
-\]</span></p>
-<p>这样更加符合<code>circle loss</code>中所提出的统一形式了.其中这里的<span class="math inline">\(|P^+|\)</span>是正样本的统计数量,<span class="math inline">\(|P|\)</span>是总类别数.<del>这个系数我觉得不加也没关系</del>...</p>
-<p><strong>NOTE</strong> 我看了下他官方的代码,实际上什么基于<code>proxy</code>的方法就是额外再加一个可训练的聚类中心...我之前的各种损失函数的实现是直接把最后一层作为聚类中心(也就是他们所说的<code>proxy</code>),这么看来把<code>circle loss</code>拉到度量学习的标准任务里肯定也是很能打的.</p>
-<h2 id="额外实验1">额外实验1</h2>
-<p>我做的cifar10分类实现，实际上<code>batchsize</code>改成500之后<span class="math inline">\(|P^+|\)</span>有99.99的概率为10，<span class="math inline">\(|P|\)</span>为10。我训练结果只和<code>circle loss</code>差0.8个点。然后我认为删除这个系数没有关系，但结果立马打脸了，差7个点了。其实这个问题还是在于<span class="math inline">\(\alpha\)</span>系数上面，对于<code>proxy anchor loss</code>和<code>amsoftmax loss</code>来说没有像<code>circle loss</code>中的<code>自适应pace</code>，优化到后期可以说学习率太大也可以说是梯度太大，模型参数波动性会较大。这个实验佐证了<code>自适应pace</code>的重要性。</p>
-<h2 id="额外实验2">额外实验2</h2>
-<p>后面我又做了一下关于<span class="math inline">\(margin\)</span>的实验，实际上我们考虑<code>softmax</code>分类的过程，要使他分类难度增强应该是降低正确类别的数值，因此应该是<span class="math inline">\(s_p=cos(\theta_{y_i})-m\)</span>，这样才会强制正确类别的向量夹角更小。那么对于不正确的的分类类别，应该是加大他的数值，<span class="math inline">\(s_n=cos(\theta_{j\neq y_i})+m\)</span>,这样会强制降低向量更加接近垂直。</p>
-<p>这里留个小坑，对于<code>circle loss</code>里面的<span class="math inline">\(margin\)</span>设置我还是得重新仔细看看。</p>
-<p><strong>NOTE</strong> 2020-6-23日更新，因为<code>circle loss</code>设置了<code>自定义pace</code>，因此他计算决策面的时候将<span class="math inline">\(\alpha\)</span>考虑进去了，所以他得到的<span class="math inline">\(margin\)</span>和我之前设想的不一样。然后我又做了一下他的间距分布图，其实这个损失还是可以继续改进的，大家可以看到当<span class="math inline">\(\cos(\theta_p)=0，\cos(\theta_n)\in(\pi,\frac{\pi}{2})\)</span>时，对于负<code>pair</code>的损失是较小的。他所说的<code>circle</code>区域实际上是在<span class="math inline">\(\cos(\theta_p)=0，\cos(\theta_n)=\frac{\pi}{2}\)</span>有一个更小的凹槽，这里是我们的<code>ideal</code>区域。</p>
-<p>接下来如果有老哥可以把<span class="math inline">\(\cos(\theta_p)=0，\cos(\theta_n)\in(\pi,\frac{\pi}{2})\)</span>这块区域的损失重新设计一下，应该可以得到更好的收敛效果。</p>
-<p>等等。。这样判断太武断了，应该还需要分析一下梯度的变化。我这里就不继续深入了。</p>
-<div data-align="center">
-<p><img src="/2020/06/17/proxy-anchor/proxy_2.png"></p>
+<h1 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h1><div align="center">
+<img src="/2020/06/17/proxy-anchor/proxy_1.png">
 </div>
 
+<p>论文主要提出了一个名为<code>Proxy Anchor</code>的损失函数.他相比于上图中<code>a,b,c,d</code>的方法.同时考虑了间距的大小作为损失的系数,且利用了整个<code>batch</code>中所有的数据,并用<code>anchor</code>作为<code>proxy</code>使得聚类中心更加明确.</p>
+<h3 id="基于pair的损失"><a href="#基于pair的损失" class="headerlink" title="基于pair的损失"></a>基于pair的损失</h3><p>对于一些没有利用整个<code>batch</code>所有数据的方法,那就需要依赖采样来取得<code>triplet pair</code>,<code>N-pair</code>等等,这样实际上引用了额外的复杂度.因此使用基于<code>proxy</code>的方法,不需要<code>pair</code>采样的方式.</p>
+<h3 id="基于proxy的损失"><a href="#基于proxy的损失" class="headerlink" title="基于proxy的损失"></a>基于proxy的损失</h3><p>基于<code>proxy</code>的度量学习是一种相对较新的方法，可以解决基于<code>pair</code>的损失的复杂性问题。<code>proxy</code>表示训练数据子集的代表，并被估计为嵌入网络参数的一部分。此类别中方法的共同思想是推断一小组的<code>proxy</code>，这些<code>proxy</code>捕获嵌入空间的全局结构，并将每个数据点与<code>proxy</code>相关联，而不是训练过程中的其他数据点。由于<code>proxy</code>的数量明显少于训练数据的数量，因此可以大大减少训练的复杂性.</p>
+<p>第一个基于<code>proxy</code>的方法为<code>Proxy-NCA</code>,他使用<code>proxies</code>的<code>Neighborhood Component Analysis</code>作为一种近似,首先为每个类别设置一个<code>proxy</code>,将数据点与<code>proxy</code>关联,拉近正类的距离,拉开负类的距离.</p>
+<p>使用<code>proxy</code>有助于极大地提高训练的收敛性，但有一个固有的局限性：由于每个数据点仅与<code>proxy</code>相关联，因此基于<code>pair</code>的方法的丰富的数据间关系不再可用。因此提出<code>Proxy Anchor</code>损失可以克服此问题，因为它的梯度可以反映数据的相对联系，这允许它们的嵌入向量在训练过程中相互影响.</p>
+<h3 id="Proxy-NCA-Loss"><a href="#Proxy-NCA-Loss" class="headerlink" title="Proxy-NCA Loss"></a>Proxy-NCA Loss</h3><p>首先介绍原本的损失.<code>Proxy-NCA</code>损失将<code>proxy</code>分配给每个类别，<code>proxy</code>的数量与类别标签的数量相同。给定一个输入数据点作为<code>anchor</code>，将同一类输入的<code>proxy</code>视为正，其他<code>proxy</code>为负。令$x$表示输入的嵌入向量，$p^+$为正<code>proxy</code>，$p^-$为负<code>proxy</code>。损失则为如下:</p>
+<script type="math/tex; mode=display">
+\begin{aligned}
+\ell(X) &=\sum_{x \in X}-\log \frac{e^{s\left(x, p^{+}\right)}}{\sum\limits_{p^{-} \in P^{-}} e^{s\left(x, p^{-}\right)}} \\
+&=\sum_{x \in X}\left\{-s\left(x, p^{+}\right)+\underset{p^{-} \in P^{-}}{\operatorname{LSE}} s\left(x, p^{-}\right)\right\}
+\end{aligned}</script><p>其中$X$为整个<code>batch</code>的嵌入向量,$P^-$为负<code>proxy</code>的集合,$s(\cdot,\cdot)$表示余弦相似度.其中$\operatorname{LSE}$为<code>log sum exp</code>.熟悉基于<code>softmax</code>损失的同学应该已经看出来了,这里其实就是交叉熵换了个皮.</p>
+<p>对于此损失的梯度如下:</p>
+<script type="math/tex; mode=display">
+\frac{\partial \ell(X)}{\partial s(x, p)}=\left\{\begin{array}{ll}
+-1, & \text { if } p=p^{+} \\
+\frac{e^{s(x, p)}}{\sum\limits_{p^{-} \in P^{-}} e^{s\left(x, p^{-}\right)}}, & \text {otherwise }
+\end{array}\right.</script><p>训练时会使得$x$与$p^+$尽量接近,使得$x$与$p^-$远离.不过注意到对于正类的梯度是恒定的,对于负类的梯度是有考虑到相似度的.此损失还是比较鲁棒的,但是由于损失仅使每个嵌入向量与<code>proxy</code>相关联，因此它无法利用细粒度的数据间关系。这种缺点限制了通过<code>Proxy-NCA</code>嵌入的能力.</p>
+<h3 id="Proxy-Anchor-Loss"><a href="#Proxy-Anchor-Loss" class="headerlink" title="Proxy-Anchor Loss"></a>Proxy-Anchor Loss</h3><p><code>Proxy-Anchor</code>损失旨在克服<code>Proxy-NCA</code>的局限性，同时保持较低的训练复杂性。主要思想是将每个<code>proxy</code>作为锚，并将其与整个数据批关联，以便在训练过程中数据通过<code>proxy anchor</code>彼此交互。此损失先按照<code>Proxy-NCA</code>的标准设置为每个类别分配一个<code>proxy</code>，公式为:</p>
+<script type="math/tex; mode=display">
+\begin{aligned}
+\ell(X)=& \frac{1}{|P+|} \sum_{p \in P^{+}} \log \left(1+\sum_{x \in X_{p}^{+}} e^{-\alpha(s(x, p)-\delta)}\right) \\
+&+\frac{1}{|P|} \sum_{p \in P} \log \left(1+\sum_{x \in X_{p}^{-}} e^{\alpha(s(x, p)+\delta)}\right)
+\end{aligned}</script><p>这个也是比较老套的设置方法,其中$\delta$为<code>margin</code>,$\alpha$为尺度系数.将一个<code>batch</code>中所有的嵌入向量$X$分成两个子集$X_p^+,X_p^-$,其中$X_p^+$表示<code>proxy</code>$p$的正样本嵌入向量,$X_p^-$则是剩下的所有向量.</p>
+<p>将损失换一个形式:</p>
+<script type="math/tex; mode=display">
+\begin{aligned}
+\ell(X)=& \frac{1}{\left|P^{+}\right|} \sum_{p \in P^{+}}[\text {Softplus }(\mathop{\operatorname{LSE}}\limits_{x \in X_{p}^{+}} -\alpha(s(x, p)-\delta))] \\
+&+\frac{1}{|P|} \sum_{p \in P}\left[\text {Softplus }\left(\mathop{\operatorname{LSE}}\limits_{p \in X_{p}^{-}} \alpha(s(x, p)+\delta)\right)\right]
+\end{aligned}</script><p>这样更加符合<code>circle loss</code>中所提出的统一形式了.其中这里的$|P^+|$是正样本的统计数量,$|P|$是总类别数.<del>这个系数我觉得不加也没关系</del>…</p>
+<p><strong>NOTE</strong> 我看了下他官方的代码,实际上什么基于<code>proxy</code>的方法就是额外再加一个可训练的聚类中心…我之前的各种损失函数的实现是直接把最后一层作为聚类中心(也就是他们所说的<code>proxy</code>),这么看来把<code>circle loss</code>拉到度量学习的标准任务里肯定也是很能打的.</p>
+<h2 id="额外实验1"><a href="#额外实验1" class="headerlink" title="额外实验1"></a>额外实验1</h2><p>我做的cifar10分类实现，实际上<code>batchsize</code>改成500之后$|P^+|$有99.99的概率为10，$|P|$为10。我训练结果只和<code>circle loss</code>差0.8个点。然后我认为删除这个系数没有关系，但结果立马打脸了，差7个点了。其实这个问题还是在于$\alpha$系数上面，对于<code>proxy anchor loss</code>和<code>amsoftmax loss</code>来说没有像<code>circle loss</code>中的<code>自适应pace</code>，优化到后期可以说学习率太大也可以说是梯度太大，模型参数波动性会较大。这个实验佐证了<code>自适应pace</code>的重要性。</p>
+<h2 id="额外实验2"><a href="#额外实验2" class="headerlink" title="额外实验2"></a>额外实验2</h2><p>后面我又做了一下关于$margin$的实验，实际上我们考虑<code>softmax</code>分类的过程，要使他分类难度增强应该是降低正确类别的数值，因此应该是$s_p=cos(\theta_{y_i})-m$，这样才会强制正确类别的向量夹角更小。那么对于不正确的的分类类别，应该是加大他的数值，$s_n=cos(\theta_{j\neq y_i})+m$,这样会强制降低向量更加接近垂直。</p>
+<p>这里留个小坑，对于<code>circle loss</code>里面的$margin$设置我还是得重新仔细看看。</p>
+<p><strong>NOTE</strong> 2020-6-23日更新，因为<code>circle loss</code>设置了<code>自定义pace</code>，因此他计算决策面的时候将$\alpha$考虑进去了，所以他得到的$margin$和我之前设想的不一样。然后我又做了一下他的间距分布图，其实这个损失还是可以继续改进的，大家可以看到当$\cos(\theta_p)=0，\cos(\theta_n)\in(\pi,\frac{\pi}{2})$时，对于负<code>pair</code>的损失是较小的。他所说的<code>circle</code>区域实际上是在$\cos(\theta_p)=0，\cos(\theta_n)=\frac{\pi}{2}$有一个更小的凹槽，这里是我们的<code>ideal</code>区域。</p>
+<p>接下来如果有老哥可以把$\cos(\theta_p)=0，\cos(\theta_n)\in(\pi,\frac{\pi}{2})$这块区域的损失重新设计一下，应该可以得到更好的收敛效果。</p>
+<p>等等。。这样判断太武断了，应该还需要分析一下梯度的变化。我这里就不继续深入了。</p>
+<div align="center">
+<img src="/2020/06/17/proxy-anchor/proxy_2.png">
+</div>
       
     </div>
     <!-- <div class="article-entry" itemprop="articleBody">
@@ -160,69 +147,56 @@
         
         
           <p>这是<code>CVPR2020</code>的一篇度量学习的论文.来自韩国.我觉得还蛮有意思的,因此学习一番.</p>
-<p>他的图画的是真好看,虽然做的事情其实就是把<code>amsoftmax</code>换个皮...</p>
+<p>他的图画的是真好看,虽然做的事情其实就是把<code>amsoftmax</code>换个皮…</p>
 <a id="more"></a>
-<h1 id="原理">原理</h1>
-<div data-align="center">
-<p><img src="/2020/06/17/proxy-anchor/proxy_1.png"></p>
-</div>
-<p>论文主要提出了一个名为<code>Proxy Anchor</code>的损失函数.他相比于上图中<code>a,b,c,d</code>的方法.同时考虑了间距的大小作为损失的系数,且利用了整个<code>batch</code>中所有的数据,并用<code>anchor</code>作为<code>proxy</code>使得聚类中心更加明确.</p>
-<h3 id="基于pair的损失">基于pair的损失</h3>
-<p>对于一些没有利用整个<code>batch</code>所有数据的方法,那就需要依赖采样来取得<code>triplet pair</code>,<code>N-pair</code>等等,这样实际上引用了额外的复杂度.因此使用基于<code>proxy</code>的方法,不需要<code>pair</code>采样的方式.</p>
-<h3 id="基于proxy的损失">基于proxy的损失</h3>
-<p>基于<code>proxy</code>的度量学习是一种相对较新的方法，可以解决基于<code>pair</code>的损失的复杂性问题。<code>proxy</code>表示训练数据子集的代表，并被估计为嵌入网络参数的一部分。此类别中方法的共同思想是推断一小组的<code>proxy</code>，这些<code>proxy</code>捕获嵌入空间的全局结构，并将每个数据点与<code>proxy</code>相关联，而不是训练过程中的其他数据点。由于<code>proxy</code>的数量明显少于训练数据的数量，因此可以大大减少训练的复杂性.</p>
-<p>第一个基于<code>proxy</code>的方法为<code>Proxy-NCA</code>,他使用<code>proxies</code>的<code>Neighborhood Component Analysis</code>作为一种近似,首先为每个类别设置一个<code>proxy</code>,将数据点与<code>proxy</code>关联,拉近正类的距离,拉开负类的距离.</p>
-<p>使用<code>proxy</code>有助于极大地提高训练的收敛性，但有一个固有的局限性：由于每个数据点仅与<code>proxy</code>相关联，因此基于<code>pair</code>的方法的丰富的数据间关系不再可用。因此提出<code>Proxy Anchor</code>损失可以克服此问题，因为它的梯度可以反映数据的相对联系，这允许它们的嵌入向量在训练过程中相互影响.</p>
-<h3 id="proxy-nca-loss">Proxy-NCA Loss</h3>
-<p>首先介绍原本的损失.<code>Proxy-NCA</code>损失将<code>proxy</code>分配给每个类别，<code>proxy</code>的数量与类别标签的数量相同。给定一个输入数据点作为<code>anchor</code>，将同一类输入的<code>proxy</code>视为正，其他<code>proxy</code>为负。令<span class="math inline">\(x\)</span>表示输入的嵌入向量，<span class="math inline">\(p^+\)</span>为正<code>proxy</code>，<span class="math inline">\(p^-\)</span>为负<code>proxy</code>。损失则为如下:</p>
-<p><span class="math display">\[
-\begin{aligned}
-\ell(X) &amp;=\sum_{x \in X}-\log \frac{e^{s\left(x, p^{+}\right)}}{\sum\limits_{p^{-} \in P^{-}} e^{s\left(x, p^{-}\right)}} \\
-&amp;=\sum_{x \in X}\left\{-s\left(x, p^{+}\right)+\underset{p^{-} \in P^{-}}{\operatorname{LSE}} s\left(x, p^{-}\right)\right\}
-\end{aligned}
-\]</span></p>
-<p>其中<span class="math inline">\(X\)</span>为整个<code>batch</code>的嵌入向量,<span class="math inline">\(P^-\)</span>为负<code>proxy</code>的集合,<span class="math inline">\(s(\cdot,\cdot)\)</span>表示余弦相似度.其中<span class="math inline">\(\operatorname{LSE}\)</span>为<code>log sum exp</code>.熟悉基于<code>softmax</code>损失的同学应该已经看出来了,这里其实就是交叉熵换了个皮.</p>
-<p>对于此损失的梯度如下: <span class="math display">\[
-\frac{\partial \ell(X)}{\partial s(x, p)}=\left\{\begin{array}{ll}
--1, &amp; \text { if } p=p^{+} \\
-\frac{e^{s(x, p)}}{\sum\limits_{p^{-} \in P^{-}} e^{s\left(x, p^{-}\right)}}, &amp; \text {otherwise }
-\end{array}\right.
-\]</span></p>
-<p>训练时会使得<span class="math inline">\(x\)</span>与<span class="math inline">\(p^+\)</span>尽量接近,使得<span class="math inline">\(x\)</span>与<span class="math inline">\(p^-\)</span>远离.不过注意到对于正类的梯度是恒定的,对于负类的梯度是有考虑到相似度的.此损失还是比较鲁棒的,但是由于损失仅使每个嵌入向量与<code>proxy</code>相关联，因此它无法利用细粒度的数据间关系。这种缺点限制了通过<code>Proxy-NCA</code>嵌入的能力.</p>
-<h3 id="proxy-anchor-loss">Proxy-Anchor Loss</h3>
-<p><code>Proxy-Anchor</code>损失旨在克服<code>Proxy-NCA</code>的局限性，同时保持较低的训练复杂性。主要思想是将每个<code>proxy</code>作为锚，并将其与整个数据批关联，以便在训练过程中数据通过<code>proxy anchor</code>彼此交互。此损失先按照<code>Proxy-NCA</code>的标准设置为每个类别分配一个<code>proxy</code>，公式为:</p>
-<p><span class="math display">\[
-\begin{aligned}
-\ell(X)=&amp; \frac{1}{|P+|} \sum_{p \in P^{+}} \log \left(1+\sum_{x \in X_{p}^{+}} e^{-\alpha(s(x, p)-\delta)}\right) \\
-&amp;+\frac{1}{|P|} \sum_{p \in P} \log \left(1+\sum_{x \in X_{p}^{-}} e^{\alpha(s(x, p)+\delta)}\right)
-\end{aligned}
-\]</span></p>
-<p>这个也是比较老套的设置方法,其中<span class="math inline">\(\delta\)</span>为<code>margin</code>,<span class="math inline">\(\alpha\)</span>为尺度系数.将一个<code>batch</code>中所有的嵌入向量<span class="math inline">\(X\)</span>分成两个子集<span class="math inline">\(X_p^+,X_p^-\)</span>,其中<span class="math inline">\(X_p^+\)</span>表示<code>proxy</code><span class="math inline">\(p\)</span>的正样本嵌入向量,<span class="math inline">\(X_p^-\)</span>则是剩下的所有向量.</p>
-<p>将损失换一个形式: <span class="math display">\[
-\begin{aligned}
-\ell(X)=&amp; \frac{1}{\left|P^{+}\right|} \sum_{p \in P^{+}}[\text {Softplus }(\mathop{\operatorname{LSE}}\limits_{x \in X_{p}^{+}} -\alpha(s(x, p)-\delta))] \\
-&amp;+\frac{1}{|P|} \sum_{p \in P}\left[\text {Softplus }\left(\mathop{\operatorname{LSE}}\limits_{p \in X_{p}^{-}} \alpha(s(x, p)+\delta)\right)\right]
-\end{aligned}
-\]</span></p>
-<p>这样更加符合<code>circle loss</code>中所提出的统一形式了.其中这里的<span class="math inline">\(|P^+|\)</span>是正样本的统计数量,<span class="math inline">\(|P|\)</span>是总类别数.<del>这个系数我觉得不加也没关系</del>...</p>
-<p><strong>NOTE</strong> 我看了下他官方的代码,实际上什么基于<code>proxy</code>的方法就是额外再加一个可训练的聚类中心...我之前的各种损失函数的实现是直接把最后一层作为聚类中心(也就是他们所说的<code>proxy</code>),这么看来把<code>circle loss</code>拉到度量学习的标准任务里肯定也是很能打的.</p>
-<h2 id="额外实验1">额外实验1</h2>
-<p>我做的cifar10分类实现，实际上<code>batchsize</code>改成500之后<span class="math inline">\(|P^+|\)</span>有99.99的概率为10，<span class="math inline">\(|P|\)</span>为10。我训练结果只和<code>circle loss</code>差0.8个点。然后我认为删除这个系数没有关系，但结果立马打脸了，差7个点了。其实这个问题还是在于<span class="math inline">\(\alpha\)</span>系数上面，对于<code>proxy anchor loss</code>和<code>amsoftmax loss</code>来说没有像<code>circle loss</code>中的<code>自适应pace</code>，优化到后期可以说学习率太大也可以说是梯度太大，模型参数波动性会较大。这个实验佐证了<code>自适应pace</code>的重要性。</p>
-<h2 id="额外实验2">额外实验2</h2>
-<p>后面我又做了一下关于<span class="math inline">\(margin\)</span>的实验，实际上我们考虑<code>softmax</code>分类的过程，要使他分类难度增强应该是降低正确类别的数值，因此应该是<span class="math inline">\(s_p=cos(\theta_{y_i})-m\)</span>，这样才会强制正确类别的向量夹角更小。那么对于不正确的的分类类别，应该是加大他的数值，<span class="math inline">\(s_n=cos(\theta_{j\neq y_i})+m\)</span>,这样会强制降低向量更加接近垂直。</p>
-<p>这里留个小坑，对于<code>circle loss</code>里面的<span class="math inline">\(margin\)</span>设置我还是得重新仔细看看。</p>
-<p><strong>NOTE</strong> 2020-6-23日更新，因为<code>circle loss</code>设置了<code>自定义pace</code>，因此他计算决策面的时候将<span class="math inline">\(\alpha\)</span>考虑进去了，所以他得到的<span class="math inline">\(margin\)</span>和我之前设想的不一样。然后我又做了一下他的间距分布图，其实这个损失还是可以继续改进的，大家可以看到当<span class="math inline">\(\cos(\theta_p)=0，\cos(\theta_n)\in(\pi,\frac{\pi}{2})\)</span>时，对于负<code>pair</code>的损失是较小的。他所说的<code>circle</code>区域实际上是在<span class="math inline">\(\cos(\theta_p)=0，\cos(\theta_n)=\frac{\pi}{2}\)</span>有一个更小的凹槽，这里是我们的<code>ideal</code>区域。</p>
-<p>接下来如果有老哥可以把<span class="math inline">\(\cos(\theta_p)=0，\cos(\theta_n)\in(\pi,\frac{\pi}{2})\)</span>这块区域的损失重新设计一下，应该可以得到更好的收敛效果。</p>
-<p>等等。。这样判断太武断了，应该还需要分析一下梯度的变化。我这里就不继续深入了。</p>
-<div data-align="center">
-<p><img src="/2020/06/17/proxy-anchor/proxy_2.png"></p>
+<h1 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h1><div align="center">
+<img src="/2020/06/17/proxy-anchor/proxy_1.png">
 </div>
 
+<p>论文主要提出了一个名为<code>Proxy Anchor</code>的损失函数.他相比于上图中<code>a,b,c,d</code>的方法.同时考虑了间距的大小作为损失的系数,且利用了整个<code>batch</code>中所有的数据,并用<code>anchor</code>作为<code>proxy</code>使得聚类中心更加明确.</p>
+<h3 id="基于pair的损失"><a href="#基于pair的损失" class="headerlink" title="基于pair的损失"></a>基于pair的损失</h3><p>对于一些没有利用整个<code>batch</code>所有数据的方法,那就需要依赖采样来取得<code>triplet pair</code>,<code>N-pair</code>等等,这样实际上引用了额外的复杂度.因此使用基于<code>proxy</code>的方法,不需要<code>pair</code>采样的方式.</p>
+<h3 id="基于proxy的损失"><a href="#基于proxy的损失" class="headerlink" title="基于proxy的损失"></a>基于proxy的损失</h3><p>基于<code>proxy</code>的度量学习是一种相对较新的方法，可以解决基于<code>pair</code>的损失的复杂性问题。<code>proxy</code>表示训练数据子集的代表，并被估计为嵌入网络参数的一部分。此类别中方法的共同思想是推断一小组的<code>proxy</code>，这些<code>proxy</code>捕获嵌入空间的全局结构，并将每个数据点与<code>proxy</code>相关联，而不是训练过程中的其他数据点。由于<code>proxy</code>的数量明显少于训练数据的数量，因此可以大大减少训练的复杂性.</p>
+<p>第一个基于<code>proxy</code>的方法为<code>Proxy-NCA</code>,他使用<code>proxies</code>的<code>Neighborhood Component Analysis</code>作为一种近似,首先为每个类别设置一个<code>proxy</code>,将数据点与<code>proxy</code>关联,拉近正类的距离,拉开负类的距离.</p>
+<p>使用<code>proxy</code>有助于极大地提高训练的收敛性，但有一个固有的局限性：由于每个数据点仅与<code>proxy</code>相关联，因此基于<code>pair</code>的方法的丰富的数据间关系不再可用。因此提出<code>Proxy Anchor</code>损失可以克服此问题，因为它的梯度可以反映数据的相对联系，这允许它们的嵌入向量在训练过程中相互影响.</p>
+<h3 id="Proxy-NCA-Loss"><a href="#Proxy-NCA-Loss" class="headerlink" title="Proxy-NCA Loss"></a>Proxy-NCA Loss</h3><p>首先介绍原本的损失.<code>Proxy-NCA</code>损失将<code>proxy</code>分配给每个类别，<code>proxy</code>的数量与类别标签的数量相同。给定一个输入数据点作为<code>anchor</code>，将同一类输入的<code>proxy</code>视为正，其他<code>proxy</code>为负。令$x$表示输入的嵌入向量，$p^+$为正<code>proxy</code>，$p^-$为负<code>proxy</code>。损失则为如下:</p>
+<script type="math/tex; mode=display">
+\begin{aligned}
+\ell(X) &=\sum_{x \in X}-\log \frac{e^{s\left(x, p^{+}\right)}}{\sum\limits_{p^{-} \in P^{-}} e^{s\left(x, p^{-}\right)}} \\
+&=\sum_{x \in X}\left\{-s\left(x, p^{+}\right)+\underset{p^{-} \in P^{-}}{\operatorname{LSE}} s\left(x, p^{-}\right)\right\}
+\end{aligned}</script><p>其中$X$为整个<code>batch</code>的嵌入向量,$P^-$为负<code>proxy</code>的集合,$s(\cdot,\cdot)$表示余弦相似度.其中$\operatorname{LSE}$为<code>log sum exp</code>.熟悉基于<code>softmax</code>损失的同学应该已经看出来了,这里其实就是交叉熵换了个皮.</p>
+<p>对于此损失的梯度如下:</p>
+<script type="math/tex; mode=display">
+\frac{\partial \ell(X)}{\partial s(x, p)}=\left\{\begin{array}{ll}
+-1, & \text { if } p=p^{+} \\
+\frac{e^{s(x, p)}}{\sum\limits_{p^{-} \in P^{-}} e^{s\left(x, p^{-}\right)}}, & \text {otherwise }
+\end{array}\right.</script><p>训练时会使得$x$与$p^+$尽量接近,使得$x$与$p^-$远离.不过注意到对于正类的梯度是恒定的,对于负类的梯度是有考虑到相似度的.此损失还是比较鲁棒的,但是由于损失仅使每个嵌入向量与<code>proxy</code>相关联，因此它无法利用细粒度的数据间关系。这种缺点限制了通过<code>Proxy-NCA</code>嵌入的能力.</p>
+<h3 id="Proxy-Anchor-Loss"><a href="#Proxy-Anchor-Loss" class="headerlink" title="Proxy-Anchor Loss"></a>Proxy-Anchor Loss</h3><p><code>Proxy-Anchor</code>损失旨在克服<code>Proxy-NCA</code>的局限性，同时保持较低的训练复杂性。主要思想是将每个<code>proxy</code>作为锚，并将其与整个数据批关联，以便在训练过程中数据通过<code>proxy anchor</code>彼此交互。此损失先按照<code>Proxy-NCA</code>的标准设置为每个类别分配一个<code>proxy</code>，公式为:</p>
+<script type="math/tex; mode=display">
+\begin{aligned}
+\ell(X)=& \frac{1}{|P+|} \sum_{p \in P^{+}} \log \left(1+\sum_{x \in X_{p}^{+}} e^{-\alpha(s(x, p)-\delta)}\right) \\
+&+\frac{1}{|P|} \sum_{p \in P} \log \left(1+\sum_{x \in X_{p}^{-}} e^{\alpha(s(x, p)+\delta)}\right)
+\end{aligned}</script><p>这个也是比较老套的设置方法,其中$\delta$为<code>margin</code>,$\alpha$为尺度系数.将一个<code>batch</code>中所有的嵌入向量$X$分成两个子集$X_p^+,X_p^-$,其中$X_p^+$表示<code>proxy</code>$p$的正样本嵌入向量,$X_p^-$则是剩下的所有向量.</p>
+<p>将损失换一个形式:</p>
+<script type="math/tex; mode=display">
+\begin{aligned}
+\ell(X)=& \frac{1}{\left|P^{+}\right|} \sum_{p \in P^{+}}[\text {Softplus }(\mathop{\operatorname{LSE}}\limits_{x \in X_{p}^{+}} -\alpha(s(x, p)-\delta))] \\
+&+\frac{1}{|P|} \sum_{p \in P}\left[\text {Softplus }\left(\mathop{\operatorname{LSE}}\limits_{p \in X_{p}^{-}} \alpha(s(x, p)+\delta)\right)\right]
+\end{aligned}</script><p>这样更加符合<code>circle loss</code>中所提出的统一形式了.其中这里的$|P^+|$是正样本的统计数量,$|P|$是总类别数.<del>这个系数我觉得不加也没关系</del>…</p>
+<p><strong>NOTE</strong> 我看了下他官方的代码,实际上什么基于<code>proxy</code>的方法就是额外再加一个可训练的聚类中心…我之前的各种损失函数的实现是直接把最后一层作为聚类中心(也就是他们所说的<code>proxy</code>),这么看来把<code>circle loss</code>拉到度量学习的标准任务里肯定也是很能打的.</p>
+<h2 id="额外实验1"><a href="#额外实验1" class="headerlink" title="额外实验1"></a>额外实验1</h2><p>我做的cifar10分类实现，实际上<code>batchsize</code>改成500之后$|P^+|$有99.99的概率为10，$|P|$为10。我训练结果只和<code>circle loss</code>差0.8个点。然后我认为删除这个系数没有关系，但结果立马打脸了，差7个点了。其实这个问题还是在于$\alpha$系数上面，对于<code>proxy anchor loss</code>和<code>amsoftmax loss</code>来说没有像<code>circle loss</code>中的<code>自适应pace</code>，优化到后期可以说学习率太大也可以说是梯度太大，模型参数波动性会较大。这个实验佐证了<code>自适应pace</code>的重要性。</p>
+<h2 id="额外实验2"><a href="#额外实验2" class="headerlink" title="额外实验2"></a>额外实验2</h2><p>后面我又做了一下关于$margin$的实验，实际上我们考虑<code>softmax</code>分类的过程，要使他分类难度增强应该是降低正确类别的数值，因此应该是$s_p=cos(\theta_{y_i})-m$，这样才会强制正确类别的向量夹角更小。那么对于不正确的的分类类别，应该是加大他的数值，$s_n=cos(\theta_{j\neq y_i})+m$,这样会强制降低向量更加接近垂直。</p>
+<p>这里留个小坑，对于<code>circle loss</code>里面的$margin$设置我还是得重新仔细看看。</p>
+<p><strong>NOTE</strong> 2020-6-23日更新，因为<code>circle loss</code>设置了<code>自定义pace</code>，因此他计算决策面的时候将$\alpha$考虑进去了，所以他得到的$margin$和我之前设想的不一样。然后我又做了一下他的间距分布图，其实这个损失还是可以继续改进的，大家可以看到当$\cos(\theta_p)=0，\cos(\theta_n)\in(\pi,\frac{\pi}{2})$时，对于负<code>pair</code>的损失是较小的。他所说的<code>circle</code>区域实际上是在$\cos(\theta_p)=0，\cos(\theta_n)=\frac{\pi}{2}$有一个更小的凹槽，这里是我们的<code>ideal</code>区域。</p>
+<p>接下来如果有老哥可以把$\cos(\theta_p)=0，\cos(\theta_n)\in(\pi,\frac{\pi}{2})$这块区域的损失重新设计一下，应该可以得到更好的收敛效果。</p>
+<p>等等。。这样判断太武断了，应该还需要分析一下梯度的变化。我这里就不继续深入了。</p>
+<div align="center">
+<img src="/2020/06/17/proxy-anchor/proxy_2.png">
+</div>
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2020/06/17/proxy-anchor/" data-id="ckhe9aw1m00alxe6x576t4t7j" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2020/06/17/proxy-anchor/" data-id="ckhhqhcxc007gl76xje0f1n1l" class="article-share-link">Share</a>
       
       
       
@@ -273,7 +247,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">标签云</h3>
     <div class="widget tagcloud">
-      <a href="/tags/C/" style="font-size: 12.67px;">C</a> <a href="/tags/C/" style="font-size: 12px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10px;">CNN</a> <a href="/tags/Eigen/" style="font-size: 10px;">Eigen</a> <a href="/tags/GAN/" style="font-size: 10.67px;">GAN</a> <a href="/tags/Linux/" style="font-size: 19.33px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.67px;">PCB</a> <a href="/tags/Qt/" style="font-size: 10px;">Qt</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/gan/" style="font-size: 10px;">gan</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 14.67px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 11.33px;">linux</a> <a href="/tags/mindspore/" style="font-size: 10.67px;">mindspore</a> <a href="/tags/mxnet/" style="font-size: 10px;">mxnet</a> <a href="/tags/pfld/" style="font-size: 10px;">pfld</a> <a href="/tags/python/" style="font-size: 18px;">python</a> <a href="/tags/pytorch/" style="font-size: 11.33px;">pytorch</a> <a href="/tags/retinaface/" style="font-size: 10px;">retinaface</a> <a href="/tags/stm32/" style="font-size: 11.33px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 20px;">tensorflow</a> <a href="/tags/vscode/" style="font-size: 10px;">vscode</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/yolo/" style="font-size: 12.67px;">yolo</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 14px;">作业</a> <a href="/tags/元学习/" style="font-size: 10px;">元学习</a> <a href="/tags/半监督学习/" style="font-size: 15.33px;">半监督学习</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/图像处理/" style="font-size: 10px;">图像处理</a> <a href="/tags/堆栈/" style="font-size: 10.67px;">堆栈</a> <a href="/tags/声音信号处理/" style="font-size: 12px;">声音信号处理</a> <a href="/tags/小工具/" style="font-size: 12px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 15.33px;">嵌入式</a> <a href="/tags/总结/" style="font-size: 10px;">总结</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 17.33px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 17.33px;">机器学习</a> <a href="/tags/树/" style="font-size: 12px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/概率论/" style="font-size: 18.67px;">概率论</a> <a href="/tags/深度学习/" style="font-size: 16px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 11.33px;">神经网络</a> <a href="/tags/算法/" style="font-size: 12px;">算法</a> <a href="/tags/统计学习方法/" style="font-size: 16.67px;">统计学习方法</a> <a href="/tags/聚类/" style="font-size: 12px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13.33px;">蓝牙</a> <a href="/tags/调参/" style="font-size: 10px;">调参</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/路由/" style="font-size: 10px;">路由</a> <a href="/tags/链表/" style="font-size: 11.33px;">链表</a> <a href="/tags/错误记录/" style="font-size: 19.33px;">错误记录</a>
+      <a href="/tags/C/" style="font-size: 12.67px;">C</a> <a href="/tags/C/" style="font-size: 12px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10px;">CNN</a> <a href="/tags/Eigen/" style="font-size: 10px;">Eigen</a> <a href="/tags/GAN/" style="font-size: 10.67px;">GAN</a> <a href="/tags/Linux/" style="font-size: 19.33px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.67px;">PCB</a> <a href="/tags/Qt/" style="font-size: 10px;">Qt</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/gan/" style="font-size: 10px;">gan</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 14.67px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 11.33px;">linux</a> <a href="/tags/mindspore/" style="font-size: 10.67px;">mindspore</a> <a href="/tags/mxnet/" style="font-size: 10px;">mxnet</a> <a href="/tags/pfld/" style="font-size: 10px;">pfld</a> <a href="/tags/python/" style="font-size: 18px;">python</a> <a href="/tags/pytorch/" style="font-size: 12px;">pytorch</a> <a href="/tags/retinaface/" style="font-size: 10px;">retinaface</a> <a href="/tags/stm32/" style="font-size: 11.33px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 20px;">tensorflow</a> <a href="/tags/vscode/" style="font-size: 10px;">vscode</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/yolo/" style="font-size: 12.67px;">yolo</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 14px;">作业</a> <a href="/tags/元学习/" style="font-size: 10px;">元学习</a> <a href="/tags/半监督学习/" style="font-size: 15.33px;">半监督学习</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/图像处理/" style="font-size: 10px;">图像处理</a> <a href="/tags/堆栈/" style="font-size: 10.67px;">堆栈</a> <a href="/tags/声音信号处理/" style="font-size: 12px;">声音信号处理</a> <a href="/tags/小工具/" style="font-size: 12px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 15.33px;">嵌入式</a> <a href="/tags/总结/" style="font-size: 10px;">总结</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 17.33px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 17.33px;">机器学习</a> <a href="/tags/树/" style="font-size: 12px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/概率论/" style="font-size: 18.67px;">概率论</a> <a href="/tags/深度学习/" style="font-size: 16px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 11.33px;">神经网络</a> <a href="/tags/算法/" style="font-size: 12px;">算法</a> <a href="/tags/统计学习方法/" style="font-size: 16.67px;">统计学习方法</a> <a href="/tags/聚类/" style="font-size: 12px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13.33px;">蓝牙</a> <a href="/tags/调参/" style="font-size: 10px;">调参</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/路由/" style="font-size: 10px;">路由</a> <a href="/tags/链表/" style="font-size: 11.33px;">链表</a> <a href="/tags/错误记录/" style="font-size: 19.33px;">错误记录</a>
     </div>
   </div>
 
@@ -295,6 +269,10 @@
       <ul>
         
           <li>
+            <a href="/2020/11/15/pytorch-feature-extract/">pytorch从任意层截断并提取数据</a>
+          </li>
+        
+          <li>
             <a href="/2020/11/12/webdataset/">Pytorch Webdataset初体验</a>
           </li>
         
@@ -308,10 +286,6 @@
         
           <li>
             <a href="/2020/10/09/whiteboxgan/">whiteboxgan</a>
-          </li>
-        
-          <li>
-            <a href="/2020/10/03/maml/">Model-Agnostic Meta-Learning</a>
           </li>
         
       </ul>
