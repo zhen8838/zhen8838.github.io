@@ -15,7 +15,7 @@
 <meta property="og:site_name">
 <meta property="og:description" content="唠唠叨叨的刷题总结,不定期更新.">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2021-02-07T16:21:20.796Z">
+<meta property="og:updated_time" content="2021-02-09T16:33:25.967Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="leetcode刷题总结">
 <meta name="twitter:description" content="唠唠叨叨的刷题总结,不定期更新.">
@@ -110,6 +110,7 @@
 <ul>
 <li><p>[95] 不同的二叉搜索树 II</p>
 <p>需要了解如何建树，递归构建不同的左子树和右子树然后合并。</p></li>
+<li><p>[37] 解数独 吐了,模板题做了老半天,最后发现是<code>x和y</code>有个地方写反了.</p></li>
 </ul>
 <h1 id="动态规划">动态规划</h1>
 <ul>
@@ -171,7 +172,50 @@
 </ul>
 <h1 id="数组">数组</h1>
 <ul>
-<li>[9] 回文数 这题最好要想到可以部分翻转。</li>
+<li><p>[9] 回文数 这题最好要想到可以部分翻转。</p></li>
+<li><p>[992] K 个不同整数的子数组</p>
+<p>求解最多K个不同数字组成的数组,通过累加的方式我们将[2,1]这种情况累积到结果中,最终我们只需要删除 [1],[2] 这些值就能获得恰好K个不同数字组成的数组个数.</p>
+<ol type="1">
+<li>假设 1:
+<ul>
+<li><code>ans + 1 = ans + [1]</code></li>
+</ul></li>
+<li>假设 12:
+<ul>
+<li><code>ans + 2 = ans + [2] , [1,2]</code></li>
+</ul></li>
+<li>假设 121:
+<ul>
+<li><code>ans + 3 = ans + [1] , [2,1] , [1,2,1]</code></li>
+</ul></li>
+</ol></li>
+<li><p>[214] 最短回文串</p>
+<p>这题利用kmp算法是极好的.kmp算法可以将找到前缀和后缀中的相同部分.对于一个回文串,我们将其分为两部分,把后面一部分反向之后就可以发现他的前缀和后缀从中心开始匹配:<code>abfda b adfba-&gt;adfba b adfba</code>.</p>
+<p>对于一个半回文串<code>abadfba</code>,我们找他最短的回文串,那么就是要找到他的重复部分: <span class="math display">\[
+\begin{aligned}
+  &amp;\mathbf{aba}dfba \\
+  abfd&amp;\mathbf{aba} \\
+  &amp;\downarrow \\
+  abfd&amp;\mathbf{aba}dfba
+\end{aligned}
+\]</span></p>
+<p>那么我们现在有kmp算法可以算<strong>前缀和后缀中重复部分</strong>,那么我们把可能出现重复的部分分别安排到前缀和后缀开始执行kmp算法,利用kmp算法求解到<code>next</code>数组,这时候<code>next</code>数组的最后一位恰巧指向翻转字符串的重复部分的起始位置,截断后加上原字符串即可: <span class="math display">\[
+\begin{aligned}
+  &amp;\mathbf{aba}dfba \\
+  abfd&amp;\mathbf{aba} \\
+  &amp;\downarrow \\
+  \mathbf{aba}dfba&amp;\$abfd\mathbf{aba} \\
+  &amp;\downarrow\ (kmp) \\
+   , a, b, a, d, f, b, a, &amp;\$, a, b, f, d, a, b, a\\
+  -1, 0, 0, 1, 0, 0, 0, 1, &amp;0, 1, 2, 0, 0, 1, 2, 3(\text{next数组})\\
+  &amp;\downarrow\ (merge) \\
+  abfd &amp;+\\
+  &amp;\mathbf{aba}dfba\\
+  &amp;\downarrow\ (merge) \\
+  abfd&amp;\mathbf{aba}dfba
+\end{aligned}
+\]</span></p>
+<p>最后附上kmp中计算<code>next</code>数组的一个巧妙实现,来自<a href="https://www.bilibili.com/video/BV1sE411T75c?from=search&amp;seid=8811667474597985849" target="_blank" rel="noopener">b站</a>: <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">findMaxCommon</span><span class="params">(<span class="keyword">const</span> <span class="built_in">string</span>&amp; pattern)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">int</span> n = pattern.size();</span><br><span class="line">  <span class="built_in">vector</span>&lt;<span class="keyword">int</span>&gt; next(n + <span class="number">1</span>, <span class="number">0</span>);</span><br><span class="line">  <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>, j = next[<span class="number">0</span>] = <span class="number">-1</span>; i &lt; n; next[++i] = ++j) &#123;</span><br><span class="line">    <span class="keyword">while</span> ((j != <span class="number">-1</span>) <span class="keyword">and</span> pattern[j] != pattern[i]) &#123;</span><br><span class="line">      j = next[j];</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> next[n];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p></li>
 </ul>
 <h1 id="并查集">并查集</h1>
 <ul>
@@ -181,6 +225,7 @@
 <p>直接并查集,记录无法merge的次数,最终集合与次数比较一下即可.</p></li>
 <li><p>[959] 由斜杠划分区域</p>
 <p>一般想法是把每个区域划分四个格子，然后并查。巧妙的方法是为每个连接线进行并查，如果成环了，那么分割区域加1.</p></li>
+<li><p>[128] 最长连续序列 将数组全部放到set中然后寻找</p></li>
 </ul>
 <h1 id="树">树</h1>
 <ul>
@@ -195,6 +240,7 @@
 <ul>
 <li><p>[424] 替换后的最长重复字符</p>
 <p>这种类型用滑动窗口，我做过一次第二次还是一直出错。写的时候需要注意滑动窗口自带剪枝的功能，对于右侧只需要一直扩展即可，左侧看时机进行收缩，并不需要收缩到特定长度，因为小于当前窗体长度的解被剪枝了。</p></li>
+<li><p>[76] 最小覆盖子串 滑动窗口模板题,算是较为简单的hard了.</p></li>
 </ul>
 <h1 id="贪心">贪心</h1>
 <ul>
@@ -273,6 +319,7 @@
 <ul>
 <li><p>[95] 不同的二叉搜索树 II</p>
 <p>需要了解如何建树，递归构建不同的左子树和右子树然后合并。</p></li>
+<li><p>[37] 解数独 吐了,模板题做了老半天,最后发现是<code>x和y</code>有个地方写反了.</p></li>
 </ul>
 <h1 id="动态规划">动态规划</h1>
 <ul>
@@ -334,7 +381,50 @@
 </ul>
 <h1 id="数组">数组</h1>
 <ul>
-<li>[9] 回文数 这题最好要想到可以部分翻转。</li>
+<li><p>[9] 回文数 这题最好要想到可以部分翻转。</p></li>
+<li><p>[992] K 个不同整数的子数组</p>
+<p>求解最多K个不同数字组成的数组,通过累加的方式我们将[2,1]这种情况累积到结果中,最终我们只需要删除 [1],[2] 这些值就能获得恰好K个不同数字组成的数组个数.</p>
+<ol type="1">
+<li>假设 1:
+<ul>
+<li><code>ans + 1 = ans + [1]</code></li>
+</ul></li>
+<li>假设 12:
+<ul>
+<li><code>ans + 2 = ans + [2] , [1,2]</code></li>
+</ul></li>
+<li>假设 121:
+<ul>
+<li><code>ans + 3 = ans + [1] , [2,1] , [1,2,1]</code></li>
+</ul></li>
+</ol></li>
+<li><p>[214] 最短回文串</p>
+<p>这题利用kmp算法是极好的.kmp算法可以将找到前缀和后缀中的相同部分.对于一个回文串,我们将其分为两部分,把后面一部分反向之后就可以发现他的前缀和后缀从中心开始匹配:<code>abfda b adfba-&gt;adfba b adfba</code>.</p>
+<p>对于一个半回文串<code>abadfba</code>,我们找他最短的回文串,那么就是要找到他的重复部分: <span class="math display">\[
+\begin{aligned}
+  &amp;\mathbf{aba}dfba \\
+  abfd&amp;\mathbf{aba} \\
+  &amp;\downarrow \\
+  abfd&amp;\mathbf{aba}dfba
+\end{aligned}
+\]</span></p>
+<p>那么我们现在有kmp算法可以算<strong>前缀和后缀中重复部分</strong>,那么我们把可能出现重复的部分分别安排到前缀和后缀开始执行kmp算法,利用kmp算法求解到<code>next</code>数组,这时候<code>next</code>数组的最后一位恰巧指向翻转字符串的重复部分的起始位置,截断后加上原字符串即可: <span class="math display">\[
+\begin{aligned}
+  &amp;\mathbf{aba}dfba \\
+  abfd&amp;\mathbf{aba} \\
+  &amp;\downarrow \\
+  \mathbf{aba}dfba&amp;\$abfd\mathbf{aba} \\
+  &amp;\downarrow\ (kmp) \\
+   , a, b, a, d, f, b, a, &amp;\$, a, b, f, d, a, b, a\\
+  -1, 0, 0, 1, 0, 0, 0, 1, &amp;0, 1, 2, 0, 0, 1, 2, 3(\text{next数组})\\
+  &amp;\downarrow\ (merge) \\
+  abfd &amp;+\\
+  &amp;\mathbf{aba}dfba\\
+  &amp;\downarrow\ (merge) \\
+  abfd&amp;\mathbf{aba}dfba
+\end{aligned}
+\]</span></p>
+<p>最后附上kmp中计算<code>next</code>数组的一个巧妙实现,来自<a href="https://www.bilibili.com/video/BV1sE411T75c?from=search&amp;seid=8811667474597985849" target="_blank" rel="noopener">b站</a>: <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">findMaxCommon</span><span class="params">(<span class="keyword">const</span> <span class="built_in">string</span>&amp; pattern)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">int</span> n = pattern.size();</span><br><span class="line">  <span class="built_in">vector</span>&lt;<span class="keyword">int</span>&gt; next(n + <span class="number">1</span>, <span class="number">0</span>);</span><br><span class="line">  <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>, j = next[<span class="number">0</span>] = <span class="number">-1</span>; i &lt; n; next[++i] = ++j) &#123;</span><br><span class="line">    <span class="keyword">while</span> ((j != <span class="number">-1</span>) <span class="keyword">and</span> pattern[j] != pattern[i]) &#123;</span><br><span class="line">      j = next[j];</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> next[n];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p></li>
 </ul>
 <h1 id="并查集">并查集</h1>
 <ul>
@@ -344,6 +434,7 @@
 <p>直接并查集,记录无法merge的次数,最终集合与次数比较一下即可.</p></li>
 <li><p>[959] 由斜杠划分区域</p>
 <p>一般想法是把每个区域划分四个格子，然后并查。巧妙的方法是为每个连接线进行并查，如果成环了，那么分割区域加1.</p></li>
+<li><p>[128] 最长连续序列 将数组全部放到set中然后寻找</p></li>
 </ul>
 <h1 id="树">树</h1>
 <ul>
@@ -358,6 +449,7 @@
 <ul>
 <li><p>[424] 替换后的最长重复字符</p>
 <p>这种类型用滑动窗口，我做过一次第二次还是一直出错。写的时候需要注意滑动窗口自带剪枝的功能，对于右侧只需要一直扩展即可，左侧看时机进行收缩，并不需要收缩到特定长度，因为小于当前窗体长度的解被剪枝了。</p></li>
+<li><p>[76] 最小覆盖子串 滑动窗口模板题,算是较为简单的hard了.</p></li>
 </ul>
 <h1 id="贪心">贪心</h1>
 <ul>
@@ -415,7 +507,7 @@
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2021/01/22/leetcode/" data-id="ckkvcszp700indw6xr0bszyrt" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2021/01/22/leetcode/" data-id="ckky9a6tp00ij1c6xr4v14qzf" class="article-share-link">Share</a>
       
       
       
