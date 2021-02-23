@@ -5,20 +5,20 @@
   
 
   
-  <title>Eigen初使用 | </title>
+  <title>QA~ | </title>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta name="description" content="准备工作,首先需要一个支持矩阵计算的库,所以准备使用eigen.">
-<meta name="keywords" content="C++,Eigen,算法">
+  <meta name="description" content="一些面试准备">
+<meta name="keywords" content="C++,算法">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Eigen初使用">
+<meta property="og:title" content="QA~">
 <meta property="og:url" content="https://zhen8838.github.io/2018/10/28/Eigen初使用/index.html">
 <meta property="og:site_name">
-<meta property="og:description" content="准备工作,首先需要一个支持矩阵计算的库,所以准备使用eigen.">
+<meta property="og:description" content="一些面试准备">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2019-03-22T08:58:12.762Z">
+<meta property="og:updated_time" content="2021-02-23T06:46:02.967Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Eigen初使用">
-<meta name="twitter:description" content="准备工作,首先需要一个支持矩阵计算的库,所以准备使用eigen.">
+<meta name="twitter:title" content="QA~">
+<meta name="twitter:description" content="一些面试准备">
   
   
     <link rel="icon" href="/favicon.png">
@@ -83,7 +83,7 @@
         
   
     <h1 class="article-title" itemprop="name">
-      Eigen初使用
+      QA~
     </h1>
   
 
@@ -91,12 +91,80 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <p>准备工作,首先需要一个支持矩阵计算的库,所以准备使用eigen.</p>
+        <p>一些面试准备</p>
 <a id="more"></a>
-<h1 id="官网下载">官网下载</h1>
-<p><a href="http://eigen.tuxfamily.org/index.php?title=Main_Page#Projects_using_Eigen" target="_blank" rel="noopener">这里</a>下载到了文件之后,解压安装.</p>
-<h1 id="安装">安装</h1>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">➜  Downloads tar -xvf eigen-eigen-b3f3d4950030.tar.bz2</span><br><span class="line">➜  Downloads <span class="built_in">cd</span> eigen-eigen-b3f3d4950030              </span><br><span class="line">➜  eigen-eigen-b3f3d4950030 mkdir build              </span><br><span class="line">➜  eigen-eigen-b3f3d4950030 <span class="built_in">cd</span> build</span><br><span class="line">➜  build cmake ..</span><br><span class="line">➜  build make install</span><br></pre></td></tr></table></figure>
+<h2 id="yolov3的具体流程">Yolov3的具体流程?</h2>
+<h3 id="yolo的网络架构">yolo的网络架构?</h3>
+<ol type="1">
+<li><p>原本是使用Darknet-53的,参数较多,并且引入了Resnet中的跳跃连接,效果较好.我在进行侧端移植时,尝试过使用Darknet-19,但是参数量还是太大,因此换成了mobilenetv2.</p></li>
+<li><p>yolo的网络借鉴了金字塔特征图,是全卷积操作,效率较高.最后的输出时从多个尺度的分支取特征,并且进行卷积后和上一层的特征图进行上采样concat,更好的进行特征融合,在对每个特征进行处理.最终输出的大特征图对应大物体,小特征图对应小物体.</p></li>
+</ol>
+<h3 id="yolo的输出特征图">yolo的输出特征图?</h3>
+<ol type="1">
+<li>输出输出通道数为[N,N,anchor_nums*(5+class_nums)].5表示了预测的x,y,w,h,objness.</li>
+</ol>
+<h3 id="yolo的特征图的解码">yolo的特征图的解码?</h3>
+<ol type="1">
+<li>x,y比较简单,将<span class="math inline">\(\sigma(x),\sigma(y)\)</span>后表示了当前物体在当前格子左上角中的相对偏移量.yolov1中是直接学习物体框的大小,yolov2开始加入了anchor的概念,因此对高度和宽度用指数函数进行激活后乘上当前所在anchor的尺寸,<span class="math inline">\(p_w e^{t_w},p_h e^{t_h}\)</span>.我在实现的时候anchor尺度是根据全局尺度归一化到0-1之间的.</li>
+</ol>
+<h3 id="anchor的意义">anchor的意义?</h3>
+<ol type="1">
+<li><p>anchor的存在是因为各自物体的大小排布不规律,模型难以拟合,通过设置一个固定的系数,让所有的大小值对其求倍数,倍数越接近1表明越符合这个anchor.这个时候训练<span class="math inline">\(e^{t_w}\)</span>,wh的gt值基本都在0左右,很容易学习并拟合.</p></li>
+<li><p>制作anchor时,我将iou作为距离参数对整个数据执行kmeans,得到的聚类中心即为anchor.</p></li>
+</ol>
+<h3 id="分类置信度">分类置信度?</h3>
+<ol type="1">
+<li>这里首先是先sigmoid激活objness后看置信度是否大于阈值,再利用softmax判断是哪个类别,严格一些可以直接把置信度乘上softmax的结果.</li>
+</ol>
+<h3 id="损失函数">损失函数?</h3>
+<ol type="1">
+<li><p>首先我们制作标签的时候确定好当前box的所有gt所在的位置,对应位置的预测结果和gt做损失即可,其他位置做负例损失,此外还有ignore的部分.</p></li>
+<li><p>如果除正例外的bbox预测出来的结果和某个gt的iou大于一定阈值了,那么表明附近区域也有预测能力了,要避免负例减弱这种能力,所以忽略.我实现的时候,看到网上一些高star的库都是直接整个batch计算ignoremask,这是不对的,需要都先映射回全局,再与每张图像的全局进行计算iou才有意义. 当时我还行尝试一下把ignorebox的部分也添加一定的损失让他们向更有意义的gt拟合,不过并没有做深入尝试.</p></li>
+<li><p>同时网上的一些库制作标签的时候没有考虑到标签重叠的问题,两个物体挨的太近的时候,后面物体的标签会将前面的标签覆盖掉.</p></li>
+<li><p>我还添加一些关于wh的系数,如果wh越小,权重越大.以及一些iou损失.</p></li>
+</ol>
+<h3 id="smooth-l1-loss">smooth L1 loss</h3>
+<ol type="1">
+<li><p>公式为<span class="math inline">\(L_1=\begin{cases}0.5x^2,\ \ |x|&lt;1\\|x|-0.5,\ \ x&lt;-1\ \text{or} x&gt;1 \end{cases}\)</span></p></li>
+<li><p>一般他们是没有经过sigmoid或其他激活的,所以使用smooth l1 loss去拟合的时候,可以在差距过大时缩小梯度,差距过小时梯度值足够平滑,稳定拟合的过程.</p></li>
+</ol>
+<h3 id="focal-loss">Focal loss</h3>
+<h3 id="iou-loss">IoU loss</h3>
+<h2 id="ssd的流程">SSD的流程?</h2>
+<h3 id="网络结构">网络结构?</h3>
+<ol type="1">
+<li><p>原始的SSD网络结构是VGG-16作Backbone,在我的项目中也替换成了类似mobilenetv2的结果进行实现.</p></li>
+<li><p>SSD同样也是利用多尺度特征,在我的项目中使用了3个分支进行输出,首先将三个分支的特征去除,然后使用SeperableConv2d(dwconv,relu,conv)进行激活,激活后也得到了特征通道数为(4 + 1+class_num),这里1的不是objness而是空白背景类.</p></li>
+<li><p>在我的项目中我尝试了对多个特征间使用SSH块,FPN块.SSH块就是将一个输入通过3x3卷积和5x5卷积进行分离,然后再concat.以扩大感受野.FPN块则是将两个分支的输入进行处理,将深分支缩小后再上采样与浅分支相加.总体来说FPN块效果会好一些,因为侧段硬件不对于5x5的卷积效果不好.</p></li>
+</ol>
+<h3 id="anchor">anchor?</h3>
+<ol type="1">
+<li>SSD的anchor和传统的yolo不同,首先根据输入大小和输出分支的缩小尺度计算当前的特征图大小,每个特征图可以对应多个大小的anchor,SSD的是对当前特征图每个小块的中心分配anchor,对于每个尺度的anchor,将宽高归一化到全局大小,然后对每个小块中心分配gt的值.</li>
+</ol>
+<h3 id="标签制作">标签制作?</h3>
+<ol type="1">
+<li><p>首先计算gt与anchor的iou,找到大于阈值的的anchor位置，这个阈值可以设置的小一点，不过太小也不好，那样label中的匹配anchor数量就会太多,找到匹配的anchor的最优gt，并为每个anchor的对应的位置分配给其最匹配的gt,设置每个anchor位置对应的置信度，如果其iou score小于阈值则设置为0,编码生成bbox label，将gt中心坐标转换为相对anchor中心的偏移，且尺度除以移除以(方差*gt宽度)，gt的宽高除anchor宽高并进行对数化再除方差,编码生成landmark label，计算gt中心坐标对应anchor的中心偏移且尺度除以(方差*anchor宽度)</p></li>
+<li><p>Encode的意义?其实就是将所有的anchor的表示方法进行修改便于网络拟合,在SSD中其实是统计了一个数据集下所有的bbox的gt的统计均值和方差,然后Encode就是进行归一化的表示.同时这里的wh也是需要log的.</p></li>
+</ol>
+<h3 id="损失函数-1">损失函数?</h3>
+<ol type="1">
+<li><p>对于定位损失使用Smooth L1进行计算,将一个batch的标签中有效部分作为boolmask将预测的bbox部分进行提取,提出后使用smooth_l1_loss进行计算.</p></li>
+<li><p>对于分类损失使用hard negtive mining,首先提取所有的预测置信度.使用logsumexp的原因如下,我猜想应该是因为早期softmax实现不好.</p>
+<p><span class="math display">\[
+\begin{aligned}
+\mathcal{L}_{\text{softmax}}&amp;=-\log \frac{e^{x_{y_i}}}{\sum_{j=1}e^{x_j}} \\
+-\log \frac{e^{x_{y_i}}}{\sum_{j=1}e^{x_j}}&amp;=\log(\sum_{j=1}e^{x_j})-\log(e^{x_{y_i}})\\
+&amp;=\log(\sum_{j=1}e^{x_j})-x_{y_i}\\
+&amp;=\text{logsumexp}(x_j)-x_{y_i}
+\end{aligned}
+\]</span></p></li>
+<li><p>我们得到了每个类别的softmax损失大小后,取出背景类的损失,并从大到小进行排序,排序之后我确定了每个位置的损失排名,接下来通过预设的hard negative mining 参数确定需要对多少个负例计算损失,得到了个数之后,取排名前n个样本作为有效负例.</p></li>
+<li><p>用n个有效负例和m个正例,使用稀疏softmax计算置信度损失.</p></li>
+</ol>
+<h3 id="预测结果">预测结果?</h3>
+<ol type="1">
+<li>获得预测结果进行解码,解码后使用softmax找到对应类别,如果概率小于阈值删除,将概率大于阈值的按类别进行nms(非极大值抑止).</li>
+</ol>
 
       
     </div>
@@ -104,22 +172,90 @@
       
         
         
-          <p>准备工作,首先需要一个支持矩阵计算的库,所以准备使用eigen.</p>
+          <p>一些面试准备</p>
 <a id="more"></a>
-<h1 id="官网下载">官网下载</h1>
-<p><a href="http://eigen.tuxfamily.org/index.php?title=Main_Page#Projects_using_Eigen" target="_blank" rel="noopener">这里</a>下载到了文件之后,解压安装.</p>
-<h1 id="安装">安装</h1>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">➜  Downloads tar -xvf eigen-eigen-b3f3d4950030.tar.bz2</span><br><span class="line">➜  Downloads <span class="built_in">cd</span> eigen-eigen-b3f3d4950030              </span><br><span class="line">➜  eigen-eigen-b3f3d4950030 mkdir build              </span><br><span class="line">➜  eigen-eigen-b3f3d4950030 <span class="built_in">cd</span> build</span><br><span class="line">➜  build cmake ..</span><br><span class="line">➜  build make install</span><br></pre></td></tr></table></figure>
+<h2 id="yolov3的具体流程">Yolov3的具体流程?</h2>
+<h3 id="yolo的网络架构">yolo的网络架构?</h3>
+<ol type="1">
+<li><p>原本是使用Darknet-53的,参数较多,并且引入了Resnet中的跳跃连接,效果较好.我在进行侧端移植时,尝试过使用Darknet-19,但是参数量还是太大,因此换成了mobilenetv2.</p></li>
+<li><p>yolo的网络借鉴了金字塔特征图,是全卷积操作,效率较高.最后的输出时从多个尺度的分支取特征,并且进行卷积后和上一层的特征图进行上采样concat,更好的进行特征融合,在对每个特征进行处理.最终输出的大特征图对应大物体,小特征图对应小物体.</p></li>
+</ol>
+<h3 id="yolo的输出特征图">yolo的输出特征图?</h3>
+<ol type="1">
+<li>输出输出通道数为[N,N,anchor_nums*(5+class_nums)].5表示了预测的x,y,w,h,objness.</li>
+</ol>
+<h3 id="yolo的特征图的解码">yolo的特征图的解码?</h3>
+<ol type="1">
+<li>x,y比较简单,将<span class="math inline">\(\sigma(x),\sigma(y)\)</span>后表示了当前物体在当前格子左上角中的相对偏移量.yolov1中是直接学习物体框的大小,yolov2开始加入了anchor的概念,因此对高度和宽度用指数函数进行激活后乘上当前所在anchor的尺寸,<span class="math inline">\(p_w e^{t_w},p_h e^{t_h}\)</span>.我在实现的时候anchor尺度是根据全局尺度归一化到0-1之间的.</li>
+</ol>
+<h3 id="anchor的意义">anchor的意义?</h3>
+<ol type="1">
+<li><p>anchor的存在是因为各自物体的大小排布不规律,模型难以拟合,通过设置一个固定的系数,让所有的大小值对其求倍数,倍数越接近1表明越符合这个anchor.这个时候训练<span class="math inline">\(e^{t_w}\)</span>,wh的gt值基本都在0左右,很容易学习并拟合.</p></li>
+<li><p>制作anchor时,我将iou作为距离参数对整个数据执行kmeans,得到的聚类中心即为anchor.</p></li>
+</ol>
+<h3 id="分类置信度">分类置信度?</h3>
+<ol type="1">
+<li>这里首先是先sigmoid激活objness后看置信度是否大于阈值,再利用softmax判断是哪个类别,严格一些可以直接把置信度乘上softmax的结果.</li>
+</ol>
+<h3 id="损失函数">损失函数?</h3>
+<ol type="1">
+<li><p>首先我们制作标签的时候确定好当前box的所有gt所在的位置,对应位置的预测结果和gt做损失即可,其他位置做负例损失,此外还有ignore的部分.</p></li>
+<li><p>如果除正例外的bbox预测出来的结果和某个gt的iou大于一定阈值了,那么表明附近区域也有预测能力了,要避免负例减弱这种能力,所以忽略.我实现的时候,看到网上一些高star的库都是直接整个batch计算ignoremask,这是不对的,需要都先映射回全局,再与每张图像的全局进行计算iou才有意义. 当时我还行尝试一下把ignorebox的部分也添加一定的损失让他们向更有意义的gt拟合,不过并没有做深入尝试.</p></li>
+<li><p>同时网上的一些库制作标签的时候没有考虑到标签重叠的问题,两个物体挨的太近的时候,后面物体的标签会将前面的标签覆盖掉.</p></li>
+<li><p>我还添加一些关于wh的系数,如果wh越小,权重越大.以及一些iou损失.</p></li>
+</ol>
+<h3 id="smooth-l1-loss">smooth L1 loss</h3>
+<ol type="1">
+<li><p>公式为<span class="math inline">\(L_1=\begin{cases}0.5x^2,\ \ |x|&lt;1\\|x|-0.5,\ \ x&lt;-1\ \text{or} x&gt;1 \end{cases}\)</span></p></li>
+<li><p>一般他们是没有经过sigmoid或其他激活的,所以使用smooth l1 loss去拟合的时候,可以在差距过大时缩小梯度,差距过小时梯度值足够平滑,稳定拟合的过程.</p></li>
+</ol>
+<h3 id="focal-loss">Focal loss</h3>
+<h3 id="iou-loss">IoU loss</h3>
+<h2 id="ssd的流程">SSD的流程?</h2>
+<h3 id="网络结构">网络结构?</h3>
+<ol type="1">
+<li><p>原始的SSD网络结构是VGG-16作Backbone,在我的项目中也替换成了类似mobilenetv2的结果进行实现.</p></li>
+<li><p>SSD同样也是利用多尺度特征,在我的项目中使用了3个分支进行输出,首先将三个分支的特征去除,然后使用SeperableConv2d(dwconv,relu,conv)进行激活,激活后也得到了特征通道数为(4 + 1+class_num),这里1的不是objness而是空白背景类.</p></li>
+<li><p>在我的项目中我尝试了对多个特征间使用SSH块,FPN块.SSH块就是将一个输入通过3x3卷积和5x5卷积进行分离,然后再concat.以扩大感受野.FPN块则是将两个分支的输入进行处理,将深分支缩小后再上采样与浅分支相加.总体来说FPN块效果会好一些,因为侧段硬件不对于5x5的卷积效果不好.</p></li>
+</ol>
+<h3 id="anchor">anchor?</h3>
+<ol type="1">
+<li>SSD的anchor和传统的yolo不同,首先根据输入大小和输出分支的缩小尺度计算当前的特征图大小,每个特征图可以对应多个大小的anchor,SSD的是对当前特征图每个小块的中心分配anchor,对于每个尺度的anchor,将宽高归一化到全局大小,然后对每个小块中心分配gt的值.</li>
+</ol>
+<h3 id="标签制作">标签制作?</h3>
+<ol type="1">
+<li><p>首先计算gt与anchor的iou,找到大于阈值的的anchor位置，这个阈值可以设置的小一点，不过太小也不好，那样label中的匹配anchor数量就会太多,找到匹配的anchor的最优gt，并为每个anchor的对应的位置分配给其最匹配的gt,设置每个anchor位置对应的置信度，如果其iou score小于阈值则设置为0,编码生成bbox label，将gt中心坐标转换为相对anchor中心的偏移，且尺度除以移除以(方差*gt宽度)，gt的宽高除anchor宽高并进行对数化再除方差,编码生成landmark label，计算gt中心坐标对应anchor的中心偏移且尺度除以(方差*anchor宽度)</p></li>
+<li><p>Encode的意义?其实就是将所有的anchor的表示方法进行修改便于网络拟合,在SSD中其实是统计了一个数据集下所有的bbox的gt的统计均值和方差,然后Encode就是进行归一化的表示.同时这里的wh也是需要log的.</p></li>
+</ol>
+<h3 id="损失函数-1">损失函数?</h3>
+<ol type="1">
+<li><p>对于定位损失使用Smooth L1进行计算,将一个batch的标签中有效部分作为boolmask将预测的bbox部分进行提取,提出后使用smooth_l1_loss进行计算.</p></li>
+<li><p>对于分类损失使用hard negtive mining,首先提取所有的预测置信度.使用logsumexp的原因如下,我猜想应该是因为早期softmax实现不好.</p>
+<p><span class="math display">\[
+\begin{aligned}
+\mathcal{L}_{\text{softmax}}&amp;=-\log \frac{e^{x_{y_i}}}{\sum_{j=1}e^{x_j}} \\
+-\log \frac{e^{x_{y_i}}}{\sum_{j=1}e^{x_j}}&amp;=\log(\sum_{j=1}e^{x_j})-\log(e^{x_{y_i}})\\
+&amp;=\log(\sum_{j=1}e^{x_j})-x_{y_i}\\
+&amp;=\text{logsumexp}(x_j)-x_{y_i}
+\end{aligned}
+\]</span></p></li>
+<li><p>我们得到了每个类别的softmax损失大小后,取出背景类的损失,并从大到小进行排序,排序之后我确定了每个位置的损失排名,接下来通过预设的hard negative mining 参数确定需要对多少个负例计算损失,得到了个数之后,取排名前n个样本作为有效负例.</p></li>
+<li><p>用n个有效负例和m个正例,使用稀疏softmax计算置信度损失.</p></li>
+</ol>
+<h3 id="预测结果">预测结果?</h3>
+<ol type="1">
+<li>获得预测结果进行解码,解码后使用softmax找到对应类别,如果概率小于阈值删除,将概率大于阈值的按类别进行nms(非极大值抑止).</li>
+</ol>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2018/10/28/Eigen初使用/" data-id="ckky9a6jy000d1c6xuzx23tmr" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2018/10/28/Eigen初使用/" data-id="cklht1lrv0009h36xzoew8g2w" class="article-share-link">Share</a>
       
       
       
-  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/C/">C++</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Eigen/">Eigen</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/算法/">算法</a></li></ul>
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/C/">C++</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/算法/">算法</a></li></ul>
 
     </footer>
   </div>
@@ -166,7 +302,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">标签云</h3>
     <div class="widget tagcloud">
-      <a href="/tags/C/" style="font-size: 12.5px;">C</a> <a href="/tags/C/" style="font-size: 11.88px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10px;">CNN</a> <a href="/tags/Eigen/" style="font-size: 10px;">Eigen</a> <a href="/tags/GAN/" style="font-size: 10.63px;">GAN</a> <a href="/tags/Linux/" style="font-size: 19.38px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 11.88px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 11.88px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.63px;">PCB</a> <a href="/tags/Qt/" style="font-size: 10px;">Qt</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/gan/" style="font-size: 10px;">gan</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 14.38px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 11.25px;">linux</a> <a href="/tags/mindspore/" style="font-size: 10.63px;">mindspore</a> <a href="/tags/mxnet/" style="font-size: 10px;">mxnet</a> <a href="/tags/pfld/" style="font-size: 10px;">pfld</a> <a href="/tags/python/" style="font-size: 18.13px;">python</a> <a href="/tags/pytorch/" style="font-size: 11.88px;">pytorch</a> <a href="/tags/retinaface/" style="font-size: 10px;">retinaface</a> <a href="/tags/stm32/" style="font-size: 11.25px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 20px;">tensorflow</a> <a href="/tags/vscode/" style="font-size: 10px;">vscode</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/yolo/" style="font-size: 12.5px;">yolo</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 13.75px;">作业</a> <a href="/tags/元学习/" style="font-size: 10px;">元学习</a> <a href="/tags/半监督学习/" style="font-size: 15px;">半监督学习</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/图像处理/" style="font-size: 10px;">图像处理</a> <a href="/tags/堆栈/" style="font-size: 10.63px;">堆栈</a> <a href="/tags/声音信号处理/" style="font-size: 11.88px;">声音信号处理</a> <a href="/tags/小工具/" style="font-size: 11.88px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 15px;">嵌入式</a> <a href="/tags/总结/" style="font-size: 10px;">总结</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 17.5px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 16.88px;">机器学习</a> <a href="/tags/树/" style="font-size: 11.88px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/概率论/" style="font-size: 18.75px;">概率论</a> <a href="/tags/深度学习/" style="font-size: 15.63px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 11.25px;">神经网络</a> <a href="/tags/算法/" style="font-size: 11.88px;">算法</a> <a href="/tags/统计学习方法/" style="font-size: 16.25px;">统计学习方法</a> <a href="/tags/聚类/" style="font-size: 11.88px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13.13px;">蓝牙</a> <a href="/tags/调参/" style="font-size: 10px;">调参</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/路由/" style="font-size: 10px;">路由</a> <a href="/tags/链表/" style="font-size: 11.25px;">链表</a> <a href="/tags/错误记录/" style="font-size: 19.38px;">错误记录</a> <a href="/tags/风格迁移/" style="font-size: 10px;">风格迁移</a>
+      <a href="/tags/C/" style="font-size: 12.5px;">C</a> <a href="/tags/C/" style="font-size: 11.88px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10px;">CNN</a> <a href="/tags/GAN/" style="font-size: 10.63px;">GAN</a> <a href="/tags/Linux/" style="font-size: 19.38px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 11.88px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 11.88px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.63px;">PCB</a> <a href="/tags/Qt/" style="font-size: 10px;">Qt</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/gan/" style="font-size: 10px;">gan</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 14.38px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 11.25px;">linux</a> <a href="/tags/mindspore/" style="font-size: 10.63px;">mindspore</a> <a href="/tags/mxnet/" style="font-size: 10px;">mxnet</a> <a href="/tags/pfld/" style="font-size: 10px;">pfld</a> <a href="/tags/python/" style="font-size: 18.13px;">python</a> <a href="/tags/pytorch/" style="font-size: 11.88px;">pytorch</a> <a href="/tags/retinaface/" style="font-size: 10px;">retinaface</a> <a href="/tags/stm32/" style="font-size: 11.25px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 20px;">tensorflow</a> <a href="/tags/vscode/" style="font-size: 10px;">vscode</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/yolo/" style="font-size: 12.5px;">yolo</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 13.75px;">作业</a> <a href="/tags/元学习/" style="font-size: 10px;">元学习</a> <a href="/tags/半监督学习/" style="font-size: 15px;">半监督学习</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/图像处理/" style="font-size: 10px;">图像处理</a> <a href="/tags/堆栈/" style="font-size: 10.63px;">堆栈</a> <a href="/tags/声音信号处理/" style="font-size: 11.88px;">声音信号处理</a> <a href="/tags/小工具/" style="font-size: 11.88px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 15px;">嵌入式</a> <a href="/tags/总结/" style="font-size: 10px;">总结</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 17.5px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 16.88px;">机器学习</a> <a href="/tags/树/" style="font-size: 11.88px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/概率论/" style="font-size: 18.75px;">概率论</a> <a href="/tags/深度学习/" style="font-size: 15.63px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 11.25px;">神经网络</a> <a href="/tags/算法/" style="font-size: 11.88px;">算法</a> <a href="/tags/统计学习方法/" style="font-size: 16.25px;">统计学习方法</a> <a href="/tags/聚类/" style="font-size: 11.88px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13.13px;">蓝牙</a> <a href="/tags/调参/" style="font-size: 10px;">调参</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/路由/" style="font-size: 10px;">路由</a> <a href="/tags/链表/" style="font-size: 11.25px;">链表</a> <a href="/tags/错误记录/" style="font-size: 19.38px;">错误记录</a> <a href="/tags/风格迁移/" style="font-size: 10px;">风格迁移</a>
     </div>
   </div>
 
