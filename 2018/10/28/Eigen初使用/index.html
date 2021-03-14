@@ -21,7 +21,7 @@
 <meta property="og:image" content="https://zhen8838.github.io/2018/10/28/Eigen初使用/Depthwise_Separable_Convolution3.png">
 <meta property="og:image" content="https://zhen8838.github.io/2018/10/28/Eigen初使用/inverted_residual_block.png">
 <meta property="og:image" content="https://zhen8838.github.io/2018/10/28/Eigen初使用/mobilenetv2.png">
-<meta property="og:updated_time" content="2021-03-04T10:41:41.715Z">
+<meta property="og:updated_time" content="2021-03-14T14:04:01.655Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="QA~">
 <meta name="twitter:description" content="[toc] 一些面试准备">
@@ -104,7 +104,7 @@
 <h2 id="公司">公司</h2>
 <ol type="1">
 <li>吉利 嵌入式开发 杭州</li>
-<li></li>
+<li>海康 计算机视觉 杭州</li>
 </ol>
 <h2 id="自我介绍与qa">自我介绍与qa</h2>
 <ol type="1">
@@ -117,7 +117,34 @@
 <h2 id="项目">项目</h2>
 <h3 id="深度学习的项目做了哪些工作">深度学习的项目做了哪些工作？</h3>
 <ol type="1">
-<li><p>我主要负责编写整个训练模型的代码，以及一些模型移植的工作。训练的代码类似于现在很火的mmlab开源的mmdetection，我一开始基于兴趣把yolo移植到了k210中，进行20类的检测，在此之前官方没有给出训练的例子，我也没有接触过深度学习，努力了两个月把这个事情搞定了并开源出去。</p></li>
+<li>我主要负责编写整个训练模型的代码，以及一些模型移植的工作。训练的代码类似于现在很火的mmlab开源的mmdetection，我一开始基于兴趣把yolo移植到了k210中，进行20类的检测，在此之前官方没有给出训练的例子，我也没有接触过深度学习，努力了两个月把这个事情搞定了并开源出去。</li>
+</ol>
+<h4 id="yolo的侧端优化部分">yolo的侧端优化部分</h4>
+<h5 id="数据">数据</h5>
+<ol type="1">
+<li><p>训练数据清洗，消除标记错误的图像。</p></li>
+<li><p>标签制作的时候，因为gt是按最匹配的格子进行分配的，因此存在着最优匹配冲突的情况，因此需要进行处理。</p></li>
+</ol>
+<h5 id="模型">模型</h5>
+<ol start="3" type="1">
+<li><p>优化算法模型，首先参考mobilenetv1大面积使用depthwise卷积，然后参考mobilenetv2引入部分的残差机制，但是不考虑使用1x1卷积进行升维。并且去除concat时的激活函数</p></li>
+<li><p>将激活函数relu替换为leaky relu？因为实际使用中发现，depthwise 卷积核很多会变成0，这时候输出是0，再用relu梯度又是0，导致神经元太多无效了，在定点化的时候会出现量化精度丢失过多的问题。</p></li>
+<li><p>考虑到输入只有224*320，不需要检测过小的bbox，因此将三分支转换为双分支输出</p></li>
+</ol>
+<h5 id="损失函数">损失函数</h5>
+<ol type="1">
+<li><p>发现了很多开源代码的计算ignore mask的部分都是错误的，他们都是考虑整个batch下同一层的输出，因此我修改成同一个的图像内部的全部层做ignoremask</p></li>
+<li><p>考虑到对小目标不是很友好，为每个图像中最小的bbox额外设置了惩罚。</p></li>
+<li><p>将模型bbox损失改成了diou loss。</p></li>
+</ol>
+<h5 id="训练优化">训练优化</h5>
+<ol type="1">
+<li><p>权重指数滑动平均</p></li>
+<li><p>自动数据增强autoaugment，每次从一个策略集中采样一个子策略进行</p></li>
+<li><p>蒸馏，首先训练了一个相同输入与输出的大模型，将模型的输出进行匹配。</p></li>
+</ol>
+<h4 id="其他部分">其他部分</h4>
+<ol start="4" type="1">
 <li><p>后面移植的算法逐渐多了起来，我就把训练框架重新写了一下，又移植了pfld、ssd、ssd+人脸关键点分支（没有人脸就不计算关键点损失）、yolov3再次优化、基于arcface的人脸识别。</p></li>
 <li><p>侧端部署主要用的是K210官方的sdk，我给官方sdk提交过一个例子。</p></li>
 <li><p>树莓派加速器我主要把树莓派端和k210代码都调试了一下，主要把spi通信走通了。两边spi都是主机，中间的fpga是从机。</p></li>
@@ -151,7 +178,7 @@
 <li><p>最后学习一个参数变换<span class="math inline">\(y_i=\gamma_i \cdot x_i&#39;+\beta_i\)</span></p></li>
 <li><p>训练的时候将所有的均值和方差进行滑动平均，推理的时候的直接用滑动平均的均值和方差。</p></li>
 </ol>
-<h3 id="其他的norm函数">其他的norm函数</h3>
+<h4 id="其他的norm函数">其他的norm函数</h4>
 <ol type="1">
 <li><p>其实norm函数都是差不多的，batch norm是batch维度，layer norm是对h,w,c进行归一化，instance 是对单个图像图像进行归一化（图像生成用的比较多），group norm就是在layer norm和instance norm中取trade off。</p>
 <p><img src="/2018/10/28/Eigen初使用/norms.png"></p></li>
@@ -161,6 +188,71 @@
 <li>卷积层<span class="math inline">\(FLOPs=(2*C_{input}*K^2-1)*H*W*C_{output}\)</span></li>
 <li>1TLOPs就是一秒执行一万亿次<span class="math inline">\(1^{12}\)</span>此操作。</li>
 </ol>
+<h2 id="gan">GAN</h2>
+<h3 id="gan原理">GAN原理</h3>
+<ol type="1">
+<li><p>首先他提出的一个问题就是找到一个映射<span class="math inline">\(Y=f(x)\)</span>,可以从随机样本映射到一个合理的分布。但是实际情况中我们没有方法去为这个映射去建立模型，只能用神经网络的方法去拟合这个映射函数。</p></li>
+<li><p>为了拟合分布，那么我们需要定义一个分布的距离度量作为优化的目标，比如js或者kl散度，这个时候问题来了，对于两个图像的相似度如何去度量或者对于图像的风格之间的距离如何去度量？</p></li>
+<li><p>这个时候天才的想法来了，用另一个神经网络去学习距离度量函数。</p></li>
+<li><p>设定两个神经网络generator和Discriminator</p></li>
+<li><p>将一个随机数或者一张图像输入到generator得到生成图像</p></li>
+<li><p>目标是使得生成的图像使得Discriminator难以判别</p></li>
+<li><p>通常生成器的损失函数为<span class="math inline">\(log(D(G(x)))\)</span>,判别器的损失函数为<span class="math inline">\(log(1-D(G(x)))+log(D(x))\)</span></p></li>
+<li><p>训练的过程需要交替训练</p></li>
+</ol>
+<h3 id="gan中cnn层">GAN中CNN层</h3>
+<ol type="1">
+<li><p>GAN中需要生成图像，因此需要将图像放大，但是传统的基于反卷积的方法通常会带来棋盘效应的问题。</p></li>
+<li><p>棋盘效益是指当反卷积输出窗口的大小不能被步长整除的时候，卷积的输出出现了重叠，并且如果连续的使用反卷积层将会加剧这个问题。</p></li>
+<li><p>虽然模型可以学习到合适的卷积参数，但是实际情况下是非常难得的。</p></li>
+<li><p>为了解决这个问题我们可以使用转置卷积层，还可以加大卷积的步长，虽然这样会导致输出变得更大。</p></li>
+<li><p>目前通常使用先upsample然后添加padding再使用卷积层进行生成，消除了生成的伪影的问题。</p></li>
+</ol>
+<h3 id="gan中的归一化层">GAN中的归一化层</h3>
+<h4 id="spectral-normalization">Spectral Normalization</h4>
+<ol type="1">
+<li><p>利用神经网络学习度量函数也需要引入额外的约束，假设不管什么数据输入我的度量都是最小，这个时候符合损失函数但是不符合实际。因此还需要引入额外的正则性约束<span class="math inline">\(\| D(y_i,\theta) - D(y&#39;_i , \theta) \|\to 0\)</span>，最终以梯度惩罚的方式加入损失函数如下：</p>
+<p><span class="math display">\[
+\begin{aligned}\Theta =&amp; \mathop{\arg\min}_{\Theta} \frac{1}{B}\sum_{i=1}^B\left[D\Big(z_i,\Theta\Big)-D\Big(y_i,\Theta\Big)\right]+\frac{\lambda }{B}\sum_{i=1}^B\left(\frac{|D(y_{i,1},\Theta)-D(y_{i,2},\Theta)|}{\left\| y_{i,1}-y_{i,2}\right\| }-1\right)^2 \end{aligned}
+\]</span></p></li>
+<li><p>这时候其实就是想到为了满足平滑性假设，我们的神经网络需要具备什么特点，假设我们有个全连接层，这时候的约束条件是：</p>
+<p><span class="math display">\[\begin{aligned}
+    \Vert f(Wx_1+b) - f(Wx_2+b)\Vert\leq C(W,b)\cdot \Vert x_1 - x_2 \Vert
+\end{aligned}\]</span></p>
+<p>那么我们保证输入<span class="math inline">\(x_1 - x_2\)</span>差距不大的时候，其实就是需要保证权重乘积的差值小：</p>
+<p><span class="math display">\[\begin{aligned}
+    \Vert W(x_1 - x_2)\Vert\leq C\Vert x_1 - x_2 \Vert
+\end{aligned}\]</span></p></li>
+<li><p>这个时候我们把<span class="math inline">\(W^TW\)</span>的最大特征根（主特征根）的平方根<span class="math inline">\(\Vert W\Vert_2\)</span>作为一个约束，就是矩阵范数约束来代替传统的l2约束。</p></li>
+</ol>
+<h4 id="adaptive-layer-instance-normalization">Adaptive Layer-Instance Normalization</h4>
+<ol type="1">
+<li><p>这个就是综合layer norm和instance norm的归一化方式</p></li>
+<li><p>分别求instance norm的均值和方差，layer norm的均值和方差，求出instance norm的输出，layer norm的输出</p></li>
+<li><p>再通过一个参数融合两个输出为一个输出</p></li>
+<li><p>最后将输出乘上gamma加上beta进行输出</p></li>
+</ol>
+<h4 id="softadalin">SoftAdaLIN</h4>
+<ol type="1">
+<li><p>SoftAdaLIN是将提出的style特征和content特征进行处理，</p></li>
+<li><p>soft gamma由style gamma和content gamma组成</p></li>
+<li><p>soft beta由style beta和content beta组成</p></li>
+<li><p>将soft gamma和soft beta作为Adaptive Layer-Instance Normalization的gamma 和 beta</p></li>
+</ol>
+<h3 id="u-gat-it">U-GAT-IT</h3>
+<p>这是一篇强行用大模型来进行cycle gan的工作，主要创新点在于adalin以及引入了CAM类激活映射的机制</p>
+<h4 id="最小二乘gan损失">最小二乘GAN损失</h4>
+<p><span class="math display">\[
+\begin{aligned}
+  L_{l s g a n}^{s \rightarrow t}=\left(\mathbb{E}_{x \sim X_{t}}\left[\left(D_{t}(x)\right)^{2}\right]+\mathbb{E}_{x \sim X_{s}}\left[\left(1-D_{t}\left(G_{s \rightarrow t}(x)\right)\right)^{2}\right]\right)
+\end{aligned}
+\]</span></p>
+<h4 id="循环一致性损失">循环一致性损失</h4>
+<p>这是cycle gan中提出一种损失，他将模型分成A2B，A2B2A，B2A，B2A2B，保证模型映射和重映射的一致性，从而提升生成质量 <span class="math display">\[
+\begin{aligned}
+  \left.L_{c y c l e}^{s \rightarrow t}=\left.\mathbb{E}_{x \sim X_{s}}\left[| x-G_{t \rightarrow s}\left(G_{s \rightarrow t}(x)\right)\right)\right|_{1}\right]
+\end{aligned}
+\]</span></p>
 <h2 id="yolov3的具体流程">Yolov3的具体流程?</h2>
 <h3 id="yolo的网络架构">yolo的网络架构?</h3>
 <ol type="1">
@@ -184,7 +276,7 @@
 <ol type="1">
 <li>这里首先是先sigmoid激活objness后看置信度是否大于阈值,再利用softmax判断是哪个类别,严格一些可以直接把置信度乘上softmax的结果.</li>
 </ol>
-<h3 id="损失函数">损失函数?</h3>
+<h3 id="损失函数-1">损失函数?</h3>
 <ol type="1">
 <li><p>首先我们制作标签的时候确定好当前box的所有gt所在的位置,对应位置的预测结果和gt做损失即可,其他位置做负例损失,此外还有ignore的部分.</p></li>
 <li><p>如果除正例外的bbox预测出来的结果和某个gt的iou大于一定阈值了,那么表明附近区域也有预测能力了,要避免负例减弱这种能力,所以忽略.我实现的时候,看到网上一些高star的库都是直接整个batch计算ignoremask,这是不对的,需要都先映射回全局,再与每张图像的全局进行计算iou才有意义. 当时我还行尝试一下把ignorebox的部分也添加一定的损失让他们向更有意义的gt拟合,不过并没有做深入尝试.</p></li>
@@ -214,7 +306,7 @@
 <li><p>首先计算gt与anchor的iou,找到大于阈值的的anchor位置，这个阈值可以设置的小一点，不过太小也不好，那样label中的匹配anchor数量就会太多,找到匹配的anchor的最优gt，并为每个anchor的对应的位置分配给其最匹配的gt,设置每个anchor位置对应的置信度，如果其iou score小于阈值则设置为0,编码生成bbox label，将gt中心坐标转换为相对anchor中心的偏移，且尺度除以移除以(方差*gt宽度)，gt的宽高除anchor宽高并进行对数化再除方差,编码生成landmark label，计算gt中心坐标对应anchor的中心偏移且尺度除以(方差*anchor宽度)</p></li>
 <li><p>Encode的意义?其实就是将所有的anchor的表示方法进行修改便于网络拟合,在SSD中其实是统计了一个数据集下所有的bbox的gt的统计均值和方差,然后Encode就是进行归一化的表示.同时这里的wh也是需要log的.</p></li>
 </ol>
-<h3 id="损失函数-1">损失函数?</h3>
+<h3 id="损失函数-2">损失函数?</h3>
 <ol type="1">
 <li><p>对于定位损失使用Smooth L1进行计算,将一个batch的标签中有效部分作为boolmask将预测的bbox部分进行提取,提出后使用smooth_l1_loss进行计算.</p></li>
 <li><p>对于分类损失使用hard negtive mining,首先提取所有的预测置信度.使用logsumexp的原因如下,我猜想应该是因为早期softmax实现不好.</p>
@@ -247,7 +339,7 @@
 <li><p><span class="math inline">\(precision=\frac{TP}{TP+FP}\)</span></p></li>
 </ol>
 <h2 id="基于加性间距胶囊网络的家庭活动识别方法研究">基于加性间距胶囊网络的家庭活动识别方法研究</h2>
-<h3 id="数据">数据</h3>
+<h3 id="数据-1">数据</h3>
 <ol type="1">
 <li>我用的国际声学挑战赛2018年的室内活动识别数据，它是由多个4通道传感器组成的，（分为开发集和测试集），我主要用是将其转换为对数mel谱图然后输入到cnn里面进行处理。cnn卷积后，将其按时序构成501x256的矩阵，把他们视为256个胶囊网络向量，输入到胶囊网络。</li>
 </ol>
@@ -265,7 +357,7 @@
 <li>这个时候我需要求<span class="math inline">\(v\)</span>和<span class="math inline">\(u\)</span>距离最大值加入到这个类中，但是为了保证特征的顺序以及特征表达能力，这里我们求<span class="math inline">\(c=softmax(&lt;v,W\cdot u&gt;)\)</span>,此时softmax的结果就表示当前的v与原始输入的相似程度。</li>
 <li>此时更新<span class="math inline">\(v=\sum c\cdot W\cdot u\)</span>就能得到新的聚类中心。</li>
 </ol>
-<h3 id="损失函数-2">损失函数</h3>
+<h3 id="损失函数-3">损失函数</h3>
 <ol type="1">
 <li><p>传统的胶囊网络将输出的胶囊的模长作为分类的依据，也就是转换为10个分类问题，模长大于阈值表示真。</p></li>
 <li><p>但是我考虑到胶囊网络其实就是为特征聚类的过程，其中非常明显的问题就是用到了矩阵的内积相似度，但是在最后却把内积抛弃了！如果从几何的角度看，应该是底部的向量比较分散，但是他们的聚类中心则表示了一个分类区域，也就是底层向量支持了这个中心向量为当前类别，反过来说就是当前类别的图像被这些底层特征所支持，那么我们引入am softmax，将每个高层聚类中心的距离拉大，那这个时候不同特征的底层向量就会被逐渐分开到不同的区域，最终每个类别特征都将分离化，强化了模型的特征选择能力。</p></li>
@@ -277,27 +369,31 @@
 </ol>
 <h3 id="squeezenet">squeezenet</h3>
 <ol type="1">
-<li>使用fire模块将1x1与3x3卷积输出进行concat。</li>
+<li>使用fire模块将1x1与3x3卷积输出进行concat。进行了尝试，但是侧端的运行速度相差较大。</li>
 </ol>
 <h3 id="mobilenet">mobilenet</h3>
-<ol start="3" type="1">
+<h5 id="mobilenetv1">mobilenetv1</h5>
+<ol type="1">
 <li><p>mobilenetv1提出的深度可分离卷积。首先使用depthwise卷积，就是用和输入特征图相同通道的卷积核进行卷积，但是这里并不会多个通道累加，只对其对应通道进行计算，得到了激活后的特征图。然后是pointwise卷积，实际上就是1x1的卷积，将之前没有累加的卷积通道进行累加。那么我们就发现原来需要生成12个特征图，现在就不要生成这么多中间变量了，还减少了运算量和参数量。</p>
 <p><img src="/2018/10/28/Eigen初使用/Depthwise_Separable_Convolution1.png"> <img src="/2018/10/28/Eigen初使用/Depthwise_Separable_Convolution2.png"> <img src="/2018/10/28/Eigen初使用/Depthwise_Separable_Convolution3.png"></p></li>
+</ol>
+<h5 id="mobilenetv2">mobilenetv2</h5>
+<ol type="1">
 <li><p>mobilenetv2中使用了inverted residual block，实际上就是与传统的残差块的通道大小顺序相反，传统残差块是先用1x1卷积进行通道降维，然后3x3卷积进行特征提取，再用1x1卷积进行升维。</p>
 <p><img src="/2018/10/28/Eigen初使用/inverted_residual_block.png"></p>
-<p>而mobilenetv2是先用1x1卷积升维，然后用可分离卷积进行特征提取，再用1x1卷积进行降维,并且去除最后一个relu6。<strong>如果有残差连接就前后相加</strong></p>
+<p>而mobilenetv2是先用1x1卷积升维，然后用可分离卷积进行特征提取，再用1x1卷积进行降维,并且去除最后一个特征连接层的激活函数。<strong>如果有残差连接就前后相加</strong></p>
 <p><img src="/2018/10/28/Eigen初使用/mobilenetv2.png"></p></li>
 </ol>
-<h3 id="你用了哪些方法去优化">你用了哪些方法去优化？</h3>
+<h2 id="模型量化">模型量化</h2>
+<h3 id="量化的原理">量化的原理</h3>
+<h4 id="伪量化">伪量化</h4>
 <ol type="1">
-<li><p>为什么要去除最后一个relu6呢？因为实际使用中发现，depthwise 卷积核很多会变成0，这时候输出是0，再用relu梯度又是0，导致神经元太多无效了。</p></li>
-<li><p>你用了什么方法进行解决？因此我尝试使用了Leaky的relu。防止当输出小于0的时候梯度消失。</p></li>
-<li><p>权重指数滑动平均</p></li>
-<li><p>自动数据增强</p></li>
-<li><p>蒸馏</p></li>
-<li><p>参考了mobilenetv2模型，不过mobilenetv2是提出的反残差块，中间用1x1卷积升维了，我就没有这样做</p></li>
+<li>伪量化就是将模型权重转为为8位精度，但是在推理的时候时候还是将模型的参数转换为浮点型进运算，只能缩小模型的存储大小，对于推理速度改进不大</li>
 </ol>
-<h3 id="量化方法的流程与原理">量化方法的流程与原理？</h3>
+<h4 id="定点量化">定点量化</h4>
+<ol type="1">
+<li>需要校准或估计范围，即模型中所有浮点张量的范围（最小，最大）。与不变的张量（例如权重和偏差）不同，除非我们运行几个推理周期，否则无法校准可变的张量（例如模型输入，激活（中间层的输出）和模型输出）。需要输入一个代表性的数据集来对其进行校准。该数据集可以是训练或验证数据的一小部分（大约100-500个样本）。请参考以下 representative_dataset()功能。</li>
+</ol>
 <h2 id="anchor-free的模型有接触吗">anchor-free的模型有接触吗？</h2>
 <h3 id="centernet-object-as-point">centernet object-as-point</h3>
 <ol type="1">
@@ -367,7 +463,7 @@
 </ol>
 <h2 id="共享内存和socket的使用">共享内存和socket的使用？</h2>
 <ol type="1">
-<li></li>
+<li>共享内存</li>
 </ol>
 
       
@@ -382,7 +478,7 @@
 <h2 id="公司">公司</h2>
 <ol type="1">
 <li>吉利 嵌入式开发 杭州</li>
-<li></li>
+<li>海康 计算机视觉 杭州</li>
 </ol>
 <h2 id="自我介绍与qa">自我介绍与qa</h2>
 <ol type="1">
@@ -395,7 +491,34 @@
 <h2 id="项目">项目</h2>
 <h3 id="深度学习的项目做了哪些工作">深度学习的项目做了哪些工作？</h3>
 <ol type="1">
-<li><p>我主要负责编写整个训练模型的代码，以及一些模型移植的工作。训练的代码类似于现在很火的mmlab开源的mmdetection，我一开始基于兴趣把yolo移植到了k210中，进行20类的检测，在此之前官方没有给出训练的例子，我也没有接触过深度学习，努力了两个月把这个事情搞定了并开源出去。</p></li>
+<li>我主要负责编写整个训练模型的代码，以及一些模型移植的工作。训练的代码类似于现在很火的mmlab开源的mmdetection，我一开始基于兴趣把yolo移植到了k210中，进行20类的检测，在此之前官方没有给出训练的例子，我也没有接触过深度学习，努力了两个月把这个事情搞定了并开源出去。</li>
+</ol>
+<h4 id="yolo的侧端优化部分">yolo的侧端优化部分</h4>
+<h5 id="数据">数据</h5>
+<ol type="1">
+<li><p>训练数据清洗，消除标记错误的图像。</p></li>
+<li><p>标签制作的时候，因为gt是按最匹配的格子进行分配的，因此存在着最优匹配冲突的情况，因此需要进行处理。</p></li>
+</ol>
+<h5 id="模型">模型</h5>
+<ol start="3" type="1">
+<li><p>优化算法模型，首先参考mobilenetv1大面积使用depthwise卷积，然后参考mobilenetv2引入部分的残差机制，但是不考虑使用1x1卷积进行升维。并且去除concat时的激活函数</p></li>
+<li><p>将激活函数relu替换为leaky relu？因为实际使用中发现，depthwise 卷积核很多会变成0，这时候输出是0，再用relu梯度又是0，导致神经元太多无效了，在定点化的时候会出现量化精度丢失过多的问题。</p></li>
+<li><p>考虑到输入只有224*320，不需要检测过小的bbox，因此将三分支转换为双分支输出</p></li>
+</ol>
+<h5 id="损失函数">损失函数</h5>
+<ol type="1">
+<li><p>发现了很多开源代码的计算ignore mask的部分都是错误的，他们都是考虑整个batch下同一层的输出，因此我修改成同一个的图像内部的全部层做ignoremask</p></li>
+<li><p>考虑到对小目标不是很友好，为每个图像中最小的bbox额外设置了惩罚。</p></li>
+<li><p>将模型bbox损失改成了diou loss。</p></li>
+</ol>
+<h5 id="训练优化">训练优化</h5>
+<ol type="1">
+<li><p>权重指数滑动平均</p></li>
+<li><p>自动数据增强autoaugment，每次从一个策略集中采样一个子策略进行</p></li>
+<li><p>蒸馏，首先训练了一个相同输入与输出的大模型，将模型的输出进行匹配。</p></li>
+</ol>
+<h4 id="其他部分">其他部分</h4>
+<ol start="4" type="1">
 <li><p>后面移植的算法逐渐多了起来，我就把训练框架重新写了一下，又移植了pfld、ssd、ssd+人脸关键点分支（没有人脸就不计算关键点损失）、yolov3再次优化、基于arcface的人脸识别。</p></li>
 <li><p>侧端部署主要用的是K210官方的sdk，我给官方sdk提交过一个例子。</p></li>
 <li><p>树莓派加速器我主要把树莓派端和k210代码都调试了一下，主要把spi通信走通了。两边spi都是主机，中间的fpga是从机。</p></li>
@@ -429,7 +552,7 @@
 <li><p>最后学习一个参数变换<span class="math inline">\(y_i=\gamma_i \cdot x_i&#39;+\beta_i\)</span></p></li>
 <li><p>训练的时候将所有的均值和方差进行滑动平均，推理的时候的直接用滑动平均的均值和方差。</p></li>
 </ol>
-<h3 id="其他的norm函数">其他的norm函数</h3>
+<h4 id="其他的norm函数">其他的norm函数</h4>
 <ol type="1">
 <li><p>其实norm函数都是差不多的，batch norm是batch维度，layer norm是对h,w,c进行归一化，instance 是对单个图像图像进行归一化（图像生成用的比较多），group norm就是在layer norm和instance norm中取trade off。</p>
 <p><img src="/2018/10/28/Eigen初使用/norms.png"></p></li>
@@ -439,6 +562,71 @@
 <li>卷积层<span class="math inline">\(FLOPs=(2*C_{input}*K^2-1)*H*W*C_{output}\)</span></li>
 <li>1TLOPs就是一秒执行一万亿次<span class="math inline">\(1^{12}\)</span>此操作。</li>
 </ol>
+<h2 id="gan">GAN</h2>
+<h3 id="gan原理">GAN原理</h3>
+<ol type="1">
+<li><p>首先他提出的一个问题就是找到一个映射<span class="math inline">\(Y=f(x)\)</span>,可以从随机样本映射到一个合理的分布。但是实际情况中我们没有方法去为这个映射去建立模型，只能用神经网络的方法去拟合这个映射函数。</p></li>
+<li><p>为了拟合分布，那么我们需要定义一个分布的距离度量作为优化的目标，比如js或者kl散度，这个时候问题来了，对于两个图像的相似度如何去度量或者对于图像的风格之间的距离如何去度量？</p></li>
+<li><p>这个时候天才的想法来了，用另一个神经网络去学习距离度量函数。</p></li>
+<li><p>设定两个神经网络generator和Discriminator</p></li>
+<li><p>将一个随机数或者一张图像输入到generator得到生成图像</p></li>
+<li><p>目标是使得生成的图像使得Discriminator难以判别</p></li>
+<li><p>通常生成器的损失函数为<span class="math inline">\(log(D(G(x)))\)</span>,判别器的损失函数为<span class="math inline">\(log(1-D(G(x)))+log(D(x))\)</span></p></li>
+<li><p>训练的过程需要交替训练</p></li>
+</ol>
+<h3 id="gan中cnn层">GAN中CNN层</h3>
+<ol type="1">
+<li><p>GAN中需要生成图像，因此需要将图像放大，但是传统的基于反卷积的方法通常会带来棋盘效应的问题。</p></li>
+<li><p>棋盘效益是指当反卷积输出窗口的大小不能被步长整除的时候，卷积的输出出现了重叠，并且如果连续的使用反卷积层将会加剧这个问题。</p></li>
+<li><p>虽然模型可以学习到合适的卷积参数，但是实际情况下是非常难得的。</p></li>
+<li><p>为了解决这个问题我们可以使用转置卷积层，还可以加大卷积的步长，虽然这样会导致输出变得更大。</p></li>
+<li><p>目前通常使用先upsample然后添加padding再使用卷积层进行生成，消除了生成的伪影的问题。</p></li>
+</ol>
+<h3 id="gan中的归一化层">GAN中的归一化层</h3>
+<h4 id="spectral-normalization">Spectral Normalization</h4>
+<ol type="1">
+<li><p>利用神经网络学习度量函数也需要引入额外的约束，假设不管什么数据输入我的度量都是最小，这个时候符合损失函数但是不符合实际。因此还需要引入额外的正则性约束<span class="math inline">\(\| D(y_i,\theta) - D(y&#39;_i , \theta) \|\to 0\)</span>，最终以梯度惩罚的方式加入损失函数如下：</p>
+<p><span class="math display">\[
+\begin{aligned}\Theta =&amp; \mathop{\arg\min}_{\Theta} \frac{1}{B}\sum_{i=1}^B\left[D\Big(z_i,\Theta\Big)-D\Big(y_i,\Theta\Big)\right]+\frac{\lambda }{B}\sum_{i=1}^B\left(\frac{|D(y_{i,1},\Theta)-D(y_{i,2},\Theta)|}{\left\| y_{i,1}-y_{i,2}\right\| }-1\right)^2 \end{aligned}
+\]</span></p></li>
+<li><p>这时候其实就是想到为了满足平滑性假设，我们的神经网络需要具备什么特点，假设我们有个全连接层，这时候的约束条件是：</p>
+<p><span class="math display">\[\begin{aligned}
+    \Vert f(Wx_1+b) - f(Wx_2+b)\Vert\leq C(W,b)\cdot \Vert x_1 - x_2 \Vert
+\end{aligned}\]</span></p>
+<p>那么我们保证输入<span class="math inline">\(x_1 - x_2\)</span>差距不大的时候，其实就是需要保证权重乘积的差值小：</p>
+<p><span class="math display">\[\begin{aligned}
+    \Vert W(x_1 - x_2)\Vert\leq C\Vert x_1 - x_2 \Vert
+\end{aligned}\]</span></p></li>
+<li><p>这个时候我们把<span class="math inline">\(W^TW\)</span>的最大特征根（主特征根）的平方根<span class="math inline">\(\Vert W\Vert_2\)</span>作为一个约束，就是矩阵范数约束来代替传统的l2约束。</p></li>
+</ol>
+<h4 id="adaptive-layer-instance-normalization">Adaptive Layer-Instance Normalization</h4>
+<ol type="1">
+<li><p>这个就是综合layer norm和instance norm的归一化方式</p></li>
+<li><p>分别求instance norm的均值和方差，layer norm的均值和方差，求出instance norm的输出，layer norm的输出</p></li>
+<li><p>再通过一个参数融合两个输出为一个输出</p></li>
+<li><p>最后将输出乘上gamma加上beta进行输出</p></li>
+</ol>
+<h4 id="softadalin">SoftAdaLIN</h4>
+<ol type="1">
+<li><p>SoftAdaLIN是将提出的style特征和content特征进行处理，</p></li>
+<li><p>soft gamma由style gamma和content gamma组成</p></li>
+<li><p>soft beta由style beta和content beta组成</p></li>
+<li><p>将soft gamma和soft beta作为Adaptive Layer-Instance Normalization的gamma 和 beta</p></li>
+</ol>
+<h3 id="u-gat-it">U-GAT-IT</h3>
+<p>这是一篇强行用大模型来进行cycle gan的工作，主要创新点在于adalin以及引入了CAM类激活映射的机制</p>
+<h4 id="最小二乘gan损失">最小二乘GAN损失</h4>
+<p><span class="math display">\[
+\begin{aligned}
+  L_{l s g a n}^{s \rightarrow t}=\left(\mathbb{E}_{x \sim X_{t}}\left[\left(D_{t}(x)\right)^{2}\right]+\mathbb{E}_{x \sim X_{s}}\left[\left(1-D_{t}\left(G_{s \rightarrow t}(x)\right)\right)^{2}\right]\right)
+\end{aligned}
+\]</span></p>
+<h4 id="循环一致性损失">循环一致性损失</h4>
+<p>这是cycle gan中提出一种损失，他将模型分成A2B，A2B2A，B2A，B2A2B，保证模型映射和重映射的一致性，从而提升生成质量 <span class="math display">\[
+\begin{aligned}
+  \left.L_{c y c l e}^{s \rightarrow t}=\left.\mathbb{E}_{x \sim X_{s}}\left[| x-G_{t \rightarrow s}\left(G_{s \rightarrow t}(x)\right)\right)\right|_{1}\right]
+\end{aligned}
+\]</span></p>
 <h2 id="yolov3的具体流程">Yolov3的具体流程?</h2>
 <h3 id="yolo的网络架构">yolo的网络架构?</h3>
 <ol type="1">
@@ -462,7 +650,7 @@
 <ol type="1">
 <li>这里首先是先sigmoid激活objness后看置信度是否大于阈值,再利用softmax判断是哪个类别,严格一些可以直接把置信度乘上softmax的结果.</li>
 </ol>
-<h3 id="损失函数">损失函数?</h3>
+<h3 id="损失函数-1">损失函数?</h3>
 <ol type="1">
 <li><p>首先我们制作标签的时候确定好当前box的所有gt所在的位置,对应位置的预测结果和gt做损失即可,其他位置做负例损失,此外还有ignore的部分.</p></li>
 <li><p>如果除正例外的bbox预测出来的结果和某个gt的iou大于一定阈值了,那么表明附近区域也有预测能力了,要避免负例减弱这种能力,所以忽略.我实现的时候,看到网上一些高star的库都是直接整个batch计算ignoremask,这是不对的,需要都先映射回全局,再与每张图像的全局进行计算iou才有意义. 当时我还行尝试一下把ignorebox的部分也添加一定的损失让他们向更有意义的gt拟合,不过并没有做深入尝试.</p></li>
@@ -492,7 +680,7 @@
 <li><p>首先计算gt与anchor的iou,找到大于阈值的的anchor位置，这个阈值可以设置的小一点，不过太小也不好，那样label中的匹配anchor数量就会太多,找到匹配的anchor的最优gt，并为每个anchor的对应的位置分配给其最匹配的gt,设置每个anchor位置对应的置信度，如果其iou score小于阈值则设置为0,编码生成bbox label，将gt中心坐标转换为相对anchor中心的偏移，且尺度除以移除以(方差*gt宽度)，gt的宽高除anchor宽高并进行对数化再除方差,编码生成landmark label，计算gt中心坐标对应anchor的中心偏移且尺度除以(方差*anchor宽度)</p></li>
 <li><p>Encode的意义?其实就是将所有的anchor的表示方法进行修改便于网络拟合,在SSD中其实是统计了一个数据集下所有的bbox的gt的统计均值和方差,然后Encode就是进行归一化的表示.同时这里的wh也是需要log的.</p></li>
 </ol>
-<h3 id="损失函数-1">损失函数?</h3>
+<h3 id="损失函数-2">损失函数?</h3>
 <ol type="1">
 <li><p>对于定位损失使用Smooth L1进行计算,将一个batch的标签中有效部分作为boolmask将预测的bbox部分进行提取,提出后使用smooth_l1_loss进行计算.</p></li>
 <li><p>对于分类损失使用hard negtive mining,首先提取所有的预测置信度.使用logsumexp的原因如下,我猜想应该是因为早期softmax实现不好.</p>
@@ -525,7 +713,7 @@
 <li><p><span class="math inline">\(precision=\frac{TP}{TP+FP}\)</span></p></li>
 </ol>
 <h2 id="基于加性间距胶囊网络的家庭活动识别方法研究">基于加性间距胶囊网络的家庭活动识别方法研究</h2>
-<h3 id="数据">数据</h3>
+<h3 id="数据-1">数据</h3>
 <ol type="1">
 <li>我用的国际声学挑战赛2018年的室内活动识别数据，它是由多个4通道传感器组成的，（分为开发集和测试集），我主要用是将其转换为对数mel谱图然后输入到cnn里面进行处理。cnn卷积后，将其按时序构成501x256的矩阵，把他们视为256个胶囊网络向量，输入到胶囊网络。</li>
 </ol>
@@ -543,7 +731,7 @@
 <li>这个时候我需要求<span class="math inline">\(v\)</span>和<span class="math inline">\(u\)</span>距离最大值加入到这个类中，但是为了保证特征的顺序以及特征表达能力，这里我们求<span class="math inline">\(c=softmax(&lt;v,W\cdot u&gt;)\)</span>,此时softmax的结果就表示当前的v与原始输入的相似程度。</li>
 <li>此时更新<span class="math inline">\(v=\sum c\cdot W\cdot u\)</span>就能得到新的聚类中心。</li>
 </ol>
-<h3 id="损失函数-2">损失函数</h3>
+<h3 id="损失函数-3">损失函数</h3>
 <ol type="1">
 <li><p>传统的胶囊网络将输出的胶囊的模长作为分类的依据，也就是转换为10个分类问题，模长大于阈值表示真。</p></li>
 <li><p>但是我考虑到胶囊网络其实就是为特征聚类的过程，其中非常明显的问题就是用到了矩阵的内积相似度，但是在最后却把内积抛弃了！如果从几何的角度看，应该是底部的向量比较分散，但是他们的聚类中心则表示了一个分类区域，也就是底层向量支持了这个中心向量为当前类别，反过来说就是当前类别的图像被这些底层特征所支持，那么我们引入am softmax，将每个高层聚类中心的距离拉大，那这个时候不同特征的底层向量就会被逐渐分开到不同的区域，最终每个类别特征都将分离化，强化了模型的特征选择能力。</p></li>
@@ -555,27 +743,31 @@
 </ol>
 <h3 id="squeezenet">squeezenet</h3>
 <ol type="1">
-<li>使用fire模块将1x1与3x3卷积输出进行concat。</li>
+<li>使用fire模块将1x1与3x3卷积输出进行concat。进行了尝试，但是侧端的运行速度相差较大。</li>
 </ol>
 <h3 id="mobilenet">mobilenet</h3>
-<ol start="3" type="1">
+<h5 id="mobilenetv1">mobilenetv1</h5>
+<ol type="1">
 <li><p>mobilenetv1提出的深度可分离卷积。首先使用depthwise卷积，就是用和输入特征图相同通道的卷积核进行卷积，但是这里并不会多个通道累加，只对其对应通道进行计算，得到了激活后的特征图。然后是pointwise卷积，实际上就是1x1的卷积，将之前没有累加的卷积通道进行累加。那么我们就发现原来需要生成12个特征图，现在就不要生成这么多中间变量了，还减少了运算量和参数量。</p>
 <p><img src="/2018/10/28/Eigen初使用/Depthwise_Separable_Convolution1.png"> <img src="/2018/10/28/Eigen初使用/Depthwise_Separable_Convolution2.png"> <img src="/2018/10/28/Eigen初使用/Depthwise_Separable_Convolution3.png"></p></li>
+</ol>
+<h5 id="mobilenetv2">mobilenetv2</h5>
+<ol type="1">
 <li><p>mobilenetv2中使用了inverted residual block，实际上就是与传统的残差块的通道大小顺序相反，传统残差块是先用1x1卷积进行通道降维，然后3x3卷积进行特征提取，再用1x1卷积进行升维。</p>
 <p><img src="/2018/10/28/Eigen初使用/inverted_residual_block.png"></p>
-<p>而mobilenetv2是先用1x1卷积升维，然后用可分离卷积进行特征提取，再用1x1卷积进行降维,并且去除最后一个relu6。<strong>如果有残差连接就前后相加</strong></p>
+<p>而mobilenetv2是先用1x1卷积升维，然后用可分离卷积进行特征提取，再用1x1卷积进行降维,并且去除最后一个特征连接层的激活函数。<strong>如果有残差连接就前后相加</strong></p>
 <p><img src="/2018/10/28/Eigen初使用/mobilenetv2.png"></p></li>
 </ol>
-<h3 id="你用了哪些方法去优化">你用了哪些方法去优化？</h3>
+<h2 id="模型量化">模型量化</h2>
+<h3 id="量化的原理">量化的原理</h3>
+<h4 id="伪量化">伪量化</h4>
 <ol type="1">
-<li><p>为什么要去除最后一个relu6呢？因为实际使用中发现，depthwise 卷积核很多会变成0，这时候输出是0，再用relu梯度又是0，导致神经元太多无效了。</p></li>
-<li><p>你用了什么方法进行解决？因此我尝试使用了Leaky的relu。防止当输出小于0的时候梯度消失。</p></li>
-<li><p>权重指数滑动平均</p></li>
-<li><p>自动数据增强</p></li>
-<li><p>蒸馏</p></li>
-<li><p>参考了mobilenetv2模型，不过mobilenetv2是提出的反残差块，中间用1x1卷积升维了，我就没有这样做</p></li>
+<li>伪量化就是将模型权重转为为8位精度，但是在推理的时候时候还是将模型的参数转换为浮点型进运算，只能缩小模型的存储大小，对于推理速度改进不大</li>
 </ol>
-<h3 id="量化方法的流程与原理">量化方法的流程与原理？</h3>
+<h4 id="定点量化">定点量化</h4>
+<ol type="1">
+<li>需要校准或估计范围，即模型中所有浮点张量的范围（最小，最大）。与不变的张量（例如权重和偏差）不同，除非我们运行几个推理周期，否则无法校准可变的张量（例如模型输入，激活（中间层的输出）和模型输出）。需要输入一个代表性的数据集来对其进行校准。该数据集可以是训练或验证数据的一小部分（大约100-500个样本）。请参考以下 representative_dataset()功能。</li>
+</ol>
 <h2 id="anchor-free的模型有接触吗">anchor-free的模型有接触吗？</h2>
 <h3 id="centernet-object-as-point">centernet object-as-point</h3>
 <ol type="1">
@@ -645,14 +837,14 @@
 </ol>
 <h2 id="共享内存和socket的使用">共享内存和socket的使用？</h2>
 <ol type="1">
-<li></li>
+<li>共享内存</li>
 </ol>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2018/10/28/Eigen初使用/" data-id="cklxi8y5g00l9g76xa61bn5k6" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2018/10/28/Eigen初使用/" data-id="ckm98ba1r00mwp36xwcw1f8e0" class="article-share-link">Share</a>
       
       
       
