@@ -93,45 +93,37 @@
       
         <p>这一章其实是逻辑回归和最大熵模型,最大熵模型的实现需要数个特征与定义对应的特征函数,因此我暂时没有实现.</p>
 <a id="more"></a>
-<h1 id="逻辑回归">逻辑回归</h1>
-<h2 id="原理">原理</h2>
-<p>假设是一个二分类问题,我们把分类问题考虑为由样本<span class="math inline">\(X\)</span>得到对应<span class="math inline">\(Y\)</span>的概率,那么模型可以被定义为<span class="math inline">\(P(Y|X)\)</span>.为了将输出分配为概率形式,使用<code>logistic</code>分布: <span class="math display">\[
+<h1 id="逻辑回归"><a href="#逻辑回归" class="headerlink" title="逻辑回归"></a>逻辑回归</h1><h2 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h2><p>假设是一个二分类问题,我们把分类问题考虑为由样本$X$得到对应$Y$的概率,那么模型可以被定义为$P(Y|X)$.为了将输出分配为概率形式,使用<code>logistic</code>分布:</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
   F(x)=P(X\leq x)=\frac{1}{1+e^{-\theta^T x}}
-\end{aligned}
-\]</span></p>
-<p>那么对于一个样本计算他类别为<code>1</code>的概率的过程可以记做<span class="math inline">\(p=\sigma(\theta^Tx)\)</span>,此时我们面对的是二分类问题,那么自然类别为<code>0</code>的概率为<span class="math inline">\(1-p\)</span>得到对应的概率质量函数为: <span class="math display">\[
+\end{aligned}</script><p>那么对于一个样本计算他类别为<code>1</code>的概率的过程可以记做$p=\sigma(\theta^Tx)$,此时我们面对的是二分类问题,那么自然类别为<code>0</code>的概率为$1-p$得到对应的概率质量函数为:</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-  \text{Let} \ \ \ p&amp;=\sigma(\theta^Tx)\\
-  P(y)&amp;=\begin{cases}p&amp;,y=1\\1-p&amp;,y=0  \end{cases}\\
-      &amp;= y^{p}+(1-y)^{1-p}\\
-  将P(y)表示为&amp;P(y|x;\theta)
-\end{aligned}
-\]</span></p>
-<p>有了对应的概率质量函数,我们需要求解最合适的参数<span class="math inline">\(\theta\)</span>,就可以利用最大似然估计的方法,最大似然考虑到了分布函数的联合分布,当他们的联合分布概率最大时,那么<span class="math inline">\(\theta\)</span>肯定是最优的.: <span class="math display">\[
+  \text{Let} \ \ \ p&=\sigma(\theta^Tx)\\
+  P(y)&=\begin{cases}p&,y=1\\1-p&,y=0  \end{cases}\\
+      &= y^{p}+(1-y)^{1-p}\\
+  将P(y)表示为&P(y|x;\theta)
+\end{aligned}</script><p>有了对应的概率质量函数,我们需要求解最合适的参数$\theta$,就可以利用最大似然估计的方法,最大似然考虑到了分布函数的联合分布,当他们的联合分布概率最大时,那么$\theta$肯定是最优的.:</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-L(x_1,x_2,...,x_n;\theta)&amp;=\prod_{i=1}^n P(y|x_i;\theta)\\
-&amp;=\prod_{i=1}^n\left[ \sigma(\theta^Tx_i)^{y_i} +(1-\sigma(\theta^Tx_i))^{1-y_i}\right]\\
-对数化&amp;\\
-L(x_1,x_2,...,x_n;\theta)&amp;=\log\left[ \prod_{i=1}^n\left[ \sigma(\theta^Tx_i)^{y_i} +(1-\sigma(\theta^Tx_i))^{1-y_i}\right]\right]\\
-&amp;=\sum_{i=1}^n\left[ y_i \log\sigma(\theta^Tx_i) +(1-y_i)\log(1-\sigma(\theta^Tx_i))\right]\\
-&amp;=\sum_{i=1}^n\left[ y_i \log\frac{1}{1+e^{-\theta^Tx_i}}  +(1-y_i)\log(1-\frac{1}{1+e^{-\theta^Tx_i}})\right]\\
-&amp;=\sum_{i=1}^n\left[ y_i (\theta^Tx_i) - \log(1+e^{\theta^Tx_i})\right]
-\end{aligned}
-\]</span></p>
-<p>注意到极大似然估计对数化后的第二步实际上就等价于负的交叉熵,所以令似然估计最大化,相当于最小化交叉熵,因此模型的损失即为: <span class="math display">\[
+L(x_1,x_2,...,x_n;\theta)&=\prod_{i=1}^n P(y|x_i;\theta)\\
+&=\prod_{i=1}^n\left[ \sigma(\theta^Tx_i)^{y_i} +(1-\sigma(\theta^Tx_i))^{1-y_i}\right]\\
+对数化&\\
+L(x_1,x_2,...,x_n;\theta)&=\log\left[ \prod_{i=1}^n\left[ \sigma(\theta^Tx_i)^{y_i} +(1-\sigma(\theta^Tx_i))^{1-y_i}\right]\right]\\
+&=\sum_{i=1}^n\left[ y_i \log\sigma(\theta^Tx_i) +(1-y_i)\log(1-\sigma(\theta^Tx_i))\right]\\
+&=\sum_{i=1}^n\left[ y_i \log\frac{1}{1+e^{-\theta^Tx_i}}  +(1-y_i)\log(1-\frac{1}{1+e^{-\theta^Tx_i}})\right]\\
+&=\sum_{i=1}^n\left[ y_i (\theta^Tx_i) - \log(1+e^{\theta^Tx_i})\right]
+\end{aligned}</script><p>注意到极大似然估计对数化后的第二步实际上就等价于负的交叉熵,所以令似然估计最大化,相当于最小化交叉熵,因此模型的损失即为:</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
   \mathcal{L}=-\sum_{i=1}^n\left[ y_i (\theta^Tx_i) - \log(1+e^{\theta^Tx_i})\right]
-\end{aligned}
-\]</span></p>
-<p>有了损失,又可以求导.可以采用梯度下降法进行优化,梯度为如下. <span class="math display">\[
+\end{aligned}</script><p>有了损失,又可以求导.可以采用梯度下降法进行优化,梯度为如下.</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-  \frac{d\mathcal{L}}{d\theta} &amp;=-(yx-\frac{e^{\theta^Tx}\cdot x}{1+e^{\theta^Tx}})\\
-  &amp;=-(y-\frac{1}{1+e^{-w^Tx}})x
-\end{aligned}
-\]</span></p>
-<h1 id="最大熵模型">最大熵模型</h1>
-<p>最大熵模型很难给出具体的例子,我看书也看的有点晕,后面参考到苏神的文章才理解一些.总体来说是求解满足各种约束条件下包含最大条件熵<span class="math inline">\(H(P(Y|X))\)</span>的模型.</p>
+  \frac{d\mathcal{L}}{d\theta} &=-(yx-\frac{e^{\theta^Tx}\cdot x}{1+e^{\theta^Tx}})\\
+  &=-(y-\frac{1}{1+e^{-w^Tx}})x
+\end{aligned}</script><h1 id="最大熵模型"><a href="#最大熵模型" class="headerlink" title="最大熵模型"></a>最大熵模型</h1><p>最大熵模型很难给出具体的例子,我看书也看的有点晕,后面参考到苏神的文章才理解一些.总体来说是求解满足各种约束条件下包含最大条件熵$H(P(Y|X))$的模型.</p>
 
       
     </div>
@@ -141,51 +133,43 @@ L(x_1,x_2,...,x_n;\theta)&amp;=\log\left[ \prod_{i=1}^n\left[ \sigma(\theta^Tx_i
         
           <p>这一章其实是逻辑回归和最大熵模型,最大熵模型的实现需要数个特征与定义对应的特征函数,因此我暂时没有实现.</p>
 <a id="more"></a>
-<h1 id="逻辑回归">逻辑回归</h1>
-<h2 id="原理">原理</h2>
-<p>假设是一个二分类问题,我们把分类问题考虑为由样本<span class="math inline">\(X\)</span>得到对应<span class="math inline">\(Y\)</span>的概率,那么模型可以被定义为<span class="math inline">\(P(Y|X)\)</span>.为了将输出分配为概率形式,使用<code>logistic</code>分布: <span class="math display">\[
+<h1 id="逻辑回归"><a href="#逻辑回归" class="headerlink" title="逻辑回归"></a>逻辑回归</h1><h2 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h2><p>假设是一个二分类问题,我们把分类问题考虑为由样本$X$得到对应$Y$的概率,那么模型可以被定义为$P(Y|X)$.为了将输出分配为概率形式,使用<code>logistic</code>分布:</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
   F(x)=P(X\leq x)=\frac{1}{1+e^{-\theta^T x}}
-\end{aligned}
-\]</span></p>
-<p>那么对于一个样本计算他类别为<code>1</code>的概率的过程可以记做<span class="math inline">\(p=\sigma(\theta^Tx)\)</span>,此时我们面对的是二分类问题,那么自然类别为<code>0</code>的概率为<span class="math inline">\(1-p\)</span>得到对应的概率质量函数为: <span class="math display">\[
+\end{aligned}</script><p>那么对于一个样本计算他类别为<code>1</code>的概率的过程可以记做$p=\sigma(\theta^Tx)$,此时我们面对的是二分类问题,那么自然类别为<code>0</code>的概率为$1-p$得到对应的概率质量函数为:</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-  \text{Let} \ \ \ p&amp;=\sigma(\theta^Tx)\\
-  P(y)&amp;=\begin{cases}p&amp;,y=1\\1-p&amp;,y=0  \end{cases}\\
-      &amp;= y^{p}+(1-y)^{1-p}\\
-  将P(y)表示为&amp;P(y|x;\theta)
-\end{aligned}
-\]</span></p>
-<p>有了对应的概率质量函数,我们需要求解最合适的参数<span class="math inline">\(\theta\)</span>,就可以利用最大似然估计的方法,最大似然考虑到了分布函数的联合分布,当他们的联合分布概率最大时,那么<span class="math inline">\(\theta\)</span>肯定是最优的.: <span class="math display">\[
+  \text{Let} \ \ \ p&=\sigma(\theta^Tx)\\
+  P(y)&=\begin{cases}p&,y=1\\1-p&,y=0  \end{cases}\\
+      &= y^{p}+(1-y)^{1-p}\\
+  将P(y)表示为&P(y|x;\theta)
+\end{aligned}</script><p>有了对应的概率质量函数,我们需要求解最合适的参数$\theta$,就可以利用最大似然估计的方法,最大似然考虑到了分布函数的联合分布,当他们的联合分布概率最大时,那么$\theta$肯定是最优的.:</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-L(x_1,x_2,...,x_n;\theta)&amp;=\prod_{i=1}^n P(y|x_i;\theta)\\
-&amp;=\prod_{i=1}^n\left[ \sigma(\theta^Tx_i)^{y_i} +(1-\sigma(\theta^Tx_i))^{1-y_i}\right]\\
-对数化&amp;\\
-L(x_1,x_2,...,x_n;\theta)&amp;=\log\left[ \prod_{i=1}^n\left[ \sigma(\theta^Tx_i)^{y_i} +(1-\sigma(\theta^Tx_i))^{1-y_i}\right]\right]\\
-&amp;=\sum_{i=1}^n\left[ y_i \log\sigma(\theta^Tx_i) +(1-y_i)\log(1-\sigma(\theta^Tx_i))\right]\\
-&amp;=\sum_{i=1}^n\left[ y_i \log\frac{1}{1+e^{-\theta^Tx_i}}  +(1-y_i)\log(1-\frac{1}{1+e^{-\theta^Tx_i}})\right]\\
-&amp;=\sum_{i=1}^n\left[ y_i (\theta^Tx_i) - \log(1+e^{\theta^Tx_i})\right]
-\end{aligned}
-\]</span></p>
-<p>注意到极大似然估计对数化后的第二步实际上就等价于负的交叉熵,所以令似然估计最大化,相当于最小化交叉熵,因此模型的损失即为: <span class="math display">\[
+L(x_1,x_2,...,x_n;\theta)&=\prod_{i=1}^n P(y|x_i;\theta)\\
+&=\prod_{i=1}^n\left[ \sigma(\theta^Tx_i)^{y_i} +(1-\sigma(\theta^Tx_i))^{1-y_i}\right]\\
+对数化&\\
+L(x_1,x_2,...,x_n;\theta)&=\log\left[ \prod_{i=1}^n\left[ \sigma(\theta^Tx_i)^{y_i} +(1-\sigma(\theta^Tx_i))^{1-y_i}\right]\right]\\
+&=\sum_{i=1}^n\left[ y_i \log\sigma(\theta^Tx_i) +(1-y_i)\log(1-\sigma(\theta^Tx_i))\right]\\
+&=\sum_{i=1}^n\left[ y_i \log\frac{1}{1+e^{-\theta^Tx_i}}  +(1-y_i)\log(1-\frac{1}{1+e^{-\theta^Tx_i}})\right]\\
+&=\sum_{i=1}^n\left[ y_i (\theta^Tx_i) - \log(1+e^{\theta^Tx_i})\right]
+\end{aligned}</script><p>注意到极大似然估计对数化后的第二步实际上就等价于负的交叉熵,所以令似然估计最大化,相当于最小化交叉熵,因此模型的损失即为:</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
   \mathcal{L}=-\sum_{i=1}^n\left[ y_i (\theta^Tx_i) - \log(1+e^{\theta^Tx_i})\right]
-\end{aligned}
-\]</span></p>
-<p>有了损失,又可以求导.可以采用梯度下降法进行优化,梯度为如下. <span class="math display">\[
+\end{aligned}</script><p>有了损失,又可以求导.可以采用梯度下降法进行优化,梯度为如下.</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-  \frac{d\mathcal{L}}{d\theta} &amp;=-(yx-\frac{e^{\theta^Tx}\cdot x}{1+e^{\theta^Tx}})\\
-  &amp;=-(y-\frac{1}{1+e^{-w^Tx}})x
-\end{aligned}
-\]</span></p>
-<h1 id="最大熵模型">最大熵模型</h1>
-<p>最大熵模型很难给出具体的例子,我看书也看的有点晕,后面参考到苏神的文章才理解一些.总体来说是求解满足各种约束条件下包含最大条件熵<span class="math inline">\(H(P(Y|X))\)</span>的模型.</p>
+  \frac{d\mathcal{L}}{d\theta} &=-(yx-\frac{e^{\theta^Tx}\cdot x}{1+e^{\theta^Tx}})\\
+  &=-(y-\frac{1}{1+e^{-w^Tx}})x
+\end{aligned}</script><h1 id="最大熵模型"><a href="#最大熵模型" class="headerlink" title="最大熵模型"></a>最大熵模型</h1><p>最大熵模型很难给出具体的例子,我看书也看的有点晕,后面参考到苏神的文章才理解一些.总体来说是求解满足各种约束条件下包含最大条件熵$H(P(Y|X))$的模型.</p>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2020/05/30/statis-learn-cp5/" data-id="ckmrshw6b00dcnn6x92e37xc8" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2020/05/30/statis-learn-cp5/" data-id="ckmrsjsj100fips6xqfaihhur" class="article-share-link">Share</a>
       
       
       
@@ -258,10 +242,6 @@ L(x_1,x_2,...,x_n;\theta)&amp;=\log\left[ \prod_{i=1}^n\left[ \sigma(\theta^Tx_i
       <ul>
         
           <li>
-            <a href="/2021/03/27/quant-1/qut/">(no title)</a>
-          </li>
-        
-          <li>
             <a href="/2021/03/27/quant-1/">神经网络量化一</a>
           </li>
         
@@ -275,6 +255,10 @@ L(x_1,x_2,...,x_n;\theta)&amp;=\log\left[ \prod_{i=1}^n\left[ \sigma(\theta^Tx_i
         
           <li>
             <a href="/2020/11/15/pytorch-feature-extract/">pytorch从任意层截断并提取数据</a>
+          </li>
+        
+          <li>
+            <a href="/2020/11/12/webdataset/">Pytorch Webdataset初体验</a>
           </li>
         
       </ul>

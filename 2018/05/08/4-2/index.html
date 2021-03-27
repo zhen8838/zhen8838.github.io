@@ -7,18 +7,18 @@
   
   <title>自己实现cp的程序 | </title>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta name="description" content="编写一个类似cp命令的程序，当使用该程序复制一个包含空洞的普通文件时，要求目标文件的空洞与源文件一致。">
+  <meta name="description" content="&amp;emsp;编写一个类似cp命令的程序，当使用该程序复制一个包含空洞的普通文件时，要求目标文件的空洞与源文件一致。">
 <meta name="keywords" content="Linux">
 <meta property="og:type" content="article">
 <meta property="og:title" content="自己实现cp的程序">
 <meta property="og:url" content="https://zhen8838.github.io/2018/05/08/4-2/index.html">
 <meta property="og:site_name">
-<meta property="og:description" content="编写一个类似cp命令的程序，当使用该程序复制一个包含空洞的普通文件时，要求目标文件的空洞与源文件一致。">
+<meta property="og:description" content="&amp;emsp;编写一个类似cp命令的程序，当使用该程序复制一个包含空洞的普通文件时，要求目标文件的空洞与源文件一致。">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:updated_time" content="2019-03-22T08:58:12.766Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="自己实现cp的程序">
-<meta name="twitter:description" content="编写一个类似cp命令的程序，当使用该程序复制一个包含空洞的普通文件时，要求目标文件的空洞与源文件一致。">
+<meta name="twitter:description" content="&amp;emsp;编写一个类似cp命令的程序，当使用该程序复制一个包含空洞的普通文件时，要求目标文件的空洞与源文件一致。">
   
   
     <link rel="icon" href="/favicon.png">
@@ -91,27 +91,33 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <p> 编写一个类似cp命令的程序，当使用该程序复制一个包含空洞的普通文件时，要求目标文件的空洞与源文件一致。</p>
+        <p>&emsp;编写一个类似cp命令的程序，当使用该程序复制一个包含空洞的普通文件时，要求目标文件的空洞与源文件一致。</p>
 <a id="more"></a>
-<h3 id="准备工作"><strong>准备工作</strong></h3>
-<ul>
-<li><p><strong>创建一个空洞文件</strong>  首先先编写一个小程序去创建空洞文件。 代码如下： <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
+<h3 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a><strong>准备工作</strong></h3><ul>
+<li><p><strong>创建一个空洞文件</strong><br>  &emsp;首先先编写一个小程序去创建空洞文件。<br>  代码如下：</p>
+  <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <pre><code>&lt;div&gt;&lt;div class=&quot;fold_hider&quot;&gt;&lt;div class=&quot;close hider_title&quot;&gt;点击显示内容&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;fold&quot;&gt;
 </code></pre><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;unistd.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;fcntl.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> fd;</span><br><span class="line">    <span class="keyword">int</span> ret;</span><br><span class="line">    fd=open(<span class="string">"hole.txt"</span>,O_CREAT|O_RDWR,<span class="number">0644</span>);</span><br><span class="line">    <span class="keyword">if</span>(fd==<span class="number">-1</span>)</span><br><span class="line">        <span class="built_in">exit</span>(EXIT_FAILURE);</span><br><span class="line">    write(fd,<span class="string">"hello"</span>,<span class="number">5</span>);</span><br><span class="line">    ret=lseek(fd,<span class="number">100000</span>,SEEK_CUR);</span><br><span class="line">    <span class="keyword">if</span>(ret==<span class="number">-1</span>)</span><br><span class="line">        <span class="built_in">exit</span>(EXIT_FAILURE);</span><br><span class="line">    write(fd,<span class="string">"world"</span>,<span class="number">5</span>);</span><br><span class="line">    close(fd);</span><br><span class="line">    <span class="built_in">exit</span>(EXIT_SUCCESS);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>&lt;/div&gt;&lt;/div&gt;&lt;/p&gt;</p>
-<p></p>
-</div></div></p></li>
-<li><p><strong>编译运行</strong> <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">$ gcc 4-2.c -o hole</span><br><span class="line">$ ./hole</span><br><span class="line">$ cat hole.txt</span><br><span class="line">helloworld</span><br><span class="line">$ du -h hole.txt</span><br><span class="line">8.0K    hole.txt</span><br><span class="line">$ od -c hole.txt</span><br><span class="line">0000000   h   e   l   l   o  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0</span><br><span class="line">0000020  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0</span><br><span class="line">*</span><br><span class="line">0303240  \0  \0  \0  \0  \0   w   o   r   l   d</span><br><span class="line">0303252</span><br></pre></td></tr></table></figure></p></li>
-<li><p><strong>程序代码</strong> <div><div class="fold_hider"><div class="close hider_title"><font< div=""></font<></div><div class="fold">
+<p>&lt;/div&gt;&lt;/div&gt;</p>
+
+</div></div>
+</li>
+<li><p><strong>编译运行</strong></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">$ gcc 4-2.c -o hole</span><br><span class="line">$ ./hole</span><br><span class="line">$ cat hole.txt</span><br><span class="line">helloworld</span><br><span class="line">$ du -h hole.txt</span><br><span class="line">8.0K    hole.txt</span><br><span class="line">$ od -c hole.txt</span><br><span class="line">0000000   h   e   l   l   o  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0</span><br><span class="line">0000020  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0</span><br><span class="line">*</span><br><span class="line">0303240  \0  \0  \0  \0  \0   w   o   r   l   d</span><br><span class="line">0303252</span><br></pre></td></tr></table></figure>
+</li>
+<li><p><strong>程序代码</strong></p>
+<div><div class="fold_hider"><div class="close hider_title"><font< div=""></font<></div><div class="fold">
 <pre><code>&lt;div&gt;&lt;div class=&quot;fold_hider&quot;&gt;&lt;div class=&quot;close hider_title&quot;&gt;点击显示内容&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;fold&quot;&gt;
 </code></pre><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;ctype.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">"tlpi_hdr.h"</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdbool.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/stat.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;fcntl.h&gt;</span></span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">int</span> argc, <span class="keyword">char</span> *argv[])</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line"><span class="keyword">char</span> buf[<span class="number">1024</span>];</span><br><span class="line"><span class="keyword">int</span> input,output, ret;</span><br><span class="line"><span class="keyword">ssize_t</span> len;</span><br><span class="line"><span class="comment">/* 读取选项 */</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span>(argc!=<span class="number">3</span>||<span class="built_in">strcmp</span>(argv[<span class="number">1</span>],<span class="string">"--help"</span>)==<span class="number">0</span>)</span><br><span class="line">&#123;</span><br><span class="line"> <span class="built_in">printf</span>(<span class="string">"usage:%s cp file1 to file2 \n"</span>,argv[<span class="number">0</span>]);</span><br><span class="line"> <span class="built_in">exit</span>(EXIT_SUCCESS);</span><br><span class="line">&#125;</span><br><span class="line">input=open(argv[<span class="number">1</span>], O_RDONLY , S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);</span><br><span class="line"><span class="keyword">if</span>(input==<span class="number">-1</span>)</span><br><span class="line">    errExit(<span class="string">"open input"</span>);</span><br><span class="line">output=open(argv[<span class="number">2</span>], O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);</span><br><span class="line"><span class="keyword">if</span>(input==<span class="number">-1</span>)</span><br><span class="line">    errExit(<span class="string">"open output"</span>);</span><br><span class="line"><span class="keyword">while</span>((ret=read(input,buf,<span class="number">1024</span>))&gt;<span class="number">0</span>)</span><br><span class="line">&#123;</span><br><span class="line">    write(output,buf,ret);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="built_in">exit</span>(EXIT_SUCCESS);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>&lt;/div&gt;&lt;/div&gt;&lt;/p&gt;</p>
+<p>&lt;/div&gt;&lt;/div&gt;</p>
 
-</div></div></div></p></li>
-<li><p><strong>编译运行</strong></p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">make &amp;&amp; ./4-2 hole.txt test.txt</span><br></pre></td></tr></table></figure></li>
-<li><p><strong>检查结果</strong></p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">$ od -c test.txt</span><br><span class="line">0000000   h   e   l   l   o  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0</span><br><span class="line">0000020  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0</span><br><span class="line">*</span><br><span class="line">0303240  \0  \0  \0  \0  \0   w   o   r   l   d</span><br><span class="line">0303252</span><br></pre></td></tr></table></figure></li>
+</div></div></div></li>
+<li><p><strong>编译运行</strong>          </p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">make &amp;&amp; ./4-2 hole.txt test.txt</span><br></pre></td></tr></table></figure>
+</li>
+<li><p><strong>检查结果</strong>    </p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">$ od -c test.txt</span><br><span class="line">0000000   h   e   l   l   o  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0</span><br><span class="line">0000020  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0</span><br><span class="line">*</span><br><span class="line">0303240  \0  \0  \0  \0  \0   w   o   r   l   d</span><br><span class="line">0303252</span><br></pre></td></tr></table></figure>
+</li>
 </ul>
 
       
@@ -120,34 +126,40 @@
       
         
         
-          <p> 编写一个类似cp命令的程序，当使用该程序复制一个包含空洞的普通文件时，要求目标文件的空洞与源文件一致。</p>
+          <p>&emsp;编写一个类似cp命令的程序，当使用该程序复制一个包含空洞的普通文件时，要求目标文件的空洞与源文件一致。</p>
 <a id="more"></a>
-<h3 id="准备工作"><strong>准备工作</strong></h3>
-<ul>
-<li><p><strong>创建一个空洞文件</strong>  首先先编写一个小程序去创建空洞文件。 代码如下： <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
+<h3 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a><strong>准备工作</strong></h3><ul>
+<li><p><strong>创建一个空洞文件</strong><br>  &emsp;首先先编写一个小程序去创建空洞文件。<br>  代码如下：</p>
+  <div><div class="fold_hider"><div class="close hider_title">点击显示内容</div></div><div class="fold">
 <pre><code>&lt;div&gt;&lt;div class=&quot;fold_hider&quot;&gt;&lt;div class=&quot;close hider_title&quot;&gt;点击显示内容&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;fold&quot;&gt;
 </code></pre><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;unistd.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;fcntl.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> fd;</span><br><span class="line">    <span class="keyword">int</span> ret;</span><br><span class="line">    fd=open(<span class="string">"hole.txt"</span>,O_CREAT|O_RDWR,<span class="number">0644</span>);</span><br><span class="line">    <span class="keyword">if</span>(fd==<span class="number">-1</span>)</span><br><span class="line">        <span class="built_in">exit</span>(EXIT_FAILURE);</span><br><span class="line">    write(fd,<span class="string">"hello"</span>,<span class="number">5</span>);</span><br><span class="line">    ret=lseek(fd,<span class="number">100000</span>,SEEK_CUR);</span><br><span class="line">    <span class="keyword">if</span>(ret==<span class="number">-1</span>)</span><br><span class="line">        <span class="built_in">exit</span>(EXIT_FAILURE);</span><br><span class="line">    write(fd,<span class="string">"world"</span>,<span class="number">5</span>);</span><br><span class="line">    close(fd);</span><br><span class="line">    <span class="built_in">exit</span>(EXIT_SUCCESS);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>&lt;/div&gt;&lt;/div&gt;&lt;/p&gt;</p>
-<p></p>
-</div></div></p></li>
-<li><p><strong>编译运行</strong> <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">$ gcc 4-2.c -o hole</span><br><span class="line">$ ./hole</span><br><span class="line">$ cat hole.txt</span><br><span class="line">helloworld</span><br><span class="line">$ du -h hole.txt</span><br><span class="line">8.0K    hole.txt</span><br><span class="line">$ od -c hole.txt</span><br><span class="line">0000000   h   e   l   l   o  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0</span><br><span class="line">0000020  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0</span><br><span class="line">*</span><br><span class="line">0303240  \0  \0  \0  \0  \0   w   o   r   l   d</span><br><span class="line">0303252</span><br></pre></td></tr></table></figure></p></li>
-<li><p><strong>程序代码</strong> <div><div class="fold_hider"><div class="close hider_title"><font< div=""></font<></div><div class="fold">
+<p>&lt;/div&gt;&lt;/div&gt;</p>
+
+</div></div>
+</li>
+<li><p><strong>编译运行</strong></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">$ gcc 4-2.c -o hole</span><br><span class="line">$ ./hole</span><br><span class="line">$ cat hole.txt</span><br><span class="line">helloworld</span><br><span class="line">$ du -h hole.txt</span><br><span class="line">8.0K    hole.txt</span><br><span class="line">$ od -c hole.txt</span><br><span class="line">0000000   h   e   l   l   o  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0</span><br><span class="line">0000020  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0</span><br><span class="line">*</span><br><span class="line">0303240  \0  \0  \0  \0  \0   w   o   r   l   d</span><br><span class="line">0303252</span><br></pre></td></tr></table></figure>
+</li>
+<li><p><strong>程序代码</strong></p>
+<div><div class="fold_hider"><div class="close hider_title"><font< div=""></font<></div><div class="fold">
 <pre><code>&lt;div&gt;&lt;div class=&quot;fold_hider&quot;&gt;&lt;div class=&quot;close hider_title&quot;&gt;点击显示内容&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;fold&quot;&gt;
 </code></pre><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;ctype.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">"tlpi_hdr.h"</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdbool.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/stat.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;fcntl.h&gt;</span></span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">int</span> argc, <span class="keyword">char</span> *argv[])</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line"><span class="keyword">char</span> buf[<span class="number">1024</span>];</span><br><span class="line"><span class="keyword">int</span> input,output, ret;</span><br><span class="line"><span class="keyword">ssize_t</span> len;</span><br><span class="line"><span class="comment">/* 读取选项 */</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span>(argc!=<span class="number">3</span>||<span class="built_in">strcmp</span>(argv[<span class="number">1</span>],<span class="string">"--help"</span>)==<span class="number">0</span>)</span><br><span class="line">&#123;</span><br><span class="line"> <span class="built_in">printf</span>(<span class="string">"usage:%s cp file1 to file2 \n"</span>,argv[<span class="number">0</span>]);</span><br><span class="line"> <span class="built_in">exit</span>(EXIT_SUCCESS);</span><br><span class="line">&#125;</span><br><span class="line">input=open(argv[<span class="number">1</span>], O_RDONLY , S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);</span><br><span class="line"><span class="keyword">if</span>(input==<span class="number">-1</span>)</span><br><span class="line">    errExit(<span class="string">"open input"</span>);</span><br><span class="line">output=open(argv[<span class="number">2</span>], O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);</span><br><span class="line"><span class="keyword">if</span>(input==<span class="number">-1</span>)</span><br><span class="line">    errExit(<span class="string">"open output"</span>);</span><br><span class="line"><span class="keyword">while</span>((ret=read(input,buf,<span class="number">1024</span>))&gt;<span class="number">0</span>)</span><br><span class="line">&#123;</span><br><span class="line">    write(output,buf,ret);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="built_in">exit</span>(EXIT_SUCCESS);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>&lt;/div&gt;&lt;/div&gt;&lt;/p&gt;</p>
+<p>&lt;/div&gt;&lt;/div&gt;</p>
 
-</div></div></div></p></li>
-<li><p><strong>编译运行</strong></p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">make &amp;&amp; ./4-2 hole.txt test.txt</span><br></pre></td></tr></table></figure></li>
-<li><p><strong>检查结果</strong></p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">$ od -c test.txt</span><br><span class="line">0000000   h   e   l   l   o  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0</span><br><span class="line">0000020  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0</span><br><span class="line">*</span><br><span class="line">0303240  \0  \0  \0  \0  \0   w   o   r   l   d</span><br><span class="line">0303252</span><br></pre></td></tr></table></figure></li>
+</div></div></div></li>
+<li><p><strong>编译运行</strong>          </p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">make &amp;&amp; ./4-2 hole.txt test.txt</span><br></pre></td></tr></table></figure>
+</li>
+<li><p><strong>检查结果</strong>    </p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">$ od -c test.txt</span><br><span class="line">0000000   h   e   l   l   o  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0</span><br><span class="line">0000020  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0</span><br><span class="line">*</span><br><span class="line">0303240  \0  \0  \0  \0  \0   w   o   r   l   d</span><br><span class="line">0303252</span><br></pre></td></tr></table></figure>
+</li>
 </ul>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2018/05/08/4-2/" data-id="ckmrshvzc0004nn6x8ryni6k6" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2018/05/08/4-2/" data-id="ckmrsjsb70009ps6xb5m6b0ol" class="article-share-link">Share</a>
       
       
       
@@ -169,9 +181,9 @@
     </a>
   
   
-    <a href="/2018/05/08/资源整理/" id="article-nav-older" class="article-nav-link-wrap">
+    <a href="/2018/05/08/编译静态库/" id="article-nav-older" class="article-nav-link-wrap">
       <strong class="article-nav-caption">Older</strong>
-      <div class="article-nav-title">资源整理</div>
+      <div class="article-nav-title">CMake编译静态库</div>
     </a>
   
 </nav>
@@ -220,10 +232,6 @@
       <ul>
         
           <li>
-            <a href="/2021/03/27/quant-1/qut/">(no title)</a>
-          </li>
-        
-          <li>
             <a href="/2021/03/27/quant-1/">神经网络量化一</a>
           </li>
         
@@ -237,6 +245,10 @@
         
           <li>
             <a href="/2020/11/15/pytorch-feature-extract/">pytorch从任意层截断并提取数据</a>
+          </li>
+        
+          <li>
+            <a href="/2020/11/12/webdataset/">Pytorch Webdataset初体验</a>
           </li>
         
       </ul>

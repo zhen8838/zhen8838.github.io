@@ -94,48 +94,42 @@
         <p>准备系统的学习一下神经网络量化，这次首先对基本原理进行了解。</p>
 <a id="more"></a>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br></pre></td></tr></table></figure>
-<h2 id="网络量化的基本原理">网络量化的基本原理</h2>
-<h3 id="背景知识">背景知识</h3>
-<p>我们通常会将一张 uint8 类型、数值范围在 <span class="math inline">\(0\sim255\)</span> 的图片归一成 float32 类型、数值范围在 <span class="math inline">\(0.0\sim1.0\)</span> 的张量，这个过程就是反量化。</p>
-<p>最简单的量化公式是<span class="math inline">\(min max map\)</span>，假设使用这里我们用<span class="math inline">\(r\)</span>表示浮点实数，<span class="math inline">\(q\)</span>表示量化后的定点整数。浮点和整型之间的换算公式为： <span class="math display">\[q = round(\frac{r}{S}+Z)\]</span> <span class="math display">\[r = S(q-Z)\]</span></p>
-<p>其中，<span class="math inline">\(S\)</span> 是 scale，表示实数和整数之间的比例关系，<span class="math inline">\(Z\)</span> 是 zero point，表示实数中的 0 经过量化后对应的整数，它们的计算方法为： <span class="math display">\[S = \frac{r_{max}-r_{min}}{q_{max}-q_{min}}\]</span> <span class="math display">\[Z = round(q_{max} - \frac{r_{max}}{S})\]</span></p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">r = np.random.normal(loc=<span class="number">50.</span>,scale=<span class="number">200.</span>,size=<span class="number">10</span>)</span><br><span class="line">q_min=<span class="number">0</span></span><br><span class="line">q_max=<span class="number">255</span></span><br><span class="line">S=(r.max()-r.min())/(q_max-q_min)</span><br><span class="line">Z=np.round(q_max-r.max()/S)</span><br><span class="line">q=np.round(r/S+Z)</span><br><span class="line">print(<span class="string">'r:'</span>,r,<span class="string">'\nS:'</span>,S,<span class="string">'\nZ:'</span>,Z,<span class="string">'\nq:'</span>,q)</span><br></pre></td></tr></table></figure>
+<h2 id="网络量化的基本原理"><a href="#网络量化的基本原理" class="headerlink" title="网络量化的基本原理"></a>网络量化的基本原理</h2><h3 id="背景知识"><a href="#背景知识" class="headerlink" title="背景知识"></a>背景知识</h3><p>我们通常会将一张 uint8 类型、数值范围在 $0\sim255$ 的图片归一成 float32 类型、数值范围在 $0.0\sim1.0$ 的张量，这个过程就是反量化。</p>
+<p>最简单的量化公式是$min max map$，假设使用这里我们用$r$表示浮点实数，$q$表示量化后的定点整数。浮点和整型之间的换算公式为：</p>
+<script type="math/tex; mode=display">q = round(\frac{r}{S}+Z)</script><script type="math/tex; mode=display">r = S(q-Z)</script><p>其中，$S$ 是 scale，表示实数和整数之间的比例关系，$Z$ 是 zero point，表示实数中的 0 经过量化后对应的整数，它们的计算方法为：</p>
+<script type="math/tex; mode=display">S = \frac{r_{max}-r_{min}}{q_{max}-q_{min}}</script><script type="math/tex; mode=display">Z = round(q_{max} - \frac{r_{max}}{S})</script><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">r = np.random.normal(loc=<span class="number">50.</span>,scale=<span class="number">200.</span>,size=<span class="number">10</span>)</span><br><span class="line">q_min=<span class="number">0</span></span><br><span class="line">q_max=<span class="number">255</span></span><br><span class="line">S=(r.max()-r.min())/(q_max-q_min)</span><br><span class="line">Z=np.round(q_max-r.max()/S)</span><br><span class="line">q=np.round(r/S+Z)</span><br><span class="line">print(<span class="string">'r:'</span>,r,<span class="string">'\nS:'</span>,S,<span class="string">'\nZ:'</span>,Z,<span class="string">'\nq:'</span>,q)</span><br></pre></td></tr></table></figure>
 <pre><code>r: [-245.72830045    1.23478453   65.72744594  205.58300291  201.59666572
    52.22934735   57.28456311  479.56419248 -129.48366498  -39.83812742] 
 S: 2.8442842859958217 
 Z: 86.0 
-q: [ -0.  86. 109. 158. 157. 104. 106. 255.  40.  72.]</code></pre>
-<p>可以发现反量化的时候将出现一定的误差：</p>
+q: [ -0.  86. 109. 158. 157. 104. 106. 255.  40.  72.]
+</code></pre><p>可以发现反量化的时候将出现一定的误差：</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">q_to_r</span><span class="params">(q,S,Z)</span>:</span></span><br><span class="line">    <span class="keyword">return</span> S*(q-Z)</span><br><span class="line">re_r=q_to_r(q,S,Z)</span><br><span class="line">r-re_r</span><br></pre></td></tr></table></figure>
 <pre><code>array([-1.11985185,  1.23478453,  0.30890736,  0.79453432, -0.34751859,
-        1.03223021,  0.39887739, -1.11985185,  1.35341218, -0.01814741])</code></pre>
-<h3 id="矩阵运算的量化">矩阵运算的量化</h3>
-<p>假设<span class="math inline">\(r_1,r_2\)</span>是两个矩阵,他们的维度分别为<span class="math inline">\(N\times M,M\times K\)</span>,<span class="math inline">\(r_3\)</span>作为两个矩阵的乘积结果,维度是<span class="math inline">\(N \times K\)</span>,乘积计算过程如下:</p>
-<p><span class="math display">\[
-r_3^{n,k}=\sum_{m=1}^M r_1^{n,m}r_2^{m,k}
-\]</span></p>
-<p>设<span class="math inline">\(S_1,Z_1\)</span>对应<span class="math inline">\(r_1\)</span>的量化因子,同理得到<span class="math inline">\(S_2,Z_2\)</span>和<span class="math inline">\(S_3,Z_3\)</span>,这时候将上述矩阵相乘公式的量化计算过程如下: <span class="math display">\[
+        1.03223021,  0.39887739, -1.11985185,  1.35341218, -0.01814741])
+</code></pre><h3 id="矩阵运算的量化"><a href="#矩阵运算的量化" class="headerlink" title="矩阵运算的量化"></a>矩阵运算的量化</h3><p>假设$r_1,r_2$是两个矩阵,他们的维度分别为$N\times M,M\times K$,$r_3$作为两个矩阵的乘积结果,维度是$N \times K$,乘积计算过程如下:</p>
+<script type="math/tex; mode=display">
+r_3^{n,k}=\sum_{m=1}^M r_1^{n,m}r_2^{m,k}</script><p>设$S_1,Z_1$对应$r_1$的量化因子,同理得到$S_2,Z_2$和$S_3,Z_3$,这时候将上述矩阵相乘公式的量化计算过程如下:</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-S_3(q_3^{n,k}-Z_3)&amp;=\sum_{m=1}^{M}S_1(q_{1}^{n,m}-Z_1)S_2(q_2^{m,k}-Z_2)\\
-S_3q_3^{n,k}&amp;=S_1S_2 \sum_{m=1}^{M}(q_{1}^{n,m}-Z_1)(q_2^{m,k}-Z_2)+S_3 Z_3\\
-q_3^{n,k}&amp;=\frac{S_1S_2}{S_3} \sum_{m=1}^{M}(q_{1}^{n,m}-Z_1)(q_2^{m,k}-Z_2)+Z_3
-\end{aligned}
-\]</span> 此时上述公式中只有<span class="math inline">\(\frac{S_1S_2}{S_3}\)</span>部分是浮点运算,假设未经过重新量化的矩阵计算结果为<span class="math inline">\(Q\)</span>,固定浮点数<span class="math inline">\(\frac{S_1S_2}{S_3}\)</span>定义为<span class="math inline">\(F\)</span>,那么对于一个浮点数可以利用一个技巧进行近似,然后可以将这个浮点计算转换为定点计算.即将这个浮点数用一个定点整数<span class="math inline">\(F_0\)</span>*定点小数<span class="math inline">\(2^{-n}\)</span>的方法来近似: <span class="math display">\[
+S_3(q_3^{n,k}-Z_3)&=\sum_{m=1}^{M}S_1(q_{1}^{n,m}-Z_1)S_2(q_2^{m,k}-Z_2)\\
+S_3q_3^{n,k}&=S_1S_2 \sum_{m=1}^{M}(q_{1}^{n,m}-Z_1)(q_2^{m,k}-Z_2)+S_3 Z_3\\
+q_3^{n,k}&=\frac{S_1S_2}{S_3} \sum_{m=1}^{M}(q_{1}^{n,m}-Z_1)(q_2^{m,k}-Z_2)+Z_3
+\end{aligned}</script><p>此时上述公式中只有$\frac{S_1S_2}{S_3}$部分是浮点运算,假设未经过重新量化的矩阵计算结果为$Q$,固定浮点数$\frac{S_1S_2}{S_3}$定义为$F$,那么对于一个浮点数可以利用一个技巧进行近似,然后可以将这个浮点计算转换为定点计算.即将这个浮点数用一个定点整数$F_0$*定点小数$2^{-n}$的方法来近似:</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-q_3^{n,k}&amp;=F Q+Z_3\\
-&amp;=2^{-n}F_0 Q+Z_3
-\end{aligned}
-\]</span></p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">get_q_mat</span><span class="params">(r,q_min=<span class="number">0</span>,q_max=<span class="number">255</span>)</span>:</span></span><br><span class="line">    S=(r.max()-r.min())/(q_max-q_min)</span><br><span class="line">    Z=np.round(q_max-r.max()/S)</span><br><span class="line">    q=np.round(r/S+Z)</span><br><span class="line">    <span class="keyword">return</span> q,S,Z</span><br><span class="line">    </span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">get_r_q_mat</span><span class="params">(h,w,loc=<span class="number">50.</span>,scale=<span class="number">200.</span>)</span>:</span></span><br><span class="line">    r = np.random.normal(loc=loc,scale=scale,size=(h,w))</span><br><span class="line">    q,S,Z = get_q_mat(r)</span><br><span class="line">    <span class="keyword">return</span> r,q,S,Z</span><br><span class="line">r_1,q_1,S_1,Z_1= get_r_q_mat(<span class="number">10</span>,<span class="number">20</span>,<span class="number">20</span>,<span class="number">50</span>)</span><br><span class="line">r_2,q_2,S_2,Z_2= get_r_q_mat(<span class="number">20</span>,<span class="number">30</span>,<span class="number">40</span>,<span class="number">200</span>)</span><br><span class="line">r_3 = r_1 @ r_2</span><br><span class="line">q_3,S_3,Z_3= get_q_mat(r_3)</span><br><span class="line">Q = (q_1-Z_1) @ (q_2-Z_2)</span><br><span class="line">F= (S_1*S_2)/S_3</span><br><span class="line">print(F)</span><br></pre></td></tr></table></figure>
-<pre><code>0.005090788538262954</code></pre>
-<p>此时我们计算<span class="math inline">\(F\)</span>的定点数<span class="math inline">\(F_0\)</span>和<span class="math inline">\(2^{-n}\)</span>,其实就是计算哪一个<span class="math inline">\(F_0\)</span>和<span class="math inline">\(n\)</span>近似<span class="math inline">\(F\)</span>的误差最小: <span class="math display">\[
+q_3^{n,k}&=F Q+Z_3\\
+&=2^{-n}F_0 Q+Z_3
+\end{aligned}</script><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">get_q_mat</span><span class="params">(r,q_min=<span class="number">0</span>,q_max=<span class="number">255</span>)</span>:</span></span><br><span class="line">    S=(r.max()-r.min())/(q_max-q_min)</span><br><span class="line">    Z=np.round(q_max-r.max()/S)</span><br><span class="line">    q=np.round(r/S+Z)</span><br><span class="line">    <span class="keyword">return</span> q,S,Z</span><br><span class="line">    </span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">get_r_q_mat</span><span class="params">(h,w,loc=<span class="number">50.</span>,scale=<span class="number">200.</span>)</span>:</span></span><br><span class="line">    r = np.random.normal(loc=loc,scale=scale,size=(h,w))</span><br><span class="line">    q,S,Z = get_q_mat(r)</span><br><span class="line">    <span class="keyword">return</span> r,q,S,Z</span><br><span class="line">r_1,q_1,S_1,Z_1= get_r_q_mat(<span class="number">10</span>,<span class="number">20</span>,<span class="number">20</span>,<span class="number">50</span>)</span><br><span class="line">r_2,q_2,S_2,Z_2= get_r_q_mat(<span class="number">20</span>,<span class="number">30</span>,<span class="number">40</span>,<span class="number">200</span>)</span><br><span class="line">r_3 = r_1 @ r_2</span><br><span class="line">q_3,S_3,Z_3= get_q_mat(r_3)</span><br><span class="line">Q = (q_1-Z_1) @ (q_2-Z_2)</span><br><span class="line">F= (S_1*S_2)/S_3</span><br><span class="line">print(F)</span><br></pre></td></tr></table></figure>
+<pre><code>0.005090788538262954
+</code></pre><p>此时我们计算$F$的定点数$F_0$和$2^{-n}$,其实就是计算哪一个$F_0$和$n$近似$F$的误差最小:</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-    \text{argmin}_{n}&amp;abs(FQ-(2^{-n} \times F_0)Q,\ \  F_0 \in [q_{min},q_{max}]\\
-    F_0 &amp;= round(\frac{F}{2^{-n}}) = round(F * (1 &lt;&lt; n)) \\
-    将F_0展开,并将2^{-n}转换为位运算&amp;: \\
-    \text{argmin}_{n}&amp;abs(FQ-(round(F * (1 &lt;&lt; n))Q &gt;&gt; n))
-\end{aligned}
-\]</span> 接下来给出一个确定<span class="math inline">\(F_0\)</span>与<span class="math inline">\(n\)</span>的代码:</p>
+    \text{argmin}_{n}&abs(FQ-(2^{-n} \times F_0)Q,\ \  F_0 \in [q_{min},q_{max}]\\
+    F_0 &= round(\frac{F}{2^{-n}}) = round(F * (1 << n)) \\
+    将F_0展开,并将2^{-n}转换为位运算&: \\
+    \text{argmin}_{n}&abs(FQ-(round(F * (1 << n))Q >> n))
+\end{aligned}</script><p>接下来给出一个确定$F_0$与$n$的代码:</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">get_f_0</span><span class="params">(F,Q,is_print=True)</span>:</span></span><br><span class="line">    mind=<span class="number">1e9</span></span><br><span class="line">    minn=<span class="number">-1</span></span><br><span class="line">    <span class="keyword">for</span> n <span class="keyword">in</span> range(<span class="number">0</span>,<span class="number">16</span>):</span><br><span class="line">        F_0=int(round(F * (<span class="number">1</span>&lt;&lt;n)))</span><br><span class="line">        diff = abs(F*Q - (int(F_0*Q)&gt;&gt;n))</span><br><span class="line">        <span class="keyword">if</span> diff&lt;mind:</span><br><span class="line">            mind,minn=diff,n</span><br><span class="line">        <span class="keyword">if</span> is_print:</span><br><span class="line">            print(<span class="string">f"n=<span class="subst">&#123;n&#125;</span>,F_0=<span class="subst">&#123;F_0&#125;</span>,diff=<span class="subst">&#123;diff&#125;</span>"</span>)</span><br><span class="line">    <span class="keyword">return</span> int(round(F * (<span class="number">1</span>&lt;&lt;minn))),minn</span><br><span class="line">F_0,n = get_f_0(F,int(Q[<span class="number">0</span>][<span class="number">0</span>]))</span><br></pre></td></tr></table></figure>
 <pre><code>n=0,F_0=0,diff=8.58306947551134
 n=1,F_0=0,diff=8.58306947551134
@@ -152,8 +146,8 @@ n=11,F_0=10,diff=0.5830694755113406
 n=12,F_0=21,diff=0.5830694755113406
 n=13,F_0=42,diff=0.5830694755113406
 n=14,F_0=83,diff=0.5830694755113406
-n=15,F_0=167,diff=0.5830694755113406</code></pre>
-<p>观察上述输出,可以发现在<span class="math inline">\(n=10\)</span>的时候就可以得到较好的量化因子了,这样所有的运算就可以用定点的方式来计算了.</p>
+n=15,F_0=167,diff=0.5830694755113406
+</code></pre><p>观察上述输出,可以发现在$n=10$的时候就可以得到较好的量化因子了,这样所有的运算就可以用定点的方式来计算了.</p>
 
       
     </div>
@@ -164,48 +158,42 @@ n=15,F_0=167,diff=0.5830694755113406</code></pre>
           <p>准备系统的学习一下神经网络量化，这次首先对基本原理进行了解。</p>
 <a id="more"></a>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br></pre></td></tr></table></figure>
-<h2 id="网络量化的基本原理">网络量化的基本原理</h2>
-<h3 id="背景知识">背景知识</h3>
-<p>我们通常会将一张 uint8 类型、数值范围在 <span class="math inline">\(0\sim255\)</span> 的图片归一成 float32 类型、数值范围在 <span class="math inline">\(0.0\sim1.0\)</span> 的张量，这个过程就是反量化。</p>
-<p>最简单的量化公式是<span class="math inline">\(min max map\)</span>，假设使用这里我们用<span class="math inline">\(r\)</span>表示浮点实数，<span class="math inline">\(q\)</span>表示量化后的定点整数。浮点和整型之间的换算公式为： <span class="math display">\[q = round(\frac{r}{S}+Z)\]</span> <span class="math display">\[r = S(q-Z)\]</span></p>
-<p>其中，<span class="math inline">\(S\)</span> 是 scale，表示实数和整数之间的比例关系，<span class="math inline">\(Z\)</span> 是 zero point，表示实数中的 0 经过量化后对应的整数，它们的计算方法为： <span class="math display">\[S = \frac{r_{max}-r_{min}}{q_{max}-q_{min}}\]</span> <span class="math display">\[Z = round(q_{max} - \frac{r_{max}}{S})\]</span></p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">r = np.random.normal(loc=<span class="number">50.</span>,scale=<span class="number">200.</span>,size=<span class="number">10</span>)</span><br><span class="line">q_min=<span class="number">0</span></span><br><span class="line">q_max=<span class="number">255</span></span><br><span class="line">S=(r.max()-r.min())/(q_max-q_min)</span><br><span class="line">Z=np.round(q_max-r.max()/S)</span><br><span class="line">q=np.round(r/S+Z)</span><br><span class="line">print(<span class="string">'r:'</span>,r,<span class="string">'\nS:'</span>,S,<span class="string">'\nZ:'</span>,Z,<span class="string">'\nq:'</span>,q)</span><br></pre></td></tr></table></figure>
+<h2 id="网络量化的基本原理"><a href="#网络量化的基本原理" class="headerlink" title="网络量化的基本原理"></a>网络量化的基本原理</h2><h3 id="背景知识"><a href="#背景知识" class="headerlink" title="背景知识"></a>背景知识</h3><p>我们通常会将一张 uint8 类型、数值范围在 $0\sim255$ 的图片归一成 float32 类型、数值范围在 $0.0\sim1.0$ 的张量，这个过程就是反量化。</p>
+<p>最简单的量化公式是$min max map$，假设使用这里我们用$r$表示浮点实数，$q$表示量化后的定点整数。浮点和整型之间的换算公式为：</p>
+<script type="math/tex; mode=display">q = round(\frac{r}{S}+Z)</script><script type="math/tex; mode=display">r = S(q-Z)</script><p>其中，$S$ 是 scale，表示实数和整数之间的比例关系，$Z$ 是 zero point，表示实数中的 0 经过量化后对应的整数，它们的计算方法为：</p>
+<script type="math/tex; mode=display">S = \frac{r_{max}-r_{min}}{q_{max}-q_{min}}</script><script type="math/tex; mode=display">Z = round(q_{max} - \frac{r_{max}}{S})</script><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">r = np.random.normal(loc=<span class="number">50.</span>,scale=<span class="number">200.</span>,size=<span class="number">10</span>)</span><br><span class="line">q_min=<span class="number">0</span></span><br><span class="line">q_max=<span class="number">255</span></span><br><span class="line">S=(r.max()-r.min())/(q_max-q_min)</span><br><span class="line">Z=np.round(q_max-r.max()/S)</span><br><span class="line">q=np.round(r/S+Z)</span><br><span class="line">print(<span class="string">'r:'</span>,r,<span class="string">'\nS:'</span>,S,<span class="string">'\nZ:'</span>,Z,<span class="string">'\nq:'</span>,q)</span><br></pre></td></tr></table></figure>
 <pre><code>r: [-245.72830045    1.23478453   65.72744594  205.58300291  201.59666572
    52.22934735   57.28456311  479.56419248 -129.48366498  -39.83812742] 
 S: 2.8442842859958217 
 Z: 86.0 
-q: [ -0.  86. 109. 158. 157. 104. 106. 255.  40.  72.]</code></pre>
-<p>可以发现反量化的时候将出现一定的误差：</p>
+q: [ -0.  86. 109. 158. 157. 104. 106. 255.  40.  72.]
+</code></pre><p>可以发现反量化的时候将出现一定的误差：</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">q_to_r</span><span class="params">(q,S,Z)</span>:</span></span><br><span class="line">    <span class="keyword">return</span> S*(q-Z)</span><br><span class="line">re_r=q_to_r(q,S,Z)</span><br><span class="line">r-re_r</span><br></pre></td></tr></table></figure>
 <pre><code>array([-1.11985185,  1.23478453,  0.30890736,  0.79453432, -0.34751859,
-        1.03223021,  0.39887739, -1.11985185,  1.35341218, -0.01814741])</code></pre>
-<h3 id="矩阵运算的量化">矩阵运算的量化</h3>
-<p>假设<span class="math inline">\(r_1,r_2\)</span>是两个矩阵,他们的维度分别为<span class="math inline">\(N\times M,M\times K\)</span>,<span class="math inline">\(r_3\)</span>作为两个矩阵的乘积结果,维度是<span class="math inline">\(N \times K\)</span>,乘积计算过程如下:</p>
-<p><span class="math display">\[
-r_3^{n,k}=\sum_{m=1}^M r_1^{n,m}r_2^{m,k}
-\]</span></p>
-<p>设<span class="math inline">\(S_1,Z_1\)</span>对应<span class="math inline">\(r_1\)</span>的量化因子,同理得到<span class="math inline">\(S_2,Z_2\)</span>和<span class="math inline">\(S_3,Z_3\)</span>,这时候将上述矩阵相乘公式的量化计算过程如下: <span class="math display">\[
+        1.03223021,  0.39887739, -1.11985185,  1.35341218, -0.01814741])
+</code></pre><h3 id="矩阵运算的量化"><a href="#矩阵运算的量化" class="headerlink" title="矩阵运算的量化"></a>矩阵运算的量化</h3><p>假设$r_1,r_2$是两个矩阵,他们的维度分别为$N\times M,M\times K$,$r_3$作为两个矩阵的乘积结果,维度是$N \times K$,乘积计算过程如下:</p>
+<script type="math/tex; mode=display">
+r_3^{n,k}=\sum_{m=1}^M r_1^{n,m}r_2^{m,k}</script><p>设$S_1,Z_1$对应$r_1$的量化因子,同理得到$S_2,Z_2$和$S_3,Z_3$,这时候将上述矩阵相乘公式的量化计算过程如下:</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-S_3(q_3^{n,k}-Z_3)&amp;=\sum_{m=1}^{M}S_1(q_{1}^{n,m}-Z_1)S_2(q_2^{m,k}-Z_2)\\
-S_3q_3^{n,k}&amp;=S_1S_2 \sum_{m=1}^{M}(q_{1}^{n,m}-Z_1)(q_2^{m,k}-Z_2)+S_3 Z_3\\
-q_3^{n,k}&amp;=\frac{S_1S_2}{S_3} \sum_{m=1}^{M}(q_{1}^{n,m}-Z_1)(q_2^{m,k}-Z_2)+Z_3
-\end{aligned}
-\]</span> 此时上述公式中只有<span class="math inline">\(\frac{S_1S_2}{S_3}\)</span>部分是浮点运算,假设未经过重新量化的矩阵计算结果为<span class="math inline">\(Q\)</span>,固定浮点数<span class="math inline">\(\frac{S_1S_2}{S_3}\)</span>定义为<span class="math inline">\(F\)</span>,那么对于一个浮点数可以利用一个技巧进行近似,然后可以将这个浮点计算转换为定点计算.即将这个浮点数用一个定点整数<span class="math inline">\(F_0\)</span>*定点小数<span class="math inline">\(2^{-n}\)</span>的方法来近似: <span class="math display">\[
+S_3(q_3^{n,k}-Z_3)&=\sum_{m=1}^{M}S_1(q_{1}^{n,m}-Z_1)S_2(q_2^{m,k}-Z_2)\\
+S_3q_3^{n,k}&=S_1S_2 \sum_{m=1}^{M}(q_{1}^{n,m}-Z_1)(q_2^{m,k}-Z_2)+S_3 Z_3\\
+q_3^{n,k}&=\frac{S_1S_2}{S_3} \sum_{m=1}^{M}(q_{1}^{n,m}-Z_1)(q_2^{m,k}-Z_2)+Z_3
+\end{aligned}</script><p>此时上述公式中只有$\frac{S_1S_2}{S_3}$部分是浮点运算,假设未经过重新量化的矩阵计算结果为$Q$,固定浮点数$\frac{S_1S_2}{S_3}$定义为$F$,那么对于一个浮点数可以利用一个技巧进行近似,然后可以将这个浮点计算转换为定点计算.即将这个浮点数用一个定点整数$F_0$*定点小数$2^{-n}$的方法来近似:</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-q_3^{n,k}&amp;=F Q+Z_3\\
-&amp;=2^{-n}F_0 Q+Z_3
-\end{aligned}
-\]</span></p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">get_q_mat</span><span class="params">(r,q_min=<span class="number">0</span>,q_max=<span class="number">255</span>)</span>:</span></span><br><span class="line">    S=(r.max()-r.min())/(q_max-q_min)</span><br><span class="line">    Z=np.round(q_max-r.max()/S)</span><br><span class="line">    q=np.round(r/S+Z)</span><br><span class="line">    <span class="keyword">return</span> q,S,Z</span><br><span class="line">    </span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">get_r_q_mat</span><span class="params">(h,w,loc=<span class="number">50.</span>,scale=<span class="number">200.</span>)</span>:</span></span><br><span class="line">    r = np.random.normal(loc=loc,scale=scale,size=(h,w))</span><br><span class="line">    q,S,Z = get_q_mat(r)</span><br><span class="line">    <span class="keyword">return</span> r,q,S,Z</span><br><span class="line">r_1,q_1,S_1,Z_1= get_r_q_mat(<span class="number">10</span>,<span class="number">20</span>,<span class="number">20</span>,<span class="number">50</span>)</span><br><span class="line">r_2,q_2,S_2,Z_2= get_r_q_mat(<span class="number">20</span>,<span class="number">30</span>,<span class="number">40</span>,<span class="number">200</span>)</span><br><span class="line">r_3 = r_1 @ r_2</span><br><span class="line">q_3,S_3,Z_3= get_q_mat(r_3)</span><br><span class="line">Q = (q_1-Z_1) @ (q_2-Z_2)</span><br><span class="line">F= (S_1*S_2)/S_3</span><br><span class="line">print(F)</span><br></pre></td></tr></table></figure>
-<pre><code>0.005090788538262954</code></pre>
-<p>此时我们计算<span class="math inline">\(F\)</span>的定点数<span class="math inline">\(F_0\)</span>和<span class="math inline">\(2^{-n}\)</span>,其实就是计算哪一个<span class="math inline">\(F_0\)</span>和<span class="math inline">\(n\)</span>近似<span class="math inline">\(F\)</span>的误差最小: <span class="math display">\[
+q_3^{n,k}&=F Q+Z_3\\
+&=2^{-n}F_0 Q+Z_3
+\end{aligned}</script><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">get_q_mat</span><span class="params">(r,q_min=<span class="number">0</span>,q_max=<span class="number">255</span>)</span>:</span></span><br><span class="line">    S=(r.max()-r.min())/(q_max-q_min)</span><br><span class="line">    Z=np.round(q_max-r.max()/S)</span><br><span class="line">    q=np.round(r/S+Z)</span><br><span class="line">    <span class="keyword">return</span> q,S,Z</span><br><span class="line">    </span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">get_r_q_mat</span><span class="params">(h,w,loc=<span class="number">50.</span>,scale=<span class="number">200.</span>)</span>:</span></span><br><span class="line">    r = np.random.normal(loc=loc,scale=scale,size=(h,w))</span><br><span class="line">    q,S,Z = get_q_mat(r)</span><br><span class="line">    <span class="keyword">return</span> r,q,S,Z</span><br><span class="line">r_1,q_1,S_1,Z_1= get_r_q_mat(<span class="number">10</span>,<span class="number">20</span>,<span class="number">20</span>,<span class="number">50</span>)</span><br><span class="line">r_2,q_2,S_2,Z_2= get_r_q_mat(<span class="number">20</span>,<span class="number">30</span>,<span class="number">40</span>,<span class="number">200</span>)</span><br><span class="line">r_3 = r_1 @ r_2</span><br><span class="line">q_3,S_3,Z_3= get_q_mat(r_3)</span><br><span class="line">Q = (q_1-Z_1) @ (q_2-Z_2)</span><br><span class="line">F= (S_1*S_2)/S_3</span><br><span class="line">print(F)</span><br></pre></td></tr></table></figure>
+<pre><code>0.005090788538262954
+</code></pre><p>此时我们计算$F$的定点数$F_0$和$2^{-n}$,其实就是计算哪一个$F_0$和$n$近似$F$的误差最小:</p>
+<script type="math/tex; mode=display">
 \begin{aligned}
-    \text{argmin}_{n}&amp;abs(FQ-(2^{-n} \times F_0)Q,\ \  F_0 \in [q_{min},q_{max}]\\
-    F_0 &amp;= round(\frac{F}{2^{-n}}) = round(F * (1 &lt;&lt; n)) \\
-    将F_0展开,并将2^{-n}转换为位运算&amp;: \\
-    \text{argmin}_{n}&amp;abs(FQ-(round(F * (1 &lt;&lt; n))Q &gt;&gt; n))
-\end{aligned}
-\]</span> 接下来给出一个确定<span class="math inline">\(F_0\)</span>与<span class="math inline">\(n\)</span>的代码:</p>
+    \text{argmin}_{n}&abs(FQ-(2^{-n} \times F_0)Q,\ \  F_0 \in [q_{min},q_{max}]\\
+    F_0 &= round(\frac{F}{2^{-n}}) = round(F * (1 << n)) \\
+    将F_0展开,并将2^{-n}转换为位运算&: \\
+    \text{argmin}_{n}&abs(FQ-(round(F * (1 << n))Q >> n))
+\end{aligned}</script><p>接下来给出一个确定$F_0$与$n$的代码:</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">get_f_0</span><span class="params">(F,Q,is_print=True)</span>:</span></span><br><span class="line">    mind=<span class="number">1e9</span></span><br><span class="line">    minn=<span class="number">-1</span></span><br><span class="line">    <span class="keyword">for</span> n <span class="keyword">in</span> range(<span class="number">0</span>,<span class="number">16</span>):</span><br><span class="line">        F_0=int(round(F * (<span class="number">1</span>&lt;&lt;n)))</span><br><span class="line">        diff = abs(F*Q - (int(F_0*Q)&gt;&gt;n))</span><br><span class="line">        <span class="keyword">if</span> diff&lt;mind:</span><br><span class="line">            mind,minn=diff,n</span><br><span class="line">        <span class="keyword">if</span> is_print:</span><br><span class="line">            print(<span class="string">f"n=<span class="subst">&#123;n&#125;</span>,F_0=<span class="subst">&#123;F_0&#125;</span>,diff=<span class="subst">&#123;diff&#125;</span>"</span>)</span><br><span class="line">    <span class="keyword">return</span> int(round(F * (<span class="number">1</span>&lt;&lt;minn))),minn</span><br><span class="line">F_0,n = get_f_0(F,int(Q[<span class="number">0</span>][<span class="number">0</span>]))</span><br></pre></td></tr></table></figure>
 <pre><code>n=0,F_0=0,diff=8.58306947551134
 n=1,F_0=0,diff=8.58306947551134
@@ -222,14 +210,14 @@ n=11,F_0=10,diff=0.5830694755113406
 n=12,F_0=21,diff=0.5830694755113406
 n=13,F_0=42,diff=0.5830694755113406
 n=14,F_0=83,diff=0.5830694755113406
-n=15,F_0=167,diff=0.5830694755113406</code></pre>
-<p>观察上述输出,可以发现在<span class="math inline">\(n=10\)</span>的时候就可以得到较好的量化因子了,这样所有的运算就可以用定点的方式来计算了.</p>
+n=15,F_0=167,diff=0.5830694755113406
+</code></pre><p>观察上述输出,可以发现在$n=10$的时候就可以得到较好的量化因子了,这样所有的运算就可以用定点的方式来计算了.</p>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2021/03/27/quant-1/" data-id="ckmrshw27008bnn6x1ryqf9p2" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2021/03/27/quant-1/" data-id="ckmrsjsfo008hps6xf0kehsi8" class="article-share-link">Share</a>
       
       
       
@@ -240,15 +228,6 @@ n=15,F_0=167,diff=0.5830694755113406</code></pre>
   
     
 <nav id="article-nav">
-  
-    <a href="/2021/03/27/quant-1/qut/" id="article-nav-newer" class="article-nav-link-wrap">
-      <strong class="article-nav-caption">Newer</strong>
-      <div class="article-nav-title">
-        
-          (no title)
-        
-      </div>
-    </a>
   
   
     <a href="/2021/01/22/leetcode/" id="article-nav-older" class="article-nav-link-wrap">
@@ -302,10 +281,6 @@ n=15,F_0=167,diff=0.5830694755113406</code></pre>
       <ul>
         
           <li>
-            <a href="/2021/03/27/quant-1/qut/">(no title)</a>
-          </li>
-        
-          <li>
             <a href="/2021/03/27/quant-1/">神经网络量化一</a>
           </li>
         
@@ -319,6 +294,10 @@ n=15,F_0=167,diff=0.5830694755113406</code></pre>
         
           <li>
             <a href="/2020/11/15/pytorch-feature-extract/">pytorch从任意层截断并提取数据</a>
+          </li>
+        
+          <li>
+            <a href="/2020/11/12/webdataset/">Pytorch Webdataset初体验</a>
           </li>
         
       </ul>

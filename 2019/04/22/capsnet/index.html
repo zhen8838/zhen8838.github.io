@@ -7,19 +7,19 @@
   
   <title>CapsNet实现以及踩坑 | </title>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta name="description" content="我本来打算用tensorflow 2.0去写capsule net的,结果被tf 2.0中的tensorboard坑的放弃了... 然后我换成tf 1.13去写了,下面做一个实现过程记录.">
+  <meta name="description" content="我本来打算用tensorflow 2.0去写capsule net的,结果被tf 2.0中的tensorboard坑的放弃了… 然后我换成tf 1.13去写了,下面做一个实现过程记录.">
 <meta name="keywords" content="深度学习,tensorflow,神经网络">
 <meta property="og:type" content="article">
 <meta property="og:title" content="CapsNet实现以及踩坑">
 <meta property="og:url" content="https://zhen8838.github.io/2019/04/22/capsnet/index.html">
 <meta property="og:site_name">
-<meta property="og:description" content="我本来打算用tensorflow 2.0去写capsule net的,结果被tf 2.0中的tensorboard坑的放弃了... 然后我换成tf 1.13去写了,下面做一个实现过程记录.">
+<meta property="og:description" content="我本来打算用tensorflow 2.0去写capsule net的,结果被tf 2.0中的tensorboard坑的放弃了… 然后我换成tf 1.13去写了,下面做一个实现过程记录.">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https://zhen8838.github.io/2019/04/22/capsnet/1.png">
 <meta property="og:updated_time" content="2019-08-05T03:23:01.944Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="CapsNet实现以及踩坑">
-<meta name="twitter:description" content="我本来打算用tensorflow 2.0去写capsule net的,结果被tf 2.0中的tensorboard坑的放弃了... 然后我换成tf 1.13去写了,下面做一个实现过程记录.">
+<meta name="twitter:description" content="我本来打算用tensorflow 2.0去写capsule net的,结果被tf 2.0中的tensorboard坑的放弃了… 然后我换成tf 1.13去写了,下面做一个实现过程记录.">
 <meta name="twitter:image" content="https://zhen8838.github.io/2019/04/22/capsnet/1.png">
   
   
@@ -93,36 +93,30 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <p>我本来打算用<code>tensorflow 2.0</code>去写<code>capsule net</code>的,结果被<code>tf 2.0</code>中的<code>tensorboard</code>坑的放弃了...</p>
+        <p>我本来打算用<code>tensorflow 2.0</code>去写<code>capsule net</code>的,结果被<code>tf 2.0</code>中的<code>tensorboard</code>坑的放弃了…</p>
 <p>然后我换成<code>tf 1.13</code>去写了,下面做一个实现过程记录.</p>
 <a id="more"></a>
-<h1 id="前言">前言</h1>
-<p>其实我感觉<code>capsule net</code>应该是全连接层的升级版,以前的全连接层矩阵输入为<span class="math inline">\(x=[batch,m]\)</span>,现在<code>capsule net</code>的全连接层为<span class="math inline">\(x=[batch,m,len]\)</span>,就是将以前的一维特征扩展成了向量特征.</p>
-<h1 id="数据流动过程">数据流动过程</h1>
-<p>其实我一开始的时候一直想不通数据流动时候的矩阵维度,所以卡壳了,下面就讲一下数据流动过程.</p>
-<p>参考的网络结构是: <img src="/2019/04/22/capsnet/1.png"></p>
+<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>其实我感觉<code>capsule net</code>应该是全连接层的升级版,以前的全连接层矩阵输入为$x=[batch,m]$,现在<code>capsule net</code>的全连接层为$x=[batch,m,len]$,就是将以前的一维特征扩展成了向量特征.</p>
+<h1 id="数据流动过程"><a href="#数据流动过程" class="headerlink" title="数据流动过程"></a>数据流动过程</h1><p>其实我一开始的时候一直想不通数据流动时候的矩阵维度,所以卡壳了,下面就讲一下数据流动过程.</p>
+<p>参考的网络结构是:<br><img src="/2019/04/22/capsnet/1.png" alt=""></p>
 <p>其实从<code>reshape</code>开始才是<code>capsule net</code>,1152为向量个数,8为向量长度.下一层连接到10个长为16的向量.最后计算向量的长度范数来匹配<code>minsit</code>的分类节点.</p>
 <p>然后在<code>capsDense</code>中使用<code>routing</code>算法来更新<code>c</code>的值,最后输出.</p>
-<h1 id="踩过的坑">踩过的坑</h1>
-<h2 id="squash">1. squash</h2>
-<h3 id="问题描述">问题描述</h3>
-<p>激活函数公式为:</p>
-<p><span class="math display">\[ \begin{aligned}
+<h1 id="踩过的坑"><a href="#踩过的坑" class="headerlink" title="踩过的坑"></a>踩过的坑</h1><h2 id="1-squash"><a href="#1-squash" class="headerlink" title="1. squash"></a>1. squash</h2><h3 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h3><p>激活函数公式为:</p>
+<script type="math/tex; mode=display">\begin{aligned}
     v_j=\frac{||s_j||^2}{1+||s_j||^2}\frac{s_j}{||s_j||}
-\end{aligned} \]</span></p>
-<p>下面<code>my_squash</code>是我写的: <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">my_squash</span><span class="params">(s)</span>:</span></span><br><span class="line">    s_norm = tf.norm_v2(s)</span><br><span class="line">    s_square_norm = tf.square(s_norm)</span><br><span class="line">    v = (s_square_norm * s)/((<span class="number">1</span>+s_square_norm)*s_norm)</span><br><span class="line">    <span class="keyword">return</span> v</span><br></pre></td></tr></table></figure></p>
+\end{aligned}</script><p>下面<code>my_squash</code>是我写的:<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">my_squash</span><span class="params">(s)</span>:</span></span><br><span class="line">    s_norm = tf.norm_v2(s)</span><br><span class="line">    s_square_norm = tf.square(s_norm)</span><br><span class="line">    v = (s_square_norm * s)/((<span class="number">1</span>+s_square_norm)*s_norm)</span><br><span class="line">    <span class="keyword">return</span> v</span><br></pre></td></tr></table></figure></p>
 <p>然后我训练的时候一直没有效果,我找了半天才明白.</p>
-<h3 id="问题解决">问题解决</h3>
-<p>问题在于<code>tf.norm_v2</code>这里的维度控制,他这里的范数指的是每一个向量的长度范数,所以需要指定维度为<code>s_norm = tf.norm_v2(s, axis=-1, keepdims=True)</code>,下面是正确的维度演示: <span class="math display">\[ \begin{aligned}
-    令 S_j &amp;= [batch,1152,8] \\
-    则 ||S_j|| &amp;= [batch,1152,1] \\
-    ||S_j||^2 &amp;= [batch,1152,1] \\
-    v&amp;= [batch,1152,8]
-\end{aligned} \]</span></p>
-<p>并且这个函数其实可以优化为: <span class="math display">\[ \begin{aligned}
-    v_j&amp;=\frac{||s_j||^2}{1+||s_j||^2}\frac{s_j}{||s_j||}\\
-    &amp;=\frac{||s_j||s_j}{1+||s_j||^2}
-\end{aligned} \]</span> 代码为: <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">with</span> tf.variable_scope(<span class="string">'squash'</span>):</span><br><span class="line">    s_norm = tf.norm_v2(s, axis=<span class="number">-1</span>, keepdims=<span class="keyword">True</span>)</span><br><span class="line">    s_square_norm = tf.square(s_norm)</span><br><span class="line">    v = (s_norm * s)/(<span class="number">1</span>+s_square_norm)</span><br><span class="line">    <span class="keyword">return</span> v</span><br></pre></td></tr></table></figure></p>
+<h3 id="问题解决"><a href="#问题解决" class="headerlink" title="问题解决"></a>问题解决</h3><p>问题在于<code>tf.norm_v2</code>这里的维度控制,他这里的范数指的是每一个向量的长度范数,所以需要指定维度为<code>s_norm = tf.norm_v2(s, axis=-1, keepdims=True)</code>,下面是正确的维度演示:</p>
+<script type="math/tex; mode=display">\begin{aligned}
+    令 S_j &= [batch,1152,8] \\
+    则 ||S_j|| &= [batch,1152,1] \\
+    ||S_j||^2 &= [batch,1152,1] \\
+    v&= [batch,1152,8]
+\end{aligned}</script><p>并且这个函数其实可以优化为:</p>
+<script type="math/tex; mode=display">\begin{aligned}
+    v_j&=\frac{||s_j||^2}{1+||s_j||^2}\frac{s_j}{||s_j||}\\
+    &=\frac{||s_j||s_j}{1+||s_j||^2}
+\end{aligned}</script><p>代码为:<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">with</span> tf.variable_scope(<span class="string">'squash'</span>):</span><br><span class="line">    s_norm = tf.norm_v2(s, axis=<span class="number">-1</span>, keepdims=<span class="keyword">True</span>)</span><br><span class="line">    s_square_norm = tf.square(s_norm)</span><br><span class="line">    v = (s_norm * s)/(<span class="number">1</span>+s_square_norm)</span><br><span class="line">    <span class="keyword">return</span> v</span><br></pre></td></tr></table></figure></p>
 
       
     </div>
@@ -130,42 +124,36 @@
       
         
         
-          <p>我本来打算用<code>tensorflow 2.0</code>去写<code>capsule net</code>的,结果被<code>tf 2.0</code>中的<code>tensorboard</code>坑的放弃了...</p>
+          <p>我本来打算用<code>tensorflow 2.0</code>去写<code>capsule net</code>的,结果被<code>tf 2.0</code>中的<code>tensorboard</code>坑的放弃了…</p>
 <p>然后我换成<code>tf 1.13</code>去写了,下面做一个实现过程记录.</p>
 <a id="more"></a>
-<h1 id="前言">前言</h1>
-<p>其实我感觉<code>capsule net</code>应该是全连接层的升级版,以前的全连接层矩阵输入为<span class="math inline">\(x=[batch,m]\)</span>,现在<code>capsule net</code>的全连接层为<span class="math inline">\(x=[batch,m,len]\)</span>,就是将以前的一维特征扩展成了向量特征.</p>
-<h1 id="数据流动过程">数据流动过程</h1>
-<p>其实我一开始的时候一直想不通数据流动时候的矩阵维度,所以卡壳了,下面就讲一下数据流动过程.</p>
-<p>参考的网络结构是: <img src="/2019/04/22/capsnet/1.png"></p>
+<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>其实我感觉<code>capsule net</code>应该是全连接层的升级版,以前的全连接层矩阵输入为$x=[batch,m]$,现在<code>capsule net</code>的全连接层为$x=[batch,m,len]$,就是将以前的一维特征扩展成了向量特征.</p>
+<h1 id="数据流动过程"><a href="#数据流动过程" class="headerlink" title="数据流动过程"></a>数据流动过程</h1><p>其实我一开始的时候一直想不通数据流动时候的矩阵维度,所以卡壳了,下面就讲一下数据流动过程.</p>
+<p>参考的网络结构是:<br><img src="/2019/04/22/capsnet/1.png" alt=""></p>
 <p>其实从<code>reshape</code>开始才是<code>capsule net</code>,1152为向量个数,8为向量长度.下一层连接到10个长为16的向量.最后计算向量的长度范数来匹配<code>minsit</code>的分类节点.</p>
 <p>然后在<code>capsDense</code>中使用<code>routing</code>算法来更新<code>c</code>的值,最后输出.</p>
-<h1 id="踩过的坑">踩过的坑</h1>
-<h2 id="squash">1. squash</h2>
-<h3 id="问题描述">问题描述</h3>
-<p>激活函数公式为:</p>
-<p><span class="math display">\[ \begin{aligned}
+<h1 id="踩过的坑"><a href="#踩过的坑" class="headerlink" title="踩过的坑"></a>踩过的坑</h1><h2 id="1-squash"><a href="#1-squash" class="headerlink" title="1. squash"></a>1. squash</h2><h3 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h3><p>激活函数公式为:</p>
+<script type="math/tex; mode=display">\begin{aligned}
     v_j=\frac{||s_j||^2}{1+||s_j||^2}\frac{s_j}{||s_j||}
-\end{aligned} \]</span></p>
-<p>下面<code>my_squash</code>是我写的: <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">my_squash</span><span class="params">(s)</span>:</span></span><br><span class="line">    s_norm = tf.norm_v2(s)</span><br><span class="line">    s_square_norm = tf.square(s_norm)</span><br><span class="line">    v = (s_square_norm * s)/((<span class="number">1</span>+s_square_norm)*s_norm)</span><br><span class="line">    <span class="keyword">return</span> v</span><br></pre></td></tr></table></figure></p>
+\end{aligned}</script><p>下面<code>my_squash</code>是我写的:<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">my_squash</span><span class="params">(s)</span>:</span></span><br><span class="line">    s_norm = tf.norm_v2(s)</span><br><span class="line">    s_square_norm = tf.square(s_norm)</span><br><span class="line">    v = (s_square_norm * s)/((<span class="number">1</span>+s_square_norm)*s_norm)</span><br><span class="line">    <span class="keyword">return</span> v</span><br></pre></td></tr></table></figure></p>
 <p>然后我训练的时候一直没有效果,我找了半天才明白.</p>
-<h3 id="问题解决">问题解决</h3>
-<p>问题在于<code>tf.norm_v2</code>这里的维度控制,他这里的范数指的是每一个向量的长度范数,所以需要指定维度为<code>s_norm = tf.norm_v2(s, axis=-1, keepdims=True)</code>,下面是正确的维度演示: <span class="math display">\[ \begin{aligned}
-    令 S_j &amp;= [batch,1152,8] \\
-    则 ||S_j|| &amp;= [batch,1152,1] \\
-    ||S_j||^2 &amp;= [batch,1152,1] \\
-    v&amp;= [batch,1152,8]
-\end{aligned} \]</span></p>
-<p>并且这个函数其实可以优化为: <span class="math display">\[ \begin{aligned}
-    v_j&amp;=\frac{||s_j||^2}{1+||s_j||^2}\frac{s_j}{||s_j||}\\
-    &amp;=\frac{||s_j||s_j}{1+||s_j||^2}
-\end{aligned} \]</span> 代码为: <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">with</span> tf.variable_scope(<span class="string">'squash'</span>):</span><br><span class="line">    s_norm = tf.norm_v2(s, axis=<span class="number">-1</span>, keepdims=<span class="keyword">True</span>)</span><br><span class="line">    s_square_norm = tf.square(s_norm)</span><br><span class="line">    v = (s_norm * s)/(<span class="number">1</span>+s_square_norm)</span><br><span class="line">    <span class="keyword">return</span> v</span><br></pre></td></tr></table></figure></p>
+<h3 id="问题解决"><a href="#问题解决" class="headerlink" title="问题解决"></a>问题解决</h3><p>问题在于<code>tf.norm_v2</code>这里的维度控制,他这里的范数指的是每一个向量的长度范数,所以需要指定维度为<code>s_norm = tf.norm_v2(s, axis=-1, keepdims=True)</code>,下面是正确的维度演示:</p>
+<script type="math/tex; mode=display">\begin{aligned}
+    令 S_j &= [batch,1152,8] \\
+    则 ||S_j|| &= [batch,1152,1] \\
+    ||S_j||^2 &= [batch,1152,1] \\
+    v&= [batch,1152,8]
+\end{aligned}</script><p>并且这个函数其实可以优化为:</p>
+<script type="math/tex; mode=display">\begin{aligned}
+    v_j&=\frac{||s_j||^2}{1+||s_j||^2}\frac{s_j}{||s_j||}\\
+    &=\frac{||s_j||s_j}{1+||s_j||^2}
+\end{aligned}</script><p>代码为:<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">with</span> tf.variable_scope(<span class="string">'squash'</span>):</span><br><span class="line">    s_norm = tf.norm_v2(s, axis=<span class="number">-1</span>, keepdims=<span class="keyword">True</span>)</span><br><span class="line">    s_square_norm = tf.square(s_norm)</span><br><span class="line">    v = (s_norm * s)/(<span class="number">1</span>+s_square_norm)</span><br><span class="line">    <span class="keyword">return</span> v</span><br></pre></td></tr></table></figure></p>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2019/04/22/capsnet/" data-id="ckmrshw0i002nnn6x3s3xp5xc" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2019/04/22/capsnet/" data-id="ckmrsjsdf002ips6xf6npn9hh" class="article-share-link">Share</a>
       
       
       
@@ -238,10 +226,6 @@
       <ul>
         
           <li>
-            <a href="/2021/03/27/quant-1/qut/">(no title)</a>
-          </li>
-        
-          <li>
             <a href="/2021/03/27/quant-1/">神经网络量化一</a>
           </li>
         
@@ -255,6 +239,10 @@
         
           <li>
             <a href="/2020/11/15/pytorch-feature-extract/">pytorch从任意层截断并提取数据</a>
+          </li>
+        
+          <li>
+            <a href="/2020/11/12/webdataset/">Pytorch Webdataset初体验</a>
           </li>
         
       </ul>

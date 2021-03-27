@@ -95,7 +95,6 @@
 <a id="more"></a>
 <p>由于<code>tensorflow</code>基于图的定义方式，在定义好模型后，再添加正则化器是无效的，必须要重新建立图才可以。使用<code>tf.keras.models.model_from_json(model.to_json())</code>是一种方法，不过如果是加载的预训练模型，我们还需要重新加载权重才可以。</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">physical_devices = tf.config.experimental.list_physical_devices(<span class="string">'GPU'</span>)</span><br><span class="line"><span class="keyword">assert</span> len(physical_devices) &gt; <span class="number">0</span>, <span class="string">"Not enough GPU hardware devices available"</span></span><br><span class="line">tf.config.experimental.set_memory_growth(physical_devices[<span class="number">0</span>], <span class="keyword">True</span>)</span><br><span class="line">inp = tf.keras.Input((<span class="number">28</span>, <span class="number">28</span>, <span class="number">1</span>))</span><br><span class="line">x = tf.keras.layers.Conv2D(<span class="number">32</span>, <span class="number">3</span>, activation=<span class="string">'relu'</span>)(inp)</span><br><span class="line">x = tf.keras.layers.MaxPooling2D()(x)</span><br><span class="line">x = tf.keras.layers.Flatten()(x)</span><br><span class="line">x = tf.keras.layers.Dropout(<span class="number">0.1</span>)(x)</span><br><span class="line">x = tf.keras.layers.Dense(<span class="number">64</span>, activation=<span class="string">'relu'</span>)(x)</span><br><span class="line">x = tf.keras.layers.BatchNormalization()(x)</span><br><span class="line">x = tf.keras.layers.Dense(<span class="number">10</span>)(x)</span><br><span class="line">model = tf.keras.Model(inp, x)</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> layer <span class="keyword">in</span> model.layers:</span><br><span class="line">    <span class="keyword">for</span> attr <span class="keyword">in</span> [<span class="string">'kernel_regularizer'</span>]:</span><br><span class="line">        <span class="keyword">if</span> hasattr(layer, attr):</span><br><span class="line">            setattr(layer, attr, tf.keras.regularizers.l2(<span class="number">0.004</span>))</span><br><span class="line"></span><br><span class="line">train_data = tf.ones(shape=(<span class="number">1</span>, <span class="number">28</span>, <span class="number">28</span>, <span class="number">1</span>))</span><br><span class="line">test_data = tf.ones(shape=(<span class="number">1</span>, <span class="number">28</span>, <span class="number">28</span>, <span class="number">1</span>))</span><br><span class="line">model = tf.keras.models.model_from_json(model.to_json())</span><br><span class="line"></span><br><span class="line">train_out = model(train_data, training=<span class="keyword">True</span>)</span><br><span class="line">print(model.losses)</span><br></pre></td></tr></table></figure>
-
       
     </div>
     <!-- <div class="article-entry" itemprop="articleBody">
@@ -106,12 +105,11 @@
 <a id="more"></a>
 <p>由于<code>tensorflow</code>基于图的定义方式，在定义好模型后，再添加正则化器是无效的，必须要重新建立图才可以。使用<code>tf.keras.models.model_from_json(model.to_json())</code>是一种方法，不过如果是加载的预训练模型，我们还需要重新加载权重才可以。</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">physical_devices = tf.config.experimental.list_physical_devices(<span class="string">'GPU'</span>)</span><br><span class="line"><span class="keyword">assert</span> len(physical_devices) &gt; <span class="number">0</span>, <span class="string">"Not enough GPU hardware devices available"</span></span><br><span class="line">tf.config.experimental.set_memory_growth(physical_devices[<span class="number">0</span>], <span class="keyword">True</span>)</span><br><span class="line">inp = tf.keras.Input((<span class="number">28</span>, <span class="number">28</span>, <span class="number">1</span>))</span><br><span class="line">x = tf.keras.layers.Conv2D(<span class="number">32</span>, <span class="number">3</span>, activation=<span class="string">'relu'</span>)(inp)</span><br><span class="line">x = tf.keras.layers.MaxPooling2D()(x)</span><br><span class="line">x = tf.keras.layers.Flatten()(x)</span><br><span class="line">x = tf.keras.layers.Dropout(<span class="number">0.1</span>)(x)</span><br><span class="line">x = tf.keras.layers.Dense(<span class="number">64</span>, activation=<span class="string">'relu'</span>)(x)</span><br><span class="line">x = tf.keras.layers.BatchNormalization()(x)</span><br><span class="line">x = tf.keras.layers.Dense(<span class="number">10</span>)(x)</span><br><span class="line">model = tf.keras.Model(inp, x)</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> layer <span class="keyword">in</span> model.layers:</span><br><span class="line">    <span class="keyword">for</span> attr <span class="keyword">in</span> [<span class="string">'kernel_regularizer'</span>]:</span><br><span class="line">        <span class="keyword">if</span> hasattr(layer, attr):</span><br><span class="line">            setattr(layer, attr, tf.keras.regularizers.l2(<span class="number">0.004</span>))</span><br><span class="line"></span><br><span class="line">train_data = tf.ones(shape=(<span class="number">1</span>, <span class="number">28</span>, <span class="number">28</span>, <span class="number">1</span>))</span><br><span class="line">test_data = tf.ones(shape=(<span class="number">1</span>, <span class="number">28</span>, <span class="number">28</span>, <span class="number">1</span>))</span><br><span class="line">model = tf.keras.models.model_from_json(model.to_json())</span><br><span class="line"></span><br><span class="line">train_out = model(train_data, training=<span class="keyword">True</span>)</span><br><span class="line">print(model.losses)</span><br></pre></td></tr></table></figure>
-
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2020/02/12/tf-all-regularizers/" data-id="ckmrshw7z00dxnn6xvmyadcpk" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2020/02/12/tf-all-regularizers/" data-id="ckmrsjsks00g1ps6xatod1b1x" class="article-share-link">Share</a>
       
       
       
@@ -184,10 +182,6 @@
       <ul>
         
           <li>
-            <a href="/2021/03/27/quant-1/qut/">(no title)</a>
-          </li>
-        
-          <li>
             <a href="/2021/03/27/quant-1/">神经网络量化一</a>
           </li>
         
@@ -201,6 +195,10 @@
         
           <li>
             <a href="/2020/11/15/pytorch-feature-extract/">pytorch从任意层截断并提取数据</a>
+          </li>
+        
+          <li>
+            <a href="/2020/11/12/webdataset/">Pytorch Webdataset初体验</a>
           </li>
         
       </ul>

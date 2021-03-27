@@ -96,24 +96,16 @@
       
         <p>Model-Agnostic Meta-Learning(MAML)是元学习中经典算法之一，今天准备来实现一下。</p>
 <a id="more"></a>
-<h1 id="基础概念">基础概念</h1>
-<p>首先从具体例子的角度进行解释，对于数学证明先按下不表。<code>MAML</code>的主要给出一个被显式训练的自适应模型参数(与具体任务无关)，利用自适应模型参数面对全新的task只需在少量数据上进行几次梯度更新即可取得良好的泛化性能。</p>
-<h2 id="task-base-learning">task base learning</h2>
-<p><code>MAML</code>中以一个<code>task</code>作为训练的最小样本，每一个<code>task</code>使用<code>nway</code>与<code>kshot</code>描述它，比如如果使用<code>omniglot</code>数据集，此数据集中有许多个文件夹，每个文件夹表示一个字符，其中包含了20个不同的人对这一字符的书写。在数据生成的过程中，随机选取<code>nway</code>个文件夹作为类别，每个文件夹采样<code>kshot</code>个样本。</p>
+<h1 id="基础概念"><a href="#基础概念" class="headerlink" title="基础概念"></a>基础概念</h1><p>首先从具体例子的角度进行解释，对于数学证明先按下不表。<code>MAML</code>的主要给出一个被显式训练的自适应模型参数(与具体任务无关)，利用自适应模型参数面对全新的task只需在少量数据上进行几次梯度更新即可取得良好的泛化性能。</p>
+<h2 id="task-base-learning"><a href="#task-base-learning" class="headerlink" title="task base learning"></a>task base learning</h2><p><code>MAML</code>中以一个<code>task</code>作为训练的最小样本，每一个<code>task</code>使用<code>nway</code>与<code>kshot</code>描述它，比如如果使用<code>omniglot</code>数据集，此数据集中有许多个文件夹，每个文件夹表示一个字符，其中包含了20个不同的人对这一字符的书写。在数据生成的过程中，随机选取<code>nway</code>个文件夹作为类别，每个文件夹采样<code>kshot</code>个样本。</p>
 <p>如下图所示,<code>nway=5</code>,<code>kshot=1</code>时的采样结果，即一共5个类别，每个类别采样<code>kshot×2</code>个样本。这里采样<code>kshot×2</code>个样本是为了将一半的样本作为<code>support set</code>(<code>一个batch中的训练集</code>)用于<code>maml</code>方法自适应，另一半作为<code>query set</code>(<code>一个batch中的测试集</code>)用于常规的梯度下降。</p>
-<figure>
-<img src="/2020/10/03/maml/maml_sample.png" alt=""><figcaption>MAML Sample</figcaption>
-</figure>
-<h2 id="compute-graph">compute graph</h2>
-<p><code>maml</code>需要找到一个在全局的<code>task</code>下具备较优泛化能力<span class="math inline">\(\theta\)</span>。设我们一个<code>batch</code>中得到了<code>support set</code>为<span class="math inline">\(S = \{x_s, y_s\}\)</span>，<code>query set</code>为<span class="math inline">\(Q = \{x_q, y_q\}\)</span>。那么开始执行计算图：</p>
-<p>首先<code>maml</code>算法将原始参数<span class="math inline">\(\theta\)</span>设置为当前网络的参数，并设置当前内循环迭代次数<span class="math inline">\(i=0\)</span>，即<span class="math inline">\(\theta_0=\theta\)</span>。然后开始自适应的过程，使用参数为<span class="math inline">\(\theta_{i}\)</span>的神经网络<span class="math inline">\(f(\theta_{i})\)</span>对<code>support set</code>进行推理，并对预测结果与<span class="math inline">\(y_s\)</span>进行损失得到<span class="math inline">\(L_{i}^s\)</span>，对此损失进行求导并利用<code>maml</code>独立的学习率<span class="math inline">\(\alpha\)</span>对参数<span class="math inline">\(\theta_{i}\)</span>进行更新，得到新的<span class="math inline">\(\theta_{i+1}\)</span>。当内循环迭代次数大于阈值<span class="math inline">\(N\)</span>时，结束自适应过程后使用<code>query set</code>对原始参数进行一次梯度下降并更新原始参数。</p>
+<p><img src="/2020/10/03/maml/maml_sample.png" alt="MAML Sample"></p>
+<h2 id="compute-graph"><a href="#compute-graph" class="headerlink" title="compute graph"></a>compute graph</h2><p><code>maml</code>需要找到一个在全局的<code>task</code>下具备较优泛化能力$\theta$。设我们一个<code>batch</code>中得到了<code>support set</code>为$S = \{x_s, y_s\}$，<code>query set</code>为$Q = \{x_q, y_q\}$。那么开始执行计算图：</p>
+<p>首先<code>maml</code>算法将原始参数$\theta$设置为当前网络的参数，并设置当前内循环迭代次数$i=0$，即$\theta_0=\theta$。然后开始自适应的过程，使用参数为$\theta_{i}$的神经网络$f(\theta_{i})$对<code>support set</code>进行推理，并对预测结果与$y_s$进行损失得到$L_{i}^s$，对此损失进行求导并利用<code>maml</code>独立的学习率$\alpha$对参数$\theta_{i}$进行更新，得到新的$\theta_{i+1}$。当内循环迭代次数大于阈值$N$时，结束自适应过程后使用<code>query set</code>对原始参数进行一次梯度下降并更新原始参数。</p>
 <p><strong>NOTE</strong>:原论文默认保留计算图，即后续的梯度下降是需要求二阶导数的。并且原论文中N默认为1，即只自适应一次。</p>
-<figure>
-<img src="/2020/10/03/maml/graph.svg" alt=""><figcaption>Compute Graph</figcaption>
-</figure>
-<p>根据计算图，我们可以了解到，<code>MAML</code>实际上是要求最终的参数<span class="math inline">\(\theta\)</span>进行<span class="math inline">\(N\)</span>次自适应后能对<code>task</code>较好拟合。</p>
-<h2 id="implement">Implement</h2>
-<p>我本来打算参考<code>learn2learn</code>的方法在<code>megengine</code>中进行实现，但是实现过程中还是碰到不少问题，比如<code>megengine</code>其实是底层默认自动构建图的，也就是和<code>tensorflow 2</code>有点类似，因此强制替换模型参数会破坏计算图。但是我又不想按原论文的实现那样，将所有参数手动指定，这样根本没办法随意修改模型，目前我想找一个能不破坏模型构建过程的方法将模型参数托管到全局字典中，前向推理的过程中再取对应参数计算，但是找不到。。希望能找到一些灵感。</p>
+<p><img src="/2020/10/03/maml/graph.svg" alt="Compute Graph"></p>
+<p>根据计算图，我们可以了解到，<code>MAML</code>实际上是要求最终的参数$\theta$进行$N$次自适应后能对<code>task</code>较好拟合。</p>
+<h2 id="Implement"><a href="#Implement" class="headerlink" title="Implement"></a>Implement</h2><p>我本来打算参考<code>learn2learn</code>的方法在<code>megengine</code>中进行实现，但是实现过程中还是碰到不少问题，比如<code>megengine</code>其实是底层默认自动构建图的，也就是和<code>tensorflow 2</code>有点类似，因此强制替换模型参数会破坏计算图。但是我又不想按原论文的实现那样，将所有参数手动指定，这样根本没办法随意修改模型，目前我想找一个能不破坏模型构建过程的方法将模型参数托管到全局字典中，前向推理的过程中再取对应参数计算，但是找不到。。希望能找到一些灵感。</p>
 
       
     </div>
@@ -123,30 +115,22 @@
         
           <p>Model-Agnostic Meta-Learning(MAML)是元学习中经典算法之一，今天准备来实现一下。</p>
 <a id="more"></a>
-<h1 id="基础概念">基础概念</h1>
-<p>首先从具体例子的角度进行解释，对于数学证明先按下不表。<code>MAML</code>的主要给出一个被显式训练的自适应模型参数(与具体任务无关)，利用自适应模型参数面对全新的task只需在少量数据上进行几次梯度更新即可取得良好的泛化性能。</p>
-<h2 id="task-base-learning">task base learning</h2>
-<p><code>MAML</code>中以一个<code>task</code>作为训练的最小样本，每一个<code>task</code>使用<code>nway</code>与<code>kshot</code>描述它，比如如果使用<code>omniglot</code>数据集，此数据集中有许多个文件夹，每个文件夹表示一个字符，其中包含了20个不同的人对这一字符的书写。在数据生成的过程中，随机选取<code>nway</code>个文件夹作为类别，每个文件夹采样<code>kshot</code>个样本。</p>
+<h1 id="基础概念"><a href="#基础概念" class="headerlink" title="基础概念"></a>基础概念</h1><p>首先从具体例子的角度进行解释，对于数学证明先按下不表。<code>MAML</code>的主要给出一个被显式训练的自适应模型参数(与具体任务无关)，利用自适应模型参数面对全新的task只需在少量数据上进行几次梯度更新即可取得良好的泛化性能。</p>
+<h2 id="task-base-learning"><a href="#task-base-learning" class="headerlink" title="task base learning"></a>task base learning</h2><p><code>MAML</code>中以一个<code>task</code>作为训练的最小样本，每一个<code>task</code>使用<code>nway</code>与<code>kshot</code>描述它，比如如果使用<code>omniglot</code>数据集，此数据集中有许多个文件夹，每个文件夹表示一个字符，其中包含了20个不同的人对这一字符的书写。在数据生成的过程中，随机选取<code>nway</code>个文件夹作为类别，每个文件夹采样<code>kshot</code>个样本。</p>
 <p>如下图所示,<code>nway=5</code>,<code>kshot=1</code>时的采样结果，即一共5个类别，每个类别采样<code>kshot×2</code>个样本。这里采样<code>kshot×2</code>个样本是为了将一半的样本作为<code>support set</code>(<code>一个batch中的训练集</code>)用于<code>maml</code>方法自适应，另一半作为<code>query set</code>(<code>一个batch中的测试集</code>)用于常规的梯度下降。</p>
-<figure>
-<img src="/2020/10/03/maml/maml_sample.png" alt=""><figcaption>MAML Sample</figcaption>
-</figure>
-<h2 id="compute-graph">compute graph</h2>
-<p><code>maml</code>需要找到一个在全局的<code>task</code>下具备较优泛化能力<span class="math inline">\(\theta\)</span>。设我们一个<code>batch</code>中得到了<code>support set</code>为<span class="math inline">\(S = \{x_s, y_s\}\)</span>，<code>query set</code>为<span class="math inline">\(Q = \{x_q, y_q\}\)</span>。那么开始执行计算图：</p>
-<p>首先<code>maml</code>算法将原始参数<span class="math inline">\(\theta\)</span>设置为当前网络的参数，并设置当前内循环迭代次数<span class="math inline">\(i=0\)</span>，即<span class="math inline">\(\theta_0=\theta\)</span>。然后开始自适应的过程，使用参数为<span class="math inline">\(\theta_{i}\)</span>的神经网络<span class="math inline">\(f(\theta_{i})\)</span>对<code>support set</code>进行推理，并对预测结果与<span class="math inline">\(y_s\)</span>进行损失得到<span class="math inline">\(L_{i}^s\)</span>，对此损失进行求导并利用<code>maml</code>独立的学习率<span class="math inline">\(\alpha\)</span>对参数<span class="math inline">\(\theta_{i}\)</span>进行更新，得到新的<span class="math inline">\(\theta_{i+1}\)</span>。当内循环迭代次数大于阈值<span class="math inline">\(N\)</span>时，结束自适应过程后使用<code>query set</code>对原始参数进行一次梯度下降并更新原始参数。</p>
+<p><img src="/2020/10/03/maml/maml_sample.png" alt="MAML Sample"></p>
+<h2 id="compute-graph"><a href="#compute-graph" class="headerlink" title="compute graph"></a>compute graph</h2><p><code>maml</code>需要找到一个在全局的<code>task</code>下具备较优泛化能力$\theta$。设我们一个<code>batch</code>中得到了<code>support set</code>为$S = \{x_s, y_s\}$，<code>query set</code>为$Q = \{x_q, y_q\}$。那么开始执行计算图：</p>
+<p>首先<code>maml</code>算法将原始参数$\theta$设置为当前网络的参数，并设置当前内循环迭代次数$i=0$，即$\theta_0=\theta$。然后开始自适应的过程，使用参数为$\theta_{i}$的神经网络$f(\theta_{i})$对<code>support set</code>进行推理，并对预测结果与$y_s$进行损失得到$L_{i}^s$，对此损失进行求导并利用<code>maml</code>独立的学习率$\alpha$对参数$\theta_{i}$进行更新，得到新的$\theta_{i+1}$。当内循环迭代次数大于阈值$N$时，结束自适应过程后使用<code>query set</code>对原始参数进行一次梯度下降并更新原始参数。</p>
 <p><strong>NOTE</strong>:原论文默认保留计算图，即后续的梯度下降是需要求二阶导数的。并且原论文中N默认为1，即只自适应一次。</p>
-<figure>
-<img src="/2020/10/03/maml/graph.svg" alt=""><figcaption>Compute Graph</figcaption>
-</figure>
-<p>根据计算图，我们可以了解到，<code>MAML</code>实际上是要求最终的参数<span class="math inline">\(\theta\)</span>进行<span class="math inline">\(N\)</span>次自适应后能对<code>task</code>较好拟合。</p>
-<h2 id="implement">Implement</h2>
-<p>我本来打算参考<code>learn2learn</code>的方法在<code>megengine</code>中进行实现，但是实现过程中还是碰到不少问题，比如<code>megengine</code>其实是底层默认自动构建图的，也就是和<code>tensorflow 2</code>有点类似，因此强制替换模型参数会破坏计算图。但是我又不想按原论文的实现那样，将所有参数手动指定，这样根本没办法随意修改模型，目前我想找一个能不破坏模型构建过程的方法将模型参数托管到全局字典中，前向推理的过程中再取对应参数计算，但是找不到。。希望能找到一些灵感。</p>
+<p><img src="/2020/10/03/maml/graph.svg" alt="Compute Graph"></p>
+<p>根据计算图，我们可以了解到，<code>MAML</code>实际上是要求最终的参数$\theta$进行$N$次自适应后能对<code>task</code>较好拟合。</p>
+<h2 id="Implement"><a href="#Implement" class="headerlink" title="Implement"></a>Implement</h2><p>我本来打算参考<code>learn2learn</code>的方法在<code>megengine</code>中进行实现，但是实现过程中还是碰到不少问题，比如<code>megengine</code>其实是底层默认自动构建图的，也就是和<code>tensorflow 2</code>有点类似，因此强制替换模型参数会破坏计算图。但是我又不想按原论文的实现那样，将所有参数手动指定，这样根本没办法随意修改模型，目前我想找一个能不破坏模型构建过程的方法将模型参数托管到全局字典中，前向推理的过程中再取对应参数计算，但是找不到。。希望能找到一些灵感。</p>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2020/10/03/maml/" data-id="ckmrshw1j005pnn6xoyjdsfqc" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2020/10/03/maml/" data-id="ckmrsjsf2005vps6xhaidnpjw" class="article-share-link">Share</a>
       
       
       
@@ -219,10 +203,6 @@
       <ul>
         
           <li>
-            <a href="/2021/03/27/quant-1/qut/">(no title)</a>
-          </li>
-        
-          <li>
             <a href="/2021/03/27/quant-1/">神经网络量化一</a>
           </li>
         
@@ -236,6 +216,10 @@
         
           <li>
             <a href="/2020/11/15/pytorch-feature-extract/">pytorch从任意层截断并提取数据</a>
+          </li>
+        
+          <li>
+            <a href="/2020/11/12/webdataset/">Pytorch Webdataset初体验</a>
           </li>
         
       </ul>

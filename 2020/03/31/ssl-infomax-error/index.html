@@ -103,47 +103,50 @@
       
         <p>最近想用<a href="https://zhen8838.github.io/2019/08/01/infor-max/"><code>infomax</code>算法</a>和<a href="https://zhen8838.github.io/2020/03/29/ssl-simclr/">对比学习</a>结合起来，然后应用在半监督学习中。在实验过程中遇到了一个非常奇怪的问题。</p>
 <a id="more"></a>
-<h1 id="问题描述">问题描述</h1>
-<p>我一开始以为<code>infomax</code>中的判别器也可以随便来，然后就定义了判别器如下：</p>
+<h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>我一开始以为<code>infomax</code>中的判别器也可以随便来，然后就定义了判别器如下：</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># get global discriminate result</span></span><br><span class="line">globaldiscriminator = compose(</span><br><span class="line">    <span class="comment"># kl.InputLayer(input_shape=[2 * z_dim]),</span></span><br><span class="line">    kl.Dense(z_dim, activation=<span class="string">'relu'</span>),</span><br><span class="line">    kl.BatchNormalization(),</span><br><span class="line">    kl.Dense(z_dim, activation=<span class="string">'relu'</span>),</span><br><span class="line">    kl.BatchNormalization(),</span><br><span class="line">    kl.Dense(z_dim, activation=<span class="string">'relu'</span>),</span><br><span class="line">    kl.BatchNormalization(),</span><br><span class="line">    kl.Dense(<span class="number">1</span>, activation=<span class="string">'sigmoid'</span>),</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
 <p>然后在<code>cifar10</code>数据集中进行实验，发现判别器损失一直没有降低，反而先验损失会降低到一个相当小的值，但编码器输出的隐变量明显不符合先验分布。</p>
-下面分别是全局互信息损失和局部互信息损失，可以看到这么多<code>step</code>过去后，几乎没有下降：
+<p>下面分别是全局互信息损失和局部互信息损失，可以看到这么多<code>step</code>过去后，几乎没有下降：</p>
 <figure class="half">
-<img src="/2020/03/31/ssl-infomax-error/g_loss_1.svg" width="350"><img src="/2020/03/31/ssl-infomax-error/l_loss_1.svg" width="350">
+    <img src="/2020/03/31/ssl-infomax-error/g_loss_1.svg" width="350"><img src="/2020/03/31/ssl-infomax-error/l_loss_1.svg" width="350">
 </figure>
-对于先验分布的损失可以看到下降到一个非常低的值了。
-<div data-align="center">
-<p><img src="/2020/03/31/ssl-infomax-error/kl_loss_1.svg" width="350"></p>
-</div>
-<p>隐变量输出分布统计结果： <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">z mean 0.005774456</span><br><span class="line">z std 0.120639555</span><br><span class="line">z mean 0.00078799046</span><br><span class="line">z std 0.08064849</span><br><span class="line">z mean 0.0028064575</span><br><span class="line">z std 0.09524193</span><br><span class="line">z mean 7.149822e-05</span><br><span class="line">z std 0.08297808</span><br></pre></td></tr></table></figure></p>
-相似度采样结果，虽然是测试集上的结果，差一点说的过去，但是这还不如不训练：
-<div data-align="center">
-<p><img src="/2020/03/31/ssl-infomax-error/sample_1.png" width="350"></p>
-</div>
-<h1 id="问题解决">问题解决</h1>
-<p>经过各种修改，发现问题就在判别器中，只要将判别器中的<code>bn</code>删除：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># get global discriminate result</span></span><br><span class="line">globaldiscriminator = compose(</span><br><span class="line">    <span class="comment"># kl.InputLayer(input_shape=[2 * z_dim]),</span></span><br><span class="line">    kl.Dense(z_dim, activation=<span class="string">'relu'</span>),</span><br><span class="line">    kl.Dense(z_dim, activation=<span class="string">'relu'</span>),</span><br><span class="line">    kl.Dense(z_dim, activation=<span class="string">'relu'</span>),</span><br><span class="line">    kl.Dense(<span class="number">1</span>, activation=<span class="string">'sigmoid'</span>),</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
-<p>然后在<code>cifar10</code>数据集中进行实验，发现判别器损失有效降低，先验损失会维持在一个范围，这样才有对抗的感觉了。</p>
-下面分别是全局互信息损失和局部互信息损失，降到了相当低：
-<figure class="half">
-<img src="/2020/03/31/ssl-infomax-error/g_loss_2.svg" width="350"><img src="/2020/03/31/ssl-infomax-error/l_loss_2.svg" width="350">
-</figure>
-对于先验分布的损失有下降，当没有那么强烈。
-<div data-align="center">
-<p><img src="/2020/03/31/ssl-infomax-error/kl_loss_2.svg" width="350"></p>
-</div>
-<p>隐变量输出分布统计结果，这次就接近于独立正态分布了： <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">z mean 0.0043534352</span><br><span class="line">z std 1.0862136</span><br><span class="line">z mean 0.009636099</span><br><span class="line">z std 1.1103721</span><br><span class="line">z mean -0.011318588</span><br><span class="line">z std 1.0901983</span><br><span class="line">z mean -0.0093264235</span><br><span class="line">z std 1.112159</span><br><span class="line">z mean -0.010979499</span><br><span class="line">z std 1.1168234</span><br></pre></td></tr></table></figure></p>
-相似度采样结果，这次就好了很多：
-<div data-align="center">
-<p><img src="/2020/03/31/ssl-infomax-error/sample_2.png" width="350"></p>
-</div>
-<h1 id="思考">思考</h1>
-<p>个人认为是这个问题是因为判别器的输入是两个隐变量直接<code>concat</code>在一起的，如果进行<code>bn</code>就导致分布相同丧失判别能力了。下一步可以考虑借鉴<code>simclr</code>中的方法，<code>infomax</code>中的负采样估计只是简单的<code>shuffle</code>一下，而<code>simclr</code>中利用矩阵乘法在一个<code>batch</code>中直接组合出<code>batch*batch-batch</code>个样本对，特别是他的论文中<code>batch size</code>最大是8192，相当暴力。</p>
-在实验的过程中我还发现了一个比较有趣的地方，就是如果直接初始化模型然后对编码器的输出做相似度采样，结果其实不差。让我感觉我训练这个模型这么久好像就改变了一下编码器输出的分布。。。
-<div data-align="center">
-<p><img src="/2020/03/31/ssl-infomax-error/sample_3.png" width="350"></p>
+
+<p>对于先验分布的损失可以看到下降到一个非常低的值了。</p>
+<div align="center">
+<img src="/2020/03/31/ssl-infomax-error/kl_loss_1.svg" width="350">
 </div>
 
+<p>隐变量输出分布统计结果：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">z mean 0.005774456</span><br><span class="line">z std 0.120639555</span><br><span class="line">z mean 0.00078799046</span><br><span class="line">z std 0.08064849</span><br><span class="line">z mean 0.0028064575</span><br><span class="line">z std 0.09524193</span><br><span class="line">z mean 7.149822e-05</span><br><span class="line">z std 0.08297808</span><br></pre></td></tr></table></figure></p>
+<p>相似度采样结果，虽然是测试集上的结果，差一点说的过去，但是这还不如不训练：</p>
+<div align="center">
+<img src="/2020/03/31/ssl-infomax-error/sample_1.png" width="350">
+</div>
+
+
+<h1 id="问题解决"><a href="#问题解决" class="headerlink" title="问题解决"></a>问题解决</h1><p>经过各种修改，发现问题就在判别器中，只要将判别器中的<code>bn</code>删除：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># get global discriminate result</span></span><br><span class="line">globaldiscriminator = compose(</span><br><span class="line">    <span class="comment"># kl.InputLayer(input_shape=[2 * z_dim]),</span></span><br><span class="line">    kl.Dense(z_dim, activation=<span class="string">'relu'</span>),</span><br><span class="line">    kl.Dense(z_dim, activation=<span class="string">'relu'</span>),</span><br><span class="line">    kl.Dense(z_dim, activation=<span class="string">'relu'</span>),</span><br><span class="line">    kl.Dense(<span class="number">1</span>, activation=<span class="string">'sigmoid'</span>),</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+<p>然后在<code>cifar10</code>数据集中进行实验，发现判别器损失有效降低，先验损失会维持在一个范围，这样才有对抗的感觉了。</p>
+<p>下面分别是全局互信息损失和局部互信息损失，降到了相当低：</p>
+<figure class="half">
+    <img src="/2020/03/31/ssl-infomax-error/g_loss_2.svg" width="350"><img src="/2020/03/31/ssl-infomax-error/l_loss_2.svg" width="350">
+</figure>
+
+<p>对于先验分布的损失有下降，当没有那么强烈。</p>
+<div align="center">
+<img src="/2020/03/31/ssl-infomax-error/kl_loss_2.svg" width="350">
+</div>
+
+<p>隐变量输出分布统计结果，这次就接近于独立正态分布了：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">z mean 0.0043534352</span><br><span class="line">z std 1.0862136</span><br><span class="line">z mean 0.009636099</span><br><span class="line">z std 1.1103721</span><br><span class="line">z mean -0.011318588</span><br><span class="line">z std 1.0901983</span><br><span class="line">z mean -0.0093264235</span><br><span class="line">z std 1.112159</span><br><span class="line">z mean -0.010979499</span><br><span class="line">z std 1.1168234</span><br></pre></td></tr></table></figure></p>
+<p>相似度采样结果，这次就好了很多：</p>
+<div align="center">
+<img src="/2020/03/31/ssl-infomax-error/sample_2.png" width="350">
+</div>
+
+<h1 id="思考"><a href="#思考" class="headerlink" title="思考"></a>思考</h1><p>个人认为是这个问题是因为判别器的输入是两个隐变量直接<code>concat</code>在一起的，如果进行<code>bn</code>就导致分布相同丧失判别能力了。下一步可以考虑借鉴<code>simclr</code>中的方法，<code>infomax</code>中的负采样估计只是简单的<code>shuffle</code>一下，而<code>simclr</code>中利用矩阵乘法在一个<code>batch</code>中直接组合出<code>batch*batch-batch</code>个样本对，特别是他的论文中<code>batch size</code>最大是8192，相当暴力。</p>
+<p>在实验的过程中我还发现了一个比较有趣的地方，就是如果直接初始化模型然后对编码器的输出做相似度采样，结果其实不差。让我感觉我训练这个模型这么久好像就改变了一下编码器输出的分布。。。</p>
+<div align="center">
+<img src="/2020/03/31/ssl-infomax-error/sample_3.png" width="350">
+</div>
       
     </div>
     <!-- <div class="article-entry" itemprop="articleBody">
@@ -152,52 +155,55 @@
         
           <p>最近想用<a href="https://zhen8838.github.io/2019/08/01/infor-max/"><code>infomax</code>算法</a>和<a href="https://zhen8838.github.io/2020/03/29/ssl-simclr/">对比学习</a>结合起来，然后应用在半监督学习中。在实验过程中遇到了一个非常奇怪的问题。</p>
 <a id="more"></a>
-<h1 id="问题描述">问题描述</h1>
-<p>我一开始以为<code>infomax</code>中的判别器也可以随便来，然后就定义了判别器如下：</p>
+<h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>我一开始以为<code>infomax</code>中的判别器也可以随便来，然后就定义了判别器如下：</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># get global discriminate result</span></span><br><span class="line">globaldiscriminator = compose(</span><br><span class="line">    <span class="comment"># kl.InputLayer(input_shape=[2 * z_dim]),</span></span><br><span class="line">    kl.Dense(z_dim, activation=<span class="string">'relu'</span>),</span><br><span class="line">    kl.BatchNormalization(),</span><br><span class="line">    kl.Dense(z_dim, activation=<span class="string">'relu'</span>),</span><br><span class="line">    kl.BatchNormalization(),</span><br><span class="line">    kl.Dense(z_dim, activation=<span class="string">'relu'</span>),</span><br><span class="line">    kl.BatchNormalization(),</span><br><span class="line">    kl.Dense(<span class="number">1</span>, activation=<span class="string">'sigmoid'</span>),</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
 <p>然后在<code>cifar10</code>数据集中进行实验，发现判别器损失一直没有降低，反而先验损失会降低到一个相当小的值，但编码器输出的隐变量明显不符合先验分布。</p>
-下面分别是全局互信息损失和局部互信息损失，可以看到这么多<code>step</code>过去后，几乎没有下降：
+<p>下面分别是全局互信息损失和局部互信息损失，可以看到这么多<code>step</code>过去后，几乎没有下降：</p>
 <figure class="half">
-<img src="/2020/03/31/ssl-infomax-error/g_loss_1.svg" width="350"><img src="/2020/03/31/ssl-infomax-error/l_loss_1.svg" width="350">
+    <img src="/2020/03/31/ssl-infomax-error/g_loss_1.svg" width="350"><img src="/2020/03/31/ssl-infomax-error/l_loss_1.svg" width="350">
 </figure>
-对于先验分布的损失可以看到下降到一个非常低的值了。
-<div data-align="center">
-<p><img src="/2020/03/31/ssl-infomax-error/kl_loss_1.svg" width="350"></p>
-</div>
-<p>隐变量输出分布统计结果： <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">z mean 0.005774456</span><br><span class="line">z std 0.120639555</span><br><span class="line">z mean 0.00078799046</span><br><span class="line">z std 0.08064849</span><br><span class="line">z mean 0.0028064575</span><br><span class="line">z std 0.09524193</span><br><span class="line">z mean 7.149822e-05</span><br><span class="line">z std 0.08297808</span><br></pre></td></tr></table></figure></p>
-相似度采样结果，虽然是测试集上的结果，差一点说的过去，但是这还不如不训练：
-<div data-align="center">
-<p><img src="/2020/03/31/ssl-infomax-error/sample_1.png" width="350"></p>
-</div>
-<h1 id="问题解决">问题解决</h1>
-<p>经过各种修改，发现问题就在判别器中，只要将判别器中的<code>bn</code>删除：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># get global discriminate result</span></span><br><span class="line">globaldiscriminator = compose(</span><br><span class="line">    <span class="comment"># kl.InputLayer(input_shape=[2 * z_dim]),</span></span><br><span class="line">    kl.Dense(z_dim, activation=<span class="string">'relu'</span>),</span><br><span class="line">    kl.Dense(z_dim, activation=<span class="string">'relu'</span>),</span><br><span class="line">    kl.Dense(z_dim, activation=<span class="string">'relu'</span>),</span><br><span class="line">    kl.Dense(<span class="number">1</span>, activation=<span class="string">'sigmoid'</span>),</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
-<p>然后在<code>cifar10</code>数据集中进行实验，发现判别器损失有效降低，先验损失会维持在一个范围，这样才有对抗的感觉了。</p>
-下面分别是全局互信息损失和局部互信息损失，降到了相当低：
-<figure class="half">
-<img src="/2020/03/31/ssl-infomax-error/g_loss_2.svg" width="350"><img src="/2020/03/31/ssl-infomax-error/l_loss_2.svg" width="350">
-</figure>
-对于先验分布的损失有下降，当没有那么强烈。
-<div data-align="center">
-<p><img src="/2020/03/31/ssl-infomax-error/kl_loss_2.svg" width="350"></p>
-</div>
-<p>隐变量输出分布统计结果，这次就接近于独立正态分布了： <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">z mean 0.0043534352</span><br><span class="line">z std 1.0862136</span><br><span class="line">z mean 0.009636099</span><br><span class="line">z std 1.1103721</span><br><span class="line">z mean -0.011318588</span><br><span class="line">z std 1.0901983</span><br><span class="line">z mean -0.0093264235</span><br><span class="line">z std 1.112159</span><br><span class="line">z mean -0.010979499</span><br><span class="line">z std 1.1168234</span><br></pre></td></tr></table></figure></p>
-相似度采样结果，这次就好了很多：
-<div data-align="center">
-<p><img src="/2020/03/31/ssl-infomax-error/sample_2.png" width="350"></p>
-</div>
-<h1 id="思考">思考</h1>
-<p>个人认为是这个问题是因为判别器的输入是两个隐变量直接<code>concat</code>在一起的，如果进行<code>bn</code>就导致分布相同丧失判别能力了。下一步可以考虑借鉴<code>simclr</code>中的方法，<code>infomax</code>中的负采样估计只是简单的<code>shuffle</code>一下，而<code>simclr</code>中利用矩阵乘法在一个<code>batch</code>中直接组合出<code>batch*batch-batch</code>个样本对，特别是他的论文中<code>batch size</code>最大是8192，相当暴力。</p>
-在实验的过程中我还发现了一个比较有趣的地方，就是如果直接初始化模型然后对编码器的输出做相似度采样，结果其实不差。让我感觉我训练这个模型这么久好像就改变了一下编码器输出的分布。。。
-<div data-align="center">
-<p><img src="/2020/03/31/ssl-infomax-error/sample_3.png" width="350"></p>
+
+<p>对于先验分布的损失可以看到下降到一个非常低的值了。</p>
+<div align="center">
+<img src="/2020/03/31/ssl-infomax-error/kl_loss_1.svg" width="350">
 </div>
 
+<p>隐变量输出分布统计结果：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">z mean 0.005774456</span><br><span class="line">z std 0.120639555</span><br><span class="line">z mean 0.00078799046</span><br><span class="line">z std 0.08064849</span><br><span class="line">z mean 0.0028064575</span><br><span class="line">z std 0.09524193</span><br><span class="line">z mean 7.149822e-05</span><br><span class="line">z std 0.08297808</span><br></pre></td></tr></table></figure></p>
+<p>相似度采样结果，虽然是测试集上的结果，差一点说的过去，但是这还不如不训练：</p>
+<div align="center">
+<img src="/2020/03/31/ssl-infomax-error/sample_1.png" width="350">
+</div>
+
+
+<h1 id="问题解决"><a href="#问题解决" class="headerlink" title="问题解决"></a>问题解决</h1><p>经过各种修改，发现问题就在判别器中，只要将判别器中的<code>bn</code>删除：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># get global discriminate result</span></span><br><span class="line">globaldiscriminator = compose(</span><br><span class="line">    <span class="comment"># kl.InputLayer(input_shape=[2 * z_dim]),</span></span><br><span class="line">    kl.Dense(z_dim, activation=<span class="string">'relu'</span>),</span><br><span class="line">    kl.Dense(z_dim, activation=<span class="string">'relu'</span>),</span><br><span class="line">    kl.Dense(z_dim, activation=<span class="string">'relu'</span>),</span><br><span class="line">    kl.Dense(<span class="number">1</span>, activation=<span class="string">'sigmoid'</span>),</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+<p>然后在<code>cifar10</code>数据集中进行实验，发现判别器损失有效降低，先验损失会维持在一个范围，这样才有对抗的感觉了。</p>
+<p>下面分别是全局互信息损失和局部互信息损失，降到了相当低：</p>
+<figure class="half">
+    <img src="/2020/03/31/ssl-infomax-error/g_loss_2.svg" width="350"><img src="/2020/03/31/ssl-infomax-error/l_loss_2.svg" width="350">
+</figure>
+
+<p>对于先验分布的损失有下降，当没有那么强烈。</p>
+<div align="center">
+<img src="/2020/03/31/ssl-infomax-error/kl_loss_2.svg" width="350">
+</div>
+
+<p>隐变量输出分布统计结果，这次就接近于独立正态分布了：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">z mean 0.0043534352</span><br><span class="line">z std 1.0862136</span><br><span class="line">z mean 0.009636099</span><br><span class="line">z std 1.1103721</span><br><span class="line">z mean -0.011318588</span><br><span class="line">z std 1.0901983</span><br><span class="line">z mean -0.0093264235</span><br><span class="line">z std 1.112159</span><br><span class="line">z mean -0.010979499</span><br><span class="line">z std 1.1168234</span><br></pre></td></tr></table></figure></p>
+<p>相似度采样结果，这次就好了很多：</p>
+<div align="center">
+<img src="/2020/03/31/ssl-infomax-error/sample_2.png" width="350">
+</div>
+
+<h1 id="思考"><a href="#思考" class="headerlink" title="思考"></a>思考</h1><p>个人认为是这个问题是因为判别器的输入是两个隐变量直接<code>concat</code>在一起的，如果进行<code>bn</code>就导致分布相同丧失判别能力了。下一步可以考虑借鉴<code>simclr</code>中的方法，<code>infomax</code>中的负采样估计只是简单的<code>shuffle</code>一下，而<code>simclr</code>中利用矩阵乘法在一个<code>batch</code>中直接组合出<code>batch*batch-batch</code>个样本对，特别是他的论文中<code>batch size</code>最大是8192，相当暴力。</p>
+<p>在实验的过程中我还发现了一个比较有趣的地方，就是如果直接初始化模型然后对编码器的输出做相似度采样，结果其实不差。让我感觉我训练这个模型这么久好像就改变了一下编码器输出的分布。。。</p>
+<div align="center">
+<img src="/2020/03/31/ssl-infomax-error/sample_3.png" width="350">
+</div>
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2020/03/31/ssl-infomax-error/" data-id="ckmrshw2e008snn6xlhr8t422" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2020/03/31/ssl-infomax-error/" data-id="ckmrsjsfq008sps6xixokq85k" class="article-share-link">Share</a>
       
       
       
@@ -270,10 +276,6 @@
       <ul>
         
           <li>
-            <a href="/2021/03/27/quant-1/qut/">(no title)</a>
-          </li>
-        
-          <li>
             <a href="/2021/03/27/quant-1/">神经网络量化一</a>
           </li>
         
@@ -287,6 +289,10 @@
         
           <li>
             <a href="/2020/11/15/pytorch-feature-extract/">pytorch从任意层截断并提取数据</a>
+          </li>
+        
+          <li>
+            <a href="/2020/11/12/webdataset/">Pytorch Webdataset初体验</a>
           </li>
         
       </ul>
