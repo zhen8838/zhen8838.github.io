@@ -1,0 +1,98 @@
+<div class="sourceCode" id="cb1"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span></code></pre></div>
+<h2 id="网络量化的基本原理">网络量化的基本原理</h2>
+<h3 id="背景知识">背景知识</h3>
+<p>我们通常会将一张 uint8 类型、数值范围在 <span class="math inline">\(0\sim255\)</span> 的图片归一成 float32 类型、数值范围在 <span class="math inline">\(0.0\sim1.0\)</span> 的张量，这个过程就是反量化。</p>
+<p>最简单的量化公式是<span class="math inline">\(min max map\)</span>，假设使用这里我们用<span class="math inline">\(r\)</span>表示浮点实数，<span class="math inline">\(q\)</span>表示量化后的定点整数。浮点和整型之间的换算公式为： <span class="math display">\[q = round(\frac{r}{S}+Z)\]</span> <span class="math display">\[r = S(q-Z)\]</span></p>
+<p>其中，<span class="math inline">\(S\)</span> 是 scale，表示实数和整数之间的比例关系，<span class="math inline">\(Z\)</span> 是 zero point，表示实数中的 0 经过量化后对应的整数，它们的计算方法为： <span class="math display">\[S = \frac{r_{max}-r_{min}}{q_{max}-q_{min}}\]</span> <span class="math display">\[Z = round(q_{max} - \frac{r_{max}}{S})\]</span></p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1"></a>r <span class="op">=</span> np.random.normal(loc<span class="op">=</span><span class="fl">50.</span>,scale<span class="op">=</span><span class="fl">200.</span>,size<span class="op">=</span><span class="dv">10</span>)</span>
+<span id="cb2-2"><a href="#cb2-2"></a>q_min<span class="op">=</span><span class="dv">0</span></span>
+<span id="cb2-3"><a href="#cb2-3"></a>q_max<span class="op">=</span><span class="dv">255</span></span>
+<span id="cb2-4"><a href="#cb2-4"></a>S<span class="op">=</span>(r.<span class="bu">max</span>()<span class="op">-</span>r.<span class="bu">min</span>())<span class="op">/</span>(q_max<span class="op">-</span>q_min)</span>
+<span id="cb2-5"><a href="#cb2-5"></a>Z<span class="op">=</span>np.<span class="bu">round</span>(q_max<span class="op">-</span>r.<span class="bu">max</span>()<span class="op">/</span>S)</span>
+<span id="cb2-6"><a href="#cb2-6"></a>q<span class="op">=</span>np.<span class="bu">round</span>(r<span class="op">/</span>S<span class="op">+</span>Z)</span>
+<span id="cb2-7"><a href="#cb2-7"></a><span class="bu">print</span>(<span class="st">&#39;r:&#39;</span>,r,<span class="st">&#39;</span><span class="ch">\n</span><span class="st">S:&#39;</span>,S,<span class="st">&#39;</span><span class="ch">\n</span><span class="st">Z:&#39;</span>,Z,<span class="st">&#39;</span><span class="ch">\n</span><span class="st">q:&#39;</span>,q)</span></code></pre></div>
+<pre><code>r: [-245.72830045    1.23478453   65.72744594  205.58300291  201.59666572
+   52.22934735   57.28456311  479.56419248 -129.48366498  -39.83812742] 
+S: 2.8442842859958217 
+Z: 86.0 
+q: [ -0.  86. 109. 158. 157. 104. 106. 255.  40.  72.]</code></pre>
+<p>可以发现反量化的时候将出现一定的误差：</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1"></a><span class="kw">def</span> q_to_r(q,S,Z):</span>
+<span id="cb4-2"><a href="#cb4-2"></a>    <span class="cf">return</span> S<span class="op">*</span>(q<span class="op">-</span>Z)</span>
+<span id="cb4-3"><a href="#cb4-3"></a>re_r<span class="op">=</span>q_to_r(q,S,Z)</span>
+<span id="cb4-4"><a href="#cb4-4"></a>r<span class="op">-</span>re_r</span></code></pre></div>
+<pre><code>array([-1.11985185,  1.23478453,  0.30890736,  0.79453432, -0.34751859,
+        1.03223021,  0.39887739, -1.11985185,  1.35341218, -0.01814741])</code></pre>
+<h3 id="矩阵运算的量化">矩阵运算的量化</h3>
+<p>假设<span class="math inline">\(r_1,r_2\)</span>是两个矩阵,他们的维度分别为<span class="math inline">\(N\times M,M\times K\)</span>,<span class="math inline">\(r_3\)</span>作为两个矩阵的乘积结果,维度是<span class="math inline">\(N \times K\)</span>,乘积计算过程如下:</p>
+<p><span class="math display">\[
+r_3^{n,k}=\sum_{m=1}^M r_1^{n,m}r_2^{m,k}
+\]</span></p>
+<p>设<span class="math inline">\(S_1,Z_1\)</span>对应<span class="math inline">\(r_1\)</span>的量化因子,同理得到<span class="math inline">\(S_2,Z_2\)</span>和<span class="math inline">\(S_3,Z_3\)</span>,这时候将上述矩阵相乘公式的量化计算过程如下: <span class="math display">\[
+\begin{aligned}
+S_3(q_3^{n,k}-Z_3)&amp;=\sum_{m=1}^{M}S_1(q_{1}^{n,m}-Z_1)S_2(q_2^{m,k}-Z_2)\\
+S_3q_3^{n,k}&amp;=S_1S_2 \sum_{m=1}^{M}(q_{1}^{n,m}-Z_1)(q_2^{m,k}-Z_2)+S_3 Z_3\\
+q_3^{n,k}&amp;=\frac{S_1S_2}{S_3} \sum_{m=1}^{M}(q_{1}^{n,m}-Z_1)(q_2^{m,k}-Z_2)+Z_3
+\end{aligned}
+\]</span> 此时上述公式中只有<span class="math inline">\(\frac{S_1S_2}{S_3}\)</span>部分是浮点运算,假设未经过重新量化的矩阵计算结果为<span class="math inline">\(Q\)</span>,固定浮点数<span class="math inline">\(\frac{S_1S_2}{S_3}\)</span>定义为<span class="math inline">\(F\)</span>,那么对于一个浮点数可以利用一个技巧进行近似,然后可以将这个浮点计算转换为定点计算.即将这个浮点数用一个定点整数<span class="math inline">\(F_0\)</span>*定点小数<span class="math inline">\(2^{-n}\)</span>的方法来近似: <span class="math display">\[
+\begin{aligned}
+q_3^{n,k}&amp;=F Q+Z_3\\
+&amp;=2^{-n}F_0 Q+Z_3
+\end{aligned}
+\]</span></p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1"></a><span class="kw">def</span> get_q_mat(r,q_min<span class="op">=</span><span class="dv">0</span>,q_max<span class="op">=</span><span class="dv">255</span>):</span>
+<span id="cb6-2"><a href="#cb6-2"></a>    S<span class="op">=</span>(r.<span class="bu">max</span>()<span class="op">-</span>r.<span class="bu">min</span>())<span class="op">/</span>(q_max<span class="op">-</span>q_min)</span>
+<span id="cb6-3"><a href="#cb6-3"></a>    Z<span class="op">=</span>np.<span class="bu">round</span>(q_max<span class="op">-</span>r.<span class="bu">max</span>()<span class="op">/</span>S)</span>
+<span id="cb6-4"><a href="#cb6-4"></a>    q<span class="op">=</span>np.<span class="bu">round</span>(r<span class="op">/</span>S<span class="op">+</span>Z)</span>
+<span id="cb6-5"><a href="#cb6-5"></a>    <span class="cf">return</span> q,S,Z</span>
+<span id="cb6-6"><a href="#cb6-6"></a>    </span>
+<span id="cb6-7"><a href="#cb6-7"></a><span class="kw">def</span> get_r_q_mat(h,w,loc<span class="op">=</span><span class="fl">50.</span>,scale<span class="op">=</span><span class="fl">200.</span>):</span>
+<span id="cb6-8"><a href="#cb6-8"></a>    r <span class="op">=</span> np.random.normal(loc<span class="op">=</span>loc,scale<span class="op">=</span>scale,size<span class="op">=</span>(h,w))</span>
+<span id="cb6-9"><a href="#cb6-9"></a>    q,S,Z <span class="op">=</span> get_q_mat(r)</span>
+<span id="cb6-10"><a href="#cb6-10"></a>    <span class="cf">return</span> r,q,S,Z</span>
+<span id="cb6-11"><a href="#cb6-11"></a>r_1,q_1,S_1,Z_1<span class="op">=</span> get_r_q_mat(<span class="dv">10</span>,<span class="dv">20</span>,<span class="dv">20</span>,<span class="dv">50</span>)</span>
+<span id="cb6-12"><a href="#cb6-12"></a>r_2,q_2,S_2,Z_2<span class="op">=</span> get_r_q_mat(<span class="dv">20</span>,<span class="dv">30</span>,<span class="dv">40</span>,<span class="dv">200</span>)</span>
+<span id="cb6-13"><a href="#cb6-13"></a>r_3 <span class="op">=</span> r_1 <span class="op">@</span> r_2</span>
+<span id="cb6-14"><a href="#cb6-14"></a>q_3,S_3,Z_3<span class="op">=</span> get_q_mat(r_3)</span>
+<span id="cb6-15"><a href="#cb6-15"></a>Q <span class="op">=</span> (q_1<span class="op">-</span>Z_1) <span class="op">@</span> (q_2<span class="op">-</span>Z_2)</span>
+<span id="cb6-16"><a href="#cb6-16"></a>F<span class="op">=</span> (S_1<span class="op">*</span>S_2)<span class="op">/</span>S_3</span>
+<span id="cb6-17"><a href="#cb6-17"></a><span class="bu">print</span>(F)</span></code></pre></div>
+<pre><code>0.005090788538262954</code></pre>
+<p>此时我们计算<span class="math inline">\(F\)</span>的定点数<span class="math inline">\(F_0\)</span>和<span class="math inline">\(2^{-n}\)</span>,其实就是计算哪一个<span class="math inline">\(F_0\)</span>和<span class="math inline">\(n\)</span>近似<span class="math inline">\(F\)</span>的误差最小: <span class="math display">\[
+\begin{aligned}
+    \text{argmin}_{n}&amp;abs(FQ-(2^{-n} \times F_0)Q,\ \  F_0 \in [q_{min},q_{max}]\\
+    F_0 &amp;= round(\frac{F}{2^{-n}}) = round(F * (1 &lt;&lt; n)) \\
+    将F_0展开,并将2^{-n}转换为位运算&amp;: \\
+    \text{argmin}_{n}&amp;abs(FQ-(round(F * (1 &lt;&lt; n))Q &gt;&gt; n))
+\end{aligned}
+\]</span> 接下来给出一个确定<span class="math inline">\(F_0\)</span>与<span class="math inline">\(n\)</span>的代码:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1"></a><span class="kw">def</span> get_f_0(F,Q,is_print<span class="op">=</span><span class="va">True</span>):</span>
+<span id="cb8-2"><a href="#cb8-2"></a>    mind<span class="op">=</span><span class="fl">1e9</span></span>
+<span id="cb8-3"><a href="#cb8-3"></a>    minn<span class="op">=-</span><span class="dv">1</span></span>
+<span id="cb8-4"><a href="#cb8-4"></a>    <span class="cf">for</span> n <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>,<span class="dv">16</span>):</span>
+<span id="cb8-5"><a href="#cb8-5"></a>        F_0<span class="op">=</span><span class="bu">int</span>(<span class="bu">round</span>(F <span class="op">*</span> (<span class="dv">1</span><span class="op">&lt;&lt;</span>n)))</span>
+<span id="cb8-6"><a href="#cb8-6"></a>        diff <span class="op">=</span> <span class="bu">abs</span>(F<span class="op">*</span>Q <span class="op">-</span> (<span class="bu">int</span>(F_0<span class="op">*</span>Q)<span class="op">&gt;&gt;</span>n))</span>
+<span id="cb8-7"><a href="#cb8-7"></a>        <span class="cf">if</span> diff<span class="op">&lt;</span>mind:</span>
+<span id="cb8-8"><a href="#cb8-8"></a>            mind,minn<span class="op">=</span>diff,n</span>
+<span id="cb8-9"><a href="#cb8-9"></a>        <span class="cf">if</span> is_print:</span>
+<span id="cb8-10"><a href="#cb8-10"></a>            <span class="bu">print</span>(<span class="ss">f&quot;n=</span><span class="sc">{n}</span><span class="ss">,F_0=</span><span class="sc">{</span>F_0<span class="sc">}</span><span class="ss">,diff=</span><span class="sc">{</span>diff<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb8-11"><a href="#cb8-11"></a>    <span class="cf">return</span> <span class="bu">int</span>(<span class="bu">round</span>(F <span class="op">*</span> (<span class="dv">1</span><span class="op">&lt;&lt;</span>minn))),minn</span>
+<span id="cb8-12"><a href="#cb8-12"></a>F_0,n <span class="op">=</span> get_f_0(F,<span class="bu">int</span>(Q[<span class="dv">0</span>][<span class="dv">0</span>]))</span></code></pre></div>
+<pre><code>n=0,F_0=0,diff=8.58306947551134
+n=1,F_0=0,diff=8.58306947551134
+n=2,F_0=0,diff=8.58306947551134
+n=3,F_0=0,diff=8.58306947551134
+n=4,F_0=0,diff=8.58306947551134
+n=5,F_0=0,diff=8.58306947551134
+n=6,F_0=0,diff=8.58306947551134
+n=7,F_0=1,diff=4.416930524488659
+n=8,F_0=1,diff=2.5830694755113406
+n=9,F_0=3,diff=0.4169305244886594
+n=10,F_0=5,diff=0.5830694755113406
+n=11,F_0=10,diff=0.5830694755113406
+n=12,F_0=21,diff=0.5830694755113406
+n=13,F_0=42,diff=0.5830694755113406
+n=14,F_0=83,diff=0.5830694755113406
+n=15,F_0=167,diff=0.5830694755113406</code></pre>
+<p>观察上述输出,可以发现在<span class="math inline">\(n=10\)</span>的时候就可以得到较好的量化因子了,这样所有的运算就可以用定点的方式来计算了.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
