@@ -101,377 +101,371 @@
         <p>[toc]</p>
 <p>一些面试准备</p>
 <a id="more"></a>
-<h2 id="公司"><a href="#公司" class="headerlink" title="公司"></a>公司</h2><ol>
+<h2 id="公司">公司</h2>
+<ol type="1">
 <li>吉利 嵌入式开发 杭州</li>
 <li>海康 计算机视觉 杭州</li>
 </ol>
-<h2 id="自我介绍与qa"><a href="#自我介绍与qa" class="headerlink" title="自我介绍与qa"></a>自我介绍与qa</h2><ol>
+<h2 id="自我介绍与qa">自我介绍与qa</h2>
+<ol type="1">
 <li>您好，我叫xxx，我是来自xx大学的一名研三学生。硕士期间，我在消防员危险异常预警系统项目中开发硬件与编写系统代码；在油管缺陷检测项目中为电磁检测信号构建了合适的消噪模型；我的主要研究课题是基于音频的老人行为异常预警系统，主要目标是利用智能家居中的传感设备采集音频信号对老人的意外情况做出非隐私侵入的预测，在课题期间我搭建了系统硬件框架，并研究算法并发表了一篇ccfa类论文，发明专利公开了三篇。我之前在新加坡的一家公司远程实习，这段时间内我独立搭建了深度学习的算法框架平台，并进行网络裁剪与算法优化，移植了多个图像算法至嵌入式设备中落地，并将其中一套算法的整体流程进行了开源。我比较喜欢学习新领域知识，记录学习的过程，因此我也开源了半监督学习以及图像生成的算法库。 （海康是目前是智能安防领域的龙头企业，我实习阶段所做的工作和海康的领域比较契合，因此我希望能来贵公司工作）</li>
 </ol>
-<h3 id="你为什么不参加秋招？"><a href="#你为什么不参加秋招？" class="headerlink" title="你为什么不参加秋招？"></a>你为什么不参加秋招？</h3><ol>
+<h3 id="你为什么不参加秋招">你为什么不参加秋招？</h3>
+<ol type="1">
 <li>因为我当时想读博士，后来又因为老师的项目结题，和别的事情耽搁了。</li>
 </ol>
-<h2 id="项目"><a href="#项目" class="headerlink" title="项目"></a>项目</h2><h3 id="深度学习的项目做了哪些工作？"><a href="#深度学习的项目做了哪些工作？" class="headerlink" title="深度学习的项目做了哪些工作？"></a>深度学习的项目做了哪些工作？</h3><ol>
+<h2 id="项目">项目</h2>
+<h3 id="深度学习的项目做了哪些工作">深度学习的项目做了哪些工作？</h3>
+<ol type="1">
 <li>我主要负责编写整个训练模型的代码，以及一些模型移植的工作。训练的代码类似于现在很火的mmlab开源的mmdetection，我一开始基于兴趣把yolo移植到了k210中，进行20类的检测，在此之前官方没有给出训练的例子，我也没有接触过深度学习，努力了两个月把这个事情搞定了并开源出去。</li>
 </ol>
-<h4 id="yolo的侧端优化部分"><a href="#yolo的侧端优化部分" class="headerlink" title="yolo的侧端优化部分"></a>yolo的侧端优化部分</h4><h5 id="数据"><a href="#数据" class="headerlink" title="数据"></a>数据</h5><ol>
-<li><p>训练数据清洗，消除标记错误的图像。</p>
-</li>
-<li><p>标签制作的时候，因为gt是按最匹配的格子进行分配的，因此存在着最优匹配冲突的情况，因此需要进行处理。</p>
-</li>
+<h4 id="yolo的侧端优化部分">yolo的侧端优化部分</h4>
+<h5 id="数据">数据</h5>
+<ol type="1">
+<li><p>训练数据清洗，消除标记错误的图像。</p></li>
+<li><p>标签制作的时候，因为gt是按最匹配的格子进行分配的，因此存在着最优匹配冲突的情况，因此需要进行处理。</p></li>
 </ol>
-<h5 id="模型"><a href="#模型" class="headerlink" title="模型"></a>模型</h5><ol>
-<li><p>优化算法模型，首先参考mobilenetv1大面积使用depthwise卷积，然后参考mobilenetv2引入部分的残差机制，但是不考虑使用1x1卷积进行升维。并且去除concat时的激活函数</p>
-</li>
-<li><p>将激活函数relu替换为leaky relu？因为实际使用中发现，depthwise 卷积核很多会变成0，这时候输出是0，再用relu梯度又是0，导致神经元太多无效了，在定点化的时候会出现量化精度丢失过多的问题。</p>
-</li>
-<li><p>考虑到输入只有224*320，不需要检测过小的bbox，因此将三分支转换为双分支输出</p>
-</li>
+<h5 id="模型">模型</h5>
+<ol start="3" type="1">
+<li><p>优化算法模型，首先参考mobilenetv1大面积使用depthwise卷积，然后参考mobilenetv2引入部分的残差机制，但是不考虑使用1x1卷积进行升维。并且去除concat时的激活函数</p></li>
+<li><p>将激活函数relu替换为leaky relu？因为实际使用中发现，depthwise 卷积核很多会变成0，这时候输出是0，再用relu梯度又是0，导致神经元太多无效了，在定点化的时候会出现量化精度丢失过多的问题。</p></li>
+<li><p>考虑到输入只有224*320，不需要检测过小的bbox，因此将三分支转换为双分支输出</p></li>
 </ol>
-<h5 id="损失函数"><a href="#损失函数" class="headerlink" title="损失函数"></a>损失函数</h5><ol>
-<li><p>发现了很多开源代码的计算ignore mask的部分都是错误的，他们都是考虑整个batch下同一层的输出，因此我修改成同一个的图像内部的全部层做ignoremask</p>
-</li>
-<li><p>考虑到对小目标不是很友好，为每个图像中最小的bbox额外设置了惩罚。</p>
-</li>
-<li><p>将模型bbox损失改成了diou loss。</p>
-</li>
+<h5 id="损失函数">损失函数</h5>
+<ol type="1">
+<li><p>发现了很多开源代码的计算ignore mask的部分都是错误的，他们都是考虑整个batch下同一层的输出，因此我修改成同一个的图像内部的全部层做ignoremask</p></li>
+<li><p>考虑到对小目标不是很友好，为每个图像中最小的bbox额外设置了惩罚。</p></li>
+<li><p>将模型bbox损失改成了diou loss。</p></li>
 </ol>
-<h5 id="训练优化"><a href="#训练优化" class="headerlink" title="训练优化"></a>训练优化</h5><ol>
-<li><p>权重指数滑动平均</p>
-</li>
-<li><p>自动数据增强autoaugment，每次从一个策略集中采样一个子策略进行</p>
-</li>
-<li><p>蒸馏，首先训练了一个相同输入与输出的大模型，将模型的输出进行匹配。</p>
-</li>
+<h5 id="训练优化">训练优化</h5>
+<ol type="1">
+<li><p>权重指数滑动平均</p></li>
+<li><p>自动数据增强autoaugment，每次从一个策略集中采样一个子策略进行</p></li>
+<li><p>蒸馏，首先训练了一个相同输入与输出的大模型，将模型的输出进行匹配。</p></li>
 </ol>
-<h4 id="其他部分"><a href="#其他部分" class="headerlink" title="其他部分"></a>其他部分</h4><ol>
-<li><p>后面移植的算法逐渐多了起来，我就把训练框架重新写了一下，又移植了pfld、ssd、ssd+人脸关键点分支（没有人脸就不计算关键点损失）、yolov3再次优化、基于arcface的人脸识别。</p>
-</li>
-<li><p>侧端部署主要用的是K210官方的sdk，我给官方sdk提交过一个例子。</p>
-</li>
-<li><p>树莓派加速器我主要把树莓派端和k210代码都调试了一下，主要把spi通信走通了。两边spi都是主机，中间的fpga是从机。</p>
-</li>
-<li><p>基于fpga的加速超分算法主要是利用total variation loss（总变分损失）判断图像的连续区域的变化，通过变化率判断当前图像是高频段还是低频段，然后分块进行超分辨率。</p>
-</li>
+<h4 id="其他部分">其他部分</h4>
+<ol start="4" type="1">
+<li><p>后面移植的算法逐渐多了起来，我就把训练框架重新写了一下，又移植了pfld、ssd、ssd+人脸关键点分支（没有人脸就不计算关键点损失）、yolov3再次优化、基于arcface的人脸识别。</p></li>
+<li><p>侧端部署主要用的是K210官方的sdk，我给官方sdk提交过一个例子。</p></li>
+<li><p>树莓派加速器我主要把树莓派端和k210代码都调试了一下，主要把spi通信走通了。两边spi都是主机，中间的fpga是从机。</p></li>
+<li><p>基于fpga的加速超分算法主要是利用total variation loss（总变分损失）判断图像的连续区域的变化，通过变化率判断当前图像是高频段还是低频段，然后分块进行超分辨率。</p></li>
 </ol>
-<h3 id="基于多源环境信息的老人行为识别和异常预警系统研发做了什么？"><a href="#基于多源环境信息的老人行为识别和异常预警系统研发做了什么？" class="headerlink" title="基于多源环境信息的老人行为识别和异常预警系统研发做了什么？"></a>基于多源环境信息的老人行为识别和异常预警系统研发做了什么？</h3><ol>
-<li><p>这个的多源传感器设备是我设计的，用了stm32搭载音频传感器还有一些温湿度传感器，用wifi模块与网关进行通信。</p>
-</li>
-<li><p>网关用的是树莓派，用qt比较简单的设置了tcpserver，每个子节点连接上来之后就创建一个线程单独接受子模块的数据。这里其实应该用进程好一点，因为线程崩了程序就崩了。</p>
-</li>
-<li><p>数据协议没有做过多的添加，随便自己定义了一个协议就向上发了。接受到数据后判断数据的头是什么，然后跳转到对应的处理函数进行接受。</p>
-</li>
-<li><p>向上发送的时候是利用http post的方式发送的，当时我用一些库发现一直发不出去，然后直接抓包postman的发送结构，知道结构后自己构建数据包。</p>
-</li>
-<li><p>云端服务器就是java的服务器，不是我写的，后面就是调用了一个我训练的模型，java调用tflite预测一下行为结果。</p>
-</li>
+<h3 id="基于多源环境信息的老人行为识别和异常预警系统研发做了什么">基于多源环境信息的老人行为识别和异常预警系统研发做了什么？</h3>
+<ol type="1">
+<li><p>这个的多源传感器设备是我设计的，用了stm32搭载音频传感器还有一些温湿度传感器，用wifi模块与网关进行通信。</p></li>
+<li><p>网关用的是树莓派，用qt比较简单的设置了tcpserver，每个子节点连接上来之后就创建一个线程单独接受子模块的数据。这里其实应该用进程好一点，因为线程崩了程序就崩了。</p></li>
+<li><p>数据协议没有做过多的添加，随便自己定义了一个协议就向上发了。接受到数据后判断数据的头是什么，然后跳转到对应的处理函数进行接受。</p></li>
+<li><p>向上发送的时候是利用http post的方式发送的，当时我用一些库发现一直发不出去，然后直接抓包postman的发送结构，知道结构后自己构建数据包。</p></li>
+<li><p>云端服务器就是java的服务器，不是我写的，后面就是调用了一个我训练的模型，java调用tflite预测一下行为结果。</p></li>
 </ol>
-<h3 id="基于移动无线传感网的火灾消防人员安全预警和救援调度系统研发"><a href="#基于移动无线传感网的火灾消防人员安全预警和救援调度系统研发" class="headerlink" title="基于移动无线传感网的火灾消防人员安全预警和救援调度系统研发"></a>基于移动无线传感网的火灾消防人员安全预警和救援调度系统研发</h3><ol>
-<li><p>这个项目是我早期设计的，没有设计的很完善。一开始是画了个荔枝派V3s的扩展版，然后发现不好用，后来用了基于全志h5的芯片做。设计了一个带显示屏、光照、温湿度、气压、有害气体等等的扩展板，设计好了之后直接写代码，一开始写的是c，但是要给每个传感器移植驱动实在是太累了，后面换c++调用spi、i2c、uart接口对每个传感器进行封装实例类。</p>
-</li>
-<li><p>代码主要是开两个进程，一个专门采集数据、一个发送数据到网关节点，中间通过无名管道进行通信，并没有进行什么同步。发送数据使用的是串口433，还是因为spi口子不够了，没办法。</p>
-</li>
-<li><p>本来设计的是要在h5上读取音频的，结果串口不够了，然后再加了个树莓派开发板，专门读取音频。所以代码中采集数据的进程里面开了个线程和专门接收下属的板子的语音识别结果。语音识别用了讯飞的离线识别库，用来识别比较简单的命令，读取音频我搞了个带pulseaudio的buildroot，搞了很久才把蓝牙耳机连接上，貌似Linux的蓝牙驱动都不太好，接下来就是树莓派接收到命令后录音10秒，然后调用sox对音频去噪，再识别，最后把识别结果发上去就好了。</p>
-</li>
-<li><p>数据发送还是比较简单的，网关就是接到什么转成json，利用socket发送到云端就好了。</p>
-</li>
+<h3 id="基于移动无线传感网的火灾消防人员安全预警和救援调度系统研发">基于移动无线传感网的火灾消防人员安全预警和救援调度系统研发</h3>
+<ol type="1">
+<li><p>这个项目是我早期设计的，没有设计的很完善。一开始是画了个荔枝派V3s的扩展版，然后发现不好用，后来用了基于全志h5的芯片做。设计了一个带显示屏、光照、温湿度、气压、有害气体等等的扩展板，设计好了之后直接写代码，一开始写的是c，但是要给每个传感器移植驱动实在是太累了，后面换c++调用spi、i2c、uart接口对每个传感器进行封装实例类。</p></li>
+<li><p>代码主要是开两个进程，一个专门采集数据、一个发送数据到网关节点，中间通过无名管道进行通信，并没有进行什么同步。发送数据使用的是串口433，还是因为spi口子不够了，没办法。</p></li>
+<li><p>本来设计的是要在h5上读取音频的，结果串口不够了，然后再加了个树莓派开发板，专门读取音频。所以代码中采集数据的进程里面开了个线程和专门接收下属的板子的语音识别结果。语音识别用了讯飞的离线识别库，用来识别比较简单的命令，读取音频我搞了个带pulseaudio的buildroot，搞了很久才把蓝牙耳机连接上，貌似Linux的蓝牙驱动都不太好，接下来就是树莓派接收到命令后录音10秒，然后调用sox对音频去噪，再识别，最后把识别结果发上去就好了。</p></li>
+<li><p>数据发送还是比较简单的，网关就是接到什么转成json，利用socket发送到云端就好了。</p></li>
 </ol>
-<h2 id="神经网络基础"><a href="#神经网络基础" class="headerlink" title="神经网络基础"></a>神经网络基础</h2><h3 id="卷积"><a href="#卷积" class="headerlink" title="卷积"></a>卷积</h3><ol>
-<li>卷积公式$z_{i,j}=\sum_{i=1,j=1}^N x_{i,j}k_{i,j}$</li>
+<h2 id="神经网络基础">神经网络基础</h2>
+<h3 id="卷积">卷积</h3>
+<ol type="1">
+<li>卷积公式<span class="math inline">\(z_{i,j}=\sum_{i=1,j=1}^N x_{i,j}k_{i,j}\)</span></li>
 </ol>
-<h3 id="batch-norm"><a href="#batch-norm" class="headerlink" title="batch norm"></a>batch norm</h3><ol>
-<li><p>首先求batch的均值$\mu_b=\frac{1}{n}\sum_{i=1}^n x_i$</p>
-</li>
-<li><p>求方差$\sigma_b^2 = \frac{1}{n}\sum_{i=1}^n(x_i-\mu_b)^2$</p>
-</li>
-<li><p>利用均值和方差对每个元素进行归一化$x_i’=\frac{x_i-\mu_b}{\sqrt{\sigma_b^2+\epsilon}}$</p>
-</li>
-<li><p>最后学习一个参数变换$y_i=\gamma_i \cdot x_i’+\beta_i$</p>
-</li>
-<li><p>训练的时候将所有的均值和方差进行滑动平均，推理的时候的直接用滑动平均的均值和方差。</p>
-</li>
+<h3 id="batch-norm">batch norm</h3>
+<ol type="1">
+<li><p>首先求batch的均值<span class="math inline">\(\mu_b=\frac{1}{n}\sum_{i=1}^n x_i\)</span></p></li>
+<li><p>求方差<span class="math inline">\(\sigma_b^2 = \frac{1}{n}\sum_{i=1}^n(x_i-\mu_b)^2\)</span></p></li>
+<li><p>利用均值和方差对每个元素进行归一化<span class="math inline">\(x_i&#39;=\frac{x_i-\mu_b}{\sqrt{\sigma_b^2+\epsilon}}\)</span></p></li>
+<li><p>最后学习一个参数变换<span class="math inline">\(y_i=\gamma_i \cdot x_i&#39;+\beta_i\)</span></p></li>
+<li><p>训练的时候将所有的均值和方差进行滑动平均，推理的时候的直接用滑动平均的均值和方差。</p></li>
 </ol>
-<h4 id="其他的norm函数"><a href="#其他的norm函数" class="headerlink" title="其他的norm函数"></a>其他的norm函数</h4><ol>
+<h4 id="其他的norm函数">其他的norm函数</h4>
+<ol type="1">
 <li><p>其实norm函数都是差不多的，batch norm是batch维度，layer norm是对h,w,c进行归一化，instance 是对单个图像图像进行归一化（图像生成用的比较多），group norm就是在layer norm和instance norm中取trade off。</p>
-<p><img src="/2018/10/28/Eigen初使用/norms.png" alt=""></p>
-</li>
+<p><img src="/2018/10/28/Eigen初使用/norms.png"></p></li>
 </ol>
-<h3 id="模型计算量运算"><a href="#模型计算量运算" class="headerlink" title="模型计算量运算"></a>模型计算量运算</h3><ol>
-<li>卷积层$FLOPs=(2<em>C_{input}</em>K^2-1)<em>H</em>W*C_{output}$</li>
-<li>1TLOPs就是一秒执行一万亿次$1^{12}$此操作。</li>
+<h3 id="模型计算量运算">模型计算量运算</h3>
+<ol type="1">
+<li>卷积层<span class="math inline">\(FLOPs=(2*C_{input}*K^2-1)*H*W*C_{output}\)</span></li>
+<li>1TLOPs就是一秒执行一万亿次<span class="math inline">\(1^{12}\)</span>此操作。</li>
 </ol>
-<h2 id="GAN"><a href="#GAN" class="headerlink" title="GAN"></a>GAN</h2><h3 id="GAN原理"><a href="#GAN原理" class="headerlink" title="GAN原理"></a>GAN原理</h3><ol>
-<li>首先他提出的一个问题就是找到一个映射$Y=f(x)$,可以从随机样本映射到一个合理的分布。但是实际情况中我们没有方法去为这个映射去建立模型，只能用神经网络的方法去拟合这个映射函数。</li>
-<li>为了拟合分布，那么我们需要定义一个分布的距离度量作为优化的目标，比如js或者kl散度，这个时候问题来了，对于两个图像的相似度如何去度量或者对于图像的风格之间的距离如何去度量？</li>
-<li><p>这个时候天才的想法来了，用另一个神经网络去学习距离度量函数。</p>
-</li>
-<li><p>设定两个神经网络generator和Discriminator</p>
-</li>
-<li>将一个随机数或者一张图像输入到generator得到生成图像</li>
-<li>目标是使得生成的图像使得Discriminator难以判别</li>
-<li>通常生成器的损失函数为$log(D(G(x)))$,判别器的损失函数为$log(1-D(G(x)))+log(D(x))$</li>
-<li>训练的过程需要交替训练</li>
+<h2 id="gan">GAN</h2>
+<h3 id="gan原理">GAN原理</h3>
+<ol type="1">
+<li><p>首先他提出的一个问题就是找到一个映射<span class="math inline">\(Y=f(x)\)</span>,可以从随机样本映射到一个合理的分布。但是实际情况中我们没有方法去为这个映射去建立模型，只能用神经网络的方法去拟合这个映射函数。</p></li>
+<li><p>为了拟合分布，那么我们需要定义一个分布的距离度量作为优化的目标，比如js或者kl散度，这个时候问题来了，对于两个图像的相似度如何去度量或者对于图像的风格之间的距离如何去度量？</p></li>
+<li><p>这个时候天才的想法来了，用另一个神经网络去学习距离度量函数。</p></li>
+<li><p>设定两个神经网络generator和Discriminator</p></li>
+<li><p>将一个随机数或者一张图像输入到generator得到生成图像</p></li>
+<li><p>目标是使得生成的图像使得Discriminator难以判别</p></li>
+<li><p>通常生成器的损失函数为<span class="math inline">\(log(D(G(x)))\)</span>,判别器的损失函数为<span class="math inline">\(log(1-D(G(x)))+log(D(x))\)</span></p></li>
+<li><p>训练的过程需要交替训练</p></li>
 </ol>
-<h3 id="GAN中CNN层"><a href="#GAN中CNN层" class="headerlink" title="GAN中CNN层"></a>GAN中CNN层</h3><ol>
-<li><p>GAN中需要生成图像，因此需要将图像放大，但是传统的基于反卷积的方法通常会带来棋盘效应的问题。</p>
-</li>
-<li><p>棋盘效益是指当反卷积输出窗口的大小不能被步长整除的时候，卷积的输出出现了重叠，并且如果连续的使用反卷积层将会加剧这个问题。</p>
-</li>
-<li><p>虽然模型可以学习到合适的卷积参数，但是实际情况下是非常难得的。</p>
-</li>
-<li><p>为了解决这个问题我们可以使用转置卷积层，还可以加大卷积的步长，虽然这样会导致输出变得更大。</p>
-</li>
-<li><p>目前通常使用先upsample然后添加padding再使用卷积层进行生成，消除了生成的伪影的问题。</p>
-</li>
+<h3 id="gan中cnn层">GAN中CNN层</h3>
+<ol type="1">
+<li><p>GAN中需要生成图像，因此需要将图像放大，但是传统的基于反卷积的方法通常会带来棋盘效应的问题。</p></li>
+<li><p>棋盘效益是指当反卷积输出窗口的大小不能被步长整除的时候，卷积的输出出现了重叠，并且如果连续的使用反卷积层将会加剧这个问题。</p></li>
+<li><p>虽然模型可以学习到合适的卷积参数，但是实际情况下是非常难得的。</p></li>
+<li><p>为了解决这个问题我们可以使用转置卷积层，还可以加大卷积的步长，虽然这样会导致输出变得更大。</p></li>
+<li><p>目前通常使用先upsample然后添加padding再使用卷积层进行生成，消除了生成的伪影的问题。</p></li>
 </ol>
-<h3 id="GAN中的归一化层"><a href="#GAN中的归一化层" class="headerlink" title="GAN中的归一化层"></a>GAN中的归一化层</h3><h4 id="Spectral-Normalization"><a href="#Spectral-Normalization" class="headerlink" title="Spectral Normalization"></a>Spectral Normalization</h4><ol>
-<li><p>利用神经网络学习度量函数也需要引入额外的约束，假设不管什么数据输入我的度量都是最小，这个时候符合损失函数但是不符合实际。因此还需要引入额外的正则性约束$| D(y_i,\theta) - D(y’_i , \theta) |\to 0$，最终以梯度惩罚的方式加入损失函数如下：</p>
-<script type="math/tex; mode=display">
-\begin{aligned}\Theta =& \mathop{\arg\min}_{\Theta} \frac{1}{B}\sum_{i=1}^B\left[D\Big(z_i,\Theta\Big)-D\Big(y_i,\Theta\Big)\right]+\frac{\lambda }{B}\sum_{i=1}^B\left(\frac{|D(y_{i,1},\Theta)-D(y_{i,2},\Theta)|}{\left\| y_{i,1}-y_{i,2}\right\| }-1\right)^2 \end{aligned}</script></li>
+<h3 id="gan中的归一化层">GAN中的归一化层</h3>
+<h4 id="spectral-normalization">Spectral Normalization</h4>
+<ol type="1">
+<li><p>利用神经网络学习度量函数也需要引入额外的约束，假设不管什么数据输入我的度量都是最小，这个时候符合损失函数但是不符合实际。因此还需要引入额外的正则性约束<span class="math inline">\(\| D(y_i,\theta) - D(y&#39;_i , \theta) \|\to 0\)</span>，最终以梯度惩罚的方式加入损失函数如下：</p>
+<p><span class="math display">\[
+\begin{aligned}\Theta =&amp; \mathop{\arg\min}_{\Theta} \frac{1}{B}\sum_{i=1}^B\left[D\Big(z_i,\Theta\Big)-D\Big(y_i,\Theta\Big)\right]+\frac{\lambda }{B}\sum_{i=1}^B\left(\frac{|D(y_{i,1},\Theta)-D(y_{i,2},\Theta)|}{\left\| y_{i,1}-y_{i,2}\right\| }-1\right)^2 \end{aligned}
+\]</span></p></li>
 <li><p>这时候其实就是想到为了满足平滑性假设，我们的神经网络需要具备什么特点，假设我们有个全连接层，这时候的约束条件是：</p>
-<script type="math/tex; mode=display">\begin{aligned}
+<p><span class="math display">\[\begin{aligned}
     \Vert f(Wx_1+b) - f(Wx_2+b)\Vert\leq C(W,b)\cdot \Vert x_1 - x_2 \Vert
-\end{aligned}</script><p>那么我们保证输入$x_1 - x_2$差距不大的时候，其实就是需要保证权重乘积的差值小：</p>
-<script type="math/tex; mode=display">\begin{aligned}
+\end{aligned}\]</span></p>
+<p>那么我们保证输入<span class="math inline">\(x_1 - x_2\)</span>差距不大的时候，其实就是需要保证权重乘积的差值小：</p>
+<p><span class="math display">\[\begin{aligned}
     \Vert W(x_1 - x_2)\Vert\leq C\Vert x_1 - x_2 \Vert
-\end{aligned}</script></li>
-<li><p>这个时候我们把$W^TW$的最大特征根（主特征根）的平方根$\Vert W\Vert_2$作为一个约束，就是矩阵范数约束来代替传统的l2约束。</p>
-</li>
+\end{aligned}\]</span></p></li>
+<li><p>这个时候我们把<span class="math inline">\(W^TW\)</span>的最大特征根（主特征根）的平方根<span class="math inline">\(\Vert W\Vert_2\)</span>作为一个约束，就是矩阵范数约束来代替传统的l2约束。</p></li>
 </ol>
-<h4 id="Adaptive-Layer-Instance-Normalization"><a href="#Adaptive-Layer-Instance-Normalization" class="headerlink" title="Adaptive Layer-Instance Normalization"></a>Adaptive Layer-Instance Normalization</h4><ol>
-<li><p>这个就是综合layer norm和instance norm的归一化方式</p>
-</li>
-<li><p>分别求instance norm的均值和方差，layer norm的均值和方差，求出instance norm的输出，layer norm的输出</p>
-</li>
+<h4 id="adaptive-layer-instance-normalization">Adaptive Layer-Instance Normalization</h4>
+<ol type="1">
+<li><p>这个就是综合layer norm和instance norm的归一化方式</p></li>
+<li><p>分别求instance norm的均值和方差，layer norm的均值和方差，求出instance norm的输出，layer norm的输出</p></li>
+<li><p>再通过一个参数融合两个输出为一个输出</p></li>
+<li><p>最后将输出乘上gamma加上beta进行输出</p></li>
 </ol>
-<ol>
-<li><p>再通过一个参数融合两个输出为一个输出</p>
-</li>
-<li><p>最后将输出乘上gamma加上beta进行输出</p>
-</li>
+<h4 id="softadalin">SoftAdaLIN</h4>
+<ol type="1">
+<li><p>SoftAdaLIN是将提出的style特征和content特征进行处理，</p></li>
+<li><p>soft gamma由style gamma和content gamma组成</p></li>
+<li><p>soft beta由style beta和content beta组成</p></li>
+<li><p>将soft gamma和soft beta作为Adaptive Layer-Instance Normalization的gamma 和 beta</p></li>
 </ol>
-<h4 id="SoftAdaLIN"><a href="#SoftAdaLIN" class="headerlink" title="SoftAdaLIN"></a>SoftAdaLIN</h4><ol>
-<li><p>SoftAdaLIN是将提出的style特征和content特征进行处理，</p>
-</li>
-<li><p>soft gamma由style gamma和content gamma组成</p>
-</li>
-<li><p>soft beta由style beta和content beta组成</p>
-</li>
-<li><p>将soft gamma和soft beta作为Adaptive Layer-Instance Normalization的gamma 和 beta</p>
-</li>
-</ol>
-<h3 id="U-GAT-IT"><a href="#U-GAT-IT" class="headerlink" title="U-GAT-IT"></a>U-GAT-IT</h3><p>这是一篇强行用大模型来进行cycle gan的工作，主要创新点在于adalin以及引入了CAM类激活映射的机制</p>
-<h4 id="最小二乘GAN损失"><a href="#最小二乘GAN损失" class="headerlink" title="最小二乘GAN损失"></a>最小二乘GAN损失</h4><ol>
+<h3 id="u-gat-it">U-GAT-IT</h3>
+<p>这是一篇强行用大模型来进行cycle gan的工作，主要创新点在于adalin以及引入了CAM类激活映射的机制</p>
+<h4 id="最小二乘gan损失">最小二乘GAN损失</h4>
+<ol type="1">
 <li>lsgan的损失就是对于真实样本的输出趋近于1，对于生成样本的输出趋近于0；</li>
 </ol>
-<script type="math/tex; mode=display">
+<p><span class="math display">\[
 \begin{aligned}
   L_{l s g a n}^{s \rightarrow t}=\left(\mathbb{E}_{x \sim X_{t}}\left[\left(D_{t}(x)\right)^{2}\right]+\mathbb{E}_{x \sim X_{s}}\left[\left(1-D_{t}\left(G_{s \rightarrow t}(x)\right)\right)^{2}\right]\right)
-\end{aligned}</script><h4 id="循环一致性损失"><a href="#循环一致性损失" class="headerlink" title="循环一致性损失"></a>循环一致性损失</h4><p>这是cycle gan中提出一种损失，他将模型分成A2B，A2B2A，B2A，B2A2B，保证模型映射和重映射的一致性，从而提升生成质量</p>
-<script type="math/tex; mode=display">
+\end{aligned}
+\]</span></p>
+<h4 id="循环一致性损失">循环一致性损失</h4>
+<p>这是cycle gan中提出一种损失，他将模型分成A2B，A2B2A，B2A，B2A2B，保证模型映射和重映射的一致性，从而提升生成质量 <span class="math display">\[
 \begin{aligned}
   \left.L_{c y c l e}^{s \rightarrow t}=\left.\mathbb{E}_{x \sim X_{s}}\left[| x-G_{t \rightarrow s}\left(G_{s \rightarrow t}(x)\right)\right)\right|_{1}\right]
-\end{aligned}</script><h2 id="Yolov3的具体流程"><a href="#Yolov3的具体流程" class="headerlink" title="Yolov3的具体流程?"></a>Yolov3的具体流程?</h2><h3 id="yolo的网络架构"><a href="#yolo的网络架构" class="headerlink" title="yolo的网络架构?"></a>yolo的网络架构?</h3><ol>
-<li><p>原本是使用Darknet-53的,参数较多,并且引入了Resnet中的跳跃连接,效果较好.我在进行侧端移植时,尝试过使用Darknet-19,但是参数量还是太大,因此换成了mobilenetv2.</p>
-</li>
-<li><p>yolo的网络借鉴了金字塔特征图,是全卷积操作,效率较高.最后的输出时从多个尺度的分支取特征,并且进行卷积后和上一层的特征图进行上采样concat,更好的进行特征融合,在对每个特征进行处理.最终输出的大特征图对应大物体,小特征图对应小物体.</p>
-</li>
+\end{aligned}
+\]</span></p>
+<h2 id="yolov3的具体流程">Yolov3的具体流程?</h2>
+<h3 id="yolo的网络架构">yolo的网络架构?</h3>
+<ol type="1">
+<li><p>原本是使用Darknet-53的,参数较多,并且引入了Resnet中的跳跃连接,效果较好.我在进行侧端移植时,尝试过使用Darknet-19,但是参数量还是太大,因此换成了mobilenetv2.</p></li>
+<li><p>yolo的网络借鉴了金字塔特征图,是全卷积操作,效率较高.最后的输出时从多个尺度的分支取特征,并且进行卷积后和上一层的特征图进行上采样concat,更好的进行特征融合,在对每个特征进行处理.最终输出的大特征图对应大物体,小特征图对应小物体.</p></li>
 </ol>
-<h3 id="yolo的输出特征图"><a href="#yolo的输出特征图" class="headerlink" title="yolo的输出特征图?"></a>yolo的输出特征图?</h3><ol>
+<h3 id="yolo的输出特征图">yolo的输出特征图?</h3>
+<ol type="1">
 <li>输出输出通道数为[N,N,anchor_nums*(5+class_nums)].5表示了预测的x,y,w,h,objness.</li>
 </ol>
-<h3 id="yolo的特征图的解码"><a href="#yolo的特征图的解码" class="headerlink" title="yolo的特征图的解码?"></a>yolo的特征图的解码?</h3><ol>
-<li>x,y比较简单,将$\sigma(x),\sigma(y)$后表示了当前物体在当前格子左上角中的相对偏移量.yolov1中是直接学习物体框的大小,yolov2开始加入了anchor的概念,因此对高度和宽度用指数函数进行激活后乘上当前所在anchor的尺寸,$p_w e^{t_w},p_h e^{t_h}$.我在实现的时候anchor尺度是根据全局尺度归一化到0-1之间的.</li>
+<h3 id="yolo的特征图的解码">yolo的特征图的解码?</h3>
+<ol type="1">
+<li>x,y比较简单,将<span class="math inline">\(\sigma(x),\sigma(y)\)</span>后表示了当前物体在当前格子左上角中的相对偏移量.yolov1中是直接学习物体框的大小,yolov2开始加入了anchor的概念,因此对高度和宽度用指数函数进行激活后乘上当前所在anchor的尺寸,<span class="math inline">\(p_w e^{t_w},p_h e^{t_h}\)</span>.我在实现的时候anchor尺度是根据全局尺度归一化到0-1之间的.</li>
 </ol>
-<h3 id="anchor的意义"><a href="#anchor的意义" class="headerlink" title="anchor的意义?"></a>anchor的意义?</h3><ol>
-<li><p>anchor的存在是因为各自物体的大小排布不规律,模型难以拟合,通过设置一个固定的系数,让所有的大小值对其求倍数,倍数越接近1表明越符合这个anchor.这个时候训练$e^{t_w}$,wh的gt值基本都在0左右,很容易学习并拟合.</p>
-</li>
-<li><p>制作anchor时,我将iou作为距离参数对整个数据执行kmeans,得到的聚类中心即为anchor.</p>
-</li>
+<h3 id="anchor的意义">anchor的意义?</h3>
+<ol type="1">
+<li><p>anchor的存在是因为各自物体的大小排布不规律,模型难以拟合,通过设置一个固定的系数,让所有的大小值对其求倍数,倍数越接近1表明越符合这个anchor.这个时候训练<span class="math inline">\(e^{t_w}\)</span>,wh的gt值基本都在0左右,很容易学习并拟合.</p></li>
+<li><p>制作anchor时,我将iou作为距离参数对整个数据执行kmeans,得到的聚类中心即为anchor.</p></li>
 </ol>
-<h3 id="分类置信度"><a href="#分类置信度" class="headerlink" title="分类置信度?"></a>分类置信度?</h3><ol>
+<h3 id="分类置信度">分类置信度?</h3>
+<ol type="1">
 <li>这里首先是先sigmoid激活objness后看置信度是否大于阈值,再利用softmax判断是哪个类别,严格一些可以直接把置信度乘上softmax的结果.</li>
 </ol>
-<h3 id="损失函数-1"><a href="#损失函数-1" class="headerlink" title="损失函数?"></a>损失函数?</h3><ol>
-<li><p>首先我们制作标签的时候确定好当前box的所有gt所在的位置,对应位置的预测结果和gt做损失即可,其他位置做负例损失,此外还有ignore的部分.</p>
-</li>
-<li><p>如果除正例外的bbox预测出来的结果和某个gt的iou大于一定阈值了,那么表明附近区域也有预测能力了,要避免负例减弱这种能力,所以忽略.我实现的时候,看到网上一些高star的库都是直接整个batch计算ignoremask,这是不对的,需要都先映射回全局,再与每张图像的全局进行计算iou才有意义. 当时我还行尝试一下把ignorebox的部分也添加一定的损失让他们向更有意义的gt拟合,不过并没有做深入尝试.</p>
-</li>
-<li><p>同时网上的一些库制作标签的时候没有考虑到标签重叠的问题,两个物体挨的太近的时候,后面物体的标签会将前面的标签覆盖掉.</p>
-</li>
-<li><p>我还添加一些关于wh的系数,如果wh越小,权重越大.以及一些iou损失.</p>
-</li>
+<h3 id="损失函数-1">损失函数?</h3>
+<ol type="1">
+<li><p>首先我们制作标签的时候确定好当前box的所有gt所在的位置,对应位置的预测结果和gt做损失即可,其他位置做负例损失,此外还有ignore的部分.</p></li>
+<li><p>如果除正例外的bbox预测出来的结果和某个gt的iou大于一定阈值了,那么表明附近区域也有预测能力了,要避免负例减弱这种能力,所以忽略.我实现的时候,看到网上一些高star的库都是直接整个batch计算ignoremask,这是不对的,需要都先映射回全局,再与每张图像的全局进行计算iou才有意义. 当时我还行尝试一下把ignorebox的部分也添加一定的损失让他们向更有意义的gt拟合,不过并没有做深入尝试.</p></li>
+<li><p>同时网上的一些库制作标签的时候没有考虑到标签重叠的问题,两个物体挨的太近的时候,后面物体的标签会将前面的标签覆盖掉.</p></li>
+<li><p>我还添加一些关于wh的系数,如果wh越小,权重越大.以及一些iou损失.</p></li>
 </ol>
-<h3 id="smooth-L1-loss"><a href="#smooth-L1-loss" class="headerlink" title="smooth L1 loss"></a>smooth L1 loss</h3><ol>
-<li><p>公式为$L_1=\begin{cases}0.5x^2,\ \ |x|<1\\|x|-0.5,\ \="" x<-1\="" \text{or}="" x="">1 \end{cases}$</1\\|x|-0.5,\></p>
-</li>
-<li><p>一般他们是没有经过sigmoid或其他激活的,所以使用smooth l1 loss去拟合的时候,可以在差距过大时缩小梯度,差距过小时梯度值足够平滑,稳定拟合的过程.</p>
-</li>
+<h3 id="smooth-l1-loss">smooth L1 loss</h3>
+<ol type="1">
+<li><p>公式为<span class="math inline">\(L_1=\begin{cases}0.5x^2,\ \ |x|&lt;1\\|x|-0.5,\ \ x&lt;-1\ \text{or} x&gt;1 \end{cases}\)</span></p></li>
+<li><p>一般他们是没有经过sigmoid或其他激活的,所以使用smooth l1 loss去拟合的时候,可以在差距过大时缩小梯度,差距过小时梯度值足够平滑,稳定拟合的过程.</p></li>
 </ol>
-<h3 id="Focal-loss"><a href="#Focal-loss" class="headerlink" title="Focal loss"></a>Focal loss</h3><h3 id="IoU-loss"><a href="#IoU-loss" class="headerlink" title="IoU loss"></a>IoU loss</h3><h2 id="SSD的流程"><a href="#SSD的流程" class="headerlink" title="SSD的流程?"></a>SSD的流程?</h2><h3 id="网络结构"><a href="#网络结构" class="headerlink" title="网络结构?"></a>网络结构?</h3><ol>
-<li><p>原始的SSD网络结构是VGG-16作Backbone,在我的项目中也替换成了类似mobilenetv2的结果进行实现.</p>
-</li>
-<li><p>SSD同样也是利用多尺度特征,在我的项目中使用了3个分支进行输出,首先将三个分支的特征去除,然后使用SeperableConv2d(dwconv,relu,conv)进行激活,激活后也得到了特征通道数为(4 + 1+class_num),这里1的不是objness而是空白背景类.</p>
-</li>
-<li><p>在我的项目中我尝试了对多个特征间使用SSH块,FPN块.SSH块就是将一个输入通过3x3卷积和5x5卷积进行分离,然后再concat.以扩大感受野.FPN块则是将两个分支的输入进行处理,将深分支缩小后再上采样与浅分支相加.总体来说FPN块效果会好一些,因为侧段硬件不对于5x5的卷积效果不好.</p>
-</li>
+<h3 id="focal-loss">Focal loss</h3>
+<h3 id="iou-loss">IoU loss</h3>
+<h2 id="ssd的流程">SSD的流程?</h2>
+<h3 id="网络结构">网络结构?</h3>
+<ol type="1">
+<li><p>原始的SSD网络结构是VGG-16作Backbone,在我的项目中也替换成了类似mobilenetv2的结果进行实现.</p></li>
+<li><p>SSD同样也是利用多尺度特征,在我的项目中使用了3个分支进行输出,首先将三个分支的特征去除,然后使用SeperableConv2d(dwconv,relu,conv)进行激活,激活后也得到了特征通道数为(4 + 1+class_num),这里1的不是objness而是空白背景类.</p></li>
+<li><p>在我的项目中我尝试了对多个特征间使用SSH块,FPN块.SSH块就是将一个输入通过3x3卷积和5x5卷积进行分离,然后再concat.以扩大感受野.FPN块则是将两个分支的输入进行处理,将深分支缩小后再上采样与浅分支相加.总体来说FPN块效果会好一些,因为侧段硬件不对于5x5的卷积效果不好.</p></li>
 </ol>
-<h3 id="anchor"><a href="#anchor" class="headerlink" title="anchor?"></a>anchor?</h3><ol>
+<h3 id="anchor">anchor?</h3>
+<ol type="1">
 <li>SSD的anchor和传统的yolo不同,首先根据输入大小和输出分支的缩小尺度计算当前的特征图大小,每个特征图可以对应多个大小的anchor,SSD的是对当前特征图每个小块的中心分配anchor,对于每个尺度的anchor,将宽高归一化到全局大小,然后对每个小块中心分配gt的值.</li>
 </ol>
-<h3 id="标签制作"><a href="#标签制作" class="headerlink" title="标签制作?"></a>标签制作?</h3><ol>
-<li><p>首先计算gt与anchor的iou,找到大于阈值的的anchor位置，这个阈值可以设置的小一点，不过太小也不好，那样label中的匹配anchor数量就会太多,找到匹配的anchor的最优gt，并为每个anchor的对应的位置分配给其最匹配的gt,设置每个anchor位置对应的置信度，如果其iou score小于阈值则设置为0,编码生成bbox label，将gt中心坐标转换为相对anchor中心的偏移，且尺度除以移除以(方差*gt宽度)，gt的宽高除anchor宽高并进行对数化再除方差,编码生成landmark label，计算gt中心坐标对应anchor的中心偏移且尺度除以(方差*anchor宽度)</p>
-</li>
-<li><p>Encode的意义?其实就是将所有的anchor的表示方法进行修改便于网络拟合,在SSD中其实是统计了一个数据集下所有的bbox的gt的统计均值和方差,然后Encode就是进行归一化的表示.同时这里的wh也是需要log的.</p>
-</li>
+<h3 id="标签制作">标签制作?</h3>
+<ol type="1">
+<li><p>首先计算gt与anchor的iou,找到大于阈值的的anchor位置，这个阈值可以设置的小一点，不过太小也不好，那样label中的匹配anchor数量就会太多,找到匹配的anchor的最优gt，并为每个anchor的对应的位置分配给其最匹配的gt,设置每个anchor位置对应的置信度，如果其iou score小于阈值则设置为0,编码生成bbox label，将gt中心坐标转换为相对anchor中心的偏移，且尺度除以移除以(方差*gt宽度)，gt的宽高除anchor宽高并进行对数化再除方差,编码生成landmark label，计算gt中心坐标对应anchor的中心偏移且尺度除以(方差*anchor宽度)</p></li>
+<li><p>Encode的意义?其实就是将所有的anchor的表示方法进行修改便于网络拟合,在SSD中其实是统计了一个数据集下所有的bbox的gt的统计均值和方差,然后Encode就是进行归一化的表示.同时这里的wh也是需要log的.</p></li>
 </ol>
-<h3 id="损失函数-2"><a href="#损失函数-2" class="headerlink" title="损失函数?"></a>损失函数?</h3><ol>
-<li><p>对于定位损失使用Smooth L1进行计算,将一个batch的标签中有效部分作为boolmask将预测的bbox部分进行提取,提出后使用smooth_l1_loss进行计算.</p>
-</li>
+<h3 id="损失函数-2">损失函数?</h3>
+<ol type="1">
+<li><p>对于定位损失使用Smooth L1进行计算,将一个batch的标签中有效部分作为boolmask将预测的bbox部分进行提取,提出后使用smooth_l1_loss进行计算.</p></li>
 <li><p>对于分类损失使用hard negtive mining,首先提取所有的预测置信度.使用logsumexp的原因如下,我猜想应该是因为早期softmax实现不好.</p>
-<script type="math/tex; mode=display">
+<p><span class="math display">\[
 \begin{aligned}
-\mathcal{L}_{\text{softmax}}&=-\log \frac{e^{x_{y_i}}}{\sum_{j=1}e^{x_j}} \\
--\log \frac{e^{x_{y_i}}}{\sum_{j=1}e^{x_j}}&=\log(\sum_{j=1}e^{x_j})-\log(e^{x_{y_i}})\\
-&=\log(\sum_{j=1}e^{x_j})-x_{y_i}\\
-&=\text{logsumexp}(x_j)-x_{y_i}
-\end{aligned}</script></li>
-<li><p>我们得到了每个类别的softmax损失大小后,取出背景类的损失,并从大到小进行排序,排序之后我确定了每个位置的损失排名,接下来通过预设的hard negative mining 参数确定需要对多少个负例计算损失,得到了个数之后,取排名前n个样本作为有效负例.</p>
-</li>
-<li><p>用n个有效负例和m个正例,使用稀疏softmax计算置信度损失.</p>
-</li>
+\mathcal{L}_{\text{softmax}}&amp;=-\log \frac{e^{x_{y_i}}}{\sum_{j=1}e^{x_j}} \\
+-\log \frac{e^{x_{y_i}}}{\sum_{j=1}e^{x_j}}&amp;=\log(\sum_{j=1}e^{x_j})-\log(e^{x_{y_i}})\\
+&amp;=\log(\sum_{j=1}e^{x_j})-x_{y_i}\\
+&amp;=\text{logsumexp}(x_j)-x_{y_i}
+\end{aligned}
+\]</span></p></li>
+<li><p>我们得到了每个类别的softmax损失大小后,取出背景类的损失,并从大到小进行排序,排序之后我确定了每个位置的损失排名,接下来通过预设的hard negative mining 参数确定需要对多少个负例计算损失,得到了个数之后,取排名前n个样本作为有效负例.</p></li>
+<li><p>用n个有效负例和m个正例,使用稀疏softmax计算置信度损失.</p></li>
 </ol>
-<h3 id="预测结果"><a href="#预测结果" class="headerlink" title="预测结果?"></a>预测结果?</h3><ol>
+<h3 id="预测结果">预测结果?</h3>
+<ol type="1">
 <li>获得预测结果进行解码,解码后使用softmax找到对应类别,如果概率小于阈值删除,将概率大于阈值的按类别进行nms(非极大值抑止).</li>
 </ol>
-<h3 id="非极大值抑止"><a href="#非极大值抑止" class="headerlink" title="非极大值抑止?"></a>非极大值抑止?</h3><ol>
+<h3 id="非极大值抑止">非极大值抑止?</h3>
+<ol type="1">
 <li>首先按score进行排序，取最大score的bbox与其余所有的bbox计算iou，删除所有iou大于阈值的bbox。然后继续寻找下一个最大score的bbox。</li>
 </ol>
-<h3 id="iou？"><a href="#iou？" class="headerlink" title="iou？"></a>iou？</h3><ol>
+<h3 id="iou">iou？</h3>
+<ol type="1">
 <li>计算交集面积，然后iou=交集面积/(a面积+b面积-交集面积)</li>
 </ol>
-<h3 id="mAP"><a href="#mAP" class="headerlink" title="mAP"></a>mAP</h3><ol>
-<li><p>召回就是预测正确的框在所有预测结果中的比例：$recall=\frac{TP}{TP+FN}=\frac{TP}{all_detections}$</p>
-</li>
-<li><p>$precision=\frac{TP}{TP+FP}$</p>
-</li>
+<h3 id="map">mAP</h3>
+<ol type="1">
+<li><p>召回就是预测正确的框在所有预测结果中的比例：<span class="math inline">\(recall=\frac{TP}{TP+FN}=\frac{TP}{all_detections}\)</span></p></li>
+<li><p><span class="math inline">\(precision=\frac{TP}{TP+FP}\)</span></p></li>
 </ol>
-<h2 id="基于加性间距胶囊网络的家庭活动识别方法研究"><a href="#基于加性间距胶囊网络的家庭活动识别方法研究" class="headerlink" title="基于加性间距胶囊网络的家庭活动识别方法研究"></a>基于加性间距胶囊网络的家庭活动识别方法研究</h2><h3 id="数据-1"><a href="#数据-1" class="headerlink" title="数据"></a>数据</h3><ol>
+<h2 id="基于加性间距胶囊网络的家庭活动识别方法研究">基于加性间距胶囊网络的家庭活动识别方法研究</h2>
+<h3 id="数据-1">数据</h3>
+<ol type="1">
 <li>我用的国际声学挑战赛2018年的室内活动识别数据，它是由多个4通道传感器组成的，（分为开发集和测试集），我主要用是将其转换为对数mel谱图然后输入到cnn里面进行处理。cnn卷积后，将其按时序构成501x256的矩阵，把他们视为256个胶囊网络向量，输入到胶囊网络。</li>
 </ol>
-<h3 id="胶囊网络？"><a href="#胶囊网络？" class="headerlink" title="胶囊网络？"></a>胶囊网络？</h3><h4 id="来自于k-means"><a href="#来自于k-means" class="headerlink" title="来自于k means"></a>来自于k means</h4><ol>
+<h3 id="胶囊网络">胶囊网络？</h3>
+<h4 id="来自于k-means">来自于k means</h4>
+<ol type="1">
 <li>选择初始化的 k 个样本作为初始聚类中心</li>
 <li>针对数据集中每个样本， 计算它到 k 个聚类中心的距离并将其分到距离最小的聚类中心所对应的类中；</li>
 <li>针对每个类别 重新计算它的聚类中心 （即属于该类的所有样本的质心）；</li>
 <li>重复上面 2 3 两步操作，直到达到某个中止条件（迭代次数、最小误差变化等）。</li>
 </ol>
-<h4 id="升级到胶囊网络"><a href="#升级到胶囊网络" class="headerlink" title="升级到胶囊网络"></a>升级到胶囊网络</h4><ol>
-<li>输入特征$u$，我们要聚类出k个$v$，首先利用转换矩阵初始化$v=W\cdot u$</li>
-<li>这个时候我需要求$v$和$u$距离最大值加入到这个类中，但是为了保证特征的顺序以及特征表达能力，这里我们求$c=softmax(<v,w\cdot u="">)$,此时softmax的结果就表示当前的v与原始输入的相似程度。</v,w\cdot></li>
-<li>此时更新$v=\sum c\cdot W\cdot u$就能得到新的聚类中心。</li>
+<h4 id="升级到胶囊网络">升级到胶囊网络</h4>
+<ol type="1">
+<li>输入特征<span class="math inline">\(u\)</span>，我们要聚类出k个<span class="math inline">\(v\)</span>，首先利用转换矩阵初始化<span class="math inline">\(v=W\cdot u\)</span></li>
+<li>这个时候我需要求<span class="math inline">\(v\)</span>和<span class="math inline">\(u\)</span>距离最大值加入到这个类中，但是为了保证特征的顺序以及特征表达能力，这里我们求<span class="math inline">\(c=softmax(&lt;v,W\cdot u&gt;)\)</span>,此时softmax的结果就表示当前的v与原始输入的相似程度。</li>
+<li>此时更新<span class="math inline">\(v=\sum c\cdot W\cdot u\)</span>就能得到新的聚类中心。</li>
 </ol>
-<h3 id="损失函数-3"><a href="#损失函数-3" class="headerlink" title="损失函数"></a>损失函数</h3><ol>
-<li><p>传统的胶囊网络将输出的胶囊的模长作为分类的依据，也就是转换为10个分类问题，模长大于阈值表示真。</p>
-</li>
-<li><p>但是我考虑到胶囊网络其实就是为特征聚类的过程，其中非常明显的问题就是用到了矩阵的内积相似度，但是在最后却把内积抛弃了！如果从几何的角度看，应该是底部的向量比较分散，但是他们的聚类中心则表示了一个分类区域，也就是底层向量支持了这个中心向量为当前类别，反过来说就是当前类别的图像被这些底层特征所支持，那么我们引入am softmax，将每个高层聚类中心的距离拉大，那这个时候不同特征的底层向量就会被逐渐分开到不同的区域，最终每个类别特征都将分离化，强化了模型的特征选择能力。</p>
-</li>
-<li><p>考虑到输出10个类别的胶囊向量，这个时候我们平时的softmax是$W^T x$，现在我们把这10个类别的胶囊向量看出$W$，只需要补上一层$x$和他们做内积就可以得到$cos\theta$了，然后使用的amsoftmax计算损失即可。</p>
-</li>
+<h3 id="损失函数-3">损失函数</h3>
+<ol type="1">
+<li><p>传统的胶囊网络将输出的胶囊的模长作为分类的依据，也就是转换为10个分类问题，模长大于阈值表示真。</p></li>
+<li><p>但是我考虑到胶囊网络其实就是为特征聚类的过程，其中非常明显的问题就是用到了矩阵的内积相似度，但是在最后却把内积抛弃了！如果从几何的角度看，应该是底部的向量比较分散，但是他们的聚类中心则表示了一个分类区域，也就是底层向量支持了这个中心向量为当前类别，反过来说就是当前类别的图像被这些底层特征所支持，那么我们引入am softmax，将每个高层聚类中心的距离拉大，那这个时候不同特征的底层向量就会被逐渐分开到不同的区域，最终每个类别特征都将分离化，强化了模型的特征选择能力。</p></li>
+<li><p>考虑到输出10个类别的胶囊向量，这个时候我们平时的softmax是<span class="math inline">\(W^T x\)</span>，现在我们把这10个类别的胶囊向量看出<span class="math inline">\(W\)</span>，只需要补上一层<span class="math inline">\(x\)</span>和他们做内积就可以得到<span class="math inline">\(cos\theta\)</span>了，然后使用的amsoftmax计算损失即可。</p></li>
 </ol>
-<h2 id="模型优化？"><a href="#模型优化？" class="headerlink" title="模型优化？"></a>模型优化？</h2><ol>
+<h2 id="模型优化">模型优化？</h2>
+<ol type="1">
 <li>尽量使用1x1的卷积核，并且减少3x3卷积核的通道数以减少参数量。不使用全连接层，将全连接层利用1x1的卷积来做，或者直接展开卷积层的结果作为输出。</li>
 </ol>
-<h3 id="squeezenet"><a href="#squeezenet" class="headerlink" title="squeezenet"></a>squeezenet</h3><ol>
+<h3 id="squeezenet">squeezenet</h3>
+<ol type="1">
 <li>使用fire模块将1x1与3x3卷积输出进行concat。进行了尝试，但是侧端的运行速度相差较大。</li>
 </ol>
-<h3 id="mobilenet"><a href="#mobilenet" class="headerlink" title="mobilenet"></a>mobilenet</h3><h5 id="mobilenetv1"><a href="#mobilenetv1" class="headerlink" title="mobilenetv1"></a>mobilenetv1</h5><ol>
+<h3 id="mobilenet">mobilenet</h3>
+<h5 id="mobilenetv1">mobilenetv1</h5>
+<ol type="1">
 <li><p>mobilenetv1提出的深度可分离卷积。首先使用depthwise卷积，就是用和输入特征图相同通道的卷积核进行卷积，但是这里并不会多个通道累加，只对其对应通道进行计算，得到了激活后的特征图。然后是pointwise卷积，实际上就是1x1的卷积，将之前没有累加的卷积通道进行累加。那么我们就发现原来需要生成12个特征图，现在就不要生成这么多中间变量了，还减少了运算量和参数量。</p>
-<p><img src="/2018/10/28/Eigen初使用/Depthwise_Separable_Convolution1.png" alt=""><br><img src="/2018/10/28/Eigen初使用/Depthwise_Separable_Convolution2.png" alt=""><br><img src="/2018/10/28/Eigen初使用/Depthwise_Separable_Convolution3.png" alt=""></p>
-</li>
+<p><img src="/2018/10/28/Eigen初使用/Depthwise_Separable_Convolution1.png"> <img src="/2018/10/28/Eigen初使用/Depthwise_Separable_Convolution2.png"> <img src="/2018/10/28/Eigen初使用/Depthwise_Separable_Convolution3.png"></p></li>
 </ol>
-<h5 id="mobilenetv2"><a href="#mobilenetv2" class="headerlink" title="mobilenetv2"></a>mobilenetv2</h5><ol>
+<h5 id="mobilenetv2">mobilenetv2</h5>
+<ol type="1">
 <li><p>mobilenetv2中使用了inverted residual block，实际上就是与传统的残差块的通道大小顺序相反，传统残差块是先用1x1卷积进行通道降维，然后3x3卷积进行特征提取，再用1x1卷积进行升维。</p>
-<p><img src="/2018/10/28/Eigen初使用/inverted_residual_block.png" alt=""></p>
+<p><img src="/2018/10/28/Eigen初使用/inverted_residual_block.png"></p>
 <p>而mobilenetv2是先用1x1卷积升维，然后用可分离卷积进行特征提取，再用1x1卷积进行降维,并且去除最后一个特征连接层的激活函数。<strong>如果有残差连接就前后相加</strong></p>
-<p><img src="/2018/10/28/Eigen初使用/mobilenetv2.png" alt=""></p>
-</li>
+<p><img src="/2018/10/28/Eigen初使用/mobilenetv2.png"></p></li>
 </ol>
-<h2 id="模型量化"><a href="#模型量化" class="headerlink" title="模型量化"></a>模型量化</h2><h3 id="量化的原理"><a href="#量化的原理" class="headerlink" title="量化的原理"></a>量化的原理</h3><h4 id="伪量化"><a href="#伪量化" class="headerlink" title="伪量化"></a>伪量化</h4><ol>
+<h2 id="模型量化">模型量化</h2>
+<h3 id="量化的原理">量化的原理</h3>
+<h4 id="伪量化">伪量化</h4>
+<ol type="1">
 <li>伪量化就是将模型权重转为为8位精度，但是在推理的时候时候还是将模型的参数转换为浮点型进运算，只能缩小模型的存储大小，对于推理速度改进不大</li>
 </ol>
-<h4 id="定点量化"><a href="#定点量化" class="headerlink" title="定点量化"></a>定点量化</h4><ol>
+<h4 id="定点量化">定点量化</h4>
+<ol type="1">
 <li>需要校准或估计范围，即模型中所有浮点张量的范围（最小，最大）。与不变的张量（例如权重和偏差）不同，除非我们运行几个推理周期，否则无法校准可变的张量（例如模型输入，激活（中间层的输出）和模型输出）。需要输入一个代表性的数据集来对其进行校准。该数据集可以是训练或验证数据的一小部分（大约100-500个样本）。请参考以下 representative_dataset()功能。</li>
 </ol>
-<h2 id="anchor-free的模型有接触吗？"><a href="#anchor-free的模型有接触吗？" class="headerlink" title="anchor-free的模型有接触吗？"></a>anchor-free的模型有接触吗？</h2><h3 id="centernet-object-as-point"><a href="#centernet-object-as-point" class="headerlink" title="centernet object-as-point"></a>centernet object-as-point</h3><ol>
+<h2 id="anchor-free的模型有接触吗">anchor-free的模型有接触吗？</h2>
+<h3 id="centernet-object-as-point">centernet object-as-point</h3>
+<ol type="1">
 <li>有进行实验与复现，一开始一直复现不出来，后来用作者开源的代码跑也效果寥寥无几。所以就没有继续尝试下去了。</li>
 </ol>
-<h2 id="人脸识别"><a href="#人脸识别" class="headerlink" title="人脸识别"></a>人脸识别</h2><h3 id="你用的是arcface的算法，流程？"><a href="#你用的是arcface的算法，流程？" class="headerlink" title="你用的是arcface的算法，流程？"></a>你用的是arcface的算法，流程？</h3><ol>
+<h2 id="人脸识别">人脸识别</h2>
+<h3 id="你用的是arcface的算法流程">你用的是arcface的算法，流程？</h3>
+<ol type="1">
 <li>我参考的是insightface的开源库，用的是他们清洗过的Refine-MS1M数据集。有个难点就是tensorflow里面没办法用索引的方式进行构建数据，这个是非常蛋疼的。不过我是先用稀疏版的arcface进行训练，然后再用triplet loss进行微调。</li>
 </ol>
-<h3 id="triplet-loss算法"><a href="#triplet-loss算法" class="headerlink" title="triplet loss算法"></a>triplet loss算法</h3><ol>
-<li><p>公式$Loss=\sum_i^N[distance(A)-distace(N)+\alpha]_+$, 对于欧式距离的triplet loss就是内类间距要比类间间距小alpha，对于cos距离的就正相反。</p>
-</li>
-<li><p>还有hard triplet loss方法，就是将整个batch中的所有向量交叉求距离，选择数据中内类差异最大的的distance(A)，和类间差异最小的distace(N)，进行计算。</p>
-</li>
+<h3 id="triplet-loss算法">triplet loss算法</h3>
+<ol type="1">
+<li><p>公式<span class="math inline">\(Loss=\sum_i^N[distance(A)-distace(N)+\alpha]_+\)</span>, 对于欧式距离的triplet loss就是内类间距要比类间间距小alpha，对于cos距离的就正相反。</p></li>
+<li><p>还有hard triplet loss方法，就是将整个batch中的所有向量交叉求距离，选择数据中内类差异最大的的distance(A)，和类间差异最小的distace(N)，进行计算。</p></li>
 </ol>
-<h3 id="落地？"><a href="#落地？" class="headerlink" title="落地？"></a>落地？</h3><ol>
+<h3 id="落地">落地？</h3>
+<ol type="1">
 <li>我就是写了一个简单的demo，把之前存储的数据归一化存在flash里面，然后每次检测到图像进行裁剪，resize，然后推理，再根据阈值进行比较即可。</li>
 </ol>
-<h2 id="深度学习框架实现？"><a href="#深度学习框架实现？" class="headerlink" title="深度学习框架实现？"></a>深度学习框架实现？</h2><h3 id="数据管理？"><a href="#数据管理？" class="headerlink" title="数据管理？"></a>数据管理？</h3><ol>
+<h2 id="深度学习框架实现">深度学习框架实现？</h2>
+<h3 id="数据管理">数据管理？</h3>
+<ol type="1">
 <li>首先设计一个metadata的格式，将各种数据集放进去。这一步比较麻烦，因为接触的数据集比较少，一开始没法设计出一个合理的格式，经过多次修改才得到了一个比较好的方案。比如目标检测的数据集，按统一的sample格式将每个类别单独存储为一个tfrecord或多个。然后保存他们每个类图像数量，以及训练、测试、验证集的路径等等数据。在训练的时候就可以很容易的调用不同数据集中的不同类或者相同类数据进行训练，对于快速在新领域训练和部署模型有着比较大的好处。</li>
 </ol>
-<h3 id="数据管道？"><a href="#数据管道？" class="headerlink" title="数据管道？"></a>数据管道？</h3><ol>
-<li><p>主要还是使用tfdata的方式，首先对于目标检测类的模型，数据处理无非就是读取图像，预处理，数据增强，标签制作等，当然下面还可以细分子函数。将这些逻辑关系整理清楚之后可以设计合理的接口，在数据管道里面进行嵌入。后面数据管道就按照tf官方的写法进行优化。</p>
-</li>
-<li><p>对于人脸识别就比较麻烦，我是将每个类别保存成tfrecord，然后多个线程交替读，并且每次读两个数据，抛弃一个数据构建triplet组。</p>
-</li>
+<h3 id="数据管道">数据管道？</h3>
+<ol type="1">
+<li><p>主要还是使用tfdata的方式，首先对于目标检测类的模型，数据处理无非就是读取图像，预处理，数据增强，标签制作等，当然下面还可以细分子函数。将这些逻辑关系整理清楚之后可以设计合理的接口，在数据管道里面进行嵌入。后面数据管道就按照tf官方的写法进行优化。</p></li>
+<li><p>对于人脸识别就比较麻烦，我是将每个类别保存成tfrecord，然后多个线程交替读，并且每次读两个数据，抛弃一个数据构建triplet组。</p></li>
 </ol>
-<h3 id="数据增强？"><a href="#数据增强？" class="headerlink" title="数据增强？"></a>数据增强？</h3><ol>
-<li><p>一开始是手写数据增强的，然后发现imgaug可以方便的增强。</p>
-</li>
-<li><p>后面在研究半监督学习的时候发现很多论文使用autoaugment，我就尝试在目标检测里面也进行了部署，当然是把里面的数据增强用tf重新修改了一遍，tf就是这个不好，所有的函数都得用tf重写，对于一些操作numpy和tf不太一样的，耗费了大量时间，效果其实和随机用imgaug差不多。</p>
-</li>
+<h3 id="数据增强">数据增强？</h3>
+<ol type="1">
+<li><p>一开始是手写数据增强的，然后发现imgaug可以方便的增强。</p></li>
+<li><p>后面在研究半监督学习的时候发现很多论文使用autoaugment，我就尝试在目标检测里面也进行了部署，当然是把里面的数据增强用tf重新修改了一遍，tf就是这个不好，所有的函数都得用tf重写，对于一些操作numpy和tf不太一样的，耗费了大量时间，效果其实和随机用imgaug差不多。</p></li>
 </ol>
-<h3 id="训练？"><a href="#训练？" class="headerlink" title="训练？"></a>训练？</h3><ol>
+<h3 id="训练">训练？</h3>
+<ol type="1">
 <li>训练就是仿照keras.fit重新构建了一个controller。还是比较好用的，不过现在keras.fit以及支持自定义训练逻辑了，所以可能用不太到了。</li>
 </ol>
-<h2 id="AI加速设备软件如何写的？"><a href="#AI加速设备软件如何写的？" class="headerlink" title="AI加速设备软件如何写的？"></a>AI加速设备软件如何写的？</h2><p>板子不是我画的，但是上面有一个K210还有一个fpga可以缓存数据，在树莓派和k210上面写了spi通信的程序即可。</p>
-<h3 id="spi如何通讯？"><a href="#spi如何通讯？" class="headerlink" title="spi如何通讯？"></a>spi如何通讯？</h3><ol>
-<li><p>SPI：全双工、同步、串行传输，收发独立，传输速率高，但是没有指定的流控制，没有应答机制确认是否接收到数据。物理上4根线（CLK/SDI/SDO/CS），因为是全双工，并且不需要寻址，所以速度要比I2C快，但是占用的物理线的数量要比I2C多；通信时可以一位一位的传输数据。</p>
-</li>
-<li><p>我用的是ioctl系统调用来控制spi设备进行通讯。</p>
-</li>
+<h2 id="ai加速设备软件如何写的">AI加速设备软件如何写的？</h2>
+<p>板子不是我画的，但是上面有一个K210还有一个fpga可以缓存数据，在树莓派和k210上面写了spi通信的程序即可。</p>
+<h3 id="spi如何通讯">spi如何通讯？</h3>
+<ol type="1">
+<li><p>SPI：全双工、同步、串行传输，收发独立，传输速率高，但是没有指定的流控制，没有应答机制确认是否接收到数据。物理上4根线（CLK/SDI/SDO/CS），因为是全双工，并且不需要寻址，所以速度要比I2C快，但是占用的物理线的数量要比I2C多；通信时可以一位一位的传输数据。</p></li>
+<li><p>我用的是ioctl系统调用来控制spi设备进行通讯。</p></li>
 </ol>
-<h3 id="i2c如何通讯？"><a href="#i2c如何通讯？" class="headerlink" title="i2c如何通讯？"></a>i2c如何通讯？</h3><ol>
-<li><p>i2c是一条时序线一条数据线，半双工、同步、串行传输，物理上只有两根线（SDA/SCL）；传输数据必须8位8位的传输。</p>
-</li>
-<li><p>我是用的是smbus协议库对i2c进行读写，smbus有好几种协议，有的是直接发送地址然后读data，还有就是发送地址发送命令再读数据。</p>
-</li>
+<h3 id="i2c如何通讯">i2c如何通讯？</h3>
+<ol type="1">
+<li><p>i2c是一条时序线一条数据线，半双工、同步、串行传输，物理上只有两根线（SDA/SCL）；传输数据必须8位8位的传输。</p></li>
+<li><p>我是用的是smbus协议库对i2c进行读写，smbus有好几种协议，有的是直接发送地址然后读data，还有就是发送地址发送命令再读数据。</p></li>
 </ol>
-<h3 id="如何搭建的传感平台软件"><a href="#如何搭建的传感平台软件" class="headerlink" title="如何搭建的传感平台软件"></a>如何搭建的传感平台软件</h3><ol>
-<li><p>将各种通讯的函数封装到底层，然后针对各个传感器编写对应的类。有ads1118 adc传感器，bmp280气体传感器，SHT31温湿度传感器，TSL2561光强传感器器。</p>
-</li>
-<li><p>本来都是用c的写法写结构体，调用函数指针后来发现还是c++比较好用。</p>
-</li>
-<li><p>写sock和别的用的是类的方式。</p>
-</li>
-<li><p>设计上是两个进程，一个数据读取，还有一个数据处理。首先初始化各种硬件设备，然后读取好数据之后通过pipe把数据发送到数据处理进程。将数据使用json的格式封装后传输到另一个进程，通过socket进行发送。</p>
-</li>
-<li><p>开发的时候用catch2测试框架对各个函数进行测试。</p>
-</li>
-<li><p>网关的板子学习了多个线程的使用，对于串口通信、tcp通信、gps通信各一个线程。但是没有用到互斥。</p>
-</li>
-<li><p>树莓派端最麻烦的就是蓝牙开发，先用buildroot做了一个带有pulseaudio的镜像，</p>
-</li>
-<li><p>sock通信的时候如果发生了断线怎么办，我设计了两个定时器作为看门狗，一个判断多长时间没有接收到数据了，还有一个用来判断接收文件的是否超时，因为当时设计的不太好，接收文件就进入另外一个while里面了，所以需要两个看门狗。</p>
-</li>
-<li><p>单片机端也是如此，不定时检测socket是否存活。</p>
-</li>
+<h3 id="如何搭建的传感平台软件">如何搭建的传感平台软件</h3>
+<ol type="1">
+<li><p>将各种通讯的函数封装到底层，然后针对各个传感器编写对应的类。有ads1118 adc传感器，bmp280气体传感器，SHT31温湿度传感器，TSL2561光强传感器器。</p></li>
+<li><p>本来都是用c的写法写结构体，调用函数指针后来发现还是c++比较好用。</p></li>
+<li><p>写sock和别的用的是类的方式。</p></li>
+<li><p>设计上是两个进程，一个数据读取，还有一个数据处理。首先初始化各种硬件设备，然后读取好数据之后通过pipe把数据发送到数据处理进程。将数据使用json的格式封装后传输到另一个进程，通过socket进行发送。</p></li>
+<li><p>开发的时候用catch2测试框架对各个函数进行测试。</p></li>
+<li><p>网关的板子学习了多个线程的使用，对于串口通信、tcp通信、gps通信各一个线程。但是没有用到互斥。</p></li>
+<li><p>树莓派端最麻烦的就是蓝牙开发，先用buildroot做了一个带有pulseaudio的镜像，</p></li>
+<li><p>sock通信的时候如果发生了断线怎么办，我设计了两个定时器作为看门狗，一个判断多长时间没有接收到数据了，还有一个用来判断接收文件的是否超时，因为当时设计的不太好，接收文件就进入另外一个while里面了，所以需要两个看门狗。</p></li>
+<li><p>单片机端也是如此，不定时检测socket是否存活。</p></li>
 </ol>
-<h2 id="Pytorch"><a href="#Pytorch" class="headerlink" title="Pytorch"></a>Pytorch</h2><h3 id="dataloader的num-worker大于0是怎么做的？"><a href="#dataloader的num-worker大于0是怎么做的？" class="headerlink" title="dataloader的num_worker大于0是怎么做的？"></a>dataloader的num_worker大于0是怎么做的？</h3><ol>
+<h2 id="pytorch">Pytorch</h2>
+<h3 id="dataloader的num_worker大于0是怎么做的">dataloader的num_worker大于0是怎么做的？</h3>
+<ol type="1">
 <li>num_worker大于0的时候，就调用python的mutiporcessing库用队列的方式读取。</li>
 </ol>
-<h2 id="共享内存和socket的使用？"><a href="#共享内存和socket的使用？" class="headerlink" title="共享内存和socket的使用？"></a>共享内存和socket的使用？</h2><ol>
+<h2 id="共享内存和socket的使用">共享内存和socket的使用？</h2>
+<ol type="1">
 <li>共享内存</li>
 </ol>
 
@@ -484,377 +478,371 @@
           <p>[toc]</p>
 <p>一些面试准备</p>
 <a id="more"></a>
-<h2 id="公司"><a href="#公司" class="headerlink" title="公司"></a>公司</h2><ol>
+<h2 id="公司">公司</h2>
+<ol type="1">
 <li>吉利 嵌入式开发 杭州</li>
 <li>海康 计算机视觉 杭州</li>
 </ol>
-<h2 id="自我介绍与qa"><a href="#自我介绍与qa" class="headerlink" title="自我介绍与qa"></a>自我介绍与qa</h2><ol>
+<h2 id="自我介绍与qa">自我介绍与qa</h2>
+<ol type="1">
 <li>您好，我叫xxx，我是来自xx大学的一名研三学生。硕士期间，我在消防员危险异常预警系统项目中开发硬件与编写系统代码；在油管缺陷检测项目中为电磁检测信号构建了合适的消噪模型；我的主要研究课题是基于音频的老人行为异常预警系统，主要目标是利用智能家居中的传感设备采集音频信号对老人的意外情况做出非隐私侵入的预测，在课题期间我搭建了系统硬件框架，并研究算法并发表了一篇ccfa类论文，发明专利公开了三篇。我之前在新加坡的一家公司远程实习，这段时间内我独立搭建了深度学习的算法框架平台，并进行网络裁剪与算法优化，移植了多个图像算法至嵌入式设备中落地，并将其中一套算法的整体流程进行了开源。我比较喜欢学习新领域知识，记录学习的过程，因此我也开源了半监督学习以及图像生成的算法库。 （海康是目前是智能安防领域的龙头企业，我实习阶段所做的工作和海康的领域比较契合，因此我希望能来贵公司工作）</li>
 </ol>
-<h3 id="你为什么不参加秋招？"><a href="#你为什么不参加秋招？" class="headerlink" title="你为什么不参加秋招？"></a>你为什么不参加秋招？</h3><ol>
+<h3 id="你为什么不参加秋招">你为什么不参加秋招？</h3>
+<ol type="1">
 <li>因为我当时想读博士，后来又因为老师的项目结题，和别的事情耽搁了。</li>
 </ol>
-<h2 id="项目"><a href="#项目" class="headerlink" title="项目"></a>项目</h2><h3 id="深度学习的项目做了哪些工作？"><a href="#深度学习的项目做了哪些工作？" class="headerlink" title="深度学习的项目做了哪些工作？"></a>深度学习的项目做了哪些工作？</h3><ol>
+<h2 id="项目">项目</h2>
+<h3 id="深度学习的项目做了哪些工作">深度学习的项目做了哪些工作？</h3>
+<ol type="1">
 <li>我主要负责编写整个训练模型的代码，以及一些模型移植的工作。训练的代码类似于现在很火的mmlab开源的mmdetection，我一开始基于兴趣把yolo移植到了k210中，进行20类的检测，在此之前官方没有给出训练的例子，我也没有接触过深度学习，努力了两个月把这个事情搞定了并开源出去。</li>
 </ol>
-<h4 id="yolo的侧端优化部分"><a href="#yolo的侧端优化部分" class="headerlink" title="yolo的侧端优化部分"></a>yolo的侧端优化部分</h4><h5 id="数据"><a href="#数据" class="headerlink" title="数据"></a>数据</h5><ol>
-<li><p>训练数据清洗，消除标记错误的图像。</p>
-</li>
-<li><p>标签制作的时候，因为gt是按最匹配的格子进行分配的，因此存在着最优匹配冲突的情况，因此需要进行处理。</p>
-</li>
+<h4 id="yolo的侧端优化部分">yolo的侧端优化部分</h4>
+<h5 id="数据">数据</h5>
+<ol type="1">
+<li><p>训练数据清洗，消除标记错误的图像。</p></li>
+<li><p>标签制作的时候，因为gt是按最匹配的格子进行分配的，因此存在着最优匹配冲突的情况，因此需要进行处理。</p></li>
 </ol>
-<h5 id="模型"><a href="#模型" class="headerlink" title="模型"></a>模型</h5><ol>
-<li><p>优化算法模型，首先参考mobilenetv1大面积使用depthwise卷积，然后参考mobilenetv2引入部分的残差机制，但是不考虑使用1x1卷积进行升维。并且去除concat时的激活函数</p>
-</li>
-<li><p>将激活函数relu替换为leaky relu？因为实际使用中发现，depthwise 卷积核很多会变成0，这时候输出是0，再用relu梯度又是0，导致神经元太多无效了，在定点化的时候会出现量化精度丢失过多的问题。</p>
-</li>
-<li><p>考虑到输入只有224*320，不需要检测过小的bbox，因此将三分支转换为双分支输出</p>
-</li>
+<h5 id="模型">模型</h5>
+<ol start="3" type="1">
+<li><p>优化算法模型，首先参考mobilenetv1大面积使用depthwise卷积，然后参考mobilenetv2引入部分的残差机制，但是不考虑使用1x1卷积进行升维。并且去除concat时的激活函数</p></li>
+<li><p>将激活函数relu替换为leaky relu？因为实际使用中发现，depthwise 卷积核很多会变成0，这时候输出是0，再用relu梯度又是0，导致神经元太多无效了，在定点化的时候会出现量化精度丢失过多的问题。</p></li>
+<li><p>考虑到输入只有224*320，不需要检测过小的bbox，因此将三分支转换为双分支输出</p></li>
 </ol>
-<h5 id="损失函数"><a href="#损失函数" class="headerlink" title="损失函数"></a>损失函数</h5><ol>
-<li><p>发现了很多开源代码的计算ignore mask的部分都是错误的，他们都是考虑整个batch下同一层的输出，因此我修改成同一个的图像内部的全部层做ignoremask</p>
-</li>
-<li><p>考虑到对小目标不是很友好，为每个图像中最小的bbox额外设置了惩罚。</p>
-</li>
-<li><p>将模型bbox损失改成了diou loss。</p>
-</li>
+<h5 id="损失函数">损失函数</h5>
+<ol type="1">
+<li><p>发现了很多开源代码的计算ignore mask的部分都是错误的，他们都是考虑整个batch下同一层的输出，因此我修改成同一个的图像内部的全部层做ignoremask</p></li>
+<li><p>考虑到对小目标不是很友好，为每个图像中最小的bbox额外设置了惩罚。</p></li>
+<li><p>将模型bbox损失改成了diou loss。</p></li>
 </ol>
-<h5 id="训练优化"><a href="#训练优化" class="headerlink" title="训练优化"></a>训练优化</h5><ol>
-<li><p>权重指数滑动平均</p>
-</li>
-<li><p>自动数据增强autoaugment，每次从一个策略集中采样一个子策略进行</p>
-</li>
-<li><p>蒸馏，首先训练了一个相同输入与输出的大模型，将模型的输出进行匹配。</p>
-</li>
+<h5 id="训练优化">训练优化</h5>
+<ol type="1">
+<li><p>权重指数滑动平均</p></li>
+<li><p>自动数据增强autoaugment，每次从一个策略集中采样一个子策略进行</p></li>
+<li><p>蒸馏，首先训练了一个相同输入与输出的大模型，将模型的输出进行匹配。</p></li>
 </ol>
-<h4 id="其他部分"><a href="#其他部分" class="headerlink" title="其他部分"></a>其他部分</h4><ol>
-<li><p>后面移植的算法逐渐多了起来，我就把训练框架重新写了一下，又移植了pfld、ssd、ssd+人脸关键点分支（没有人脸就不计算关键点损失）、yolov3再次优化、基于arcface的人脸识别。</p>
-</li>
-<li><p>侧端部署主要用的是K210官方的sdk，我给官方sdk提交过一个例子。</p>
-</li>
-<li><p>树莓派加速器我主要把树莓派端和k210代码都调试了一下，主要把spi通信走通了。两边spi都是主机，中间的fpga是从机。</p>
-</li>
-<li><p>基于fpga的加速超分算法主要是利用total variation loss（总变分损失）判断图像的连续区域的变化，通过变化率判断当前图像是高频段还是低频段，然后分块进行超分辨率。</p>
-</li>
+<h4 id="其他部分">其他部分</h4>
+<ol start="4" type="1">
+<li><p>后面移植的算法逐渐多了起来，我就把训练框架重新写了一下，又移植了pfld、ssd、ssd+人脸关键点分支（没有人脸就不计算关键点损失）、yolov3再次优化、基于arcface的人脸识别。</p></li>
+<li><p>侧端部署主要用的是K210官方的sdk，我给官方sdk提交过一个例子。</p></li>
+<li><p>树莓派加速器我主要把树莓派端和k210代码都调试了一下，主要把spi通信走通了。两边spi都是主机，中间的fpga是从机。</p></li>
+<li><p>基于fpga的加速超分算法主要是利用total variation loss（总变分损失）判断图像的连续区域的变化，通过变化率判断当前图像是高频段还是低频段，然后分块进行超分辨率。</p></li>
 </ol>
-<h3 id="基于多源环境信息的老人行为识别和异常预警系统研发做了什么？"><a href="#基于多源环境信息的老人行为识别和异常预警系统研发做了什么？" class="headerlink" title="基于多源环境信息的老人行为识别和异常预警系统研发做了什么？"></a>基于多源环境信息的老人行为识别和异常预警系统研发做了什么？</h3><ol>
-<li><p>这个的多源传感器设备是我设计的，用了stm32搭载音频传感器还有一些温湿度传感器，用wifi模块与网关进行通信。</p>
-</li>
-<li><p>网关用的是树莓派，用qt比较简单的设置了tcpserver，每个子节点连接上来之后就创建一个线程单独接受子模块的数据。这里其实应该用进程好一点，因为线程崩了程序就崩了。</p>
-</li>
-<li><p>数据协议没有做过多的添加，随便自己定义了一个协议就向上发了。接受到数据后判断数据的头是什么，然后跳转到对应的处理函数进行接受。</p>
-</li>
-<li><p>向上发送的时候是利用http post的方式发送的，当时我用一些库发现一直发不出去，然后直接抓包postman的发送结构，知道结构后自己构建数据包。</p>
-</li>
-<li><p>云端服务器就是java的服务器，不是我写的，后面就是调用了一个我训练的模型，java调用tflite预测一下行为结果。</p>
-</li>
+<h3 id="基于多源环境信息的老人行为识别和异常预警系统研发做了什么">基于多源环境信息的老人行为识别和异常预警系统研发做了什么？</h3>
+<ol type="1">
+<li><p>这个的多源传感器设备是我设计的，用了stm32搭载音频传感器还有一些温湿度传感器，用wifi模块与网关进行通信。</p></li>
+<li><p>网关用的是树莓派，用qt比较简单的设置了tcpserver，每个子节点连接上来之后就创建一个线程单独接受子模块的数据。这里其实应该用进程好一点，因为线程崩了程序就崩了。</p></li>
+<li><p>数据协议没有做过多的添加，随便自己定义了一个协议就向上发了。接受到数据后判断数据的头是什么，然后跳转到对应的处理函数进行接受。</p></li>
+<li><p>向上发送的时候是利用http post的方式发送的，当时我用一些库发现一直发不出去，然后直接抓包postman的发送结构，知道结构后自己构建数据包。</p></li>
+<li><p>云端服务器就是java的服务器，不是我写的，后面就是调用了一个我训练的模型，java调用tflite预测一下行为结果。</p></li>
 </ol>
-<h3 id="基于移动无线传感网的火灾消防人员安全预警和救援调度系统研发"><a href="#基于移动无线传感网的火灾消防人员安全预警和救援调度系统研发" class="headerlink" title="基于移动无线传感网的火灾消防人员安全预警和救援调度系统研发"></a>基于移动无线传感网的火灾消防人员安全预警和救援调度系统研发</h3><ol>
-<li><p>这个项目是我早期设计的，没有设计的很完善。一开始是画了个荔枝派V3s的扩展版，然后发现不好用，后来用了基于全志h5的芯片做。设计了一个带显示屏、光照、温湿度、气压、有害气体等等的扩展板，设计好了之后直接写代码，一开始写的是c，但是要给每个传感器移植驱动实在是太累了，后面换c++调用spi、i2c、uart接口对每个传感器进行封装实例类。</p>
-</li>
-<li><p>代码主要是开两个进程，一个专门采集数据、一个发送数据到网关节点，中间通过无名管道进行通信，并没有进行什么同步。发送数据使用的是串口433，还是因为spi口子不够了，没办法。</p>
-</li>
-<li><p>本来设计的是要在h5上读取音频的，结果串口不够了，然后再加了个树莓派开发板，专门读取音频。所以代码中采集数据的进程里面开了个线程和专门接收下属的板子的语音识别结果。语音识别用了讯飞的离线识别库，用来识别比较简单的命令，读取音频我搞了个带pulseaudio的buildroot，搞了很久才把蓝牙耳机连接上，貌似Linux的蓝牙驱动都不太好，接下来就是树莓派接收到命令后录音10秒，然后调用sox对音频去噪，再识别，最后把识别结果发上去就好了。</p>
-</li>
-<li><p>数据发送还是比较简单的，网关就是接到什么转成json，利用socket发送到云端就好了。</p>
-</li>
+<h3 id="基于移动无线传感网的火灾消防人员安全预警和救援调度系统研发">基于移动无线传感网的火灾消防人员安全预警和救援调度系统研发</h3>
+<ol type="1">
+<li><p>这个项目是我早期设计的，没有设计的很完善。一开始是画了个荔枝派V3s的扩展版，然后发现不好用，后来用了基于全志h5的芯片做。设计了一个带显示屏、光照、温湿度、气压、有害气体等等的扩展板，设计好了之后直接写代码，一开始写的是c，但是要给每个传感器移植驱动实在是太累了，后面换c++调用spi、i2c、uart接口对每个传感器进行封装实例类。</p></li>
+<li><p>代码主要是开两个进程，一个专门采集数据、一个发送数据到网关节点，中间通过无名管道进行通信，并没有进行什么同步。发送数据使用的是串口433，还是因为spi口子不够了，没办法。</p></li>
+<li><p>本来设计的是要在h5上读取音频的，结果串口不够了，然后再加了个树莓派开发板，专门读取音频。所以代码中采集数据的进程里面开了个线程和专门接收下属的板子的语音识别结果。语音识别用了讯飞的离线识别库，用来识别比较简单的命令，读取音频我搞了个带pulseaudio的buildroot，搞了很久才把蓝牙耳机连接上，貌似Linux的蓝牙驱动都不太好，接下来就是树莓派接收到命令后录音10秒，然后调用sox对音频去噪，再识别，最后把识别结果发上去就好了。</p></li>
+<li><p>数据发送还是比较简单的，网关就是接到什么转成json，利用socket发送到云端就好了。</p></li>
 </ol>
-<h2 id="神经网络基础"><a href="#神经网络基础" class="headerlink" title="神经网络基础"></a>神经网络基础</h2><h3 id="卷积"><a href="#卷积" class="headerlink" title="卷积"></a>卷积</h3><ol>
-<li>卷积公式$z_{i,j}=\sum_{i=1,j=1}^N x_{i,j}k_{i,j}$</li>
+<h2 id="神经网络基础">神经网络基础</h2>
+<h3 id="卷积">卷积</h3>
+<ol type="1">
+<li>卷积公式<span class="math inline">\(z_{i,j}=\sum_{i=1,j=1}^N x_{i,j}k_{i,j}\)</span></li>
 </ol>
-<h3 id="batch-norm"><a href="#batch-norm" class="headerlink" title="batch norm"></a>batch norm</h3><ol>
-<li><p>首先求batch的均值$\mu_b=\frac{1}{n}\sum_{i=1}^n x_i$</p>
-</li>
-<li><p>求方差$\sigma_b^2 = \frac{1}{n}\sum_{i=1}^n(x_i-\mu_b)^2$</p>
-</li>
-<li><p>利用均值和方差对每个元素进行归一化$x_i’=\frac{x_i-\mu_b}{\sqrt{\sigma_b^2+\epsilon}}$</p>
-</li>
-<li><p>最后学习一个参数变换$y_i=\gamma_i \cdot x_i’+\beta_i$</p>
-</li>
-<li><p>训练的时候将所有的均值和方差进行滑动平均，推理的时候的直接用滑动平均的均值和方差。</p>
-</li>
+<h3 id="batch-norm">batch norm</h3>
+<ol type="1">
+<li><p>首先求batch的均值<span class="math inline">\(\mu_b=\frac{1}{n}\sum_{i=1}^n x_i\)</span></p></li>
+<li><p>求方差<span class="math inline">\(\sigma_b^2 = \frac{1}{n}\sum_{i=1}^n(x_i-\mu_b)^2\)</span></p></li>
+<li><p>利用均值和方差对每个元素进行归一化<span class="math inline">\(x_i&#39;=\frac{x_i-\mu_b}{\sqrt{\sigma_b^2+\epsilon}}\)</span></p></li>
+<li><p>最后学习一个参数变换<span class="math inline">\(y_i=\gamma_i \cdot x_i&#39;+\beta_i\)</span></p></li>
+<li><p>训练的时候将所有的均值和方差进行滑动平均，推理的时候的直接用滑动平均的均值和方差。</p></li>
 </ol>
-<h4 id="其他的norm函数"><a href="#其他的norm函数" class="headerlink" title="其他的norm函数"></a>其他的norm函数</h4><ol>
+<h4 id="其他的norm函数">其他的norm函数</h4>
+<ol type="1">
 <li><p>其实norm函数都是差不多的，batch norm是batch维度，layer norm是对h,w,c进行归一化，instance 是对单个图像图像进行归一化（图像生成用的比较多），group norm就是在layer norm和instance norm中取trade off。</p>
-<p><img src="/2018/10/28/Eigen初使用/norms.png" alt=""></p>
-</li>
+<p><img src="/2018/10/28/Eigen初使用/norms.png"></p></li>
 </ol>
-<h3 id="模型计算量运算"><a href="#模型计算量运算" class="headerlink" title="模型计算量运算"></a>模型计算量运算</h3><ol>
-<li>卷积层$FLOPs=(2<em>C_{input}</em>K^2-1)<em>H</em>W*C_{output}$</li>
-<li>1TLOPs就是一秒执行一万亿次$1^{12}$此操作。</li>
+<h3 id="模型计算量运算">模型计算量运算</h3>
+<ol type="1">
+<li>卷积层<span class="math inline">\(FLOPs=(2*C_{input}*K^2-1)*H*W*C_{output}\)</span></li>
+<li>1TLOPs就是一秒执行一万亿次<span class="math inline">\(1^{12}\)</span>此操作。</li>
 </ol>
-<h2 id="GAN"><a href="#GAN" class="headerlink" title="GAN"></a>GAN</h2><h3 id="GAN原理"><a href="#GAN原理" class="headerlink" title="GAN原理"></a>GAN原理</h3><ol>
-<li>首先他提出的一个问题就是找到一个映射$Y=f(x)$,可以从随机样本映射到一个合理的分布。但是实际情况中我们没有方法去为这个映射去建立模型，只能用神经网络的方法去拟合这个映射函数。</li>
-<li>为了拟合分布，那么我们需要定义一个分布的距离度量作为优化的目标，比如js或者kl散度，这个时候问题来了，对于两个图像的相似度如何去度量或者对于图像的风格之间的距离如何去度量？</li>
-<li><p>这个时候天才的想法来了，用另一个神经网络去学习距离度量函数。</p>
-</li>
-<li><p>设定两个神经网络generator和Discriminator</p>
-</li>
-<li>将一个随机数或者一张图像输入到generator得到生成图像</li>
-<li>目标是使得生成的图像使得Discriminator难以判别</li>
-<li>通常生成器的损失函数为$log(D(G(x)))$,判别器的损失函数为$log(1-D(G(x)))+log(D(x))$</li>
-<li>训练的过程需要交替训练</li>
+<h2 id="gan">GAN</h2>
+<h3 id="gan原理">GAN原理</h3>
+<ol type="1">
+<li><p>首先他提出的一个问题就是找到一个映射<span class="math inline">\(Y=f(x)\)</span>,可以从随机样本映射到一个合理的分布。但是实际情况中我们没有方法去为这个映射去建立模型，只能用神经网络的方法去拟合这个映射函数。</p></li>
+<li><p>为了拟合分布，那么我们需要定义一个分布的距离度量作为优化的目标，比如js或者kl散度，这个时候问题来了，对于两个图像的相似度如何去度量或者对于图像的风格之间的距离如何去度量？</p></li>
+<li><p>这个时候天才的想法来了，用另一个神经网络去学习距离度量函数。</p></li>
+<li><p>设定两个神经网络generator和Discriminator</p></li>
+<li><p>将一个随机数或者一张图像输入到generator得到生成图像</p></li>
+<li><p>目标是使得生成的图像使得Discriminator难以判别</p></li>
+<li><p>通常生成器的损失函数为<span class="math inline">\(log(D(G(x)))\)</span>,判别器的损失函数为<span class="math inline">\(log(1-D(G(x)))+log(D(x))\)</span></p></li>
+<li><p>训练的过程需要交替训练</p></li>
 </ol>
-<h3 id="GAN中CNN层"><a href="#GAN中CNN层" class="headerlink" title="GAN中CNN层"></a>GAN中CNN层</h3><ol>
-<li><p>GAN中需要生成图像，因此需要将图像放大，但是传统的基于反卷积的方法通常会带来棋盘效应的问题。</p>
-</li>
-<li><p>棋盘效益是指当反卷积输出窗口的大小不能被步长整除的时候，卷积的输出出现了重叠，并且如果连续的使用反卷积层将会加剧这个问题。</p>
-</li>
-<li><p>虽然模型可以学习到合适的卷积参数，但是实际情况下是非常难得的。</p>
-</li>
-<li><p>为了解决这个问题我们可以使用转置卷积层，还可以加大卷积的步长，虽然这样会导致输出变得更大。</p>
-</li>
-<li><p>目前通常使用先upsample然后添加padding再使用卷积层进行生成，消除了生成的伪影的问题。</p>
-</li>
+<h3 id="gan中cnn层">GAN中CNN层</h3>
+<ol type="1">
+<li><p>GAN中需要生成图像，因此需要将图像放大，但是传统的基于反卷积的方法通常会带来棋盘效应的问题。</p></li>
+<li><p>棋盘效益是指当反卷积输出窗口的大小不能被步长整除的时候，卷积的输出出现了重叠，并且如果连续的使用反卷积层将会加剧这个问题。</p></li>
+<li><p>虽然模型可以学习到合适的卷积参数，但是实际情况下是非常难得的。</p></li>
+<li><p>为了解决这个问题我们可以使用转置卷积层，还可以加大卷积的步长，虽然这样会导致输出变得更大。</p></li>
+<li><p>目前通常使用先upsample然后添加padding再使用卷积层进行生成，消除了生成的伪影的问题。</p></li>
 </ol>
-<h3 id="GAN中的归一化层"><a href="#GAN中的归一化层" class="headerlink" title="GAN中的归一化层"></a>GAN中的归一化层</h3><h4 id="Spectral-Normalization"><a href="#Spectral-Normalization" class="headerlink" title="Spectral Normalization"></a>Spectral Normalization</h4><ol>
-<li><p>利用神经网络学习度量函数也需要引入额外的约束，假设不管什么数据输入我的度量都是最小，这个时候符合损失函数但是不符合实际。因此还需要引入额外的正则性约束$| D(y_i,\theta) - D(y’_i , \theta) |\to 0$，最终以梯度惩罚的方式加入损失函数如下：</p>
-<script type="math/tex; mode=display">
-\begin{aligned}\Theta =& \mathop{\arg\min}_{\Theta} \frac{1}{B}\sum_{i=1}^B\left[D\Big(z_i,\Theta\Big)-D\Big(y_i,\Theta\Big)\right]+\frac{\lambda }{B}\sum_{i=1}^B\left(\frac{|D(y_{i,1},\Theta)-D(y_{i,2},\Theta)|}{\left\| y_{i,1}-y_{i,2}\right\| }-1\right)^2 \end{aligned}</script></li>
+<h3 id="gan中的归一化层">GAN中的归一化层</h3>
+<h4 id="spectral-normalization">Spectral Normalization</h4>
+<ol type="1">
+<li><p>利用神经网络学习度量函数也需要引入额外的约束，假设不管什么数据输入我的度量都是最小，这个时候符合损失函数但是不符合实际。因此还需要引入额外的正则性约束<span class="math inline">\(\| D(y_i,\theta) - D(y&#39;_i , \theta) \|\to 0\)</span>，最终以梯度惩罚的方式加入损失函数如下：</p>
+<p><span class="math display">\[
+\begin{aligned}\Theta =&amp; \mathop{\arg\min}_{\Theta} \frac{1}{B}\sum_{i=1}^B\left[D\Big(z_i,\Theta\Big)-D\Big(y_i,\Theta\Big)\right]+\frac{\lambda }{B}\sum_{i=1}^B\left(\frac{|D(y_{i,1},\Theta)-D(y_{i,2},\Theta)|}{\left\| y_{i,1}-y_{i,2}\right\| }-1\right)^2 \end{aligned}
+\]</span></p></li>
 <li><p>这时候其实就是想到为了满足平滑性假设，我们的神经网络需要具备什么特点，假设我们有个全连接层，这时候的约束条件是：</p>
-<script type="math/tex; mode=display">\begin{aligned}
+<p><span class="math display">\[\begin{aligned}
     \Vert f(Wx_1+b) - f(Wx_2+b)\Vert\leq C(W,b)\cdot \Vert x_1 - x_2 \Vert
-\end{aligned}</script><p>那么我们保证输入$x_1 - x_2$差距不大的时候，其实就是需要保证权重乘积的差值小：</p>
-<script type="math/tex; mode=display">\begin{aligned}
+\end{aligned}\]</span></p>
+<p>那么我们保证输入<span class="math inline">\(x_1 - x_2\)</span>差距不大的时候，其实就是需要保证权重乘积的差值小：</p>
+<p><span class="math display">\[\begin{aligned}
     \Vert W(x_1 - x_2)\Vert\leq C\Vert x_1 - x_2 \Vert
-\end{aligned}</script></li>
-<li><p>这个时候我们把$W^TW$的最大特征根（主特征根）的平方根$\Vert W\Vert_2$作为一个约束，就是矩阵范数约束来代替传统的l2约束。</p>
-</li>
+\end{aligned}\]</span></p></li>
+<li><p>这个时候我们把<span class="math inline">\(W^TW\)</span>的最大特征根（主特征根）的平方根<span class="math inline">\(\Vert W\Vert_2\)</span>作为一个约束，就是矩阵范数约束来代替传统的l2约束。</p></li>
 </ol>
-<h4 id="Adaptive-Layer-Instance-Normalization"><a href="#Adaptive-Layer-Instance-Normalization" class="headerlink" title="Adaptive Layer-Instance Normalization"></a>Adaptive Layer-Instance Normalization</h4><ol>
-<li><p>这个就是综合layer norm和instance norm的归一化方式</p>
-</li>
-<li><p>分别求instance norm的均值和方差，layer norm的均值和方差，求出instance norm的输出，layer norm的输出</p>
-</li>
+<h4 id="adaptive-layer-instance-normalization">Adaptive Layer-Instance Normalization</h4>
+<ol type="1">
+<li><p>这个就是综合layer norm和instance norm的归一化方式</p></li>
+<li><p>分别求instance norm的均值和方差，layer norm的均值和方差，求出instance norm的输出，layer norm的输出</p></li>
+<li><p>再通过一个参数融合两个输出为一个输出</p></li>
+<li><p>最后将输出乘上gamma加上beta进行输出</p></li>
 </ol>
-<ol>
-<li><p>再通过一个参数融合两个输出为一个输出</p>
-</li>
-<li><p>最后将输出乘上gamma加上beta进行输出</p>
-</li>
+<h4 id="softadalin">SoftAdaLIN</h4>
+<ol type="1">
+<li><p>SoftAdaLIN是将提出的style特征和content特征进行处理，</p></li>
+<li><p>soft gamma由style gamma和content gamma组成</p></li>
+<li><p>soft beta由style beta和content beta组成</p></li>
+<li><p>将soft gamma和soft beta作为Adaptive Layer-Instance Normalization的gamma 和 beta</p></li>
 </ol>
-<h4 id="SoftAdaLIN"><a href="#SoftAdaLIN" class="headerlink" title="SoftAdaLIN"></a>SoftAdaLIN</h4><ol>
-<li><p>SoftAdaLIN是将提出的style特征和content特征进行处理，</p>
-</li>
-<li><p>soft gamma由style gamma和content gamma组成</p>
-</li>
-<li><p>soft beta由style beta和content beta组成</p>
-</li>
-<li><p>将soft gamma和soft beta作为Adaptive Layer-Instance Normalization的gamma 和 beta</p>
-</li>
-</ol>
-<h3 id="U-GAT-IT"><a href="#U-GAT-IT" class="headerlink" title="U-GAT-IT"></a>U-GAT-IT</h3><p>这是一篇强行用大模型来进行cycle gan的工作，主要创新点在于adalin以及引入了CAM类激活映射的机制</p>
-<h4 id="最小二乘GAN损失"><a href="#最小二乘GAN损失" class="headerlink" title="最小二乘GAN损失"></a>最小二乘GAN损失</h4><ol>
+<h3 id="u-gat-it">U-GAT-IT</h3>
+<p>这是一篇强行用大模型来进行cycle gan的工作，主要创新点在于adalin以及引入了CAM类激活映射的机制</p>
+<h4 id="最小二乘gan损失">最小二乘GAN损失</h4>
+<ol type="1">
 <li>lsgan的损失就是对于真实样本的输出趋近于1，对于生成样本的输出趋近于0；</li>
 </ol>
-<script type="math/tex; mode=display">
+<p><span class="math display">\[
 \begin{aligned}
   L_{l s g a n}^{s \rightarrow t}=\left(\mathbb{E}_{x \sim X_{t}}\left[\left(D_{t}(x)\right)^{2}\right]+\mathbb{E}_{x \sim X_{s}}\left[\left(1-D_{t}\left(G_{s \rightarrow t}(x)\right)\right)^{2}\right]\right)
-\end{aligned}</script><h4 id="循环一致性损失"><a href="#循环一致性损失" class="headerlink" title="循环一致性损失"></a>循环一致性损失</h4><p>这是cycle gan中提出一种损失，他将模型分成A2B，A2B2A，B2A，B2A2B，保证模型映射和重映射的一致性，从而提升生成质量</p>
-<script type="math/tex; mode=display">
+\end{aligned}
+\]</span></p>
+<h4 id="循环一致性损失">循环一致性损失</h4>
+<p>这是cycle gan中提出一种损失，他将模型分成A2B，A2B2A，B2A，B2A2B，保证模型映射和重映射的一致性，从而提升生成质量 <span class="math display">\[
 \begin{aligned}
   \left.L_{c y c l e}^{s \rightarrow t}=\left.\mathbb{E}_{x \sim X_{s}}\left[| x-G_{t \rightarrow s}\left(G_{s \rightarrow t}(x)\right)\right)\right|_{1}\right]
-\end{aligned}</script><h2 id="Yolov3的具体流程"><a href="#Yolov3的具体流程" class="headerlink" title="Yolov3的具体流程?"></a>Yolov3的具体流程?</h2><h3 id="yolo的网络架构"><a href="#yolo的网络架构" class="headerlink" title="yolo的网络架构?"></a>yolo的网络架构?</h3><ol>
-<li><p>原本是使用Darknet-53的,参数较多,并且引入了Resnet中的跳跃连接,效果较好.我在进行侧端移植时,尝试过使用Darknet-19,但是参数量还是太大,因此换成了mobilenetv2.</p>
-</li>
-<li><p>yolo的网络借鉴了金字塔特征图,是全卷积操作,效率较高.最后的输出时从多个尺度的分支取特征,并且进行卷积后和上一层的特征图进行上采样concat,更好的进行特征融合,在对每个特征进行处理.最终输出的大特征图对应大物体,小特征图对应小物体.</p>
-</li>
+\end{aligned}
+\]</span></p>
+<h2 id="yolov3的具体流程">Yolov3的具体流程?</h2>
+<h3 id="yolo的网络架构">yolo的网络架构?</h3>
+<ol type="1">
+<li><p>原本是使用Darknet-53的,参数较多,并且引入了Resnet中的跳跃连接,效果较好.我在进行侧端移植时,尝试过使用Darknet-19,但是参数量还是太大,因此换成了mobilenetv2.</p></li>
+<li><p>yolo的网络借鉴了金字塔特征图,是全卷积操作,效率较高.最后的输出时从多个尺度的分支取特征,并且进行卷积后和上一层的特征图进行上采样concat,更好的进行特征融合,在对每个特征进行处理.最终输出的大特征图对应大物体,小特征图对应小物体.</p></li>
 </ol>
-<h3 id="yolo的输出特征图"><a href="#yolo的输出特征图" class="headerlink" title="yolo的输出特征图?"></a>yolo的输出特征图?</h3><ol>
+<h3 id="yolo的输出特征图">yolo的输出特征图?</h3>
+<ol type="1">
 <li>输出输出通道数为[N,N,anchor_nums*(5+class_nums)].5表示了预测的x,y,w,h,objness.</li>
 </ol>
-<h3 id="yolo的特征图的解码"><a href="#yolo的特征图的解码" class="headerlink" title="yolo的特征图的解码?"></a>yolo的特征图的解码?</h3><ol>
-<li>x,y比较简单,将$\sigma(x),\sigma(y)$后表示了当前物体在当前格子左上角中的相对偏移量.yolov1中是直接学习物体框的大小,yolov2开始加入了anchor的概念,因此对高度和宽度用指数函数进行激活后乘上当前所在anchor的尺寸,$p_w e^{t_w},p_h e^{t_h}$.我在实现的时候anchor尺度是根据全局尺度归一化到0-1之间的.</li>
+<h3 id="yolo的特征图的解码">yolo的特征图的解码?</h3>
+<ol type="1">
+<li>x,y比较简单,将<span class="math inline">\(\sigma(x),\sigma(y)\)</span>后表示了当前物体在当前格子左上角中的相对偏移量.yolov1中是直接学习物体框的大小,yolov2开始加入了anchor的概念,因此对高度和宽度用指数函数进行激活后乘上当前所在anchor的尺寸,<span class="math inline">\(p_w e^{t_w},p_h e^{t_h}\)</span>.我在实现的时候anchor尺度是根据全局尺度归一化到0-1之间的.</li>
 </ol>
-<h3 id="anchor的意义"><a href="#anchor的意义" class="headerlink" title="anchor的意义?"></a>anchor的意义?</h3><ol>
-<li><p>anchor的存在是因为各自物体的大小排布不规律,模型难以拟合,通过设置一个固定的系数,让所有的大小值对其求倍数,倍数越接近1表明越符合这个anchor.这个时候训练$e^{t_w}$,wh的gt值基本都在0左右,很容易学习并拟合.</p>
-</li>
-<li><p>制作anchor时,我将iou作为距离参数对整个数据执行kmeans,得到的聚类中心即为anchor.</p>
-</li>
+<h3 id="anchor的意义">anchor的意义?</h3>
+<ol type="1">
+<li><p>anchor的存在是因为各自物体的大小排布不规律,模型难以拟合,通过设置一个固定的系数,让所有的大小值对其求倍数,倍数越接近1表明越符合这个anchor.这个时候训练<span class="math inline">\(e^{t_w}\)</span>,wh的gt值基本都在0左右,很容易学习并拟合.</p></li>
+<li><p>制作anchor时,我将iou作为距离参数对整个数据执行kmeans,得到的聚类中心即为anchor.</p></li>
 </ol>
-<h3 id="分类置信度"><a href="#分类置信度" class="headerlink" title="分类置信度?"></a>分类置信度?</h3><ol>
+<h3 id="分类置信度">分类置信度?</h3>
+<ol type="1">
 <li>这里首先是先sigmoid激活objness后看置信度是否大于阈值,再利用softmax判断是哪个类别,严格一些可以直接把置信度乘上softmax的结果.</li>
 </ol>
-<h3 id="损失函数-1"><a href="#损失函数-1" class="headerlink" title="损失函数?"></a>损失函数?</h3><ol>
-<li><p>首先我们制作标签的时候确定好当前box的所有gt所在的位置,对应位置的预测结果和gt做损失即可,其他位置做负例损失,此外还有ignore的部分.</p>
-</li>
-<li><p>如果除正例外的bbox预测出来的结果和某个gt的iou大于一定阈值了,那么表明附近区域也有预测能力了,要避免负例减弱这种能力,所以忽略.我实现的时候,看到网上一些高star的库都是直接整个batch计算ignoremask,这是不对的,需要都先映射回全局,再与每张图像的全局进行计算iou才有意义. 当时我还行尝试一下把ignorebox的部分也添加一定的损失让他们向更有意义的gt拟合,不过并没有做深入尝试.</p>
-</li>
-<li><p>同时网上的一些库制作标签的时候没有考虑到标签重叠的问题,两个物体挨的太近的时候,后面物体的标签会将前面的标签覆盖掉.</p>
-</li>
-<li><p>我还添加一些关于wh的系数,如果wh越小,权重越大.以及一些iou损失.</p>
-</li>
+<h3 id="损失函数-1">损失函数?</h3>
+<ol type="1">
+<li><p>首先我们制作标签的时候确定好当前box的所有gt所在的位置,对应位置的预测结果和gt做损失即可,其他位置做负例损失,此外还有ignore的部分.</p></li>
+<li><p>如果除正例外的bbox预测出来的结果和某个gt的iou大于一定阈值了,那么表明附近区域也有预测能力了,要避免负例减弱这种能力,所以忽略.我实现的时候,看到网上一些高star的库都是直接整个batch计算ignoremask,这是不对的,需要都先映射回全局,再与每张图像的全局进行计算iou才有意义. 当时我还行尝试一下把ignorebox的部分也添加一定的损失让他们向更有意义的gt拟合,不过并没有做深入尝试.</p></li>
+<li><p>同时网上的一些库制作标签的时候没有考虑到标签重叠的问题,两个物体挨的太近的时候,后面物体的标签会将前面的标签覆盖掉.</p></li>
+<li><p>我还添加一些关于wh的系数,如果wh越小,权重越大.以及一些iou损失.</p></li>
 </ol>
-<h3 id="smooth-L1-loss"><a href="#smooth-L1-loss" class="headerlink" title="smooth L1 loss"></a>smooth L1 loss</h3><ol>
-<li><p>公式为$L_1=\begin{cases}0.5x^2,\ \ |x|<1\\|x|-0.5,\ \="" x<-1\="" \text{or}="" x="">1 \end{cases}$</1\\|x|-0.5,\></p>
-</li>
-<li><p>一般他们是没有经过sigmoid或其他激活的,所以使用smooth l1 loss去拟合的时候,可以在差距过大时缩小梯度,差距过小时梯度值足够平滑,稳定拟合的过程.</p>
-</li>
+<h3 id="smooth-l1-loss">smooth L1 loss</h3>
+<ol type="1">
+<li><p>公式为<span class="math inline">\(L_1=\begin{cases}0.5x^2,\ \ |x|&lt;1\\|x|-0.5,\ \ x&lt;-1\ \text{or} x&gt;1 \end{cases}\)</span></p></li>
+<li><p>一般他们是没有经过sigmoid或其他激活的,所以使用smooth l1 loss去拟合的时候,可以在差距过大时缩小梯度,差距过小时梯度值足够平滑,稳定拟合的过程.</p></li>
 </ol>
-<h3 id="Focal-loss"><a href="#Focal-loss" class="headerlink" title="Focal loss"></a>Focal loss</h3><h3 id="IoU-loss"><a href="#IoU-loss" class="headerlink" title="IoU loss"></a>IoU loss</h3><h2 id="SSD的流程"><a href="#SSD的流程" class="headerlink" title="SSD的流程?"></a>SSD的流程?</h2><h3 id="网络结构"><a href="#网络结构" class="headerlink" title="网络结构?"></a>网络结构?</h3><ol>
-<li><p>原始的SSD网络结构是VGG-16作Backbone,在我的项目中也替换成了类似mobilenetv2的结果进行实现.</p>
-</li>
-<li><p>SSD同样也是利用多尺度特征,在我的项目中使用了3个分支进行输出,首先将三个分支的特征去除,然后使用SeperableConv2d(dwconv,relu,conv)进行激活,激活后也得到了特征通道数为(4 + 1+class_num),这里1的不是objness而是空白背景类.</p>
-</li>
-<li><p>在我的项目中我尝试了对多个特征间使用SSH块,FPN块.SSH块就是将一个输入通过3x3卷积和5x5卷积进行分离,然后再concat.以扩大感受野.FPN块则是将两个分支的输入进行处理,将深分支缩小后再上采样与浅分支相加.总体来说FPN块效果会好一些,因为侧段硬件不对于5x5的卷积效果不好.</p>
-</li>
+<h3 id="focal-loss">Focal loss</h3>
+<h3 id="iou-loss">IoU loss</h3>
+<h2 id="ssd的流程">SSD的流程?</h2>
+<h3 id="网络结构">网络结构?</h3>
+<ol type="1">
+<li><p>原始的SSD网络结构是VGG-16作Backbone,在我的项目中也替换成了类似mobilenetv2的结果进行实现.</p></li>
+<li><p>SSD同样也是利用多尺度特征,在我的项目中使用了3个分支进行输出,首先将三个分支的特征去除,然后使用SeperableConv2d(dwconv,relu,conv)进行激活,激活后也得到了特征通道数为(4 + 1+class_num),这里1的不是objness而是空白背景类.</p></li>
+<li><p>在我的项目中我尝试了对多个特征间使用SSH块,FPN块.SSH块就是将一个输入通过3x3卷积和5x5卷积进行分离,然后再concat.以扩大感受野.FPN块则是将两个分支的输入进行处理,将深分支缩小后再上采样与浅分支相加.总体来说FPN块效果会好一些,因为侧段硬件不对于5x5的卷积效果不好.</p></li>
 </ol>
-<h3 id="anchor"><a href="#anchor" class="headerlink" title="anchor?"></a>anchor?</h3><ol>
+<h3 id="anchor">anchor?</h3>
+<ol type="1">
 <li>SSD的anchor和传统的yolo不同,首先根据输入大小和输出分支的缩小尺度计算当前的特征图大小,每个特征图可以对应多个大小的anchor,SSD的是对当前特征图每个小块的中心分配anchor,对于每个尺度的anchor,将宽高归一化到全局大小,然后对每个小块中心分配gt的值.</li>
 </ol>
-<h3 id="标签制作"><a href="#标签制作" class="headerlink" title="标签制作?"></a>标签制作?</h3><ol>
-<li><p>首先计算gt与anchor的iou,找到大于阈值的的anchor位置，这个阈值可以设置的小一点，不过太小也不好，那样label中的匹配anchor数量就会太多,找到匹配的anchor的最优gt，并为每个anchor的对应的位置分配给其最匹配的gt,设置每个anchor位置对应的置信度，如果其iou score小于阈值则设置为0,编码生成bbox label，将gt中心坐标转换为相对anchor中心的偏移，且尺度除以移除以(方差*gt宽度)，gt的宽高除anchor宽高并进行对数化再除方差,编码生成landmark label，计算gt中心坐标对应anchor的中心偏移且尺度除以(方差*anchor宽度)</p>
-</li>
-<li><p>Encode的意义?其实就是将所有的anchor的表示方法进行修改便于网络拟合,在SSD中其实是统计了一个数据集下所有的bbox的gt的统计均值和方差,然后Encode就是进行归一化的表示.同时这里的wh也是需要log的.</p>
-</li>
+<h3 id="标签制作">标签制作?</h3>
+<ol type="1">
+<li><p>首先计算gt与anchor的iou,找到大于阈值的的anchor位置，这个阈值可以设置的小一点，不过太小也不好，那样label中的匹配anchor数量就会太多,找到匹配的anchor的最优gt，并为每个anchor的对应的位置分配给其最匹配的gt,设置每个anchor位置对应的置信度，如果其iou score小于阈值则设置为0,编码生成bbox label，将gt中心坐标转换为相对anchor中心的偏移，且尺度除以移除以(方差*gt宽度)，gt的宽高除anchor宽高并进行对数化再除方差,编码生成landmark label，计算gt中心坐标对应anchor的中心偏移且尺度除以(方差*anchor宽度)</p></li>
+<li><p>Encode的意义?其实就是将所有的anchor的表示方法进行修改便于网络拟合,在SSD中其实是统计了一个数据集下所有的bbox的gt的统计均值和方差,然后Encode就是进行归一化的表示.同时这里的wh也是需要log的.</p></li>
 </ol>
-<h3 id="损失函数-2"><a href="#损失函数-2" class="headerlink" title="损失函数?"></a>损失函数?</h3><ol>
-<li><p>对于定位损失使用Smooth L1进行计算,将一个batch的标签中有效部分作为boolmask将预测的bbox部分进行提取,提出后使用smooth_l1_loss进行计算.</p>
-</li>
+<h3 id="损失函数-2">损失函数?</h3>
+<ol type="1">
+<li><p>对于定位损失使用Smooth L1进行计算,将一个batch的标签中有效部分作为boolmask将预测的bbox部分进行提取,提出后使用smooth_l1_loss进行计算.</p></li>
 <li><p>对于分类损失使用hard negtive mining,首先提取所有的预测置信度.使用logsumexp的原因如下,我猜想应该是因为早期softmax实现不好.</p>
-<script type="math/tex; mode=display">
+<p><span class="math display">\[
 \begin{aligned}
-\mathcal{L}_{\text{softmax}}&=-\log \frac{e^{x_{y_i}}}{\sum_{j=1}e^{x_j}} \\
--\log \frac{e^{x_{y_i}}}{\sum_{j=1}e^{x_j}}&=\log(\sum_{j=1}e^{x_j})-\log(e^{x_{y_i}})\\
-&=\log(\sum_{j=1}e^{x_j})-x_{y_i}\\
-&=\text{logsumexp}(x_j)-x_{y_i}
-\end{aligned}</script></li>
-<li><p>我们得到了每个类别的softmax损失大小后,取出背景类的损失,并从大到小进行排序,排序之后我确定了每个位置的损失排名,接下来通过预设的hard negative mining 参数确定需要对多少个负例计算损失,得到了个数之后,取排名前n个样本作为有效负例.</p>
-</li>
-<li><p>用n个有效负例和m个正例,使用稀疏softmax计算置信度损失.</p>
-</li>
+\mathcal{L}_{\text{softmax}}&amp;=-\log \frac{e^{x_{y_i}}}{\sum_{j=1}e^{x_j}} \\
+-\log \frac{e^{x_{y_i}}}{\sum_{j=1}e^{x_j}}&amp;=\log(\sum_{j=1}e^{x_j})-\log(e^{x_{y_i}})\\
+&amp;=\log(\sum_{j=1}e^{x_j})-x_{y_i}\\
+&amp;=\text{logsumexp}(x_j)-x_{y_i}
+\end{aligned}
+\]</span></p></li>
+<li><p>我们得到了每个类别的softmax损失大小后,取出背景类的损失,并从大到小进行排序,排序之后我确定了每个位置的损失排名,接下来通过预设的hard negative mining 参数确定需要对多少个负例计算损失,得到了个数之后,取排名前n个样本作为有效负例.</p></li>
+<li><p>用n个有效负例和m个正例,使用稀疏softmax计算置信度损失.</p></li>
 </ol>
-<h3 id="预测结果"><a href="#预测结果" class="headerlink" title="预测结果?"></a>预测结果?</h3><ol>
+<h3 id="预测结果">预测结果?</h3>
+<ol type="1">
 <li>获得预测结果进行解码,解码后使用softmax找到对应类别,如果概率小于阈值删除,将概率大于阈值的按类别进行nms(非极大值抑止).</li>
 </ol>
-<h3 id="非极大值抑止"><a href="#非极大值抑止" class="headerlink" title="非极大值抑止?"></a>非极大值抑止?</h3><ol>
+<h3 id="非极大值抑止">非极大值抑止?</h3>
+<ol type="1">
 <li>首先按score进行排序，取最大score的bbox与其余所有的bbox计算iou，删除所有iou大于阈值的bbox。然后继续寻找下一个最大score的bbox。</li>
 </ol>
-<h3 id="iou？"><a href="#iou？" class="headerlink" title="iou？"></a>iou？</h3><ol>
+<h3 id="iou">iou？</h3>
+<ol type="1">
 <li>计算交集面积，然后iou=交集面积/(a面积+b面积-交集面积)</li>
 </ol>
-<h3 id="mAP"><a href="#mAP" class="headerlink" title="mAP"></a>mAP</h3><ol>
-<li><p>召回就是预测正确的框在所有预测结果中的比例：$recall=\frac{TP}{TP+FN}=\frac{TP}{all_detections}$</p>
-</li>
-<li><p>$precision=\frac{TP}{TP+FP}$</p>
-</li>
+<h3 id="map">mAP</h3>
+<ol type="1">
+<li><p>召回就是预测正确的框在所有预测结果中的比例：<span class="math inline">\(recall=\frac{TP}{TP+FN}=\frac{TP}{all_detections}\)</span></p></li>
+<li><p><span class="math inline">\(precision=\frac{TP}{TP+FP}\)</span></p></li>
 </ol>
-<h2 id="基于加性间距胶囊网络的家庭活动识别方法研究"><a href="#基于加性间距胶囊网络的家庭活动识别方法研究" class="headerlink" title="基于加性间距胶囊网络的家庭活动识别方法研究"></a>基于加性间距胶囊网络的家庭活动识别方法研究</h2><h3 id="数据-1"><a href="#数据-1" class="headerlink" title="数据"></a>数据</h3><ol>
+<h2 id="基于加性间距胶囊网络的家庭活动识别方法研究">基于加性间距胶囊网络的家庭活动识别方法研究</h2>
+<h3 id="数据-1">数据</h3>
+<ol type="1">
 <li>我用的国际声学挑战赛2018年的室内活动识别数据，它是由多个4通道传感器组成的，（分为开发集和测试集），我主要用是将其转换为对数mel谱图然后输入到cnn里面进行处理。cnn卷积后，将其按时序构成501x256的矩阵，把他们视为256个胶囊网络向量，输入到胶囊网络。</li>
 </ol>
-<h3 id="胶囊网络？"><a href="#胶囊网络？" class="headerlink" title="胶囊网络？"></a>胶囊网络？</h3><h4 id="来自于k-means"><a href="#来自于k-means" class="headerlink" title="来自于k means"></a>来自于k means</h4><ol>
+<h3 id="胶囊网络">胶囊网络？</h3>
+<h4 id="来自于k-means">来自于k means</h4>
+<ol type="1">
 <li>选择初始化的 k 个样本作为初始聚类中心</li>
 <li>针对数据集中每个样本， 计算它到 k 个聚类中心的距离并将其分到距离最小的聚类中心所对应的类中；</li>
 <li>针对每个类别 重新计算它的聚类中心 （即属于该类的所有样本的质心）；</li>
 <li>重复上面 2 3 两步操作，直到达到某个中止条件（迭代次数、最小误差变化等）。</li>
 </ol>
-<h4 id="升级到胶囊网络"><a href="#升级到胶囊网络" class="headerlink" title="升级到胶囊网络"></a>升级到胶囊网络</h4><ol>
-<li>输入特征$u$，我们要聚类出k个$v$，首先利用转换矩阵初始化$v=W\cdot u$</li>
-<li>这个时候我需要求$v$和$u$距离最大值加入到这个类中，但是为了保证特征的顺序以及特征表达能力，这里我们求$c=softmax(<v,w\cdot u="">)$,此时softmax的结果就表示当前的v与原始输入的相似程度。</v,w\cdot></li>
-<li>此时更新$v=\sum c\cdot W\cdot u$就能得到新的聚类中心。</li>
+<h4 id="升级到胶囊网络">升级到胶囊网络</h4>
+<ol type="1">
+<li>输入特征<span class="math inline">\(u\)</span>，我们要聚类出k个<span class="math inline">\(v\)</span>，首先利用转换矩阵初始化<span class="math inline">\(v=W\cdot u\)</span></li>
+<li>这个时候我需要求<span class="math inline">\(v\)</span>和<span class="math inline">\(u\)</span>距离最大值加入到这个类中，但是为了保证特征的顺序以及特征表达能力，这里我们求<span class="math inline">\(c=softmax(&lt;v,W\cdot u&gt;)\)</span>,此时softmax的结果就表示当前的v与原始输入的相似程度。</li>
+<li>此时更新<span class="math inline">\(v=\sum c\cdot W\cdot u\)</span>就能得到新的聚类中心。</li>
 </ol>
-<h3 id="损失函数-3"><a href="#损失函数-3" class="headerlink" title="损失函数"></a>损失函数</h3><ol>
-<li><p>传统的胶囊网络将输出的胶囊的模长作为分类的依据，也就是转换为10个分类问题，模长大于阈值表示真。</p>
-</li>
-<li><p>但是我考虑到胶囊网络其实就是为特征聚类的过程，其中非常明显的问题就是用到了矩阵的内积相似度，但是在最后却把内积抛弃了！如果从几何的角度看，应该是底部的向量比较分散，但是他们的聚类中心则表示了一个分类区域，也就是底层向量支持了这个中心向量为当前类别，反过来说就是当前类别的图像被这些底层特征所支持，那么我们引入am softmax，将每个高层聚类中心的距离拉大，那这个时候不同特征的底层向量就会被逐渐分开到不同的区域，最终每个类别特征都将分离化，强化了模型的特征选择能力。</p>
-</li>
-<li><p>考虑到输出10个类别的胶囊向量，这个时候我们平时的softmax是$W^T x$，现在我们把这10个类别的胶囊向量看出$W$，只需要补上一层$x$和他们做内积就可以得到$cos\theta$了，然后使用的amsoftmax计算损失即可。</p>
-</li>
+<h3 id="损失函数-3">损失函数</h3>
+<ol type="1">
+<li><p>传统的胶囊网络将输出的胶囊的模长作为分类的依据，也就是转换为10个分类问题，模长大于阈值表示真。</p></li>
+<li><p>但是我考虑到胶囊网络其实就是为特征聚类的过程，其中非常明显的问题就是用到了矩阵的内积相似度，但是在最后却把内积抛弃了！如果从几何的角度看，应该是底部的向量比较分散，但是他们的聚类中心则表示了一个分类区域，也就是底层向量支持了这个中心向量为当前类别，反过来说就是当前类别的图像被这些底层特征所支持，那么我们引入am softmax，将每个高层聚类中心的距离拉大，那这个时候不同特征的底层向量就会被逐渐分开到不同的区域，最终每个类别特征都将分离化，强化了模型的特征选择能力。</p></li>
+<li><p>考虑到输出10个类别的胶囊向量，这个时候我们平时的softmax是<span class="math inline">\(W^T x\)</span>，现在我们把这10个类别的胶囊向量看出<span class="math inline">\(W\)</span>，只需要补上一层<span class="math inline">\(x\)</span>和他们做内积就可以得到<span class="math inline">\(cos\theta\)</span>了，然后使用的amsoftmax计算损失即可。</p></li>
 </ol>
-<h2 id="模型优化？"><a href="#模型优化？" class="headerlink" title="模型优化？"></a>模型优化？</h2><ol>
+<h2 id="模型优化">模型优化？</h2>
+<ol type="1">
 <li>尽量使用1x1的卷积核，并且减少3x3卷积核的通道数以减少参数量。不使用全连接层，将全连接层利用1x1的卷积来做，或者直接展开卷积层的结果作为输出。</li>
 </ol>
-<h3 id="squeezenet"><a href="#squeezenet" class="headerlink" title="squeezenet"></a>squeezenet</h3><ol>
+<h3 id="squeezenet">squeezenet</h3>
+<ol type="1">
 <li>使用fire模块将1x1与3x3卷积输出进行concat。进行了尝试，但是侧端的运行速度相差较大。</li>
 </ol>
-<h3 id="mobilenet"><a href="#mobilenet" class="headerlink" title="mobilenet"></a>mobilenet</h3><h5 id="mobilenetv1"><a href="#mobilenetv1" class="headerlink" title="mobilenetv1"></a>mobilenetv1</h5><ol>
+<h3 id="mobilenet">mobilenet</h3>
+<h5 id="mobilenetv1">mobilenetv1</h5>
+<ol type="1">
 <li><p>mobilenetv1提出的深度可分离卷积。首先使用depthwise卷积，就是用和输入特征图相同通道的卷积核进行卷积，但是这里并不会多个通道累加，只对其对应通道进行计算，得到了激活后的特征图。然后是pointwise卷积，实际上就是1x1的卷积，将之前没有累加的卷积通道进行累加。那么我们就发现原来需要生成12个特征图，现在就不要生成这么多中间变量了，还减少了运算量和参数量。</p>
-<p><img src="/2018/10/28/Eigen初使用/Depthwise_Separable_Convolution1.png" alt=""><br><img src="/2018/10/28/Eigen初使用/Depthwise_Separable_Convolution2.png" alt=""><br><img src="/2018/10/28/Eigen初使用/Depthwise_Separable_Convolution3.png" alt=""></p>
-</li>
+<p><img src="/2018/10/28/Eigen初使用/Depthwise_Separable_Convolution1.png"> <img src="/2018/10/28/Eigen初使用/Depthwise_Separable_Convolution2.png"> <img src="/2018/10/28/Eigen初使用/Depthwise_Separable_Convolution3.png"></p></li>
 </ol>
-<h5 id="mobilenetv2"><a href="#mobilenetv2" class="headerlink" title="mobilenetv2"></a>mobilenetv2</h5><ol>
+<h5 id="mobilenetv2">mobilenetv2</h5>
+<ol type="1">
 <li><p>mobilenetv2中使用了inverted residual block，实际上就是与传统的残差块的通道大小顺序相反，传统残差块是先用1x1卷积进行通道降维，然后3x3卷积进行特征提取，再用1x1卷积进行升维。</p>
-<p><img src="/2018/10/28/Eigen初使用/inverted_residual_block.png" alt=""></p>
+<p><img src="/2018/10/28/Eigen初使用/inverted_residual_block.png"></p>
 <p>而mobilenetv2是先用1x1卷积升维，然后用可分离卷积进行特征提取，再用1x1卷积进行降维,并且去除最后一个特征连接层的激活函数。<strong>如果有残差连接就前后相加</strong></p>
-<p><img src="/2018/10/28/Eigen初使用/mobilenetv2.png" alt=""></p>
-</li>
+<p><img src="/2018/10/28/Eigen初使用/mobilenetv2.png"></p></li>
 </ol>
-<h2 id="模型量化"><a href="#模型量化" class="headerlink" title="模型量化"></a>模型量化</h2><h3 id="量化的原理"><a href="#量化的原理" class="headerlink" title="量化的原理"></a>量化的原理</h3><h4 id="伪量化"><a href="#伪量化" class="headerlink" title="伪量化"></a>伪量化</h4><ol>
+<h2 id="模型量化">模型量化</h2>
+<h3 id="量化的原理">量化的原理</h3>
+<h4 id="伪量化">伪量化</h4>
+<ol type="1">
 <li>伪量化就是将模型权重转为为8位精度，但是在推理的时候时候还是将模型的参数转换为浮点型进运算，只能缩小模型的存储大小，对于推理速度改进不大</li>
 </ol>
-<h4 id="定点量化"><a href="#定点量化" class="headerlink" title="定点量化"></a>定点量化</h4><ol>
+<h4 id="定点量化">定点量化</h4>
+<ol type="1">
 <li>需要校准或估计范围，即模型中所有浮点张量的范围（最小，最大）。与不变的张量（例如权重和偏差）不同，除非我们运行几个推理周期，否则无法校准可变的张量（例如模型输入，激活（中间层的输出）和模型输出）。需要输入一个代表性的数据集来对其进行校准。该数据集可以是训练或验证数据的一小部分（大约100-500个样本）。请参考以下 representative_dataset()功能。</li>
 </ol>
-<h2 id="anchor-free的模型有接触吗？"><a href="#anchor-free的模型有接触吗？" class="headerlink" title="anchor-free的模型有接触吗？"></a>anchor-free的模型有接触吗？</h2><h3 id="centernet-object-as-point"><a href="#centernet-object-as-point" class="headerlink" title="centernet object-as-point"></a>centernet object-as-point</h3><ol>
+<h2 id="anchor-free的模型有接触吗">anchor-free的模型有接触吗？</h2>
+<h3 id="centernet-object-as-point">centernet object-as-point</h3>
+<ol type="1">
 <li>有进行实验与复现，一开始一直复现不出来，后来用作者开源的代码跑也效果寥寥无几。所以就没有继续尝试下去了。</li>
 </ol>
-<h2 id="人脸识别"><a href="#人脸识别" class="headerlink" title="人脸识别"></a>人脸识别</h2><h3 id="你用的是arcface的算法，流程？"><a href="#你用的是arcface的算法，流程？" class="headerlink" title="你用的是arcface的算法，流程？"></a>你用的是arcface的算法，流程？</h3><ol>
+<h2 id="人脸识别">人脸识别</h2>
+<h3 id="你用的是arcface的算法流程">你用的是arcface的算法，流程？</h3>
+<ol type="1">
 <li>我参考的是insightface的开源库，用的是他们清洗过的Refine-MS1M数据集。有个难点就是tensorflow里面没办法用索引的方式进行构建数据，这个是非常蛋疼的。不过我是先用稀疏版的arcface进行训练，然后再用triplet loss进行微调。</li>
 </ol>
-<h3 id="triplet-loss算法"><a href="#triplet-loss算法" class="headerlink" title="triplet loss算法"></a>triplet loss算法</h3><ol>
-<li><p>公式$Loss=\sum_i^N[distance(A)-distace(N)+\alpha]_+$, 对于欧式距离的triplet loss就是内类间距要比类间间距小alpha，对于cos距离的就正相反。</p>
-</li>
-<li><p>还有hard triplet loss方法，就是将整个batch中的所有向量交叉求距离，选择数据中内类差异最大的的distance(A)，和类间差异最小的distace(N)，进行计算。</p>
-</li>
+<h3 id="triplet-loss算法">triplet loss算法</h3>
+<ol type="1">
+<li><p>公式<span class="math inline">\(Loss=\sum_i^N[distance(A)-distace(N)+\alpha]_+\)</span>, 对于欧式距离的triplet loss就是内类间距要比类间间距小alpha，对于cos距离的就正相反。</p></li>
+<li><p>还有hard triplet loss方法，就是将整个batch中的所有向量交叉求距离，选择数据中内类差异最大的的distance(A)，和类间差异最小的distace(N)，进行计算。</p></li>
 </ol>
-<h3 id="落地？"><a href="#落地？" class="headerlink" title="落地？"></a>落地？</h3><ol>
+<h3 id="落地">落地？</h3>
+<ol type="1">
 <li>我就是写了一个简单的demo，把之前存储的数据归一化存在flash里面，然后每次检测到图像进行裁剪，resize，然后推理，再根据阈值进行比较即可。</li>
 </ol>
-<h2 id="深度学习框架实现？"><a href="#深度学习框架实现？" class="headerlink" title="深度学习框架实现？"></a>深度学习框架实现？</h2><h3 id="数据管理？"><a href="#数据管理？" class="headerlink" title="数据管理？"></a>数据管理？</h3><ol>
+<h2 id="深度学习框架实现">深度学习框架实现？</h2>
+<h3 id="数据管理">数据管理？</h3>
+<ol type="1">
 <li>首先设计一个metadata的格式，将各种数据集放进去。这一步比较麻烦，因为接触的数据集比较少，一开始没法设计出一个合理的格式，经过多次修改才得到了一个比较好的方案。比如目标检测的数据集，按统一的sample格式将每个类别单独存储为一个tfrecord或多个。然后保存他们每个类图像数量，以及训练、测试、验证集的路径等等数据。在训练的时候就可以很容易的调用不同数据集中的不同类或者相同类数据进行训练，对于快速在新领域训练和部署模型有着比较大的好处。</li>
 </ol>
-<h3 id="数据管道？"><a href="#数据管道？" class="headerlink" title="数据管道？"></a>数据管道？</h3><ol>
-<li><p>主要还是使用tfdata的方式，首先对于目标检测类的模型，数据处理无非就是读取图像，预处理，数据增强，标签制作等，当然下面还可以细分子函数。将这些逻辑关系整理清楚之后可以设计合理的接口，在数据管道里面进行嵌入。后面数据管道就按照tf官方的写法进行优化。</p>
-</li>
-<li><p>对于人脸识别就比较麻烦，我是将每个类别保存成tfrecord，然后多个线程交替读，并且每次读两个数据，抛弃一个数据构建triplet组。</p>
-</li>
+<h3 id="数据管道">数据管道？</h3>
+<ol type="1">
+<li><p>主要还是使用tfdata的方式，首先对于目标检测类的模型，数据处理无非就是读取图像，预处理，数据增强，标签制作等，当然下面还可以细分子函数。将这些逻辑关系整理清楚之后可以设计合理的接口，在数据管道里面进行嵌入。后面数据管道就按照tf官方的写法进行优化。</p></li>
+<li><p>对于人脸识别就比较麻烦，我是将每个类别保存成tfrecord，然后多个线程交替读，并且每次读两个数据，抛弃一个数据构建triplet组。</p></li>
 </ol>
-<h3 id="数据增强？"><a href="#数据增强？" class="headerlink" title="数据增强？"></a>数据增强？</h3><ol>
-<li><p>一开始是手写数据增强的，然后发现imgaug可以方便的增强。</p>
-</li>
-<li><p>后面在研究半监督学习的时候发现很多论文使用autoaugment，我就尝试在目标检测里面也进行了部署，当然是把里面的数据增强用tf重新修改了一遍，tf就是这个不好，所有的函数都得用tf重写，对于一些操作numpy和tf不太一样的，耗费了大量时间，效果其实和随机用imgaug差不多。</p>
-</li>
+<h3 id="数据增强">数据增强？</h3>
+<ol type="1">
+<li><p>一开始是手写数据增强的，然后发现imgaug可以方便的增强。</p></li>
+<li><p>后面在研究半监督学习的时候发现很多论文使用autoaugment，我就尝试在目标检测里面也进行了部署，当然是把里面的数据增强用tf重新修改了一遍，tf就是这个不好，所有的函数都得用tf重写，对于一些操作numpy和tf不太一样的，耗费了大量时间，效果其实和随机用imgaug差不多。</p></li>
 </ol>
-<h3 id="训练？"><a href="#训练？" class="headerlink" title="训练？"></a>训练？</h3><ol>
+<h3 id="训练">训练？</h3>
+<ol type="1">
 <li>训练就是仿照keras.fit重新构建了一个controller。还是比较好用的，不过现在keras.fit以及支持自定义训练逻辑了，所以可能用不太到了。</li>
 </ol>
-<h2 id="AI加速设备软件如何写的？"><a href="#AI加速设备软件如何写的？" class="headerlink" title="AI加速设备软件如何写的？"></a>AI加速设备软件如何写的？</h2><p>板子不是我画的，但是上面有一个K210还有一个fpga可以缓存数据，在树莓派和k210上面写了spi通信的程序即可。</p>
-<h3 id="spi如何通讯？"><a href="#spi如何通讯？" class="headerlink" title="spi如何通讯？"></a>spi如何通讯？</h3><ol>
-<li><p>SPI：全双工、同步、串行传输，收发独立，传输速率高，但是没有指定的流控制，没有应答机制确认是否接收到数据。物理上4根线（CLK/SDI/SDO/CS），因为是全双工，并且不需要寻址，所以速度要比I2C快，但是占用的物理线的数量要比I2C多；通信时可以一位一位的传输数据。</p>
-</li>
-<li><p>我用的是ioctl系统调用来控制spi设备进行通讯。</p>
-</li>
+<h2 id="ai加速设备软件如何写的">AI加速设备软件如何写的？</h2>
+<p>板子不是我画的，但是上面有一个K210还有一个fpga可以缓存数据，在树莓派和k210上面写了spi通信的程序即可。</p>
+<h3 id="spi如何通讯">spi如何通讯？</h3>
+<ol type="1">
+<li><p>SPI：全双工、同步、串行传输，收发独立，传输速率高，但是没有指定的流控制，没有应答机制确认是否接收到数据。物理上4根线（CLK/SDI/SDO/CS），因为是全双工，并且不需要寻址，所以速度要比I2C快，但是占用的物理线的数量要比I2C多；通信时可以一位一位的传输数据。</p></li>
+<li><p>我用的是ioctl系统调用来控制spi设备进行通讯。</p></li>
 </ol>
-<h3 id="i2c如何通讯？"><a href="#i2c如何通讯？" class="headerlink" title="i2c如何通讯？"></a>i2c如何通讯？</h3><ol>
-<li><p>i2c是一条时序线一条数据线，半双工、同步、串行传输，物理上只有两根线（SDA/SCL）；传输数据必须8位8位的传输。</p>
-</li>
-<li><p>我是用的是smbus协议库对i2c进行读写，smbus有好几种协议，有的是直接发送地址然后读data，还有就是发送地址发送命令再读数据。</p>
-</li>
+<h3 id="i2c如何通讯">i2c如何通讯？</h3>
+<ol type="1">
+<li><p>i2c是一条时序线一条数据线，半双工、同步、串行传输，物理上只有两根线（SDA/SCL）；传输数据必须8位8位的传输。</p></li>
+<li><p>我是用的是smbus协议库对i2c进行读写，smbus有好几种协议，有的是直接发送地址然后读data，还有就是发送地址发送命令再读数据。</p></li>
 </ol>
-<h3 id="如何搭建的传感平台软件"><a href="#如何搭建的传感平台软件" class="headerlink" title="如何搭建的传感平台软件"></a>如何搭建的传感平台软件</h3><ol>
-<li><p>将各种通讯的函数封装到底层，然后针对各个传感器编写对应的类。有ads1118 adc传感器，bmp280气体传感器，SHT31温湿度传感器，TSL2561光强传感器器。</p>
-</li>
-<li><p>本来都是用c的写法写结构体，调用函数指针后来发现还是c++比较好用。</p>
-</li>
-<li><p>写sock和别的用的是类的方式。</p>
-</li>
-<li><p>设计上是两个进程，一个数据读取，还有一个数据处理。首先初始化各种硬件设备，然后读取好数据之后通过pipe把数据发送到数据处理进程。将数据使用json的格式封装后传输到另一个进程，通过socket进行发送。</p>
-</li>
-<li><p>开发的时候用catch2测试框架对各个函数进行测试。</p>
-</li>
-<li><p>网关的板子学习了多个线程的使用，对于串口通信、tcp通信、gps通信各一个线程。但是没有用到互斥。</p>
-</li>
-<li><p>树莓派端最麻烦的就是蓝牙开发，先用buildroot做了一个带有pulseaudio的镜像，</p>
-</li>
-<li><p>sock通信的时候如果发生了断线怎么办，我设计了两个定时器作为看门狗，一个判断多长时间没有接收到数据了，还有一个用来判断接收文件的是否超时，因为当时设计的不太好，接收文件就进入另外一个while里面了，所以需要两个看门狗。</p>
-</li>
-<li><p>单片机端也是如此，不定时检测socket是否存活。</p>
-</li>
+<h3 id="如何搭建的传感平台软件">如何搭建的传感平台软件</h3>
+<ol type="1">
+<li><p>将各种通讯的函数封装到底层，然后针对各个传感器编写对应的类。有ads1118 adc传感器，bmp280气体传感器，SHT31温湿度传感器，TSL2561光强传感器器。</p></li>
+<li><p>本来都是用c的写法写结构体，调用函数指针后来发现还是c++比较好用。</p></li>
+<li><p>写sock和别的用的是类的方式。</p></li>
+<li><p>设计上是两个进程，一个数据读取，还有一个数据处理。首先初始化各种硬件设备，然后读取好数据之后通过pipe把数据发送到数据处理进程。将数据使用json的格式封装后传输到另一个进程，通过socket进行发送。</p></li>
+<li><p>开发的时候用catch2测试框架对各个函数进行测试。</p></li>
+<li><p>网关的板子学习了多个线程的使用，对于串口通信、tcp通信、gps通信各一个线程。但是没有用到互斥。</p></li>
+<li><p>树莓派端最麻烦的就是蓝牙开发，先用buildroot做了一个带有pulseaudio的镜像，</p></li>
+<li><p>sock通信的时候如果发生了断线怎么办，我设计了两个定时器作为看门狗，一个判断多长时间没有接收到数据了，还有一个用来判断接收文件的是否超时，因为当时设计的不太好，接收文件就进入另外一个while里面了，所以需要两个看门狗。</p></li>
+<li><p>单片机端也是如此，不定时检测socket是否存活。</p></li>
 </ol>
-<h2 id="Pytorch"><a href="#Pytorch" class="headerlink" title="Pytorch"></a>Pytorch</h2><h3 id="dataloader的num-worker大于0是怎么做的？"><a href="#dataloader的num-worker大于0是怎么做的？" class="headerlink" title="dataloader的num_worker大于0是怎么做的？"></a>dataloader的num_worker大于0是怎么做的？</h3><ol>
+<h2 id="pytorch">Pytorch</h2>
+<h3 id="dataloader的num_worker大于0是怎么做的">dataloader的num_worker大于0是怎么做的？</h3>
+<ol type="1">
 <li>num_worker大于0的时候，就调用python的mutiporcessing库用队列的方式读取。</li>
 </ol>
-<h2 id="共享内存和socket的使用？"><a href="#共享内存和socket的使用？" class="headerlink" title="共享内存和socket的使用？"></a>共享内存和socket的使用？</h2><ol>
+<h2 id="共享内存和socket的使用">共享内存和socket的使用？</h2>
+<ol type="1">
 <li>共享内存</li>
 </ol>
 
@@ -862,7 +850,7 @@
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2018/10/28/Eigen初使用/" data-id="ckmxj5slg00mkch6xhc15xscd" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2018/10/28/Eigen初使用/" data-id="ckn4jin0000mh6i6x3i6u8pct" class="article-share-link">Share</a>
       
       
       
@@ -913,7 +901,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">标签云</h3>
     <div class="widget tagcloud">
-      <a href="/tags/C/" style="font-size: 12.67px;">C</a> <a href="/tags/C/" style="font-size: 12px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10px;">CNN</a> <a href="/tags/GAN/" style="font-size: 10.67px;">GAN</a> <a href="/tags/Linux/" style="font-size: 19.33px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.67px;">PCB</a> <a href="/tags/Qt/" style="font-size: 10px;">Qt</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/gan/" style="font-size: 10px;">gan</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 14.67px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 11.33px;">linux</a> <a href="/tags/mindspore/" style="font-size: 10.67px;">mindspore</a> <a href="/tags/mxnet/" style="font-size: 10px;">mxnet</a> <a href="/tags/pfld/" style="font-size: 10px;">pfld</a> <a href="/tags/python/" style="font-size: 18px;">python</a> <a href="/tags/pytorch/" style="font-size: 12px;">pytorch</a> <a href="/tags/retinaface/" style="font-size: 10px;">retinaface</a> <a href="/tags/stm32/" style="font-size: 11.33px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 20px;">tensorflow</a> <a href="/tags/vscode/" style="font-size: 10px;">vscode</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/yolo/" style="font-size: 12.67px;">yolo</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 14px;">作业</a> <a href="/tags/元学习/" style="font-size: 10px;">元学习</a> <a href="/tags/半监督学习/" style="font-size: 15.33px;">半监督学习</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/图像处理/" style="font-size: 10px;">图像处理</a> <a href="/tags/堆栈/" style="font-size: 10.67px;">堆栈</a> <a href="/tags/声音信号处理/" style="font-size: 12px;">声音信号处理</a> <a href="/tags/小工具/" style="font-size: 12px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 15.33px;">嵌入式</a> <a href="/tags/总结/" style="font-size: 10px;">总结</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 17.33px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 16.67px;">机器学习</a> <a href="/tags/树/" style="font-size: 12px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/概率论/" style="font-size: 18.67px;">概率论</a> <a href="/tags/深度学习/" style="font-size: 16px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 11.33px;">神经网络</a> <a href="/tags/神经网络量化/" style="font-size: 10px;">神经网络量化</a> <a href="/tags/算法/" style="font-size: 12px;">算法</a> <a href="/tags/统计学习方法/" style="font-size: 16px;">统计学习方法</a> <a href="/tags/聚类/" style="font-size: 12px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13.33px;">蓝牙</a> <a href="/tags/调参/" style="font-size: 10px;">调参</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/路由/" style="font-size: 10px;">路由</a> <a href="/tags/链表/" style="font-size: 11.33px;">链表</a> <a href="/tags/错误记录/" style="font-size: 19.33px;">错误记录</a> <a href="/tags/风格迁移/" style="font-size: 10px;">风格迁移</a>
+      <a href="/tags/C/" style="font-size: 12.67px;">C</a> <a href="/tags/C/" style="font-size: 12px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10px;">CNN</a> <a href="/tags/GAN/" style="font-size: 10.67px;">GAN</a> <a href="/tags/Linux/" style="font-size: 19.33px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.67px;">PCB</a> <a href="/tags/Qt/" style="font-size: 10px;">Qt</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/gan/" style="font-size: 10px;">gan</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 14.67px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 11.33px;">linux</a> <a href="/tags/mindspore/" style="font-size: 10.67px;">mindspore</a> <a href="/tags/mxnet/" style="font-size: 10px;">mxnet</a> <a href="/tags/pfld/" style="font-size: 10px;">pfld</a> <a href="/tags/python/" style="font-size: 18px;">python</a> <a href="/tags/pytorch/" style="font-size: 12px;">pytorch</a> <a href="/tags/retinaface/" style="font-size: 10px;">retinaface</a> <a href="/tags/stm32/" style="font-size: 11.33px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 20px;">tensorflow</a> <a href="/tags/vscode/" style="font-size: 10px;">vscode</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/yolo/" style="font-size: 12.67px;">yolo</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 14px;">作业</a> <a href="/tags/元学习/" style="font-size: 10px;">元学习</a> <a href="/tags/半监督学习/" style="font-size: 15.33px;">半监督学习</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/图像处理/" style="font-size: 10px;">图像处理</a> <a href="/tags/堆栈/" style="font-size: 10.67px;">堆栈</a> <a href="/tags/声音信号处理/" style="font-size: 12px;">声音信号处理</a> <a href="/tags/小工具/" style="font-size: 12px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 15.33px;">嵌入式</a> <a href="/tags/总结/" style="font-size: 10px;">总结</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 17.33px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 16.67px;">机器学习</a> <a href="/tags/树/" style="font-size: 12px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/概率论/" style="font-size: 18.67px;">概率论</a> <a href="/tags/深度学习/" style="font-size: 16px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 11.33px;">神经网络</a> <a href="/tags/神经网络量化/" style="font-size: 10px;">神经网络量化</a> <a href="/tags/算法/" style="font-size: 12.67px;">算法</a> <a href="/tags/统计学习方法/" style="font-size: 16px;">统计学习方法</a> <a href="/tags/聚类/" style="font-size: 12px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13.33px;">蓝牙</a> <a href="/tags/调参/" style="font-size: 10px;">调参</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/路由/" style="font-size: 10px;">路由</a> <a href="/tags/链表/" style="font-size: 11.33px;">链表</a> <a href="/tags/错误记录/" style="font-size: 19.33px;">错误记录</a> <a href="/tags/风格迁移/" style="font-size: 10px;">风格迁移</a>
     </div>
   </div>
 
@@ -922,7 +910,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">归档</h3>
     <div class="widget">
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/03/">三月 2021</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/01/">一月 2021</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/11/">十一月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/10/">十月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/09/">九月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/08/">八月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/07/">七月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/05/">五月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/04/">四月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/12/">十二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/09/">九月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/08/">八月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/07/">七月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/06/">六月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/05/">五月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">三月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/04/">四月 2021</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/03/">三月 2021</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/01/">一月 2021</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/11/">十一月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/10/">十月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/09/">九月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/08/">八月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/07/">七月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/05/">五月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/04/">四月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/12/">十二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/09/">九月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/08/">八月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/07/">七月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/06/">六月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/05/">五月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">三月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a></li></ul>
     </div>
   </div>
 
@@ -933,6 +921,10 @@
     <h3 class="widget-title">最新文章</h3>
     <div class="widget">
       <ul>
+        
+          <li>
+            <a href="/2021/04/05/bin-search-template/">二分查找-统一框架</a>
+          </li>
         
           <li>
             <a href="/2021/03/27/quant-1/">神经网络量化-基本原理</a>
@@ -948,10 +940,6 @@
         
           <li>
             <a href="/2020/11/15/pytorch-feature-extract/">pytorch从任意层截断并提取数据</a>
-          </li>
-        
-          <li>
-            <a href="/2020/11/12/webdataset/">Pytorch Webdataset初体验</a>
           </li>
         
       </ul>

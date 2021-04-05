@@ -103,50 +103,47 @@
       
         <p>最近想用<a href="https://zhen8838.github.io/2019/08/01/infor-max/"><code>infomax</code>算法</a>和<a href="https://zhen8838.github.io/2020/03/29/ssl-simclr/">对比学习</a>结合起来，然后应用在半监督学习中。在实验过程中遇到了一个非常奇怪的问题。</p>
 <a id="more"></a>
-<h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>我一开始以为<code>infomax</code>中的判别器也可以随便来，然后就定义了判别器如下：</p>
+<h1 id="问题描述">问题描述</h1>
+<p>我一开始以为<code>infomax</code>中的判别器也可以随便来，然后就定义了判别器如下：</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># get global discriminate result</span></span><br><span class="line">globaldiscriminator = compose(</span><br><span class="line">    <span class="comment"># kl.InputLayer(input_shape=[2 * z_dim]),</span></span><br><span class="line">    kl.Dense(z_dim, activation=<span class="string">'relu'</span>),</span><br><span class="line">    kl.BatchNormalization(),</span><br><span class="line">    kl.Dense(z_dim, activation=<span class="string">'relu'</span>),</span><br><span class="line">    kl.BatchNormalization(),</span><br><span class="line">    kl.Dense(z_dim, activation=<span class="string">'relu'</span>),</span><br><span class="line">    kl.BatchNormalization(),</span><br><span class="line">    kl.Dense(<span class="number">1</span>, activation=<span class="string">'sigmoid'</span>),</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
 <p>然后在<code>cifar10</code>数据集中进行实验，发现判别器损失一直没有降低，反而先验损失会降低到一个相当小的值，但编码器输出的隐变量明显不符合先验分布。</p>
-<p>下面分别是全局互信息损失和局部互信息损失，可以看到这么多<code>step</code>过去后，几乎没有下降：</p>
+下面分别是全局互信息损失和局部互信息损失，可以看到这么多<code>step</code>过去后，几乎没有下降：
 <figure class="half">
-    <img src="/2020/03/31/ssl-infomax-error/g_loss_1.svg" width="350"><img src="/2020/03/31/ssl-infomax-error/l_loss_1.svg" width="350">
+<img src="/2020/03/31/ssl-infomax-error/g_loss_1.svg" width="350"><img src="/2020/03/31/ssl-infomax-error/l_loss_1.svg" width="350">
 </figure>
-
-<p>对于先验分布的损失可以看到下降到一个非常低的值了。</p>
-<div align="center">
-<img src="/2020/03/31/ssl-infomax-error/kl_loss_1.svg" width="350">
+对于先验分布的损失可以看到下降到一个非常低的值了。
+<div data-align="center">
+<p><img src="/2020/03/31/ssl-infomax-error/kl_loss_1.svg" width="350"></p>
 </div>
-
-<p>隐变量输出分布统计结果：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">z mean 0.005774456</span><br><span class="line">z std 0.120639555</span><br><span class="line">z mean 0.00078799046</span><br><span class="line">z std 0.08064849</span><br><span class="line">z mean 0.0028064575</span><br><span class="line">z std 0.09524193</span><br><span class="line">z mean 7.149822e-05</span><br><span class="line">z std 0.08297808</span><br></pre></td></tr></table></figure></p>
-<p>相似度采样结果，虽然是测试集上的结果，差一点说的过去，但是这还不如不训练：</p>
-<div align="center">
-<img src="/2020/03/31/ssl-infomax-error/sample_1.png" width="350">
+<p>隐变量输出分布统计结果： <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">z mean 0.005774456</span><br><span class="line">z std 0.120639555</span><br><span class="line">z mean 0.00078799046</span><br><span class="line">z std 0.08064849</span><br><span class="line">z mean 0.0028064575</span><br><span class="line">z std 0.09524193</span><br><span class="line">z mean 7.149822e-05</span><br><span class="line">z std 0.08297808</span><br></pre></td></tr></table></figure></p>
+相似度采样结果，虽然是测试集上的结果，差一点说的过去，但是这还不如不训练：
+<div data-align="center">
+<p><img src="/2020/03/31/ssl-infomax-error/sample_1.png" width="350"></p>
 </div>
-
-
-<h1 id="问题解决"><a href="#问题解决" class="headerlink" title="问题解决"></a>问题解决</h1><p>经过各种修改，发现问题就在判别器中，只要将判别器中的<code>bn</code>删除：</p>
+<h1 id="问题解决">问题解决</h1>
+<p>经过各种修改，发现问题就在判别器中，只要将判别器中的<code>bn</code>删除：</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># get global discriminate result</span></span><br><span class="line">globaldiscriminator = compose(</span><br><span class="line">    <span class="comment"># kl.InputLayer(input_shape=[2 * z_dim]),</span></span><br><span class="line">    kl.Dense(z_dim, activation=<span class="string">'relu'</span>),</span><br><span class="line">    kl.Dense(z_dim, activation=<span class="string">'relu'</span>),</span><br><span class="line">    kl.Dense(z_dim, activation=<span class="string">'relu'</span>),</span><br><span class="line">    kl.Dense(<span class="number">1</span>, activation=<span class="string">'sigmoid'</span>),</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
 <p>然后在<code>cifar10</code>数据集中进行实验，发现判别器损失有效降低，先验损失会维持在一个范围，这样才有对抗的感觉了。</p>
-<p>下面分别是全局互信息损失和局部互信息损失，降到了相当低：</p>
+下面分别是全局互信息损失和局部互信息损失，降到了相当低：
 <figure class="half">
-    <img src="/2020/03/31/ssl-infomax-error/g_loss_2.svg" width="350"><img src="/2020/03/31/ssl-infomax-error/l_loss_2.svg" width="350">
+<img src="/2020/03/31/ssl-infomax-error/g_loss_2.svg" width="350"><img src="/2020/03/31/ssl-infomax-error/l_loss_2.svg" width="350">
 </figure>
-
-<p>对于先验分布的损失有下降，当没有那么强烈。</p>
-<div align="center">
-<img src="/2020/03/31/ssl-infomax-error/kl_loss_2.svg" width="350">
+对于先验分布的损失有下降，当没有那么强烈。
+<div data-align="center">
+<p><img src="/2020/03/31/ssl-infomax-error/kl_loss_2.svg" width="350"></p>
+</div>
+<p>隐变量输出分布统计结果，这次就接近于独立正态分布了： <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">z mean 0.0043534352</span><br><span class="line">z std 1.0862136</span><br><span class="line">z mean 0.009636099</span><br><span class="line">z std 1.1103721</span><br><span class="line">z mean -0.011318588</span><br><span class="line">z std 1.0901983</span><br><span class="line">z mean -0.0093264235</span><br><span class="line">z std 1.112159</span><br><span class="line">z mean -0.010979499</span><br><span class="line">z std 1.1168234</span><br></pre></td></tr></table></figure></p>
+相似度采样结果，这次就好了很多：
+<div data-align="center">
+<p><img src="/2020/03/31/ssl-infomax-error/sample_2.png" width="350"></p>
+</div>
+<h1 id="思考">思考</h1>
+<p>个人认为是这个问题是因为判别器的输入是两个隐变量直接<code>concat</code>在一起的，如果进行<code>bn</code>就导致分布相同丧失判别能力了。下一步可以考虑借鉴<code>simclr</code>中的方法，<code>infomax</code>中的负采样估计只是简单的<code>shuffle</code>一下，而<code>simclr</code>中利用矩阵乘法在一个<code>batch</code>中直接组合出<code>batch*batch-batch</code>个样本对，特别是他的论文中<code>batch size</code>最大是8192，相当暴力。</p>
+在实验的过程中我还发现了一个比较有趣的地方，就是如果直接初始化模型然后对编码器的输出做相似度采样，结果其实不差。让我感觉我训练这个模型这么久好像就改变了一下编码器输出的分布。。。
+<div data-align="center">
+<p><img src="/2020/03/31/ssl-infomax-error/sample_3.png" width="350"></p>
 </div>
 
-<p>隐变量输出分布统计结果，这次就接近于独立正态分布了：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">z mean 0.0043534352</span><br><span class="line">z std 1.0862136</span><br><span class="line">z mean 0.009636099</span><br><span class="line">z std 1.1103721</span><br><span class="line">z mean -0.011318588</span><br><span class="line">z std 1.0901983</span><br><span class="line">z mean -0.0093264235</span><br><span class="line">z std 1.112159</span><br><span class="line">z mean -0.010979499</span><br><span class="line">z std 1.1168234</span><br></pre></td></tr></table></figure></p>
-<p>相似度采样结果，这次就好了很多：</p>
-<div align="center">
-<img src="/2020/03/31/ssl-infomax-error/sample_2.png" width="350">
-</div>
-
-<h1 id="思考"><a href="#思考" class="headerlink" title="思考"></a>思考</h1><p>个人认为是这个问题是因为判别器的输入是两个隐变量直接<code>concat</code>在一起的，如果进行<code>bn</code>就导致分布相同丧失判别能力了。下一步可以考虑借鉴<code>simclr</code>中的方法，<code>infomax</code>中的负采样估计只是简单的<code>shuffle</code>一下，而<code>simclr</code>中利用矩阵乘法在一个<code>batch</code>中直接组合出<code>batch*batch-batch</code>个样本对，特别是他的论文中<code>batch size</code>最大是8192，相当暴力。</p>
-<p>在实验的过程中我还发现了一个比较有趣的地方，就是如果直接初始化模型然后对编码器的输出做相似度采样，结果其实不差。让我感觉我训练这个模型这么久好像就改变了一下编码器输出的分布。。。</p>
-<div align="center">
-<img src="/2020/03/31/ssl-infomax-error/sample_3.png" width="350">
-</div>
       
     </div>
     <!-- <div class="article-entry" itemprop="articleBody">
@@ -155,55 +152,52 @@
         
           <p>最近想用<a href="https://zhen8838.github.io/2019/08/01/infor-max/"><code>infomax</code>算法</a>和<a href="https://zhen8838.github.io/2020/03/29/ssl-simclr/">对比学习</a>结合起来，然后应用在半监督学习中。在实验过程中遇到了一个非常奇怪的问题。</p>
 <a id="more"></a>
-<h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>我一开始以为<code>infomax</code>中的判别器也可以随便来，然后就定义了判别器如下：</p>
+<h1 id="问题描述">问题描述</h1>
+<p>我一开始以为<code>infomax</code>中的判别器也可以随便来，然后就定义了判别器如下：</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># get global discriminate result</span></span><br><span class="line">globaldiscriminator = compose(</span><br><span class="line">    <span class="comment"># kl.InputLayer(input_shape=[2 * z_dim]),</span></span><br><span class="line">    kl.Dense(z_dim, activation=<span class="string">'relu'</span>),</span><br><span class="line">    kl.BatchNormalization(),</span><br><span class="line">    kl.Dense(z_dim, activation=<span class="string">'relu'</span>),</span><br><span class="line">    kl.BatchNormalization(),</span><br><span class="line">    kl.Dense(z_dim, activation=<span class="string">'relu'</span>),</span><br><span class="line">    kl.BatchNormalization(),</span><br><span class="line">    kl.Dense(<span class="number">1</span>, activation=<span class="string">'sigmoid'</span>),</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
 <p>然后在<code>cifar10</code>数据集中进行实验，发现判别器损失一直没有降低，反而先验损失会降低到一个相当小的值，但编码器输出的隐变量明显不符合先验分布。</p>
-<p>下面分别是全局互信息损失和局部互信息损失，可以看到这么多<code>step</code>过去后，几乎没有下降：</p>
+下面分别是全局互信息损失和局部互信息损失，可以看到这么多<code>step</code>过去后，几乎没有下降：
 <figure class="half">
-    <img src="/2020/03/31/ssl-infomax-error/g_loss_1.svg" width="350"><img src="/2020/03/31/ssl-infomax-error/l_loss_1.svg" width="350">
+<img src="/2020/03/31/ssl-infomax-error/g_loss_1.svg" width="350"><img src="/2020/03/31/ssl-infomax-error/l_loss_1.svg" width="350">
 </figure>
-
-<p>对于先验分布的损失可以看到下降到一个非常低的值了。</p>
-<div align="center">
-<img src="/2020/03/31/ssl-infomax-error/kl_loss_1.svg" width="350">
+对于先验分布的损失可以看到下降到一个非常低的值了。
+<div data-align="center">
+<p><img src="/2020/03/31/ssl-infomax-error/kl_loss_1.svg" width="350"></p>
 </div>
-
-<p>隐变量输出分布统计结果：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">z mean 0.005774456</span><br><span class="line">z std 0.120639555</span><br><span class="line">z mean 0.00078799046</span><br><span class="line">z std 0.08064849</span><br><span class="line">z mean 0.0028064575</span><br><span class="line">z std 0.09524193</span><br><span class="line">z mean 7.149822e-05</span><br><span class="line">z std 0.08297808</span><br></pre></td></tr></table></figure></p>
-<p>相似度采样结果，虽然是测试集上的结果，差一点说的过去，但是这还不如不训练：</p>
-<div align="center">
-<img src="/2020/03/31/ssl-infomax-error/sample_1.png" width="350">
+<p>隐变量输出分布统计结果： <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">z mean 0.005774456</span><br><span class="line">z std 0.120639555</span><br><span class="line">z mean 0.00078799046</span><br><span class="line">z std 0.08064849</span><br><span class="line">z mean 0.0028064575</span><br><span class="line">z std 0.09524193</span><br><span class="line">z mean 7.149822e-05</span><br><span class="line">z std 0.08297808</span><br></pre></td></tr></table></figure></p>
+相似度采样结果，虽然是测试集上的结果，差一点说的过去，但是这还不如不训练：
+<div data-align="center">
+<p><img src="/2020/03/31/ssl-infomax-error/sample_1.png" width="350"></p>
 </div>
-
-
-<h1 id="问题解决"><a href="#问题解决" class="headerlink" title="问题解决"></a>问题解决</h1><p>经过各种修改，发现问题就在判别器中，只要将判别器中的<code>bn</code>删除：</p>
+<h1 id="问题解决">问题解决</h1>
+<p>经过各种修改，发现问题就在判别器中，只要将判别器中的<code>bn</code>删除：</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># get global discriminate result</span></span><br><span class="line">globaldiscriminator = compose(</span><br><span class="line">    <span class="comment"># kl.InputLayer(input_shape=[2 * z_dim]),</span></span><br><span class="line">    kl.Dense(z_dim, activation=<span class="string">'relu'</span>),</span><br><span class="line">    kl.Dense(z_dim, activation=<span class="string">'relu'</span>),</span><br><span class="line">    kl.Dense(z_dim, activation=<span class="string">'relu'</span>),</span><br><span class="line">    kl.Dense(<span class="number">1</span>, activation=<span class="string">'sigmoid'</span>),</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
 <p>然后在<code>cifar10</code>数据集中进行实验，发现判别器损失有效降低，先验损失会维持在一个范围，这样才有对抗的感觉了。</p>
-<p>下面分别是全局互信息损失和局部互信息损失，降到了相当低：</p>
+下面分别是全局互信息损失和局部互信息损失，降到了相当低：
 <figure class="half">
-    <img src="/2020/03/31/ssl-infomax-error/g_loss_2.svg" width="350"><img src="/2020/03/31/ssl-infomax-error/l_loss_2.svg" width="350">
+<img src="/2020/03/31/ssl-infomax-error/g_loss_2.svg" width="350"><img src="/2020/03/31/ssl-infomax-error/l_loss_2.svg" width="350">
 </figure>
-
-<p>对于先验分布的损失有下降，当没有那么强烈。</p>
-<div align="center">
-<img src="/2020/03/31/ssl-infomax-error/kl_loss_2.svg" width="350">
+对于先验分布的损失有下降，当没有那么强烈。
+<div data-align="center">
+<p><img src="/2020/03/31/ssl-infomax-error/kl_loss_2.svg" width="350"></p>
+</div>
+<p>隐变量输出分布统计结果，这次就接近于独立正态分布了： <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">z mean 0.0043534352</span><br><span class="line">z std 1.0862136</span><br><span class="line">z mean 0.009636099</span><br><span class="line">z std 1.1103721</span><br><span class="line">z mean -0.011318588</span><br><span class="line">z std 1.0901983</span><br><span class="line">z mean -0.0093264235</span><br><span class="line">z std 1.112159</span><br><span class="line">z mean -0.010979499</span><br><span class="line">z std 1.1168234</span><br></pre></td></tr></table></figure></p>
+相似度采样结果，这次就好了很多：
+<div data-align="center">
+<p><img src="/2020/03/31/ssl-infomax-error/sample_2.png" width="350"></p>
+</div>
+<h1 id="思考">思考</h1>
+<p>个人认为是这个问题是因为判别器的输入是两个隐变量直接<code>concat</code>在一起的，如果进行<code>bn</code>就导致分布相同丧失判别能力了。下一步可以考虑借鉴<code>simclr</code>中的方法，<code>infomax</code>中的负采样估计只是简单的<code>shuffle</code>一下，而<code>simclr</code>中利用矩阵乘法在一个<code>batch</code>中直接组合出<code>batch*batch-batch</code>个样本对，特别是他的论文中<code>batch size</code>最大是8192，相当暴力。</p>
+在实验的过程中我还发现了一个比较有趣的地方，就是如果直接初始化模型然后对编码器的输出做相似度采样，结果其实不差。让我感觉我训练这个模型这么久好像就改变了一下编码器输出的分布。。。
+<div data-align="center">
+<p><img src="/2020/03/31/ssl-infomax-error/sample_3.png" width="350"></p>
 </div>
 
-<p>隐变量输出分布统计结果，这次就接近于独立正态分布了：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">z mean 0.0043534352</span><br><span class="line">z std 1.0862136</span><br><span class="line">z mean 0.009636099</span><br><span class="line">z std 1.1103721</span><br><span class="line">z mean -0.011318588</span><br><span class="line">z std 1.0901983</span><br><span class="line">z mean -0.0093264235</span><br><span class="line">z std 1.112159</span><br><span class="line">z mean -0.010979499</span><br><span class="line">z std 1.1168234</span><br></pre></td></tr></table></figure></p>
-<p>相似度采样结果，这次就好了很多：</p>
-<div align="center">
-<img src="/2020/03/31/ssl-infomax-error/sample_2.png" width="350">
-</div>
-
-<h1 id="思考"><a href="#思考" class="headerlink" title="思考"></a>思考</h1><p>个人认为是这个问题是因为判别器的输入是两个隐变量直接<code>concat</code>在一起的，如果进行<code>bn</code>就导致分布相同丧失判别能力了。下一步可以考虑借鉴<code>simclr</code>中的方法，<code>infomax</code>中的负采样估计只是简单的<code>shuffle</code>一下，而<code>simclr</code>中利用矩阵乘法在一个<code>batch</code>中直接组合出<code>batch*batch-batch</code>个样本对，特别是他的论文中<code>batch size</code>最大是8192，相当暴力。</p>
-<p>在实验的过程中我还发现了一个比较有趣的地方，就是如果直接初始化模型然后对编码器的输出做相似度采样，结果其实不差。让我感觉我训练这个模型这么久好像就改变了一下编码器输出的分布。。。</p>
-<div align="center">
-<img src="/2020/03/31/ssl-infomax-error/sample_3.png" width="350">
-</div>
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2020/03/31/ssl-infomax-error/" data-id="ckmxj5s9500bcch6x2e7pg5t7" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2020/03/31/ssl-infomax-error/" data-id="ckn4jimni00ds6i6xa33vs4ri" class="article-share-link">Share</a>
       
       
       
@@ -254,7 +248,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">标签云</h3>
     <div class="widget tagcloud">
-      <a href="/tags/C/" style="font-size: 12.67px;">C</a> <a href="/tags/C/" style="font-size: 12px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10px;">CNN</a> <a href="/tags/GAN/" style="font-size: 10.67px;">GAN</a> <a href="/tags/Linux/" style="font-size: 19.33px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.67px;">PCB</a> <a href="/tags/Qt/" style="font-size: 10px;">Qt</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/gan/" style="font-size: 10px;">gan</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 14.67px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 11.33px;">linux</a> <a href="/tags/mindspore/" style="font-size: 10.67px;">mindspore</a> <a href="/tags/mxnet/" style="font-size: 10px;">mxnet</a> <a href="/tags/pfld/" style="font-size: 10px;">pfld</a> <a href="/tags/python/" style="font-size: 18px;">python</a> <a href="/tags/pytorch/" style="font-size: 12px;">pytorch</a> <a href="/tags/retinaface/" style="font-size: 10px;">retinaface</a> <a href="/tags/stm32/" style="font-size: 11.33px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 20px;">tensorflow</a> <a href="/tags/vscode/" style="font-size: 10px;">vscode</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/yolo/" style="font-size: 12.67px;">yolo</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 14px;">作业</a> <a href="/tags/元学习/" style="font-size: 10px;">元学习</a> <a href="/tags/半监督学习/" style="font-size: 15.33px;">半监督学习</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/图像处理/" style="font-size: 10px;">图像处理</a> <a href="/tags/堆栈/" style="font-size: 10.67px;">堆栈</a> <a href="/tags/声音信号处理/" style="font-size: 12px;">声音信号处理</a> <a href="/tags/小工具/" style="font-size: 12px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 15.33px;">嵌入式</a> <a href="/tags/总结/" style="font-size: 10px;">总结</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 17.33px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 16.67px;">机器学习</a> <a href="/tags/树/" style="font-size: 12px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/概率论/" style="font-size: 18.67px;">概率论</a> <a href="/tags/深度学习/" style="font-size: 16px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 11.33px;">神经网络</a> <a href="/tags/神经网络量化/" style="font-size: 10px;">神经网络量化</a> <a href="/tags/算法/" style="font-size: 12px;">算法</a> <a href="/tags/统计学习方法/" style="font-size: 16px;">统计学习方法</a> <a href="/tags/聚类/" style="font-size: 12px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13.33px;">蓝牙</a> <a href="/tags/调参/" style="font-size: 10px;">调参</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/路由/" style="font-size: 10px;">路由</a> <a href="/tags/链表/" style="font-size: 11.33px;">链表</a> <a href="/tags/错误记录/" style="font-size: 19.33px;">错误记录</a> <a href="/tags/风格迁移/" style="font-size: 10px;">风格迁移</a>
+      <a href="/tags/C/" style="font-size: 12.67px;">C</a> <a href="/tags/C/" style="font-size: 12px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10px;">CNN</a> <a href="/tags/GAN/" style="font-size: 10.67px;">GAN</a> <a href="/tags/Linux/" style="font-size: 19.33px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.67px;">PCB</a> <a href="/tags/Qt/" style="font-size: 10px;">Qt</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/gan/" style="font-size: 10px;">gan</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 14.67px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 11.33px;">linux</a> <a href="/tags/mindspore/" style="font-size: 10.67px;">mindspore</a> <a href="/tags/mxnet/" style="font-size: 10px;">mxnet</a> <a href="/tags/pfld/" style="font-size: 10px;">pfld</a> <a href="/tags/python/" style="font-size: 18px;">python</a> <a href="/tags/pytorch/" style="font-size: 12px;">pytorch</a> <a href="/tags/retinaface/" style="font-size: 10px;">retinaface</a> <a href="/tags/stm32/" style="font-size: 11.33px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 20px;">tensorflow</a> <a href="/tags/vscode/" style="font-size: 10px;">vscode</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/yolo/" style="font-size: 12.67px;">yolo</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 14px;">作业</a> <a href="/tags/元学习/" style="font-size: 10px;">元学习</a> <a href="/tags/半监督学习/" style="font-size: 15.33px;">半监督学习</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/图像处理/" style="font-size: 10px;">图像处理</a> <a href="/tags/堆栈/" style="font-size: 10.67px;">堆栈</a> <a href="/tags/声音信号处理/" style="font-size: 12px;">声音信号处理</a> <a href="/tags/小工具/" style="font-size: 12px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 15.33px;">嵌入式</a> <a href="/tags/总结/" style="font-size: 10px;">总结</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 17.33px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 16.67px;">机器学习</a> <a href="/tags/树/" style="font-size: 12px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/概率论/" style="font-size: 18.67px;">概率论</a> <a href="/tags/深度学习/" style="font-size: 16px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 11.33px;">神经网络</a> <a href="/tags/神经网络量化/" style="font-size: 10px;">神经网络量化</a> <a href="/tags/算法/" style="font-size: 12.67px;">算法</a> <a href="/tags/统计学习方法/" style="font-size: 16px;">统计学习方法</a> <a href="/tags/聚类/" style="font-size: 12px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13.33px;">蓝牙</a> <a href="/tags/调参/" style="font-size: 10px;">调参</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/路由/" style="font-size: 10px;">路由</a> <a href="/tags/链表/" style="font-size: 11.33px;">链表</a> <a href="/tags/错误记录/" style="font-size: 19.33px;">错误记录</a> <a href="/tags/风格迁移/" style="font-size: 10px;">风格迁移</a>
     </div>
   </div>
 
@@ -263,7 +257,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">归档</h3>
     <div class="widget">
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/03/">三月 2021</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/01/">一月 2021</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/11/">十一月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/10/">十月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/09/">九月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/08/">八月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/07/">七月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/05/">五月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/04/">四月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/12/">十二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/09/">九月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/08/">八月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/07/">七月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/06/">六月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/05/">五月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">三月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/04/">四月 2021</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/03/">三月 2021</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/01/">一月 2021</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/11/">十一月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/10/">十月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/09/">九月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/08/">八月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/07/">七月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/05/">五月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/04/">四月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/12/">十二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/09/">九月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/08/">八月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/07/">七月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/06/">六月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/05/">五月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">三月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a></li></ul>
     </div>
   </div>
 
@@ -274,6 +268,10 @@
     <h3 class="widget-title">最新文章</h3>
     <div class="widget">
       <ul>
+        
+          <li>
+            <a href="/2021/04/05/bin-search-template/">二分查找-统一框架</a>
+          </li>
         
           <li>
             <a href="/2021/03/27/quant-1/">神经网络量化-基本原理</a>
@@ -289,10 +287,6 @@
         
           <li>
             <a href="/2020/11/15/pytorch-feature-extract/">pytorch从任意层截断并提取数据</a>
-          </li>
-        
-          <li>
-            <a href="/2020/11/12/webdataset/">Pytorch Webdataset初体验</a>
           </li>
         
       </ul>

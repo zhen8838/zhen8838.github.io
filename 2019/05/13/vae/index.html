@@ -7,20 +7,20 @@
   
   <title>变分自编码器(VAE)学习 | </title>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta name="description" content="我看了VAE之后忽然对神经网络的非监督学习以及概率模型很感兴趣,但是无奈概率模型真的好难懂啊.今天尝试一边描述VAE一边真正的理解他.参考总结自:https://spaces.ac.cn/archives/5253">
+  <meta name="description" content="我看了VAE之后忽然对神经网络的非监督学习以及概率模型很感兴趣,但是无奈概率模型真的好难懂啊. 今天尝试一边描述VAE一边真正的理解他. 参考总结自:https://spaces.ac.cn/archives/5253">
 <meta name="keywords" content="深度学习,概率论">
 <meta property="og:type" content="article">
 <meta property="og:title" content="变分自编码器(VAE)学习">
 <meta property="og:url" content="https://zhen8838.github.io/2019/05/13/vae/index.html">
 <meta property="og:site_name">
-<meta property="og:description" content="我看了VAE之后忽然对神经网络的非监督学习以及概率模型很感兴趣,但是无奈概率模型真的好难懂啊.今天尝试一边描述VAE一边真正的理解他.参考总结自:https://spaces.ac.cn/archives/5253">
+<meta property="og:description" content="我看了VAE之后忽然对神经网络的非监督学习以及概率模型很感兴趣,但是无奈概率模型真的好难懂啊. 今天尝试一边描述VAE一边真正的理解他. 参考总结自:https://spaces.ac.cn/archives/5253">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https://zhen8838.github.io/2019/05/13/vae/encoder-decoder.png">
 <meta property="og:image" content="https://zhen8838.github.io/2019/05/13/vae/vae.png">
 <meta property="og:updated_time" content="2019-08-05T03:27:24.914Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="变分自编码器(VAE)学习">
-<meta name="twitter:description" content="我看了VAE之后忽然对神经网络的非监督学习以及概率模型很感兴趣,但是无奈概率模型真的好难懂啊.今天尝试一边描述VAE一边真正的理解他.参考总结自:https://spaces.ac.cn/archives/5253">
+<meta name="twitter:description" content="我看了VAE之后忽然对神经网络的非监督学习以及概率模型很感兴趣,但是无奈概率模型真的好难懂啊. 今天尝试一边描述VAE一边真正的理解他. 参考总结自:https://spaces.ac.cn/archives/5253">
 <meta name="twitter:image" content="https://zhen8838.github.io/2019/05/13/vae/encoder-decoder.png">
   
   
@@ -94,31 +94,34 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <p>我看了<code>VAE</code>之后忽然对神经网络的非监督学习以及概率模型很感兴趣,但是无奈概率模型真的好难懂啊.<br>今天尝试一边描述<code>VAE</code>一边真正的理解他.<br>参考总结自:<a href="https://spaces.ac.cn/archives/5253" target="_blank" rel="noopener">https://spaces.ac.cn/archives/5253</a></p>
+        <p>我看了<code>VAE</code>之后忽然对神经网络的非监督学习以及概率模型很感兴趣,但是无奈概率模型真的好难懂啊. 今天尝试一边描述<code>VAE</code>一边真正的理解他. 参考总结自:https://spaces.ac.cn/archives/5253</p>
 <a id="more"></a>
-<h1 id="介绍"><a href="#介绍" class="headerlink" title="介绍"></a>介绍</h1><p>变分自编码器是传统编码器的一个变体,从深度学习的角度来说就是改变了<code>loss</code>函数使生成器可以<br>生成与原样本不相同但又属于相同分布的样本.</p>
-<p><img src="/2019/05/13/vae/encoder-decoder.png" alt=""></p>
-<h2 id="术语表"><a href="#术语表" class="headerlink" title="术语表:"></a>术语表:</h2><ul>
+<h1 id="介绍">介绍</h1>
+<p>变分自编码器是传统编码器的一个变体,从深度学习的角度来说就是改变了<code>loss</code>函数使生成器可以 生成与原样本不相同但又属于相同分布的样本.</p>
+<p><img src="/2019/05/13/vae/encoder-decoder.png"></p>
+<h2 id="术语表">术语表:</h2>
+<ul>
 <li><p>编码器:</p>
-<p>在概率模型中,编码器称为推理网络,他将参数化潜在特征的后验近似$z$,然后将参数输出到分布$q(z|x)$,也可以说$q(z|x)$是$x$的后验分布.</p>
-</li>
+<p>在概率模型中,编码器称为推理网络,他将参数化潜在特征的后验近似<span class="math inline">\(z\)</span>,然后将参数输出到分布<span class="math inline">\(q(z|x)\)</span>,也可以说<span class="math inline">\(q(z|x)\)</span>是<span class="math inline">\(x\)</span>的后验分布.</p></li>
 <li><p>解码器:</p>
-<p>解码器是根据$z$重构$x$的,分布为$p(x|z)$.</p>
-</li>
+<p>解码器是根据<span class="math inline">\(z\)</span>重构<span class="math inline">\(x\)</span>的,分布为<span class="math inline">\(p(x|z)\)</span>.</p></li>
 </ul>
-<h2 id="推导"><a href="#推导" class="headerlink" title="推导"></a>推导</h2><p>在传统的编码器中,解码器$p(x|z)$是易于训练的,但是$q(z|x)$是难以学习的.根据贝叶斯定理,我们可以把后验分布转写成另一种形式,但是$p(x)$也并不知道,所以利用联合概率分布近似代替$p(x)$:</p>
-<script type="math/tex; mode=display">\begin{aligned}
+<h2 id="推导">推导</h2>
+<p>在传统的编码器中,解码器<span class="math inline">\(p(x|z)\)</span>是易于训练的,但是<span class="math inline">\(q(z|x)\)</span>是难以学习的.根据贝叶斯定理,我们可以把后验分布转写成另一种形式,但是<span class="math inline">\(p(x)\)</span>也并不知道,所以利用联合概率分布近似代替<span class="math inline">\(p(x)\)</span>: <span class="math display">\[ \begin{aligned}
     q(z|x)=\frac{p(x|z)p(z)}{p(x)}=\frac{p(x|z)p(z)}{\sum_zp(x|z)p(z)}
-\end{aligned}</script><p>为了近似求出后验分布,我们还需要一种方法将估计出的分布与真实分布进行比较,所以使用<code>KL分歧</code>来衡量两个概率分布的相似程度.如果相同,则分歧为0,如果大于0,则分布不同.<br>因此使用如下方式使用<code>KL分歧</code>:<br>由于我们考虑的是各分量独立的多元正态分布，因此只需要推导一元正态分布的情形即可:</p>
-<script type="math/tex; mode=display">\begin{aligned}&KL\Big(N(\mu,\sigma^2)\Big\Vert N(0,1)\Big)\\ 
-=&\int \frac{1}{\sqrt{2\pi\sigma^2}}e^{-(x-\mu)^2/2\sigma^2} \left(\log \frac{e^{-(x-\mu)^2/2\sigma^2}/\sqrt{2\pi\sigma^2}}{e^{-x^2/2}/\sqrt{2\pi}}\right)dx\\ 
-=&\int \frac{1}{\sqrt{2\pi\sigma^2}}e^{-(x-\mu)^2/2\sigma^2} \log \left\{\frac{1}{\sqrt{\sigma^2}}\exp\left\{\frac{1}{2}\big[x^2-(x-\mu)^2/\sigma^2\big]\right\} \right\}dx\\ 
-=&\frac{1}{2}\int \frac{1}{\sqrt{2\pi\sigma^2}}e^{-(x-\mu)^2/2\sigma^2} \Big[-\log \sigma^2+x^2-(x-\mu)^2/\sigma^2 \Big] dx \\
-=&\frac{1}{2}[-log\sigma^2+\mu^2+\sigma^2-1]
-\end{aligned}</script><h2 id="重参数"><a href="#重参数" class="headerlink" title="重参数"></a>重参数</h2><p><code>VAE</code>可以生成新的$X$就是因为他从隐空间取$z$的时候是随机选取的,但是随机选取$z$会导致无法反向求导,所以就使用一个重参数技巧.</p>
-<p>从$N(\mu,\sigma^2)$中采样一个$z$,就相当于从$N(0,1)$中采样一个$\epsilon$,然后令$z=\mu+\epsilon*\sigma$.</p>
-<h2 id="本质结构"><a href="#本质结构" class="headerlink" title="本质结构"></a>本质结构</h2><p><img src="/2019/05/13/vae/vae.png" alt=""></p>
-<p>本质上<code>VAE</code>就是训练出一个后验分布$q(Z|X)$,然后生成器从后验分布中随机取元素(相当于加噪声)并解码出对应的$\bar{X}$.代码上实现起来相当简单,但是背后的数学思想是非常难理解的,现在我还是一知半解.</p>
+\end{aligned} \]</span></p>
+<p>为了近似求出后验分布,我们还需要一种方法将估计出的分布与真实分布进行比较,所以使用<code>KL分歧</code>来衡量两个概率分布的相似程度.如果相同,则分歧为0,如果大于0,则分布不同. 因此使用如下方式使用<code>KL分歧</code>: 由于我们考虑的是各分量独立的多元正态分布，因此只需要推导一元正态分布的情形即可: <span class="math display">\[ \begin{aligned}&amp;KL\Big(N(\mu,\sigma^2)\Big\Vert N(0,1)\Big)\\ 
+=&amp;\int \frac{1}{\sqrt{2\pi\sigma^2}}e^{-(x-\mu)^2/2\sigma^2} \left(\log \frac{e^{-(x-\mu)^2/2\sigma^2}/\sqrt{2\pi\sigma^2}}{e^{-x^2/2}/\sqrt{2\pi}}\right)dx\\ 
+=&amp;\int \frac{1}{\sqrt{2\pi\sigma^2}}e^{-(x-\mu)^2/2\sigma^2} \log \left\{\frac{1}{\sqrt{\sigma^2}}\exp\left\{\frac{1}{2}\big[x^2-(x-\mu)^2/\sigma^2\big]\right\} \right\}dx\\ 
+=&amp;\frac{1}{2}\int \frac{1}{\sqrt{2\pi\sigma^2}}e^{-(x-\mu)^2/2\sigma^2} \Big[-\log \sigma^2+x^2-(x-\mu)^2/\sigma^2 \Big] dx \\
+=&amp;\frac{1}{2}[-log\sigma^2+\mu^2+\sigma^2-1]
+\end{aligned}\]</span></p>
+<h2 id="重参数">重参数</h2>
+<p><code>VAE</code>可以生成新的<span class="math inline">\(X\)</span>就是因为他从隐空间取<span class="math inline">\(z\)</span>的时候是随机选取的,但是随机选取<span class="math inline">\(z\)</span>会导致无法反向求导,所以就使用一个重参数技巧.</p>
+<p>从<span class="math inline">\(N(\mu,\sigma^2)\)</span>中采样一个<span class="math inline">\(z\)</span>,就相当于从<span class="math inline">\(N(0,1)\)</span>中采样一个<span class="math inline">\(\epsilon\)</span>,然后令<span class="math inline">\(z=\mu+\epsilon*\sigma\)</span>.</p>
+<h2 id="本质结构">本质结构</h2>
+<p><img src="/2019/05/13/vae/vae.png"></p>
+<p>本质上<code>VAE</code>就是训练出一个后验分布<span class="math inline">\(q(Z|X)\)</span>,然后生成器从后验分布中随机取元素(相当于加噪声)并解码出对应的<span class="math inline">\(\bar{X}\)</span>.代码上实现起来相当简单,但是背后的数学思想是非常难理解的,现在我还是一知半解.</p>
 
       
     </div>
@@ -126,37 +129,40 @@
       
         
         
-          <p>我看了<code>VAE</code>之后忽然对神经网络的非监督学习以及概率模型很感兴趣,但是无奈概率模型真的好难懂啊.<br>今天尝试一边描述<code>VAE</code>一边真正的理解他.<br>参考总结自:<a href="https://spaces.ac.cn/archives/5253" target="_blank" rel="noopener">https://spaces.ac.cn/archives/5253</a></p>
+          <p>我看了<code>VAE</code>之后忽然对神经网络的非监督学习以及概率模型很感兴趣,但是无奈概率模型真的好难懂啊. 今天尝试一边描述<code>VAE</code>一边真正的理解他. 参考总结自:https://spaces.ac.cn/archives/5253</p>
 <a id="more"></a>
-<h1 id="介绍"><a href="#介绍" class="headerlink" title="介绍"></a>介绍</h1><p>变分自编码器是传统编码器的一个变体,从深度学习的角度来说就是改变了<code>loss</code>函数使生成器可以<br>生成与原样本不相同但又属于相同分布的样本.</p>
-<p><img src="/2019/05/13/vae/encoder-decoder.png" alt=""></p>
-<h2 id="术语表"><a href="#术语表" class="headerlink" title="术语表:"></a>术语表:</h2><ul>
+<h1 id="介绍">介绍</h1>
+<p>变分自编码器是传统编码器的一个变体,从深度学习的角度来说就是改变了<code>loss</code>函数使生成器可以 生成与原样本不相同但又属于相同分布的样本.</p>
+<p><img src="/2019/05/13/vae/encoder-decoder.png"></p>
+<h2 id="术语表">术语表:</h2>
+<ul>
 <li><p>编码器:</p>
-<p>在概率模型中,编码器称为推理网络,他将参数化潜在特征的后验近似$z$,然后将参数输出到分布$q(z|x)$,也可以说$q(z|x)$是$x$的后验分布.</p>
-</li>
+<p>在概率模型中,编码器称为推理网络,他将参数化潜在特征的后验近似<span class="math inline">\(z\)</span>,然后将参数输出到分布<span class="math inline">\(q(z|x)\)</span>,也可以说<span class="math inline">\(q(z|x)\)</span>是<span class="math inline">\(x\)</span>的后验分布.</p></li>
 <li><p>解码器:</p>
-<p>解码器是根据$z$重构$x$的,分布为$p(x|z)$.</p>
-</li>
+<p>解码器是根据<span class="math inline">\(z\)</span>重构<span class="math inline">\(x\)</span>的,分布为<span class="math inline">\(p(x|z)\)</span>.</p></li>
 </ul>
-<h2 id="推导"><a href="#推导" class="headerlink" title="推导"></a>推导</h2><p>在传统的编码器中,解码器$p(x|z)$是易于训练的,但是$q(z|x)$是难以学习的.根据贝叶斯定理,我们可以把后验分布转写成另一种形式,但是$p(x)$也并不知道,所以利用联合概率分布近似代替$p(x)$:</p>
-<script type="math/tex; mode=display">\begin{aligned}
+<h2 id="推导">推导</h2>
+<p>在传统的编码器中,解码器<span class="math inline">\(p(x|z)\)</span>是易于训练的,但是<span class="math inline">\(q(z|x)\)</span>是难以学习的.根据贝叶斯定理,我们可以把后验分布转写成另一种形式,但是<span class="math inline">\(p(x)\)</span>也并不知道,所以利用联合概率分布近似代替<span class="math inline">\(p(x)\)</span>: <span class="math display">\[ \begin{aligned}
     q(z|x)=\frac{p(x|z)p(z)}{p(x)}=\frac{p(x|z)p(z)}{\sum_zp(x|z)p(z)}
-\end{aligned}</script><p>为了近似求出后验分布,我们还需要一种方法将估计出的分布与真实分布进行比较,所以使用<code>KL分歧</code>来衡量两个概率分布的相似程度.如果相同,则分歧为0,如果大于0,则分布不同.<br>因此使用如下方式使用<code>KL分歧</code>:<br>由于我们考虑的是各分量独立的多元正态分布，因此只需要推导一元正态分布的情形即可:</p>
-<script type="math/tex; mode=display">\begin{aligned}&KL\Big(N(\mu,\sigma^2)\Big\Vert N(0,1)\Big)\\ 
-=&\int \frac{1}{\sqrt{2\pi\sigma^2}}e^{-(x-\mu)^2/2\sigma^2} \left(\log \frac{e^{-(x-\mu)^2/2\sigma^2}/\sqrt{2\pi\sigma^2}}{e^{-x^2/2}/\sqrt{2\pi}}\right)dx\\ 
-=&\int \frac{1}{\sqrt{2\pi\sigma^2}}e^{-(x-\mu)^2/2\sigma^2} \log \left\{\frac{1}{\sqrt{\sigma^2}}\exp\left\{\frac{1}{2}\big[x^2-(x-\mu)^2/\sigma^2\big]\right\} \right\}dx\\ 
-=&\frac{1}{2}\int \frac{1}{\sqrt{2\pi\sigma^2}}e^{-(x-\mu)^2/2\sigma^2} \Big[-\log \sigma^2+x^2-(x-\mu)^2/\sigma^2 \Big] dx \\
-=&\frac{1}{2}[-log\sigma^2+\mu^2+\sigma^2-1]
-\end{aligned}</script><h2 id="重参数"><a href="#重参数" class="headerlink" title="重参数"></a>重参数</h2><p><code>VAE</code>可以生成新的$X$就是因为他从隐空间取$z$的时候是随机选取的,但是随机选取$z$会导致无法反向求导,所以就使用一个重参数技巧.</p>
-<p>从$N(\mu,\sigma^2)$中采样一个$z$,就相当于从$N(0,1)$中采样一个$\epsilon$,然后令$z=\mu+\epsilon*\sigma$.</p>
-<h2 id="本质结构"><a href="#本质结构" class="headerlink" title="本质结构"></a>本质结构</h2><p><img src="/2019/05/13/vae/vae.png" alt=""></p>
-<p>本质上<code>VAE</code>就是训练出一个后验分布$q(Z|X)$,然后生成器从后验分布中随机取元素(相当于加噪声)并解码出对应的$\bar{X}$.代码上实现起来相当简单,但是背后的数学思想是非常难理解的,现在我还是一知半解.</p>
+\end{aligned} \]</span></p>
+<p>为了近似求出后验分布,我们还需要一种方法将估计出的分布与真实分布进行比较,所以使用<code>KL分歧</code>来衡量两个概率分布的相似程度.如果相同,则分歧为0,如果大于0,则分布不同. 因此使用如下方式使用<code>KL分歧</code>: 由于我们考虑的是各分量独立的多元正态分布，因此只需要推导一元正态分布的情形即可: <span class="math display">\[ \begin{aligned}&amp;KL\Big(N(\mu,\sigma^2)\Big\Vert N(0,1)\Big)\\ 
+=&amp;\int \frac{1}{\sqrt{2\pi\sigma^2}}e^{-(x-\mu)^2/2\sigma^2} \left(\log \frac{e^{-(x-\mu)^2/2\sigma^2}/\sqrt{2\pi\sigma^2}}{e^{-x^2/2}/\sqrt{2\pi}}\right)dx\\ 
+=&amp;\int \frac{1}{\sqrt{2\pi\sigma^2}}e^{-(x-\mu)^2/2\sigma^2} \log \left\{\frac{1}{\sqrt{\sigma^2}}\exp\left\{\frac{1}{2}\big[x^2-(x-\mu)^2/\sigma^2\big]\right\} \right\}dx\\ 
+=&amp;\frac{1}{2}\int \frac{1}{\sqrt{2\pi\sigma^2}}e^{-(x-\mu)^2/2\sigma^2} \Big[-\log \sigma^2+x^2-(x-\mu)^2/\sigma^2 \Big] dx \\
+=&amp;\frac{1}{2}[-log\sigma^2+\mu^2+\sigma^2-1]
+\end{aligned}\]</span></p>
+<h2 id="重参数">重参数</h2>
+<p><code>VAE</code>可以生成新的<span class="math inline">\(X\)</span>就是因为他从隐空间取<span class="math inline">\(z\)</span>的时候是随机选取的,但是随机选取<span class="math inline">\(z\)</span>会导致无法反向求导,所以就使用一个重参数技巧.</p>
+<p>从<span class="math inline">\(N(\mu,\sigma^2)\)</span>中采样一个<span class="math inline">\(z\)</span>,就相当于从<span class="math inline">\(N(0,1)\)</span>中采样一个<span class="math inline">\(\epsilon\)</span>,然后令<span class="math inline">\(z=\mu+\epsilon*\sigma\)</span>.</p>
+<h2 id="本质结构">本质结构</h2>
+<p><img src="/2019/05/13/vae/vae.png"></p>
+<p>本质上<code>VAE</code>就是训练出一个后验分布<span class="math inline">\(q(Z|X)\)</span>,然后生成器从后验分布中随机取元素(相当于加噪声)并解码出对应的<span class="math inline">\(\bar{X}\)</span>.代码上实现起来相当简单,但是背后的数学思想是非常难理解的,现在我还是一知半解.</p>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2019/05/13/vae/" data-id="ckmxj5saw00fdch6xnz16nthp" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2019/05/13/vae/" data-id="ckn4jimsr00hq6i6x5oml6cuw" class="article-share-link">Share</a>
       
       
       
@@ -207,7 +213,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">标签云</h3>
     <div class="widget tagcloud">
-      <a href="/tags/C/" style="font-size: 12.67px;">C</a> <a href="/tags/C/" style="font-size: 12px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10px;">CNN</a> <a href="/tags/GAN/" style="font-size: 10.67px;">GAN</a> <a href="/tags/Linux/" style="font-size: 19.33px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.67px;">PCB</a> <a href="/tags/Qt/" style="font-size: 10px;">Qt</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/gan/" style="font-size: 10px;">gan</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 14.67px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 11.33px;">linux</a> <a href="/tags/mindspore/" style="font-size: 10.67px;">mindspore</a> <a href="/tags/mxnet/" style="font-size: 10px;">mxnet</a> <a href="/tags/pfld/" style="font-size: 10px;">pfld</a> <a href="/tags/python/" style="font-size: 18px;">python</a> <a href="/tags/pytorch/" style="font-size: 12px;">pytorch</a> <a href="/tags/retinaface/" style="font-size: 10px;">retinaface</a> <a href="/tags/stm32/" style="font-size: 11.33px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 20px;">tensorflow</a> <a href="/tags/vscode/" style="font-size: 10px;">vscode</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/yolo/" style="font-size: 12.67px;">yolo</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 14px;">作业</a> <a href="/tags/元学习/" style="font-size: 10px;">元学习</a> <a href="/tags/半监督学习/" style="font-size: 15.33px;">半监督学习</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/图像处理/" style="font-size: 10px;">图像处理</a> <a href="/tags/堆栈/" style="font-size: 10.67px;">堆栈</a> <a href="/tags/声音信号处理/" style="font-size: 12px;">声音信号处理</a> <a href="/tags/小工具/" style="font-size: 12px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 15.33px;">嵌入式</a> <a href="/tags/总结/" style="font-size: 10px;">总结</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 17.33px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 16.67px;">机器学习</a> <a href="/tags/树/" style="font-size: 12px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/概率论/" style="font-size: 18.67px;">概率论</a> <a href="/tags/深度学习/" style="font-size: 16px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 11.33px;">神经网络</a> <a href="/tags/神经网络量化/" style="font-size: 10px;">神经网络量化</a> <a href="/tags/算法/" style="font-size: 12px;">算法</a> <a href="/tags/统计学习方法/" style="font-size: 16px;">统计学习方法</a> <a href="/tags/聚类/" style="font-size: 12px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13.33px;">蓝牙</a> <a href="/tags/调参/" style="font-size: 10px;">调参</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/路由/" style="font-size: 10px;">路由</a> <a href="/tags/链表/" style="font-size: 11.33px;">链表</a> <a href="/tags/错误记录/" style="font-size: 19.33px;">错误记录</a> <a href="/tags/风格迁移/" style="font-size: 10px;">风格迁移</a>
+      <a href="/tags/C/" style="font-size: 12.67px;">C</a> <a href="/tags/C/" style="font-size: 12px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10px;">CNN</a> <a href="/tags/GAN/" style="font-size: 10.67px;">GAN</a> <a href="/tags/Linux/" style="font-size: 19.33px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.67px;">PCB</a> <a href="/tags/Qt/" style="font-size: 10px;">Qt</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/gan/" style="font-size: 10px;">gan</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 14.67px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 11.33px;">linux</a> <a href="/tags/mindspore/" style="font-size: 10.67px;">mindspore</a> <a href="/tags/mxnet/" style="font-size: 10px;">mxnet</a> <a href="/tags/pfld/" style="font-size: 10px;">pfld</a> <a href="/tags/python/" style="font-size: 18px;">python</a> <a href="/tags/pytorch/" style="font-size: 12px;">pytorch</a> <a href="/tags/retinaface/" style="font-size: 10px;">retinaface</a> <a href="/tags/stm32/" style="font-size: 11.33px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 20px;">tensorflow</a> <a href="/tags/vscode/" style="font-size: 10px;">vscode</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/yolo/" style="font-size: 12.67px;">yolo</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 14px;">作业</a> <a href="/tags/元学习/" style="font-size: 10px;">元学习</a> <a href="/tags/半监督学习/" style="font-size: 15.33px;">半监督学习</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/图像处理/" style="font-size: 10px;">图像处理</a> <a href="/tags/堆栈/" style="font-size: 10.67px;">堆栈</a> <a href="/tags/声音信号处理/" style="font-size: 12px;">声音信号处理</a> <a href="/tags/小工具/" style="font-size: 12px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 15.33px;">嵌入式</a> <a href="/tags/总结/" style="font-size: 10px;">总结</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 17.33px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 16.67px;">机器学习</a> <a href="/tags/树/" style="font-size: 12px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/概率论/" style="font-size: 18.67px;">概率论</a> <a href="/tags/深度学习/" style="font-size: 16px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 11.33px;">神经网络</a> <a href="/tags/神经网络量化/" style="font-size: 10px;">神经网络量化</a> <a href="/tags/算法/" style="font-size: 12.67px;">算法</a> <a href="/tags/统计学习方法/" style="font-size: 16px;">统计学习方法</a> <a href="/tags/聚类/" style="font-size: 12px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13.33px;">蓝牙</a> <a href="/tags/调参/" style="font-size: 10px;">调参</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/路由/" style="font-size: 10px;">路由</a> <a href="/tags/链表/" style="font-size: 11.33px;">链表</a> <a href="/tags/错误记录/" style="font-size: 19.33px;">错误记录</a> <a href="/tags/风格迁移/" style="font-size: 10px;">风格迁移</a>
     </div>
   </div>
 
@@ -216,7 +222,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">归档</h3>
     <div class="widget">
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/03/">三月 2021</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/01/">一月 2021</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/11/">十一月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/10/">十月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/09/">九月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/08/">八月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/07/">七月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/05/">五月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/04/">四月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/12/">十二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/09/">九月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/08/">八月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/07/">七月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/06/">六月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/05/">五月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">三月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/04/">四月 2021</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/03/">三月 2021</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/01/">一月 2021</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/11/">十一月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/10/">十月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/09/">九月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/08/">八月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/07/">七月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/05/">五月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/04/">四月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/12/">十二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/09/">九月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/08/">八月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/07/">七月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/06/">六月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/05/">五月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">三月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a></li></ul>
     </div>
   </div>
 
@@ -227,6 +233,10 @@
     <h3 class="widget-title">最新文章</h3>
     <div class="widget">
       <ul>
+        
+          <li>
+            <a href="/2021/04/05/bin-search-template/">二分查找-统一框架</a>
+          </li>
         
           <li>
             <a href="/2021/03/27/quant-1/">神经网络量化-基本原理</a>
@@ -242,10 +252,6 @@
         
           <li>
             <a href="/2020/11/15/pytorch-feature-extract/">pytorch从任意层截断并提取数据</a>
-          </li>
-        
-          <li>
-            <a href="/2020/11/12/webdataset/">Pytorch Webdataset初体验</a>
           </li>
         
       </ul>

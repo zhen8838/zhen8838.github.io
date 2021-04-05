@@ -100,71 +100,84 @@
 <p>我尝试用<code>tensorflow 2.x</code>复现这个项目，这个项目成功地把我从<code>tensorflow</code>劝退。。先吐槽一下，因为这个项目需要同时训练7个模型，我开启<code>jit</code>时用<code>tf2.X</code>的<code>tf.function</code>，<code>autograph</code>转换一下居然需要20分钟以上！每次启动训练得等20分钟，实在是受不了，不过转换之后的速度比<code>pytorch</code>实现快50%让我还可以接受。第二点是最不能忍受的，在<code>pytorch</code>中用8G显存即可训练，<code>tensorflow</code>中我降低了判别器的的层数还需要12G显存才能训练，直接劝退。</p>
 <p>PS. 再提一句，他的生成器中间特征处理有两种做法，轻量级的方法是<code>GMP</code>再生成，否则直接生成。直接生成的话模型参数200MB往上了..我看了下他们po的图训练时显存需要22G..☹</p>
 <a id="more"></a>
-<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><ol>
+<h1 id="总结">总结</h1>
+<ol type="1">
 <li>我使用<code>TF2.1</code>和小视科技提供的数据集,训练不完全的模型是可以达到他的效果.但是使用<code>JOJO</code>的图像很难达到效果,转换后太接近真实图像,如果有人知道怎么解决可以告诉我.</li>
 <li>我对截取动漫图像写了一个<a href="https://github.com/zhen8838/playground/blob/master/tools/screen_crop.py" target="_blank" rel="noopener">脚本</a>,安装<code>wxpython</code>和<code>mss</code>之后即可以开始点击截屏.上下键控制截屏区域大小,<code>esc</code>退出.记得点击后停顿一秒钟再松开.这里感谢我的学弟帮我截图..</li>
-<li>图像截取好了之后去除背景最麻烦的!我在网上找了一圈没有找到免费的抠图软件,全都要收费.搞得我都想先弄个自动抠图的模型…花了30块钱处理了一百来张图像,另外几百张图像都没有处理.这个可能就是我没有成功的原因.</li>
+<li>图像截取好了之后去除背景最麻烦的!我在网上找了一圈没有找到免费的抠图软件,全都要收费.搞得我都想先弄个自动抠图的模型...花了30块钱处理了一百来张图像,另外几百张图像都没有处理.这个可能就是我没有成功的原因.</li>
 <li>然后我用<code>pytorch</code>的代码去训练,训练调试了接近半个月,今天想了结这个事情了,最后一次昨天到今天训练了一天半..效果也就这样.</li>
 <li>真实图像我用的是<code>celeba-H mask</code>,写了个去除背景的<a href="https://github.com/zhen8838/playground/blob/master/tools/face_crop_and_mask.py" target="_blank" rel="noopener">脚本</a>处理的.</li>
 </ol>
 <p>截取好的动漫图像放在<a href="https://drive.google.com/file/d/1dxJCkMATwxROliNI9YG91JxwfeVXUwl4/view?usp=sharing" target="_blank" rel="noopener">这里</a>.如果有兴趣的话,可以把背景去除后进行训练,那样效果会比较好.</p>
-<h1 id="模型结构"><a href="#模型结构" class="headerlink" title="模型结构"></a>模型结构</h1><p>他的论文图画的有点难懂，所以我重新画了一下。整个模型还是比较对称的，中间有点类似于<code>U-Net</code>的结构，将编码器生成的特征进行<code>global Avg pool</code>之后称为<code>Content feature</code>。全部<code>Encode</code>之后得到的特征<code>X</code>分别进行<code>global Avg pool</code>与<code>global Max pool</code>的<code>CAM</code>层，得到新的特征后，经过卷积得到<code>heatmap</code>，同时经过一个全连接得到<code>Style feature</code>。最后将新的特征通过解码器与上采样层得到输出。</p>
-<div align="center">
-<img src="/2020/06/08/U-GAT-IT/u-gat-it.svg">
+<h1 id="模型结构">模型结构</h1>
+<p>他的论文图画的有点难懂，所以我重新画了一下。整个模型还是比较对称的，中间有点类似于<code>U-Net</code>的结构，将编码器生成的特征进行<code>global Avg pool</code>之后称为<code>Content feature</code>。全部<code>Encode</code>之后得到的特征<code>X</code>分别进行<code>global Avg pool</code>与<code>global Max pool</code>的<code>CAM</code>层，得到新的特征后，经过卷积得到<code>heatmap</code>，同时经过一个全连接得到<code>Style feature</code>。最后将新的特征通过解码器与上采样层得到输出。</p>
+<div data-align="center">
+<p><img src="/2020/06/08/U-GAT-IT/u-gat-it.svg"></p>
 </div>
-
-<h2 id="Class-Activation-Map-CAM"><a href="#Class-Activation-Map-CAM" class="headerlink" title="Class Activation Map(CAM)"></a>Class Activation Map(CAM)</h2><p>这个技巧是老方法了，特征经过一个全局池化层降低维度，通过全连接层后得到单个的<code>logit</code>，此时全连接层的权重体现了特征通道的对于输出<code>logit</code>的贡献大小，因此将权重乘上特征得到自注意后的新特征。这样我们的新特征就加强了部分通道特征的权重。</p>
-<div align="center">
-<img src="/2020/06/08/U-GAT-IT/cam-att.svg" width="50%/">
+<h2 id="class-activation-mapcam">Class Activation Map(CAM)</h2>
+<p>这个技巧是老方法了，特征经过一个全局池化层降低维度，通过全连接层后得到单个的<code>logit</code>，此时全连接层的权重体现了特征通道的对于输出<code>logit</code>的贡献大小，因此将权重乘上特征得到自注意后的新特征。这样我们的新特征就加强了部分通道特征的权重。</p>
+<div data-align="center">
+<p><img src="/2020/06/08/U-GAT-IT/cam-att.svg" width="50%/"></p>
 </div>
-
-
-<h2 id="Decode"><a href="#Decode" class="headerlink" title="Decode"></a>Decode</h2><p>原本的论文使用的是<code>Adaptive Layer-Instance Normalization(AdaLIN)</code>，他是没有考虑到编码器生成<code>content feature</code>和<code>style feature</code>的融合。</p>
-<p>原始的<code>AdaLIN</code>：</p>
-<script type="math/tex; mode=display">
+<h2 id="decode">Decode</h2>
+<p>原本的论文使用的是<code>Adaptive Layer-Instance Normalization(AdaLIN)</code>，他是没有考虑到编码器生成<code>content feature</code>和<code>style feature</code>的融合。</p>
+<p>原始的<code>AdaLIN</code>： <span class="math display">\[
 \begin{aligned}
-  AdaLIN(\alpha,\gamma,\beta)&=\rho\cdot(\rho\cdot\hat{\alpha}_I+(1-\rho)\cdot\hat{\alpha}_L)+\beta\\
-  \hat{\alpha}_I&=\frac{\alpha-\mu_I}{\sqrt{\sigma^2_I+\epsilon}},\hat{\alpha}_L=\frac{\alpha-\mu_L}{\sqrt{\sigma^2_L+\epsilon}}\\
-  \rho&\leftarrow \text{clip}_{[0,1]}(\rho-\tau\Delta\rho)
-\end{aligned}</script><p>其实就是分别对特征进行通道级的归一化和层级的归一化，使用参数$\rho$控制各部分的权重，最后利用$\gamma,\beta$进行激活。<code>NOTE：</code> 他的<code>\gamma,\beta</code>是将<code>style feature</code>通过两个独立的全连接层生成的。</p>
+  AdaLIN(\alpha,\gamma,\beta)&amp;=\rho\cdot(\rho\cdot\hat{\alpha}_I+(1-\rho)\cdot\hat{\alpha}_L)+\beta\\
+  \hat{\alpha}_I&amp;=\frac{\alpha-\mu_I}{\sqrt{\sigma^2_I+\epsilon}},\hat{\alpha}_L=\frac{\alpha-\mu_L}{\sqrt{\sigma^2_L+\epsilon}}\\
+  \rho&amp;\leftarrow \text{clip}_{[0,1]}(\rho-\tau\Delta\rho)
+\end{aligned}
+\]</span></p>
+<p>其实就是分别对特征进行通道级的归一化和层级的归一化，使用参数<span class="math inline">\(\rho\)</span>控制各部分的权重，最后利用<span class="math inline">\(\gamma,\beta\)</span>进行激活。<code>NOTE：</code> 他的<code>\gamma,\beta</code>是将<code>style feature</code>通过两个独立的全连接层生成的。</p>
 <p>小视科技提出的<code>SoftAdaLIN</code>如下：</p>
-<div align="center">
-<img src="/2020/06/08/U-GAT-IT/decode.svg" width="80%/">
+<div data-align="center">
+<p><img src="/2020/06/08/U-GAT-IT/decode.svg" width="80%/"></p>
 </div>
-
 <p>对于每一个解码器，引入了编码器生成的<code>content feature</code>，同时利用类似的方法控制<code>content feature</code>和<code>style feature</code>的权重，再生成<code>soft gamma</code>和<code>soft beta</code>，进行<code>AdaLIN</code>计算。</p>
 <p>这些结构没有数学上的证明，主要是通过大量的消融测试证明其有效性。</p>
-<h1 id="损失函数"><a href="#损失函数" class="headerlink" title="损失函数"></a>损失函数</h1><h2 id="对抗损失"><a href="#对抗损失" class="headerlink" title="对抗损失"></a>对抗损失</h2><p>其中对抗损失为最小二乘<code>GAN</code>：</p>
-<script type="math/tex; mode=display">
+<h1 id="损失函数">损失函数</h1>
+<h2 id="对抗损失">对抗损失</h2>
+<p>其中对抗损失为最小二乘<code>GAN</code>： <span class="math display">\[
 \begin{aligned}
   L_{l s g a n}^{s \rightarrow t}=\left(\mathbb{E}_{x \sim X_{t}}\left[\left(D_{t}(x)\right)^{2}\right]+\mathbb{E}_{x \sim X_{s}}\left[\left(1-D_{t}\left(G_{s \rightarrow t}(x)\right)\right)^{2}\right]\right)
-\end{aligned}</script><h2 id="循环一致性损失"><a href="#循环一致性损失" class="headerlink" title="循环一致性损失"></a>循环一致性损失</h2><p>这个是<code>cycleGAN</code>中的标配：</p>
-<script type="math/tex; mode=display">
+\end{aligned}
+\]</span></p>
+<h2 id="循环一致性损失">循环一致性损失</h2>
+<p>这个是<code>cycleGAN</code>中的标配：</p>
+<p><span class="math display">\[
 \begin{aligned}
   \left.L_{c y c l e}^{s \rightarrow t}=\left.\mathbb{E}_{x \sim X_{s}}\left[| x-G_{t \rightarrow s}\left(G_{s \rightarrow t}(x)\right)\right)\right|_{1}\right]
-\end{aligned}</script><h2 id="图像一致性损失"><a href="#图像一致性损失" class="headerlink" title="图像一致性损失"></a>图像一致性损失</h2><p>这个也是<code>cycleGAN</code>中的标配：</p>
-<script type="math/tex; mode=display">
+\end{aligned}
+\]</span></p>
+<h2 id="图像一致性损失">图像一致性损失</h2>
+<p>这个也是<code>cycleGAN</code>中的标配： <span class="math display">\[
 \begin{aligned}
   L_{i d e n t i t y}^{s \rightarrow t}=\mathbb{E}_{x \sim X_{t}}\left[\left|x-G_{s \rightarrow t}(x)\right|_{1}\right]
-\end{aligned}</script><h2 id="CAM损失"><a href="#CAM损失" class="headerlink" title="CAM损失"></a>CAM损失</h2><p>这个就是对之前模型生成<code>CAM logit</code>进行判别（这里我有个地方前面忘记说明了，他的判别器中也使用的<code>CAM</code>的方法），对于判别器中的生成的<code>CAM logit</code>判别比较简单，即正样本的<code>logit</code>接近于1，负样本接近0。</p>
+\end{aligned}
+\]</span></p>
+<h2 id="cam损失">CAM损失</h2>
+<p>这个就是对之前模型生成<code>CAM logit</code>进行判别（这里我有个地方前面忘记说明了，他的判别器中也使用的<code>CAM</code>的方法），对于判别器中的生成的<code>CAM logit</code>判别比较简单，即正样本的<code>logit</code>接近于1，负样本接近0。</p>
 <p>生成器中的<code>CAM logit</code>使用交叉熵的使跨域的转换<code>logit</code>接近于1，同域的转换接近0。</p>
-<script type="math/tex; mode=display">
+<p><span class="math display">\[
 \begin{aligned}
   \begin{array}{l}
 L_{c a m}^{s \rightarrow t}=-\left(\mathbb{E}_{x \sim X_{s}}\left[\log \left(\eta_{s}(x)\right)\right]+\mathbb{E}_{x \sim X_{t}}\left[\log \left(1-\eta_{s}(x)\right)\right]\right) \\
 L_{c a m}^{D_{t}}=\mathbb{E}_{x \sim X_{t}}\left[\left(\eta_{D_{t}}(x)\right)^{2}\right]+\mathbb{E}_{x \sim X_{s}}\left[\left(1-\eta_{D_{t}}\left(G_{s \rightarrow t}(x)\right)^{2}\right]\right.
 \end{array}
-\end{aligned}</script><h2 id="身份ID损失"><a href="#身份ID损失" class="headerlink" title="身份ID损失"></a>身份ID损失</h2><p>这是小视科技自己提的，因为要做接近于真人的效果转换，加上人脸识别损失比较好。</p>
-<h1 id="复现笔记"><a href="#复现笔记" class="headerlink" title="复现笔记"></a>复现笔记</h1><h2 id="6-8"><a href="#6-8" class="headerlink" title="6.8"></a>6.8</h2><p>前面已经做了很多次实验了，动画图像我也截取了不少了。昨晚我想训练网络适合亚洲人脸，网上一下找不到好的亚洲人脸数据，然后我就找了个<code>stylegan</code>生成的亚洲人脸，训练了一晚发现很奇怪的问题，只要是用生成的数据做转换，很大概率会得到有问题的图像,如下所示。</p>
-<div align="center">
-<img src="/2020/06/08/U-GAT-IT/exp1_1.png">
+\end{aligned}
+\]</span></p>
+<h2 id="身份id损失">身份ID损失</h2>
+<p>这是小视科技自己提的，因为要做接近于真人的效果转换，加上人脸识别损失比较好。</p>
+<h1 id="复现笔记">复现笔记</h1>
+<h2 id="section">6.8</h2>
+<p>前面已经做了很多次实验了，动画图像我也截取了不少了。昨晚我想训练网络适合亚洲人脸，网上一下找不到好的亚洲人脸数据，然后我就找了个<code>stylegan</code>生成的亚洲人脸，训练了一晚发现很奇怪的问题，只要是用生成的数据做转换，很大概率会得到有问题的图像,如下所示。</p>
+<div data-align="center">
+<p><img src="/2020/06/08/U-GAT-IT/exp1_1.png"></p>
 </div>
-
-<p>我发现<code>jojo</code>的风格还是适合模特，用模特的照片转换之后相当有味：</p>
-<div align="center">
-<img src="/2020/06/08/U-GAT-IT/exp1_2.png">
+我发现<code>jojo</code>的风格还是适合模特，用模特的照片转换之后相当有味：
+<div data-align="center">
+<p><img src="/2020/06/08/U-GAT-IT/exp1_2.png"></p>
 </div>
-
 <p>不说了，我重新去找合适的数据了。明天看效果。</p>
 
       
@@ -177,78 +190,91 @@ L_{c a m}^{D_{t}}=\mathbb{E}_{x \sim X_{t}}\left[\left(\eta_{D_{t}}(x)\right)^{2
 <p>我尝试用<code>tensorflow 2.x</code>复现这个项目，这个项目成功地把我从<code>tensorflow</code>劝退。。先吐槽一下，因为这个项目需要同时训练7个模型，我开启<code>jit</code>时用<code>tf2.X</code>的<code>tf.function</code>，<code>autograph</code>转换一下居然需要20分钟以上！每次启动训练得等20分钟，实在是受不了，不过转换之后的速度比<code>pytorch</code>实现快50%让我还可以接受。第二点是最不能忍受的，在<code>pytorch</code>中用8G显存即可训练，<code>tensorflow</code>中我降低了判别器的的层数还需要12G显存才能训练，直接劝退。</p>
 <p>PS. 再提一句，他的生成器中间特征处理有两种做法，轻量级的方法是<code>GMP</code>再生成，否则直接生成。直接生成的话模型参数200MB往上了..我看了下他们po的图训练时显存需要22G..☹</p>
 <a id="more"></a>
-<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><ol>
+<h1 id="总结">总结</h1>
+<ol type="1">
 <li>我使用<code>TF2.1</code>和小视科技提供的数据集,训练不完全的模型是可以达到他的效果.但是使用<code>JOJO</code>的图像很难达到效果,转换后太接近真实图像,如果有人知道怎么解决可以告诉我.</li>
 <li>我对截取动漫图像写了一个<a href="https://github.com/zhen8838/playground/blob/master/tools/screen_crop.py" target="_blank" rel="noopener">脚本</a>,安装<code>wxpython</code>和<code>mss</code>之后即可以开始点击截屏.上下键控制截屏区域大小,<code>esc</code>退出.记得点击后停顿一秒钟再松开.这里感谢我的学弟帮我截图..</li>
-<li>图像截取好了之后去除背景最麻烦的!我在网上找了一圈没有找到免费的抠图软件,全都要收费.搞得我都想先弄个自动抠图的模型…花了30块钱处理了一百来张图像,另外几百张图像都没有处理.这个可能就是我没有成功的原因.</li>
+<li>图像截取好了之后去除背景最麻烦的!我在网上找了一圈没有找到免费的抠图软件,全都要收费.搞得我都想先弄个自动抠图的模型...花了30块钱处理了一百来张图像,另外几百张图像都没有处理.这个可能就是我没有成功的原因.</li>
 <li>然后我用<code>pytorch</code>的代码去训练,训练调试了接近半个月,今天想了结这个事情了,最后一次昨天到今天训练了一天半..效果也就这样.</li>
 <li>真实图像我用的是<code>celeba-H mask</code>,写了个去除背景的<a href="https://github.com/zhen8838/playground/blob/master/tools/face_crop_and_mask.py" target="_blank" rel="noopener">脚本</a>处理的.</li>
 </ol>
 <p>截取好的动漫图像放在<a href="https://drive.google.com/file/d/1dxJCkMATwxROliNI9YG91JxwfeVXUwl4/view?usp=sharing" target="_blank" rel="noopener">这里</a>.如果有兴趣的话,可以把背景去除后进行训练,那样效果会比较好.</p>
-<h1 id="模型结构"><a href="#模型结构" class="headerlink" title="模型结构"></a>模型结构</h1><p>他的论文图画的有点难懂，所以我重新画了一下。整个模型还是比较对称的，中间有点类似于<code>U-Net</code>的结构，将编码器生成的特征进行<code>global Avg pool</code>之后称为<code>Content feature</code>。全部<code>Encode</code>之后得到的特征<code>X</code>分别进行<code>global Avg pool</code>与<code>global Max pool</code>的<code>CAM</code>层，得到新的特征后，经过卷积得到<code>heatmap</code>，同时经过一个全连接得到<code>Style feature</code>。最后将新的特征通过解码器与上采样层得到输出。</p>
-<div align="center">
-<img src="/2020/06/08/U-GAT-IT/u-gat-it.svg">
+<h1 id="模型结构">模型结构</h1>
+<p>他的论文图画的有点难懂，所以我重新画了一下。整个模型还是比较对称的，中间有点类似于<code>U-Net</code>的结构，将编码器生成的特征进行<code>global Avg pool</code>之后称为<code>Content feature</code>。全部<code>Encode</code>之后得到的特征<code>X</code>分别进行<code>global Avg pool</code>与<code>global Max pool</code>的<code>CAM</code>层，得到新的特征后，经过卷积得到<code>heatmap</code>，同时经过一个全连接得到<code>Style feature</code>。最后将新的特征通过解码器与上采样层得到输出。</p>
+<div data-align="center">
+<p><img src="/2020/06/08/U-GAT-IT/u-gat-it.svg"></p>
 </div>
-
-<h2 id="Class-Activation-Map-CAM"><a href="#Class-Activation-Map-CAM" class="headerlink" title="Class Activation Map(CAM)"></a>Class Activation Map(CAM)</h2><p>这个技巧是老方法了，特征经过一个全局池化层降低维度，通过全连接层后得到单个的<code>logit</code>，此时全连接层的权重体现了特征通道的对于输出<code>logit</code>的贡献大小，因此将权重乘上特征得到自注意后的新特征。这样我们的新特征就加强了部分通道特征的权重。</p>
-<div align="center">
-<img src="/2020/06/08/U-GAT-IT/cam-att.svg" width="50%/">
+<h2 id="class-activation-mapcam">Class Activation Map(CAM)</h2>
+<p>这个技巧是老方法了，特征经过一个全局池化层降低维度，通过全连接层后得到单个的<code>logit</code>，此时全连接层的权重体现了特征通道的对于输出<code>logit</code>的贡献大小，因此将权重乘上特征得到自注意后的新特征。这样我们的新特征就加强了部分通道特征的权重。</p>
+<div data-align="center">
+<p><img src="/2020/06/08/U-GAT-IT/cam-att.svg" width="50%/"></p>
 </div>
-
-
-<h2 id="Decode"><a href="#Decode" class="headerlink" title="Decode"></a>Decode</h2><p>原本的论文使用的是<code>Adaptive Layer-Instance Normalization(AdaLIN)</code>，他是没有考虑到编码器生成<code>content feature</code>和<code>style feature</code>的融合。</p>
-<p>原始的<code>AdaLIN</code>：</p>
-<script type="math/tex; mode=display">
+<h2 id="decode">Decode</h2>
+<p>原本的论文使用的是<code>Adaptive Layer-Instance Normalization(AdaLIN)</code>，他是没有考虑到编码器生成<code>content feature</code>和<code>style feature</code>的融合。</p>
+<p>原始的<code>AdaLIN</code>： <span class="math display">\[
 \begin{aligned}
-  AdaLIN(\alpha,\gamma,\beta)&=\rho\cdot(\rho\cdot\hat{\alpha}_I+(1-\rho)\cdot\hat{\alpha}_L)+\beta\\
-  \hat{\alpha}_I&=\frac{\alpha-\mu_I}{\sqrt{\sigma^2_I+\epsilon}},\hat{\alpha}_L=\frac{\alpha-\mu_L}{\sqrt{\sigma^2_L+\epsilon}}\\
-  \rho&\leftarrow \text{clip}_{[0,1]}(\rho-\tau\Delta\rho)
-\end{aligned}</script><p>其实就是分别对特征进行通道级的归一化和层级的归一化，使用参数$\rho$控制各部分的权重，最后利用$\gamma,\beta$进行激活。<code>NOTE：</code> 他的<code>\gamma,\beta</code>是将<code>style feature</code>通过两个独立的全连接层生成的。</p>
+  AdaLIN(\alpha,\gamma,\beta)&amp;=\rho\cdot(\rho\cdot\hat{\alpha}_I+(1-\rho)\cdot\hat{\alpha}_L)+\beta\\
+  \hat{\alpha}_I&amp;=\frac{\alpha-\mu_I}{\sqrt{\sigma^2_I+\epsilon}},\hat{\alpha}_L=\frac{\alpha-\mu_L}{\sqrt{\sigma^2_L+\epsilon}}\\
+  \rho&amp;\leftarrow \text{clip}_{[0,1]}(\rho-\tau\Delta\rho)
+\end{aligned}
+\]</span></p>
+<p>其实就是分别对特征进行通道级的归一化和层级的归一化，使用参数<span class="math inline">\(\rho\)</span>控制各部分的权重，最后利用<span class="math inline">\(\gamma,\beta\)</span>进行激活。<code>NOTE：</code> 他的<code>\gamma,\beta</code>是将<code>style feature</code>通过两个独立的全连接层生成的。</p>
 <p>小视科技提出的<code>SoftAdaLIN</code>如下：</p>
-<div align="center">
-<img src="/2020/06/08/U-GAT-IT/decode.svg" width="80%/">
+<div data-align="center">
+<p><img src="/2020/06/08/U-GAT-IT/decode.svg" width="80%/"></p>
 </div>
-
 <p>对于每一个解码器，引入了编码器生成的<code>content feature</code>，同时利用类似的方法控制<code>content feature</code>和<code>style feature</code>的权重，再生成<code>soft gamma</code>和<code>soft beta</code>，进行<code>AdaLIN</code>计算。</p>
 <p>这些结构没有数学上的证明，主要是通过大量的消融测试证明其有效性。</p>
-<h1 id="损失函数"><a href="#损失函数" class="headerlink" title="损失函数"></a>损失函数</h1><h2 id="对抗损失"><a href="#对抗损失" class="headerlink" title="对抗损失"></a>对抗损失</h2><p>其中对抗损失为最小二乘<code>GAN</code>：</p>
-<script type="math/tex; mode=display">
+<h1 id="损失函数">损失函数</h1>
+<h2 id="对抗损失">对抗损失</h2>
+<p>其中对抗损失为最小二乘<code>GAN</code>： <span class="math display">\[
 \begin{aligned}
   L_{l s g a n}^{s \rightarrow t}=\left(\mathbb{E}_{x \sim X_{t}}\left[\left(D_{t}(x)\right)^{2}\right]+\mathbb{E}_{x \sim X_{s}}\left[\left(1-D_{t}\left(G_{s \rightarrow t}(x)\right)\right)^{2}\right]\right)
-\end{aligned}</script><h2 id="循环一致性损失"><a href="#循环一致性损失" class="headerlink" title="循环一致性损失"></a>循环一致性损失</h2><p>这个是<code>cycleGAN</code>中的标配：</p>
-<script type="math/tex; mode=display">
+\end{aligned}
+\]</span></p>
+<h2 id="循环一致性损失">循环一致性损失</h2>
+<p>这个是<code>cycleGAN</code>中的标配：</p>
+<p><span class="math display">\[
 \begin{aligned}
   \left.L_{c y c l e}^{s \rightarrow t}=\left.\mathbb{E}_{x \sim X_{s}}\left[| x-G_{t \rightarrow s}\left(G_{s \rightarrow t}(x)\right)\right)\right|_{1}\right]
-\end{aligned}</script><h2 id="图像一致性损失"><a href="#图像一致性损失" class="headerlink" title="图像一致性损失"></a>图像一致性损失</h2><p>这个也是<code>cycleGAN</code>中的标配：</p>
-<script type="math/tex; mode=display">
+\end{aligned}
+\]</span></p>
+<h2 id="图像一致性损失">图像一致性损失</h2>
+<p>这个也是<code>cycleGAN</code>中的标配： <span class="math display">\[
 \begin{aligned}
   L_{i d e n t i t y}^{s \rightarrow t}=\mathbb{E}_{x \sim X_{t}}\left[\left|x-G_{s \rightarrow t}(x)\right|_{1}\right]
-\end{aligned}</script><h2 id="CAM损失"><a href="#CAM损失" class="headerlink" title="CAM损失"></a>CAM损失</h2><p>这个就是对之前模型生成<code>CAM logit</code>进行判别（这里我有个地方前面忘记说明了，他的判别器中也使用的<code>CAM</code>的方法），对于判别器中的生成的<code>CAM logit</code>判别比较简单，即正样本的<code>logit</code>接近于1，负样本接近0。</p>
+\end{aligned}
+\]</span></p>
+<h2 id="cam损失">CAM损失</h2>
+<p>这个就是对之前模型生成<code>CAM logit</code>进行判别（这里我有个地方前面忘记说明了，他的判别器中也使用的<code>CAM</code>的方法），对于判别器中的生成的<code>CAM logit</code>判别比较简单，即正样本的<code>logit</code>接近于1，负样本接近0。</p>
 <p>生成器中的<code>CAM logit</code>使用交叉熵的使跨域的转换<code>logit</code>接近于1，同域的转换接近0。</p>
-<script type="math/tex; mode=display">
+<p><span class="math display">\[
 \begin{aligned}
   \begin{array}{l}
 L_{c a m}^{s \rightarrow t}=-\left(\mathbb{E}_{x \sim X_{s}}\left[\log \left(\eta_{s}(x)\right)\right]+\mathbb{E}_{x \sim X_{t}}\left[\log \left(1-\eta_{s}(x)\right)\right]\right) \\
 L_{c a m}^{D_{t}}=\mathbb{E}_{x \sim X_{t}}\left[\left(\eta_{D_{t}}(x)\right)^{2}\right]+\mathbb{E}_{x \sim X_{s}}\left[\left(1-\eta_{D_{t}}\left(G_{s \rightarrow t}(x)\right)^{2}\right]\right.
 \end{array}
-\end{aligned}</script><h2 id="身份ID损失"><a href="#身份ID损失" class="headerlink" title="身份ID损失"></a>身份ID损失</h2><p>这是小视科技自己提的，因为要做接近于真人的效果转换，加上人脸识别损失比较好。</p>
-<h1 id="复现笔记"><a href="#复现笔记" class="headerlink" title="复现笔记"></a>复现笔记</h1><h2 id="6-8"><a href="#6-8" class="headerlink" title="6.8"></a>6.8</h2><p>前面已经做了很多次实验了，动画图像我也截取了不少了。昨晚我想训练网络适合亚洲人脸，网上一下找不到好的亚洲人脸数据，然后我就找了个<code>stylegan</code>生成的亚洲人脸，训练了一晚发现很奇怪的问题，只要是用生成的数据做转换，很大概率会得到有问题的图像,如下所示。</p>
-<div align="center">
-<img src="/2020/06/08/U-GAT-IT/exp1_1.png">
+\end{aligned}
+\]</span></p>
+<h2 id="身份id损失">身份ID损失</h2>
+<p>这是小视科技自己提的，因为要做接近于真人的效果转换，加上人脸识别损失比较好。</p>
+<h1 id="复现笔记">复现笔记</h1>
+<h2 id="section">6.8</h2>
+<p>前面已经做了很多次实验了，动画图像我也截取了不少了。昨晚我想训练网络适合亚洲人脸，网上一下找不到好的亚洲人脸数据，然后我就找了个<code>stylegan</code>生成的亚洲人脸，训练了一晚发现很奇怪的问题，只要是用生成的数据做转换，很大概率会得到有问题的图像,如下所示。</p>
+<div data-align="center">
+<p><img src="/2020/06/08/U-GAT-IT/exp1_1.png"></p>
 </div>
-
-<p>我发现<code>jojo</code>的风格还是适合模特，用模特的照片转换之后相当有味：</p>
-<div align="center">
-<img src="/2020/06/08/U-GAT-IT/exp1_2.png">
+我发现<code>jojo</code>的风格还是适合模特，用模特的照片转换之后相当有味：
+<div data-align="center">
+<p><img src="/2020/06/08/U-GAT-IT/exp1_2.png"></p>
 </div>
-
 <p>不说了，我重新去找合适的数据了。明天看效果。</p>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2020/06/08/U-GAT-IT/" data-id="ckmxj5s4o001bch6xvgo84euv" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2020/06/08/U-GAT-IT/" data-id="ckn4jimgb00146i6x3osxc4e2" class="article-share-link">Share</a>
       
       
       
@@ -297,7 +323,7 @@ L_{c a m}^{D_{t}}=\mathbb{E}_{x \sim X_{t}}\left[\left(\eta_{D_{t}}(x)\right)^{2
   <div class="widget-wrap">
     <h3 class="widget-title">标签云</h3>
     <div class="widget tagcloud">
-      <a href="/tags/C/" style="font-size: 12.67px;">C</a> <a href="/tags/C/" style="font-size: 12px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10px;">CNN</a> <a href="/tags/GAN/" style="font-size: 10.67px;">GAN</a> <a href="/tags/Linux/" style="font-size: 19.33px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.67px;">PCB</a> <a href="/tags/Qt/" style="font-size: 10px;">Qt</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/gan/" style="font-size: 10px;">gan</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 14.67px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 11.33px;">linux</a> <a href="/tags/mindspore/" style="font-size: 10.67px;">mindspore</a> <a href="/tags/mxnet/" style="font-size: 10px;">mxnet</a> <a href="/tags/pfld/" style="font-size: 10px;">pfld</a> <a href="/tags/python/" style="font-size: 18px;">python</a> <a href="/tags/pytorch/" style="font-size: 12px;">pytorch</a> <a href="/tags/retinaface/" style="font-size: 10px;">retinaface</a> <a href="/tags/stm32/" style="font-size: 11.33px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 20px;">tensorflow</a> <a href="/tags/vscode/" style="font-size: 10px;">vscode</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/yolo/" style="font-size: 12.67px;">yolo</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 14px;">作业</a> <a href="/tags/元学习/" style="font-size: 10px;">元学习</a> <a href="/tags/半监督学习/" style="font-size: 15.33px;">半监督学习</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/图像处理/" style="font-size: 10px;">图像处理</a> <a href="/tags/堆栈/" style="font-size: 10.67px;">堆栈</a> <a href="/tags/声音信号处理/" style="font-size: 12px;">声音信号处理</a> <a href="/tags/小工具/" style="font-size: 12px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 15.33px;">嵌入式</a> <a href="/tags/总结/" style="font-size: 10px;">总结</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 17.33px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 16.67px;">机器学习</a> <a href="/tags/树/" style="font-size: 12px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/概率论/" style="font-size: 18.67px;">概率论</a> <a href="/tags/深度学习/" style="font-size: 16px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 11.33px;">神经网络</a> <a href="/tags/神经网络量化/" style="font-size: 10px;">神经网络量化</a> <a href="/tags/算法/" style="font-size: 12px;">算法</a> <a href="/tags/统计学习方法/" style="font-size: 16px;">统计学习方法</a> <a href="/tags/聚类/" style="font-size: 12px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13.33px;">蓝牙</a> <a href="/tags/调参/" style="font-size: 10px;">调参</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/路由/" style="font-size: 10px;">路由</a> <a href="/tags/链表/" style="font-size: 11.33px;">链表</a> <a href="/tags/错误记录/" style="font-size: 19.33px;">错误记录</a> <a href="/tags/风格迁移/" style="font-size: 10px;">风格迁移</a>
+      <a href="/tags/C/" style="font-size: 12.67px;">C</a> <a href="/tags/C/" style="font-size: 12px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10px;">CNN</a> <a href="/tags/GAN/" style="font-size: 10.67px;">GAN</a> <a href="/tags/Linux/" style="font-size: 19.33px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.67px;">PCB</a> <a href="/tags/Qt/" style="font-size: 10px;">Qt</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/gan/" style="font-size: 10px;">gan</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 14.67px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 11.33px;">linux</a> <a href="/tags/mindspore/" style="font-size: 10.67px;">mindspore</a> <a href="/tags/mxnet/" style="font-size: 10px;">mxnet</a> <a href="/tags/pfld/" style="font-size: 10px;">pfld</a> <a href="/tags/python/" style="font-size: 18px;">python</a> <a href="/tags/pytorch/" style="font-size: 12px;">pytorch</a> <a href="/tags/retinaface/" style="font-size: 10px;">retinaface</a> <a href="/tags/stm32/" style="font-size: 11.33px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 20px;">tensorflow</a> <a href="/tags/vscode/" style="font-size: 10px;">vscode</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/yolo/" style="font-size: 12.67px;">yolo</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 14px;">作业</a> <a href="/tags/元学习/" style="font-size: 10px;">元学习</a> <a href="/tags/半监督学习/" style="font-size: 15.33px;">半监督学习</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/图像处理/" style="font-size: 10px;">图像处理</a> <a href="/tags/堆栈/" style="font-size: 10.67px;">堆栈</a> <a href="/tags/声音信号处理/" style="font-size: 12px;">声音信号处理</a> <a href="/tags/小工具/" style="font-size: 12px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 15.33px;">嵌入式</a> <a href="/tags/总结/" style="font-size: 10px;">总结</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 17.33px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 16.67px;">机器学习</a> <a href="/tags/树/" style="font-size: 12px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/概率论/" style="font-size: 18.67px;">概率论</a> <a href="/tags/深度学习/" style="font-size: 16px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 11.33px;">神经网络</a> <a href="/tags/神经网络量化/" style="font-size: 10px;">神经网络量化</a> <a href="/tags/算法/" style="font-size: 12.67px;">算法</a> <a href="/tags/统计学习方法/" style="font-size: 16px;">统计学习方法</a> <a href="/tags/聚类/" style="font-size: 12px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13.33px;">蓝牙</a> <a href="/tags/调参/" style="font-size: 10px;">调参</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/路由/" style="font-size: 10px;">路由</a> <a href="/tags/链表/" style="font-size: 11.33px;">链表</a> <a href="/tags/错误记录/" style="font-size: 19.33px;">错误记录</a> <a href="/tags/风格迁移/" style="font-size: 10px;">风格迁移</a>
     </div>
   </div>
 
@@ -306,7 +332,7 @@ L_{c a m}^{D_{t}}=\mathbb{E}_{x \sim X_{t}}\left[\left(\eta_{D_{t}}(x)\right)^{2
   <div class="widget-wrap">
     <h3 class="widget-title">归档</h3>
     <div class="widget">
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/03/">三月 2021</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/01/">一月 2021</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/11/">十一月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/10/">十月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/09/">九月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/08/">八月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/07/">七月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/05/">五月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/04/">四月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/12/">十二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/09/">九月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/08/">八月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/07/">七月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/06/">六月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/05/">五月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">三月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/04/">四月 2021</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/03/">三月 2021</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/01/">一月 2021</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/11/">十一月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/10/">十月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/09/">九月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/08/">八月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/07/">七月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/05/">五月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/04/">四月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/12/">十二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/09/">九月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/08/">八月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/07/">七月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/06/">六月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/05/">五月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">三月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a></li></ul>
     </div>
   </div>
 
@@ -317,6 +343,10 @@ L_{c a m}^{D_{t}}=\mathbb{E}_{x \sim X_{t}}\left[\left(\eta_{D_{t}}(x)\right)^{2
     <h3 class="widget-title">最新文章</h3>
     <div class="widget">
       <ul>
+        
+          <li>
+            <a href="/2021/04/05/bin-search-template/">二分查找-统一框架</a>
+          </li>
         
           <li>
             <a href="/2021/03/27/quant-1/">神经网络量化-基本原理</a>
@@ -332,10 +362,6 @@ L_{c a m}^{D_{t}}=\mathbb{E}_{x \sim X_{t}}\left[\left(\eta_{D_{t}}(x)\right)^{2
         
           <li>
             <a href="/2020/11/15/pytorch-feature-extract/">pytorch从任意层截断并提取数据</a>
-          </li>
-        
-          <li>
-            <a href="/2020/11/12/webdataset/">Pytorch Webdataset初体验</a>
           </li>
         
       </ul>
