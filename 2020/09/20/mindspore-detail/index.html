@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html>
-<head><meta name="generator" content="Hexo 3.8.0">
+<head>
   <!-- hexo-inject:begin --><!-- hexo-inject:end --><meta charset="utf-8">
   
 
@@ -8,17 +8,17 @@
   <title>关于mindspore | </title>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <meta name="description" content="记录一些关于mindspore代码的东西。">
-<meta name="keywords" content="mindspore">
 <meta property="og:type" content="article">
 <meta property="og:title" content="关于mindspore">
 <meta property="og:url" content="https://zhen8838.github.io/2020/09/20/mindspore-detail/index.html">
 <meta property="og:site_name">
 <meta property="og:description" content="记录一些关于mindspore代码的东西。">
-<meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2020-09-21T10:50:53.582Z">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-09-19T21:50:13.000Z">
+<meta property="article:modified_time" content="2020-09-21T10:50:53.000Z">
+<meta property="article:author" content="NAke">
+<meta property="article:tag" content="mindspore">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="关于mindspore">
-<meta name="twitter:description" content="记录一些关于mindspore代码的东西。">
   
   
     <link rel="icon" href="/favicon.png">
@@ -28,9 +28,11 @@
     <!-- <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css"> -->
     <!-- <link href="//fonts.useso.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css"> -->
   
-  <link rel="stylesheet" href="/css/style.css"><!-- hexo-inject:begin --><!-- hexo-inject:end -->
-</head>
-</html>
+  
+<link rel="stylesheet" href="/css/style.css">
+
+<meta name="generator" content="Hexo 5.4.0"><!-- hexo-inject:begin --><!-- hexo-inject:end --></head>
+
 <body>
   <!-- hexo-inject:begin --><!-- hexo-inject:end --><div id="container">
     <div id="wrap">
@@ -65,14 +67,14 @@
   </div>
 </header>
       <div class="outer">
-        <section id="main"><article id="post-mindspore-detail" class="article article-type-post" itemscope="" itemprop="blogPost">
+        <section id="main"><article id="post-mindspore-detail" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
     <a href="/2020/09/20/mindspore-detail/" class="article-date">
   <time datetime="2020-09-19T21:50:13.000Z" itemprop="datePublished">2020-09-19</time>
 </a>
     
   <div class="article-category">
-    <a class="article-category-link" href="/categories/学习/">学习</a>
+    <a class="article-category-link" href="/categories/%E5%AD%A6%E4%B9%A0/">学习</a>
   </div>
 
   </div>
@@ -92,35 +94,31 @@
     <div class="article-entry" itemprop="articleBody">
       
         <p>记录一些关于mindspore代码的东西。</p>
-<a id="more"></a>
-<h2 id="算子调用流程">算子调用流程</h2>
-<p>例如GPU算子<code>Argmax</code>，他的调用顺序是： <code>Argmax</code>&lt;-<code>Primitive.Argmax</code>&lt;-<code>ccsrc/backend/kernel_compiler/gpu/arrays/argmax_gpu_kernel.cc</code>&lt;-<code>ccsrc/backend/kernel_compiler/gpu/cuda_impl/argmax_impl.cu</code></p>
+<span id="more"></span>
+<h2 id="算子调用流程"><a href="#算子调用流程" class="headerlink" title="算子调用流程"></a>算子调用流程</h2><p>例如GPU算子<code>Argmax</code>，他的调用顺序是：<br><code>Argmax</code>&lt;-<code>Primitive.Argmax</code>&lt;-<code>ccsrc/backend/kernel_compiler/gpu/arrays/argmax_gpu_kernel.cc</code>&lt;-<code>ccsrc/backend/kernel_compiler/gpu/cuda_impl/argmax_impl.cu</code></p>
 <p>对于<code>batchnorm</code>这类操作，因为<code>cudnn</code>中有预先写好的，因此可以不用手动写GPU impl。</p>
-<h2 id="batchnorm">batchnorm</h2>
-<p><code>batchnorm</code>属实比较复杂，我看了一下<code>ccsrc</code>里面有4种<code>batchnorm</code>：<code>[batchnorm,fused_batch_norm_ex,fused_batch_norm,batchnorm_fold,batchnorm_fold_2]</code>。其中<code>batchnorm_fold,batchnorm_fold_2</code>是量化时使用的。<code>batchnorm,fused_batch_norm_ex,fused_batch_norm</code>是根据当前的运行模式决定的，如果是<code>graph_mode</code>执行<code>P.FusedBatchNormEx</code>进行训练，而测试时均用<code>P.BatchNorm</code>。</p>
+<h2 id="batchnorm"><a href="#batchnorm" class="headerlink" title="batchnorm"></a>batchnorm</h2><p><code>batchnorm</code>属实比较复杂，我看了一下<code>ccsrc</code>里面有4种<code>batchnorm</code>：<code>[batchnorm,fused_batch_norm_ex,fused_batch_norm,batchnorm_fold,batchnorm_fold_2]</code>。其中<code>batchnorm_fold,batchnorm_fold_2</code>是量化时使用的。<code>batchnorm,fused_batch_norm_ex,fused_batch_norm</code>是根据当前的运行模式决定的，如果是<code>graph_mode</code>执行<code>P.FusedBatchNormEx</code>进行训练，而测试时均用<code>P.BatchNorm</code>。</p>
 <p>目前的问题是<code>P.FusedBatchNormEx</code>和<code>P.BatchNorm</code>的<code>GPU</code>后端都不支持<code>2D</code>输入。。但我看代码其实也不复杂，因为对于<code>GPU</code>后端其实都是调用的<code>cudnn</code>库，因此需要看看为何<code>cudnn</code>不支持<code>2D</code>输入，先看看<code>pytorch</code>的底层是怎么搞的。</p>
-<h4 id="pytorch的batchnorm实现"><code>pytorch</code>的<code>batchnorm</code>实现</h4>
-<ol type="1">
+<h4 id="pytorch的batchnorm实现"><a href="#pytorch的batchnorm实现" class="headerlink" title="pytorch的batchnorm实现"></a><code>pytorch</code>的<code>batchnorm</code>实现</h4><ol>
 <li>因为<code>pytorch</code>时间久，因此<code>aten/src/ATen/native/cudnn/BatchNorm.cpp</code>中包含了很多版本适配。看起来比较复杂。</li>
 <li>对于<code>2D</code>的输入他默认的<code>mode=CUDNN_BATCHNORM_PER_ACTIVATION</code>，介绍里写的是<code>bnScale, bnBias tensor dims are 1xCxHxWx.. (one value per CHW...-slice, normalized over N slice)</code>，然后：</li>
 </ol>
-<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">TensorDescriptor idesc&#123; *input, <span class="number">4</span> &#125;;  <span class="comment">// input descriptor</span></span><br><span class="line">TensorDescriptor wdesc&#123; expandScale(*weight, input-&gt;dim()), <span class="number">4</span> &#125;;  <span class="comment">// descriptor for weight, bias, running_mean, etc.</span></span><br></pre></td></tr></table></figure>
-<p>我认为他的想法应该是将<code>2D</code>输入扩展为<code>4D</code>然后调用<code>cudnn</code>的<code>batchnorm</code>。然后做了下测试，发现他们的梯度的确是相同的： <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> torch</span><br><span class="line"><span class="keyword">import</span> torch.nn.modules <span class="keyword">as</span> m</span><br><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line"></span><br><span class="line">n1 = m.BatchNorm1d(<span class="number">100</span>).to(<span class="string">'cuda'</span>)</span><br><span class="line">n1.train(<span class="keyword">True</span>)</span><br><span class="line">x = torch.randn(<span class="number">32</span>, <span class="number">100</span>, device=<span class="string">'cuda'</span>, requires_grad=<span class="keyword">True</span>)</span><br><span class="line">y = torch.randn(<span class="number">32</span>, <span class="number">100</span>, device=<span class="string">'cuda'</span>, requires_grad=<span class="keyword">True</span>)</span><br><span class="line">criterion = m.MSELoss()</span><br><span class="line">y_pred = n1(x)</span><br><span class="line">loss = criterion(y_pred, y)</span><br><span class="line">loss.backward()</span><br><span class="line">xg_1 = x.grad.cpu().numpy().copy()</span><br><span class="line">x.grad.zero_()</span><br><span class="line">print(xg_1)</span><br><span class="line"></span><br><span class="line">n2 = m.BatchNorm2d(<span class="number">100</span>).to(<span class="string">'cuda'</span>)</span><br><span class="line">n2.train(<span class="keyword">True</span>)</span><br><span class="line">nx = torch.unsqueeze(torch.unsqueeze(x, <span class="number">-1</span>), <span class="number">-1</span>)</span><br><span class="line">ny = torch.unsqueeze(torch.unsqueeze(y, <span class="number">-1</span>), <span class="number">-1</span>)</span><br><span class="line">y_pred = n2(nx)</span><br><span class="line">loss = criterion(y_pred, ny)</span><br><span class="line">loss.backward()</span><br><span class="line">xg_2 = x.grad.cpu().numpy().copy()</span><br><span class="line">x.grad.zero_()</span><br><span class="line">print(xg_2)</span><br><span class="line">print(np.allclose(xg_1, xg_2))</span><br></pre></td></tr></table></figure></p>
-<h4 id="编译代码">编译代码</h4>
-<p>编译代码首先需要按<a href="https://gitee.com/mindspore/mindspore/blob/master/docker/mindspore-gpu/devel/Dockerfile" target="_blank" rel="noopener">官方配置</a>设置docker，属实麻烦，因为需要下载很多依赖，必须得有<code>vpn</code>不然不行。</p>
-<ol type="1">
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">TensorDescriptor idesc&#123; *input, <span class="number">4</span> &#125;;  <span class="comment">// input descriptor</span></span><br><span class="line">TensorDescriptor wdesc&#123; <span class="built_in">expandScale</span>(*weight, input-&gt;<span class="built_in">dim</span>()), <span class="number">4</span> &#125;;  <span class="comment">// descriptor for weight, bias, running_mean, etc.</span></span><br></pre></td></tr></table></figure>
+<p>我认为他的想法应该是将<code>2D</code>输入扩展为<code>4D</code>然后调用<code>cudnn</code>的<code>batchnorm</code>。然后做了下测试，发现他们的梯度的确是相同的：<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> torch</span><br><span class="line"><span class="keyword">import</span> torch.nn.modules <span class="keyword">as</span> m</span><br><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line"></span><br><span class="line">n1 = m.BatchNorm1d(<span class="number">100</span>).to(<span class="string">&#x27;cuda&#x27;</span>)</span><br><span class="line">n1.train(<span class="literal">True</span>)</span><br><span class="line">x = torch.randn(<span class="number">32</span>, <span class="number">100</span>, device=<span class="string">&#x27;cuda&#x27;</span>, requires_grad=<span class="literal">True</span>)</span><br><span class="line">y = torch.randn(<span class="number">32</span>, <span class="number">100</span>, device=<span class="string">&#x27;cuda&#x27;</span>, requires_grad=<span class="literal">True</span>)</span><br><span class="line">criterion = m.MSELoss()</span><br><span class="line">y_pred = n1(x)</span><br><span class="line">loss = criterion(y_pred, y)</span><br><span class="line">loss.backward()</span><br><span class="line">xg_1 = x.grad.cpu().numpy().copy()</span><br><span class="line">x.grad.zero_()</span><br><span class="line"><span class="built_in">print</span>(xg_1)</span><br><span class="line"></span><br><span class="line">n2 = m.BatchNorm2d(<span class="number">100</span>).to(<span class="string">&#x27;cuda&#x27;</span>)</span><br><span class="line">n2.train(<span class="literal">True</span>)</span><br><span class="line">nx = torch.unsqueeze(torch.unsqueeze(x, -<span class="number">1</span>), -<span class="number">1</span>)</span><br><span class="line">ny = torch.unsqueeze(torch.unsqueeze(y, -<span class="number">1</span>), -<span class="number">1</span>)</span><br><span class="line">y_pred = n2(nx)</span><br><span class="line">loss = criterion(y_pred, ny)</span><br><span class="line">loss.backward()</span><br><span class="line">xg_2 = x.grad.cpu().numpy().copy()</span><br><span class="line">x.grad.zero_()</span><br><span class="line"><span class="built_in">print</span>(xg_2)</span><br><span class="line"><span class="built_in">print</span>(np.allclose(xg_1, xg_2))</span><br></pre></td></tr></table></figure></p>
+<h4 id="编译代码"><a href="#编译代码" class="headerlink" title="编译代码"></a>编译代码</h4><p>编译代码首先需要按<a target="_blank" rel="noopener" href="https://gitee.com/mindspore/mindspore/blob/master/docker/mindspore-gpu/devel/Dockerfile">官方配置</a>设置docker，属实麻烦，因为需要下载很多依赖，必须得有<code>vpn</code>不然不行。</p>
+<ol>
 <li>配置<code>docker</code>使用主机的代理：我用的是<code>vscode</code>，因此在<code>devcontainer</code>中添加：</li>
 </ol>
-<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">"runArgs": [</span><br><span class="line">	"--runtime=nvidia",</span><br><span class="line">	<span class="string">"--network=host"</span></span><br><span class="line">],</span><br></pre></td></tr></table></figure>
-<p>然后<code>dockerfile</code>添加代理地址，或者手动在终端设置： <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">RUN echo -e &quot;\nexport https_proxy=http://127.0.0.1:8888\nexport http_proxy=http://127.0.0.1:8889&quot; &gt;&gt; ~/.bashrc &amp;&amp; source ~/.bashrc</span><br></pre></td></tr></table></figure></p>
-<ol start="2" type="1">
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&quot;runArgs&quot;: [</span><br><span class="line">	&quot;--runtime=nvidia&quot;,</span><br><span class="line">	<span class="string">&quot;--network=host&quot;</span></span><br><span class="line">],</span><br></pre></td></tr></table></figure>
+<p>然后<code>dockerfile</code>添加代理地址，或者手动在终端设置：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">RUN echo -e &quot;\nexport https_proxy&#x3D;http:&#x2F;&#x2F;127.0.0.1:8888\nexport http_proxy&#x3D;http:&#x2F;&#x2F;127.0.0.1:8889&quot; &gt;&gt; ~&#x2F;.bashrc &amp;&amp; source ~&#x2F;.bashrc</span><br></pre></td></tr></table></figure></p>
+<ol>
 <li>开始编译，icu4j校验不匹配</li>
 </ol>
 <p>我切换到<code>0.7.0</code>版本，然后<code>./build.sh -e gpu -j 8</code>，一开始构建很正常，到<code>icu4j</code>就奇怪了，这个包我下载了不下5次，然后看了一下<code>mindspore</code>的源码记录：<code>https://gitee.com/mindspore/mindspore/commit/094bdbe253a328baee394922aeb54389ca07d563</code>，发现他的<code>md5</code>写错了。。。按他的更新即可。</p>
-<ol start="3" type="1">
-<li>出现<code>No rule to make target '/usr/local/cuda/lib64/libcudnn.so', needed by 'mindspore/ccsrc/CMakeFiles/_c_expression.dir/cmake_device_link.o'.  Stop.</code></li>
+<ol>
+<li>出现<code>No rule to make target &#39;/usr/local/cuda/lib64/libcudnn.so&#39;, needed by &#39;mindspore/ccsrc/CMakeFiles/_c_expression.dir/cmake_device_link.o&#39;.  Stop.</code></li>
 </ol>
-<p>这个原因是官方给的<code>devel</code>与<code>release</code>版的镜像配置不太一样，导致<code>libcudnn.so</code>没有在正确位置，执行： <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ln -s /usr/lib/x86_64-linux-gnu/libcudnn.so.7.6.5 /usr/<span class="built_in">local</span>/cuda/lib64/libcudnn.so</span><br><span class="line">ln -s /usr/include/x86_64-linux-gnu/cudnn_v7.h /usr/<span class="built_in">local</span>/cuda/include/cudnn.h</span><br></pre></td></tr></table></figure></p>
+<p>这个原因是官方给的<code>devel</code>与<code>release</code>版的镜像配置不太一样，导致<code>libcudnn.so</code>没有在正确位置，执行：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ln -s /usr/lib/x86_64-linux-gnu/libcudnn.so.7.6.5 /usr/<span class="built_in">local</span>/cuda/lib64/libcudnn.so</span><br><span class="line">ln -s /usr/include/x86_64-linux-gnu/cudnn_v7.h /usr/<span class="built_in">local</span>/cuda/include/cudnn.h</span><br></pre></td></tr></table></figure></p>
 
       
     </div>
@@ -129,45 +127,41 @@
         
         
           <p>记录一些关于mindspore代码的东西。</p>
-<a id="more"></a>
-<h2 id="算子调用流程">算子调用流程</h2>
-<p>例如GPU算子<code>Argmax</code>，他的调用顺序是： <code>Argmax</code>&lt;-<code>Primitive.Argmax</code>&lt;-<code>ccsrc/backend/kernel_compiler/gpu/arrays/argmax_gpu_kernel.cc</code>&lt;-<code>ccsrc/backend/kernel_compiler/gpu/cuda_impl/argmax_impl.cu</code></p>
+<span id="more"></span>
+<h2 id="算子调用流程"><a href="#算子调用流程" class="headerlink" title="算子调用流程"></a>算子调用流程</h2><p>例如GPU算子<code>Argmax</code>，他的调用顺序是：<br><code>Argmax</code>&lt;-<code>Primitive.Argmax</code>&lt;-<code>ccsrc/backend/kernel_compiler/gpu/arrays/argmax_gpu_kernel.cc</code>&lt;-<code>ccsrc/backend/kernel_compiler/gpu/cuda_impl/argmax_impl.cu</code></p>
 <p>对于<code>batchnorm</code>这类操作，因为<code>cudnn</code>中有预先写好的，因此可以不用手动写GPU impl。</p>
-<h2 id="batchnorm">batchnorm</h2>
-<p><code>batchnorm</code>属实比较复杂，我看了一下<code>ccsrc</code>里面有4种<code>batchnorm</code>：<code>[batchnorm,fused_batch_norm_ex,fused_batch_norm,batchnorm_fold,batchnorm_fold_2]</code>。其中<code>batchnorm_fold,batchnorm_fold_2</code>是量化时使用的。<code>batchnorm,fused_batch_norm_ex,fused_batch_norm</code>是根据当前的运行模式决定的，如果是<code>graph_mode</code>执行<code>P.FusedBatchNormEx</code>进行训练，而测试时均用<code>P.BatchNorm</code>。</p>
+<h2 id="batchnorm"><a href="#batchnorm" class="headerlink" title="batchnorm"></a>batchnorm</h2><p><code>batchnorm</code>属实比较复杂，我看了一下<code>ccsrc</code>里面有4种<code>batchnorm</code>：<code>[batchnorm,fused_batch_norm_ex,fused_batch_norm,batchnorm_fold,batchnorm_fold_2]</code>。其中<code>batchnorm_fold,batchnorm_fold_2</code>是量化时使用的。<code>batchnorm,fused_batch_norm_ex,fused_batch_norm</code>是根据当前的运行模式决定的，如果是<code>graph_mode</code>执行<code>P.FusedBatchNormEx</code>进行训练，而测试时均用<code>P.BatchNorm</code>。</p>
 <p>目前的问题是<code>P.FusedBatchNormEx</code>和<code>P.BatchNorm</code>的<code>GPU</code>后端都不支持<code>2D</code>输入。。但我看代码其实也不复杂，因为对于<code>GPU</code>后端其实都是调用的<code>cudnn</code>库，因此需要看看为何<code>cudnn</code>不支持<code>2D</code>输入，先看看<code>pytorch</code>的底层是怎么搞的。</p>
-<h4 id="pytorch的batchnorm实现"><code>pytorch</code>的<code>batchnorm</code>实现</h4>
-<ol type="1">
+<h4 id="pytorch的batchnorm实现"><a href="#pytorch的batchnorm实现" class="headerlink" title="pytorch的batchnorm实现"></a><code>pytorch</code>的<code>batchnorm</code>实现</h4><ol>
 <li>因为<code>pytorch</code>时间久，因此<code>aten/src/ATen/native/cudnn/BatchNorm.cpp</code>中包含了很多版本适配。看起来比较复杂。</li>
 <li>对于<code>2D</code>的输入他默认的<code>mode=CUDNN_BATCHNORM_PER_ACTIVATION</code>，介绍里写的是<code>bnScale, bnBias tensor dims are 1xCxHxWx.. (one value per CHW...-slice, normalized over N slice)</code>，然后：</li>
 </ol>
-<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">TensorDescriptor idesc&#123; *input, <span class="number">4</span> &#125;;  <span class="comment">// input descriptor</span></span><br><span class="line">TensorDescriptor wdesc&#123; expandScale(*weight, input-&gt;dim()), <span class="number">4</span> &#125;;  <span class="comment">// descriptor for weight, bias, running_mean, etc.</span></span><br></pre></td></tr></table></figure>
-<p>我认为他的想法应该是将<code>2D</code>输入扩展为<code>4D</code>然后调用<code>cudnn</code>的<code>batchnorm</code>。然后做了下测试，发现他们的梯度的确是相同的： <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> torch</span><br><span class="line"><span class="keyword">import</span> torch.nn.modules <span class="keyword">as</span> m</span><br><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line"></span><br><span class="line">n1 = m.BatchNorm1d(<span class="number">100</span>).to(<span class="string">'cuda'</span>)</span><br><span class="line">n1.train(<span class="keyword">True</span>)</span><br><span class="line">x = torch.randn(<span class="number">32</span>, <span class="number">100</span>, device=<span class="string">'cuda'</span>, requires_grad=<span class="keyword">True</span>)</span><br><span class="line">y = torch.randn(<span class="number">32</span>, <span class="number">100</span>, device=<span class="string">'cuda'</span>, requires_grad=<span class="keyword">True</span>)</span><br><span class="line">criterion = m.MSELoss()</span><br><span class="line">y_pred = n1(x)</span><br><span class="line">loss = criterion(y_pred, y)</span><br><span class="line">loss.backward()</span><br><span class="line">xg_1 = x.grad.cpu().numpy().copy()</span><br><span class="line">x.grad.zero_()</span><br><span class="line">print(xg_1)</span><br><span class="line"></span><br><span class="line">n2 = m.BatchNorm2d(<span class="number">100</span>).to(<span class="string">'cuda'</span>)</span><br><span class="line">n2.train(<span class="keyword">True</span>)</span><br><span class="line">nx = torch.unsqueeze(torch.unsqueeze(x, <span class="number">-1</span>), <span class="number">-1</span>)</span><br><span class="line">ny = torch.unsqueeze(torch.unsqueeze(y, <span class="number">-1</span>), <span class="number">-1</span>)</span><br><span class="line">y_pred = n2(nx)</span><br><span class="line">loss = criterion(y_pred, ny)</span><br><span class="line">loss.backward()</span><br><span class="line">xg_2 = x.grad.cpu().numpy().copy()</span><br><span class="line">x.grad.zero_()</span><br><span class="line">print(xg_2)</span><br><span class="line">print(np.allclose(xg_1, xg_2))</span><br></pre></td></tr></table></figure></p>
-<h4 id="编译代码">编译代码</h4>
-<p>编译代码首先需要按<a href="https://gitee.com/mindspore/mindspore/blob/master/docker/mindspore-gpu/devel/Dockerfile" target="_blank" rel="noopener">官方配置</a>设置docker，属实麻烦，因为需要下载很多依赖，必须得有<code>vpn</code>不然不行。</p>
-<ol type="1">
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">TensorDescriptor idesc&#123; *input, <span class="number">4</span> &#125;;  <span class="comment">// input descriptor</span></span><br><span class="line">TensorDescriptor wdesc&#123; <span class="built_in">expandScale</span>(*weight, input-&gt;<span class="built_in">dim</span>()), <span class="number">4</span> &#125;;  <span class="comment">// descriptor for weight, bias, running_mean, etc.</span></span><br></pre></td></tr></table></figure>
+<p>我认为他的想法应该是将<code>2D</code>输入扩展为<code>4D</code>然后调用<code>cudnn</code>的<code>batchnorm</code>。然后做了下测试，发现他们的梯度的确是相同的：<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> torch</span><br><span class="line"><span class="keyword">import</span> torch.nn.modules <span class="keyword">as</span> m</span><br><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line"></span><br><span class="line">n1 = m.BatchNorm1d(<span class="number">100</span>).to(<span class="string">&#x27;cuda&#x27;</span>)</span><br><span class="line">n1.train(<span class="literal">True</span>)</span><br><span class="line">x = torch.randn(<span class="number">32</span>, <span class="number">100</span>, device=<span class="string">&#x27;cuda&#x27;</span>, requires_grad=<span class="literal">True</span>)</span><br><span class="line">y = torch.randn(<span class="number">32</span>, <span class="number">100</span>, device=<span class="string">&#x27;cuda&#x27;</span>, requires_grad=<span class="literal">True</span>)</span><br><span class="line">criterion = m.MSELoss()</span><br><span class="line">y_pred = n1(x)</span><br><span class="line">loss = criterion(y_pred, y)</span><br><span class="line">loss.backward()</span><br><span class="line">xg_1 = x.grad.cpu().numpy().copy()</span><br><span class="line">x.grad.zero_()</span><br><span class="line"><span class="built_in">print</span>(xg_1)</span><br><span class="line"></span><br><span class="line">n2 = m.BatchNorm2d(<span class="number">100</span>).to(<span class="string">&#x27;cuda&#x27;</span>)</span><br><span class="line">n2.train(<span class="literal">True</span>)</span><br><span class="line">nx = torch.unsqueeze(torch.unsqueeze(x, -<span class="number">1</span>), -<span class="number">1</span>)</span><br><span class="line">ny = torch.unsqueeze(torch.unsqueeze(y, -<span class="number">1</span>), -<span class="number">1</span>)</span><br><span class="line">y_pred = n2(nx)</span><br><span class="line">loss = criterion(y_pred, ny)</span><br><span class="line">loss.backward()</span><br><span class="line">xg_2 = x.grad.cpu().numpy().copy()</span><br><span class="line">x.grad.zero_()</span><br><span class="line"><span class="built_in">print</span>(xg_2)</span><br><span class="line"><span class="built_in">print</span>(np.allclose(xg_1, xg_2))</span><br></pre></td></tr></table></figure></p>
+<h4 id="编译代码"><a href="#编译代码" class="headerlink" title="编译代码"></a>编译代码</h4><p>编译代码首先需要按<a target="_blank" rel="noopener" href="https://gitee.com/mindspore/mindspore/blob/master/docker/mindspore-gpu/devel/Dockerfile">官方配置</a>设置docker，属实麻烦，因为需要下载很多依赖，必须得有<code>vpn</code>不然不行。</p>
+<ol>
 <li>配置<code>docker</code>使用主机的代理：我用的是<code>vscode</code>，因此在<code>devcontainer</code>中添加：</li>
 </ol>
-<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">"runArgs": [</span><br><span class="line">	"--runtime=nvidia",</span><br><span class="line">	<span class="string">"--network=host"</span></span><br><span class="line">],</span><br></pre></td></tr></table></figure>
-<p>然后<code>dockerfile</code>添加代理地址，或者手动在终端设置： <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">RUN echo -e &quot;\nexport https_proxy=http://127.0.0.1:8888\nexport http_proxy=http://127.0.0.1:8889&quot; &gt;&gt; ~/.bashrc &amp;&amp; source ~/.bashrc</span><br></pre></td></tr></table></figure></p>
-<ol start="2" type="1">
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&quot;runArgs&quot;: [</span><br><span class="line">	&quot;--runtime=nvidia&quot;,</span><br><span class="line">	<span class="string">&quot;--network=host&quot;</span></span><br><span class="line">],</span><br></pre></td></tr></table></figure>
+<p>然后<code>dockerfile</code>添加代理地址，或者手动在终端设置：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">RUN echo -e &quot;\nexport https_proxy&#x3D;http:&#x2F;&#x2F;127.0.0.1:8888\nexport http_proxy&#x3D;http:&#x2F;&#x2F;127.0.0.1:8889&quot; &gt;&gt; ~&#x2F;.bashrc &amp;&amp; source ~&#x2F;.bashrc</span><br></pre></td></tr></table></figure></p>
+<ol>
 <li>开始编译，icu4j校验不匹配</li>
 </ol>
 <p>我切换到<code>0.7.0</code>版本，然后<code>./build.sh -e gpu -j 8</code>，一开始构建很正常，到<code>icu4j</code>就奇怪了，这个包我下载了不下5次，然后看了一下<code>mindspore</code>的源码记录：<code>https://gitee.com/mindspore/mindspore/commit/094bdbe253a328baee394922aeb54389ca07d563</code>，发现他的<code>md5</code>写错了。。。按他的更新即可。</p>
-<ol start="3" type="1">
-<li>出现<code>No rule to make target '/usr/local/cuda/lib64/libcudnn.so', needed by 'mindspore/ccsrc/CMakeFiles/_c_expression.dir/cmake_device_link.o'.  Stop.</code></li>
+<ol>
+<li>出现<code>No rule to make target &#39;/usr/local/cuda/lib64/libcudnn.so&#39;, needed by &#39;mindspore/ccsrc/CMakeFiles/_c_expression.dir/cmake_device_link.o&#39;.  Stop.</code></li>
 </ol>
-<p>这个原因是官方给的<code>devel</code>与<code>release</code>版的镜像配置不太一样，导致<code>libcudnn.so</code>没有在正确位置，执行： <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ln -s /usr/lib/x86_64-linux-gnu/libcudnn.so.7.6.5 /usr/<span class="built_in">local</span>/cuda/lib64/libcudnn.so</span><br><span class="line">ln -s /usr/include/x86_64-linux-gnu/cudnn_v7.h /usr/<span class="built_in">local</span>/cuda/include/cudnn.h</span><br></pre></td></tr></table></figure></p>
+<p>这个原因是官方给的<code>devel</code>与<code>release</code>版的镜像配置不太一样，导致<code>libcudnn.so</code>没有在正确位置，执行：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ln -s /usr/lib/x86_64-linux-gnu/libcudnn.so.7.6.5 /usr/<span class="built_in">local</span>/cuda/lib64/libcudnn.so</span><br><span class="line">ln -s /usr/include/x86_64-linux-gnu/cudnn_v7.h /usr/<span class="built_in">local</span>/cuda/include/cudnn.h</span><br></pre></td></tr></table></figure></p>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2020/09/20/mindspore-detail/" data-id="ckn4kjsvr0063gg6xtw2cdmyf" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2020/09/20/mindspore-detail/" data-id="cko1nvup5002iqtjgb88scncm" class="article-share-link">Share</a>
       
       
       
-  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/mindspore/">mindspore</a></li></ul>
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/mindspore/" rel="tag">mindspore</a></li></ul>
 
     </footer>
   </div>
@@ -204,7 +198,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">分类</h3>
     <div class="widget">
-      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/学习/">学习</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/生活/">生活</a></li></ul>
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/%E5%AD%A6%E4%B9%A0/">学习</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E7%94%9F%E6%B4%BB/">生活</a></li></ul>
     </div>
   </div>
 
@@ -214,7 +208,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">标签云</h3>
     <div class="widget tagcloud">
-      <a href="/tags/C/" style="font-size: 12.67px;">C</a> <a href="/tags/C/" style="font-size: 12px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10px;">CNN</a> <a href="/tags/GAN/" style="font-size: 10.67px;">GAN</a> <a href="/tags/Linux/" style="font-size: 19.33px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.67px;">PCB</a> <a href="/tags/Qt/" style="font-size: 10px;">Qt</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/gan/" style="font-size: 10px;">gan</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 14.67px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 11.33px;">linux</a> <a href="/tags/mindspore/" style="font-size: 10.67px;">mindspore</a> <a href="/tags/mxnet/" style="font-size: 10px;">mxnet</a> <a href="/tags/pfld/" style="font-size: 10px;">pfld</a> <a href="/tags/python/" style="font-size: 18px;">python</a> <a href="/tags/pytorch/" style="font-size: 12px;">pytorch</a> <a href="/tags/retinaface/" style="font-size: 10px;">retinaface</a> <a href="/tags/stm32/" style="font-size: 11.33px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 20px;">tensorflow</a> <a href="/tags/vscode/" style="font-size: 10px;">vscode</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/yolo/" style="font-size: 12.67px;">yolo</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 14px;">作业</a> <a href="/tags/元学习/" style="font-size: 10px;">元学习</a> <a href="/tags/半监督学习/" style="font-size: 15.33px;">半监督学习</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/图像处理/" style="font-size: 10px;">图像处理</a> <a href="/tags/堆栈/" style="font-size: 10.67px;">堆栈</a> <a href="/tags/声音信号处理/" style="font-size: 12px;">声音信号处理</a> <a href="/tags/小工具/" style="font-size: 12px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 15.33px;">嵌入式</a> <a href="/tags/总结/" style="font-size: 10px;">总结</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 17.33px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 16.67px;">机器学习</a> <a href="/tags/树/" style="font-size: 12px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/概率论/" style="font-size: 18.67px;">概率论</a> <a href="/tags/深度学习/" style="font-size: 16px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 11.33px;">神经网络</a> <a href="/tags/神经网络量化/" style="font-size: 10px;">神经网络量化</a> <a href="/tags/算法/" style="font-size: 12.67px;">算法</a> <a href="/tags/统计学习方法/" style="font-size: 16px;">统计学习方法</a> <a href="/tags/聚类/" style="font-size: 12px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13.33px;">蓝牙</a> <a href="/tags/调参/" style="font-size: 10px;">调参</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/路由/" style="font-size: 10px;">路由</a> <a href="/tags/链表/" style="font-size: 11.33px;">链表</a> <a href="/tags/错误记录/" style="font-size: 19.33px;">错误记录</a> <a href="/tags/风格迁移/" style="font-size: 10px;">风格迁移</a>
+      <a href="/tags/C/" style="font-size: 12.67px;">C</a> <a href="/tags/C/" style="font-size: 12px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10px;">CNN</a> <a href="/tags/GAN/" style="font-size: 10.67px;">GAN</a> <a href="/tags/Linux/" style="font-size: 19.33px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.67px;">PCB</a> <a href="/tags/Qt/" style="font-size: 10px;">Qt</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/c/" style="font-size: 10.67px;">c++</a> <a href="/tags/cmake/" style="font-size: 10px;">cmake</a> <a href="/tags/gan/" style="font-size: 10px;">gan</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 14.67px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 11.33px;">linux</a> <a href="/tags/mindspore/" style="font-size: 10.67px;">mindspore</a> <a href="/tags/mxnet/" style="font-size: 10px;">mxnet</a> <a href="/tags/pfld/" style="font-size: 10px;">pfld</a> <a href="/tags/python/" style="font-size: 18px;">python</a> <a href="/tags/pytorch/" style="font-size: 12px;">pytorch</a> <a href="/tags/retinaface/" style="font-size: 10px;">retinaface</a> <a href="/tags/stm32/" style="font-size: 11.33px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 20px;">tensorflow</a> <a href="/tags/vscode/" style="font-size: 10px;">vscode</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/yolo/" style="font-size: 12.67px;">yolo</a> <a href="/tags/%E4%BA%8C%E5%8F%89%E6%A0%91/" style="font-size: 10px;">二叉树</a> <a href="/tags/%E4%BD%9C%E4%B8%9A/" style="font-size: 14px;">作业</a> <a href="/tags/%E5%85%83%E5%AD%A6%E4%B9%A0/" style="font-size: 10px;">元学习</a> <a href="/tags/%E5%8D%8A%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0/" style="font-size: 15.33px;">半监督学习</a> <a href="/tags/%E5%8D%9A%E5%AE%A2/" style="font-size: 10px;">博客</a> <a href="/tags/%E5%9B%BE%E5%83%8F%E5%A4%84%E7%90%86/" style="font-size: 10px;">图像处理</a> <a href="/tags/%E5%A0%86%E6%A0%88/" style="font-size: 10.67px;">堆栈</a> <a href="/tags/%E5%A3%B0%E9%9F%B3%E4%BF%A1%E5%8F%B7%E5%A4%84%E7%90%86/" style="font-size: 12px;">声音信号处理</a> <a href="/tags/%E5%B0%8F%E5%B7%A5%E5%85%B7/" style="font-size: 12px;">小工具</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" style="font-size: 15.33px;">嵌入式</a> <a href="/tags/%E6%80%BB%E7%BB%93/" style="font-size: 10px;">总结</a> <a href="/tags/%E6%8E%92%E5%BA%8F/" style="font-size: 10px;">排序</a> <a href="/tags/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/" style="font-size: 17.33px;">数据结构</a> <a href="/tags/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/" style="font-size: 16.67px;">机器学习</a> <a href="/tags/%E6%A0%91/" style="font-size: 12px;">树</a> <a href="/tags/%E6%A0%91%E8%8E%93%E6%B4%BE/" style="font-size: 10px;">树莓派</a> <a href="/tags/%E6%A6%82%E7%8E%87%E8%AE%BA/" style="font-size: 18.67px;">概率论</a> <a href="/tags/%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0/" style="font-size: 16px;">深度学习</a> <a href="/tags/%E7%A5%9E%E7%BB%8F%E7%BD%91%E7%BB%9C/" style="font-size: 11.33px;">神经网络</a> <a href="/tags/%E7%A5%9E%E7%BB%8F%E7%BD%91%E7%BB%9C%E9%87%8F%E5%8C%96/" style="font-size: 10px;">神经网络量化</a> <a href="/tags/%E7%AE%97%E6%B3%95/" style="font-size: 12.67px;">算法</a> <a href="/tags/%E7%BB%9F%E8%AE%A1%E5%AD%A6%E4%B9%A0%E6%96%B9%E6%B3%95/" style="font-size: 16px;">统计学习方法</a> <a href="/tags/%E8%81%9A%E7%B1%BB/" style="font-size: 12px;">聚类</a> <a href="/tags/%E8%93%9D%E7%89%99/" style="font-size: 13.33px;">蓝牙</a> <a href="/tags/%E8%B0%83%E5%8F%82/" style="font-size: 10px;">调参</a> <a href="/tags/%E8%B5%84%E6%BA%90%E6%B1%87%E6%80%BB/" style="font-size: 10px;">资源汇总</a> <a href="/tags/%E8%B7%AF%E7%94%B1/" style="font-size: 10px;">路由</a> <a href="/tags/%E9%93%BE%E8%A1%A8/" style="font-size: 11.33px;">链表</a> <a href="/tags/%E9%94%99%E8%AF%AF%E8%AE%B0%E5%BD%95/" style="font-size: 19.33px;">错误记录</a> <a href="/tags/%E9%A3%8E%E6%A0%BC%E8%BF%81%E7%A7%BB/" style="font-size: 10px;">风格迁移</a>
     </div>
   </div>
 
@@ -236,23 +230,23 @@
       <ul>
         
           <li>
+            <a href="/2021/04/29/ncnn-learn/">ncnn学习</a>
+          </li>
+        
+          <li>
+            <a href="/2021/04/25/cpp-trick/">cpp挖坑&amp;爬坑</a>
+          </li>
+        
+          <li>
+            <a href="/2021/04/25/cmake-error/">cmake踩坑&amp;爬坑</a>
+          </li>
+        
+          <li>
             <a href="/2021/04/05/bin-search-template/">二分查找-统一框架</a>
           </li>
         
           <li>
             <a href="/2021/03/27/quant-1/">神经网络量化-基本原理</a>
-          </li>
-        
-          <li>
-            <a href="/2021/01/22/leetcode/">leetcode刷题总结</a>
-          </li>
-        
-          <li>
-            <a href="/2020/11/27/param-free-nsf/">Parameter-Free Style Projection for Arbitrary Style Transfer</a>
-          </li>
-        
-          <li>
-            <a href="/2020/11/15/pytorch-feature-extract/">pytorch从任意层截断并提取数据</a>
           </li>
         
       </ul>
@@ -287,8 +281,13 @@
 <script src="//cdn.staticfile.org/jquery/2.0.3/jquery.min.js"></script>
 
 
-  <link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
-  <script src="/fancybox/jquery.fancybox.pack.js"></script>
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
+
+  
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+
+
 
 
 <script src="/js/script.js"></script>
@@ -296,21 +295,7 @@
 
 
 
-  </div>
-<script type="text/x-mathjax-config">
-    MathJax.Hub.Config({
-        tex2jax: {
-            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
-            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
-            processEscapes: true
-        }
-    });
-    MathJax.Hub.Queue(function() {
-        var all = MathJax.Hub.getAllJax();
-        for (var i = 0; i < all.length; ++i)
-            all[i].SourceElement().parentNode.className += ' has-jax';
-    });
-</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+
+  </div><!-- hexo-inject:begin --><!-- hexo-inject:end -->
 </body>
 </html>

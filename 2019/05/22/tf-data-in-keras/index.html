@@ -1,24 +1,25 @@
 <!DOCTYPE html>
 <html>
-<head><meta name="generator" content="Hexo 3.8.0">
+<head>
   <!-- hexo-inject:begin --><!-- hexo-inject:end --><meta charset="utf-8">
   
 
   
   <title>tf.Keras完美使用tf.data API | </title>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta name="description" content="最近看了苏剑林的几篇博客， 我忽然对keras不是那么抵触了,才发现之前认为Keras使用不灵活完全是因为的认识不够深入。所以我准备使用Tensorflow 2.0中的tf.Keras来 构建Yolo v3，在tensorflow中我们可以更加灵活的优化我们的数据输入管道，这次介绍一下多输入的model如何结合tf.data，基础的使用方式在这里学习。">
-<meta name="keywords" content="tensorflow,keras">
+  <meta name="description" content="最近看了苏剑林的几篇博客，我忽然对keras不是那么抵触了,才发现之前认为Keras使用不灵活完全是因为的认识不够深入。所以我准备使用Tensorflow 2.0中的tf.Keras来构建Yolo v3，在tensorflow中我们可以更加灵活的优化我们的数据输入管道，这次介绍一下多输入的model如何结合tf.data，基础的使用方式在这里学习。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="tf.Keras完美使用tf.data API">
 <meta property="og:url" content="https://zhen8838.github.io/2019/05/22/tf-data-in-keras/index.html">
 <meta property="og:site_name">
-<meta property="og:description" content="最近看了苏剑林的几篇博客， 我忽然对keras不是那么抵触了,才发现之前认为Keras使用不灵活完全是因为的认识不够深入。所以我准备使用Tensorflow 2.0中的tf.Keras来 构建Yolo v3，在tensorflow中我们可以更加灵活的优化我们的数据输入管道，这次介绍一下多输入的model如何结合tf.data，基础的使用方式在这里学习。">
-<meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2019-05-21T08:41:21.267Z">
+<meta property="og:description" content="最近看了苏剑林的几篇博客，我忽然对keras不是那么抵触了,才发现之前认为Keras使用不灵活完全是因为的认识不够深入。所以我准备使用Tensorflow 2.0中的tf.Keras来构建Yolo v3，在tensorflow中我们可以更加灵活的优化我们的数据输入管道，这次介绍一下多输入的model如何结合tf.data，基础的使用方式在这里学习。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2019-05-21T16:03:46.000Z">
+<meta property="article:modified_time" content="2019-05-21T08:41:21.000Z">
+<meta property="article:author" content="NAke">
+<meta property="article:tag" content="tensorflow">
+<meta property="article:tag" content="keras">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="tf.Keras完美使用tf.data API">
-<meta name="twitter:description" content="最近看了苏剑林的几篇博客， 我忽然对keras不是那么抵触了,才发现之前认为Keras使用不灵活完全是因为的认识不够深入。所以我准备使用Tensorflow 2.0中的tf.Keras来 构建Yolo v3，在tensorflow中我们可以更加灵活的优化我们的数据输入管道，这次介绍一下多输入的model如何结合tf.data，基础的使用方式在这里学习。">
   
   
     <link rel="icon" href="/favicon.png">
@@ -28,9 +29,11 @@
     <!-- <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css"> -->
     <!-- <link href="//fonts.useso.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css"> -->
   
-  <link rel="stylesheet" href="/css/style.css"><!-- hexo-inject:begin --><!-- hexo-inject:end -->
-</head>
-</html>
+  
+<link rel="stylesheet" href="/css/style.css">
+
+<meta name="generator" content="Hexo 5.4.0"><!-- hexo-inject:begin --><!-- hexo-inject:end --></head>
+
 <body>
   <!-- hexo-inject:begin --><!-- hexo-inject:end --><div id="container">
     <div id="wrap">
@@ -65,14 +68,14 @@
   </div>
 </header>
       <div class="outer">
-        <section id="main"><article id="post-tf-data-in-keras" class="article article-type-post" itemscope="" itemprop="blogPost">
+        <section id="main"><article id="post-tf-data-in-keras" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
     <a href="/2019/05/22/tf-data-in-keras/" class="article-date">
   <time datetime="2019-05-21T16:03:46.000Z" itemprop="datePublished">2019-05-21</time>
 </a>
     
   <div class="article-category">
-    <a class="article-category-link" href="/categories/学习/">学习</a>
+    <a class="article-category-link" href="/categories/%E5%AD%A6%E4%B9%A0/">学习</a>
   </div>
 
   </div>
@@ -91,14 +94,12 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <p>最近看了苏剑林的几篇<a href="https://kexue.fm/search/%E8%AE%A9Keras%E6%9B%B4%E9%85%B7%E4%B8%80%E4%BA%9B/" target="_blank" rel="noopener">博客</a>， 我忽然对<code>keras</code>不是那么抵触了,才发现之前认为<code>Keras</code>使用不灵活完全是因为的认识不够深入。所以我准备使用<code>Tensorflow 2.0</code>中的<code>tf.Keras</code>来 构建<code>Yolo v3</code>，在<code>tensorflow</code>中我们可以更加灵活的优化我们的数据输入管道，这次介绍一下多输入的<code>model</code>如何结合<code>tf.data</code>，基础的使用方式在<a href="https://www.tensorflow.org/alpha/tutorials/load_data/csv" target="_blank" rel="noopener">这里</a>学习。</p>
-<a id="more"></a>
-<h1 id="起因">起因</h1>
-<p>大家都知道，<code>YOLO v3</code>是一个多输出的模型，在构建模型的时候，<code>label</code>需要多个，所以模型输入也是多个。如果输入是<code>numpy</code>数组，可以保存不同维度的数组，但是<code>tf.Tensor</code>只能保存相同尺寸的数组。</p>
+        <p>最近看了苏剑林的几篇<a target="_blank" rel="noopener" href="https://kexue.fm/search/%E8%AE%A9Keras%E6%9B%B4%E9%85%B7%E4%B8%80%E4%BA%9B/">博客</a>，<br>我忽然对<code>keras</code>不是那么抵触了,才发现之前认为<code>Keras</code>使用不灵活完全是因为的认识不够深入。所以我准备使用<code>Tensorflow 2.0</code>中的<code>tf.Keras</code>来<br>构建<code>Yolo v3</code>，在<code>tensorflow</code>中我们可以更加灵活的优化我们的数据输入管道，这次介绍一下多输入的<code>model</code>如何结合<code>tf.data</code>，基础的使用方式在<a target="_blank" rel="noopener" href="https://www.tensorflow.org/alpha/tutorials/load_data/csv">这里</a>学习。</p>
+<span id="more"></span>
+<h1 id="起因"><a href="#起因" class="headerlink" title="起因"></a>起因</h1><p>大家都知道，<code>YOLO v3</code>是一个多输出的模型，在构建模型的时候，<code>label</code>需要多个，所以模型输入也是多个。如果输入是<code>numpy</code>数组，可以保存不同维度的数组，但是<code>tf.Tensor</code>只能保存相同尺寸的数组。</p>
 <p>然后在<code>model.fit</code>中使用<code>tf.data</code>,一般情况下是保证返回值对应<code>x、y</code>,但是现在<code>yolo</code>需要输入<code>[x1,x2,x3,x4],y</code>,这需要<code>tf.data</code>返回一个包含元组的列表。</p>
-<h1 id="解决方案">解决方案</h1>
-<p>首先我尝试在<code>map</code>中直接返回嵌套的列表，但是因为我使用的是<code>py_function</code>，返回值不能嵌套(暂时没有尝试纯tensorflow的函数能否返回嵌套列表)。还好找了一个好用的方法：<code>tf.data.dataset.zip</code>，可以将两个<code>dataset</code>对象制作成嵌套列表，所以只需要小改动程序如下，把样本与标签分开制作，然后再合并即可！：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">parser</span><span class="params">(lines)</span>:</span></span><br><span class="line">    image_data = []</span><br><span class="line">    box_data = []</span><br><span class="line">    <span class="keyword">for</span> line <span class="keyword">in</span> lines:</span><br><span class="line">        image, box = get_random_data(line.numpy().decode(), input_shape, random=<span class="keyword">True</span>)</span><br><span class="line">        image_data.append(image)</span><br><span class="line">        box_data.append(box)</span><br><span class="line"></span><br><span class="line">    image_data = np.array(image_data)</span><br><span class="line">    box_data = np.array(box_data)</span><br><span class="line"></span><br><span class="line">    y_true = [tf.convert_to_tensor(y, tf.float32) <span class="keyword">for</span> y <span class="keyword">in</span> preprocess_true_boxes(box_data, input_shape, anchors, num_classes)]</span><br><span class="line">    image_data = tf.convert_to_tensor(image_data, tf.float32)</span><br><span class="line">    <span class="keyword">return</span> (image_data, *y_true)</span><br><span class="line"></span><br><span class="line">x_set = (tf.data.Dataset.from_tensor_slices(annotation_lines).</span><br><span class="line">         apply(tf.data.experimental.shuffle_and_repeat(batch_size * <span class="number">300</span>, seed=<span class="number">66</span>)).</span><br><span class="line">         batch(batch_size, drop_remainder=<span class="keyword">True</span>).</span><br><span class="line">         map(<span class="keyword">lambda</span> lines: py_function(parser, [lines], [tf.float32] * (<span class="number">1</span> + len(anchors) // <span class="number">3</span>))))</span><br><span class="line">y_set = tf.data.Dataset.from_tensors(tf.zeros(batch_size, tf.float32)).repeat()</span><br><span class="line">dataset = tf.data.Dataset.zip((x_set, y_set))</span><br><span class="line"></span><br><span class="line">sample = next(iter(dataset))</span><br><span class="line">。</span><br><span class="line">。</span><br><span class="line">。</span><br><span class="line">。</span><br><span class="line">train_set = create_dataset(lines[:num_train], batch_size, input_shape, anchors, num_classes)</span><br><span class="line"></span><br><span class="line">model.fit(train_set,</span><br><span class="line">          epochs=<span class="number">20</span>,</span><br><span class="line">          steps_per_epoch=max(<span class="number">1</span>, num_train // batch_size),</span><br><span class="line">          callbacks=[logging, checkpoint])</span><br></pre></td></tr></table></figure>
+<h1 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h1><p>首先我尝试在<code>map</code>中直接返回嵌套的列表，但是因为我使用的是<code>py_function</code>，返回值不能嵌套(暂时没有尝试纯tensorflow的函数能否返回嵌套列表)。还好找了一个好用的方法：<code>tf.data.dataset.zip</code>，可以将两个<code>dataset</code>对象制作成嵌套列表，所以只需要小改动程序如下，把样本与标签分开制作，然后再合并即可！：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">parser</span>(<span class="params">lines</span>):</span></span><br><span class="line">    image_data = []</span><br><span class="line">    box_data = []</span><br><span class="line">    <span class="keyword">for</span> line <span class="keyword">in</span> lines:</span><br><span class="line">        image, box = get_random_data(line.numpy().decode(), input_shape, random=<span class="literal">True</span>)</span><br><span class="line">        image_data.append(image)</span><br><span class="line">        box_data.append(box)</span><br><span class="line"></span><br><span class="line">    image_data = np.array(image_data)</span><br><span class="line">    box_data = np.array(box_data)</span><br><span class="line"></span><br><span class="line">    y_true = [tf.convert_to_tensor(y, tf.float32) <span class="keyword">for</span> y <span class="keyword">in</span> preprocess_true_boxes(box_data, input_shape, anchors, num_classes)]</span><br><span class="line">    image_data = tf.convert_to_tensor(image_data, tf.float32)</span><br><span class="line">    <span class="keyword">return</span> (image_data, *y_true)</span><br><span class="line"></span><br><span class="line">x_set = (tf.data.Dataset.from_tensor_slices(annotation_lines).</span><br><span class="line">         apply(tf.data.experimental.shuffle_and_repeat(batch_size * <span class="number">300</span>, seed=<span class="number">66</span>)).</span><br><span class="line">         batch(batch_size, drop_remainder=<span class="literal">True</span>).</span><br><span class="line">         <span class="built_in">map</span>(<span class="keyword">lambda</span> lines: py_function(parser, [lines], [tf.float32] * (<span class="number">1</span> + <span class="built_in">len</span>(anchors) // <span class="number">3</span>))))</span><br><span class="line">y_set = tf.data.Dataset.from_tensors(tf.zeros(batch_size, tf.float32)).repeat()</span><br><span class="line">dataset = tf.data.Dataset.<span class="built_in">zip</span>((x_set, y_set))</span><br><span class="line"></span><br><span class="line">sample = <span class="built_in">next</span>(<span class="built_in">iter</span>(dataset))</span><br><span class="line">。</span><br><span class="line">。</span><br><span class="line">。</span><br><span class="line">。</span><br><span class="line">train_set = create_dataset(lines[:num_train], batch_size, input_shape, anchors, num_classes)</span><br><span class="line"></span><br><span class="line">model.fit(train_set,</span><br><span class="line">          epochs=<span class="number">20</span>,</span><br><span class="line">          steps_per_epoch=<span class="built_in">max</span>(<span class="number">1</span>, num_train // batch_size),</span><br><span class="line">          callbacks=[logging, checkpoint])</span><br></pre></td></tr></table></figure>
 
       
     </div>
@@ -106,24 +107,22 @@
       
         
         
-          <p>最近看了苏剑林的几篇<a href="https://kexue.fm/search/%E8%AE%A9Keras%E6%9B%B4%E9%85%B7%E4%B8%80%E4%BA%9B/" target="_blank" rel="noopener">博客</a>， 我忽然对<code>keras</code>不是那么抵触了,才发现之前认为<code>Keras</code>使用不灵活完全是因为的认识不够深入。所以我准备使用<code>Tensorflow 2.0</code>中的<code>tf.Keras</code>来 构建<code>Yolo v3</code>，在<code>tensorflow</code>中我们可以更加灵活的优化我们的数据输入管道，这次介绍一下多输入的<code>model</code>如何结合<code>tf.data</code>，基础的使用方式在<a href="https://www.tensorflow.org/alpha/tutorials/load_data/csv" target="_blank" rel="noopener">这里</a>学习。</p>
-<a id="more"></a>
-<h1 id="起因">起因</h1>
-<p>大家都知道，<code>YOLO v3</code>是一个多输出的模型，在构建模型的时候，<code>label</code>需要多个，所以模型输入也是多个。如果输入是<code>numpy</code>数组，可以保存不同维度的数组，但是<code>tf.Tensor</code>只能保存相同尺寸的数组。</p>
+          <p>最近看了苏剑林的几篇<a target="_blank" rel="noopener" href="https://kexue.fm/search/%E8%AE%A9Keras%E6%9B%B4%E9%85%B7%E4%B8%80%E4%BA%9B/">博客</a>，<br>我忽然对<code>keras</code>不是那么抵触了,才发现之前认为<code>Keras</code>使用不灵活完全是因为的认识不够深入。所以我准备使用<code>Tensorflow 2.0</code>中的<code>tf.Keras</code>来<br>构建<code>Yolo v3</code>，在<code>tensorflow</code>中我们可以更加灵活的优化我们的数据输入管道，这次介绍一下多输入的<code>model</code>如何结合<code>tf.data</code>，基础的使用方式在<a target="_blank" rel="noopener" href="https://www.tensorflow.org/alpha/tutorials/load_data/csv">这里</a>学习。</p>
+<span id="more"></span>
+<h1 id="起因"><a href="#起因" class="headerlink" title="起因"></a>起因</h1><p>大家都知道，<code>YOLO v3</code>是一个多输出的模型，在构建模型的时候，<code>label</code>需要多个，所以模型输入也是多个。如果输入是<code>numpy</code>数组，可以保存不同维度的数组，但是<code>tf.Tensor</code>只能保存相同尺寸的数组。</p>
 <p>然后在<code>model.fit</code>中使用<code>tf.data</code>,一般情况下是保证返回值对应<code>x、y</code>,但是现在<code>yolo</code>需要输入<code>[x1,x2,x3,x4],y</code>,这需要<code>tf.data</code>返回一个包含元组的列表。</p>
-<h1 id="解决方案">解决方案</h1>
-<p>首先我尝试在<code>map</code>中直接返回嵌套的列表，但是因为我使用的是<code>py_function</code>，返回值不能嵌套(暂时没有尝试纯tensorflow的函数能否返回嵌套列表)。还好找了一个好用的方法：<code>tf.data.dataset.zip</code>，可以将两个<code>dataset</code>对象制作成嵌套列表，所以只需要小改动程序如下，把样本与标签分开制作，然后再合并即可！：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">parser</span><span class="params">(lines)</span>:</span></span><br><span class="line">    image_data = []</span><br><span class="line">    box_data = []</span><br><span class="line">    <span class="keyword">for</span> line <span class="keyword">in</span> lines:</span><br><span class="line">        image, box = get_random_data(line.numpy().decode(), input_shape, random=<span class="keyword">True</span>)</span><br><span class="line">        image_data.append(image)</span><br><span class="line">        box_data.append(box)</span><br><span class="line"></span><br><span class="line">    image_data = np.array(image_data)</span><br><span class="line">    box_data = np.array(box_data)</span><br><span class="line"></span><br><span class="line">    y_true = [tf.convert_to_tensor(y, tf.float32) <span class="keyword">for</span> y <span class="keyword">in</span> preprocess_true_boxes(box_data, input_shape, anchors, num_classes)]</span><br><span class="line">    image_data = tf.convert_to_tensor(image_data, tf.float32)</span><br><span class="line">    <span class="keyword">return</span> (image_data, *y_true)</span><br><span class="line"></span><br><span class="line">x_set = (tf.data.Dataset.from_tensor_slices(annotation_lines).</span><br><span class="line">         apply(tf.data.experimental.shuffle_and_repeat(batch_size * <span class="number">300</span>, seed=<span class="number">66</span>)).</span><br><span class="line">         batch(batch_size, drop_remainder=<span class="keyword">True</span>).</span><br><span class="line">         map(<span class="keyword">lambda</span> lines: py_function(parser, [lines], [tf.float32] * (<span class="number">1</span> + len(anchors) // <span class="number">3</span>))))</span><br><span class="line">y_set = tf.data.Dataset.from_tensors(tf.zeros(batch_size, tf.float32)).repeat()</span><br><span class="line">dataset = tf.data.Dataset.zip((x_set, y_set))</span><br><span class="line"></span><br><span class="line">sample = next(iter(dataset))</span><br><span class="line">。</span><br><span class="line">。</span><br><span class="line">。</span><br><span class="line">。</span><br><span class="line">train_set = create_dataset(lines[:num_train], batch_size, input_shape, anchors, num_classes)</span><br><span class="line"></span><br><span class="line">model.fit(train_set,</span><br><span class="line">          epochs=<span class="number">20</span>,</span><br><span class="line">          steps_per_epoch=max(<span class="number">1</span>, num_train // batch_size),</span><br><span class="line">          callbacks=[logging, checkpoint])</span><br></pre></td></tr></table></figure>
+<h1 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h1><p>首先我尝试在<code>map</code>中直接返回嵌套的列表，但是因为我使用的是<code>py_function</code>，返回值不能嵌套(暂时没有尝试纯tensorflow的函数能否返回嵌套列表)。还好找了一个好用的方法：<code>tf.data.dataset.zip</code>，可以将两个<code>dataset</code>对象制作成嵌套列表，所以只需要小改动程序如下，把样本与标签分开制作，然后再合并即可！：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">parser</span>(<span class="params">lines</span>):</span></span><br><span class="line">    image_data = []</span><br><span class="line">    box_data = []</span><br><span class="line">    <span class="keyword">for</span> line <span class="keyword">in</span> lines:</span><br><span class="line">        image, box = get_random_data(line.numpy().decode(), input_shape, random=<span class="literal">True</span>)</span><br><span class="line">        image_data.append(image)</span><br><span class="line">        box_data.append(box)</span><br><span class="line"></span><br><span class="line">    image_data = np.array(image_data)</span><br><span class="line">    box_data = np.array(box_data)</span><br><span class="line"></span><br><span class="line">    y_true = [tf.convert_to_tensor(y, tf.float32) <span class="keyword">for</span> y <span class="keyword">in</span> preprocess_true_boxes(box_data, input_shape, anchors, num_classes)]</span><br><span class="line">    image_data = tf.convert_to_tensor(image_data, tf.float32)</span><br><span class="line">    <span class="keyword">return</span> (image_data, *y_true)</span><br><span class="line"></span><br><span class="line">x_set = (tf.data.Dataset.from_tensor_slices(annotation_lines).</span><br><span class="line">         apply(tf.data.experimental.shuffle_and_repeat(batch_size * <span class="number">300</span>, seed=<span class="number">66</span>)).</span><br><span class="line">         batch(batch_size, drop_remainder=<span class="literal">True</span>).</span><br><span class="line">         <span class="built_in">map</span>(<span class="keyword">lambda</span> lines: py_function(parser, [lines], [tf.float32] * (<span class="number">1</span> + <span class="built_in">len</span>(anchors) // <span class="number">3</span>))))</span><br><span class="line">y_set = tf.data.Dataset.from_tensors(tf.zeros(batch_size, tf.float32)).repeat()</span><br><span class="line">dataset = tf.data.Dataset.<span class="built_in">zip</span>((x_set, y_set))</span><br><span class="line"></span><br><span class="line">sample = <span class="built_in">next</span>(<span class="built_in">iter</span>(dataset))</span><br><span class="line">。</span><br><span class="line">。</span><br><span class="line">。</span><br><span class="line">。</span><br><span class="line">train_set = create_dataset(lines[:num_train], batch_size, input_shape, anchors, num_classes)</span><br><span class="line"></span><br><span class="line">model.fit(train_set,</span><br><span class="line">          epochs=<span class="number">20</span>,</span><br><span class="line">          steps_per_epoch=<span class="built_in">max</span>(<span class="number">1</span>, num_train // batch_size),</span><br><span class="line">          callbacks=[logging, checkpoint])</span><br></pre></td></tr></table></figure>
 
         
       
     </div> -->
     <footer class="article-footer">
-      <a data-url="https://zhen8838.github.io/2019/05/22/tf-data-in-keras/" data-id="ckn4kjt2d00g7gg6xr6cobuk1" class="article-share-link">Share</a>
+      <a data-url="https://zhen8838.github.io/2019/05/22/tf-data-in-keras/" data-id="cko1nvupp004cqtjghvhz98xw" class="article-share-link">Share</a>
       
       
       
-  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/keras/">keras</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/tensorflow/">tensorflow</a></li></ul>
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/keras/" rel="tag">keras</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/tensorflow/" rel="tag">tensorflow</a></li></ul>
 
     </footer>
   </div>
@@ -160,7 +159,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">分类</h3>
     <div class="widget">
-      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/学习/">学习</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/生活/">生活</a></li></ul>
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/%E5%AD%A6%E4%B9%A0/">学习</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E7%94%9F%E6%B4%BB/">生活</a></li></ul>
     </div>
   </div>
 
@@ -170,7 +169,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">标签云</h3>
     <div class="widget tagcloud">
-      <a href="/tags/C/" style="font-size: 12.67px;">C</a> <a href="/tags/C/" style="font-size: 12px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10px;">CNN</a> <a href="/tags/GAN/" style="font-size: 10.67px;">GAN</a> <a href="/tags/Linux/" style="font-size: 19.33px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.67px;">PCB</a> <a href="/tags/Qt/" style="font-size: 10px;">Qt</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/gan/" style="font-size: 10px;">gan</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 14.67px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 11.33px;">linux</a> <a href="/tags/mindspore/" style="font-size: 10.67px;">mindspore</a> <a href="/tags/mxnet/" style="font-size: 10px;">mxnet</a> <a href="/tags/pfld/" style="font-size: 10px;">pfld</a> <a href="/tags/python/" style="font-size: 18px;">python</a> <a href="/tags/pytorch/" style="font-size: 12px;">pytorch</a> <a href="/tags/retinaface/" style="font-size: 10px;">retinaface</a> <a href="/tags/stm32/" style="font-size: 11.33px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 20px;">tensorflow</a> <a href="/tags/vscode/" style="font-size: 10px;">vscode</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/yolo/" style="font-size: 12.67px;">yolo</a> <a href="/tags/二叉树/" style="font-size: 10px;">二叉树</a> <a href="/tags/作业/" style="font-size: 14px;">作业</a> <a href="/tags/元学习/" style="font-size: 10px;">元学习</a> <a href="/tags/半监督学习/" style="font-size: 15.33px;">半监督学习</a> <a href="/tags/博客/" style="font-size: 10px;">博客</a> <a href="/tags/图像处理/" style="font-size: 10px;">图像处理</a> <a href="/tags/堆栈/" style="font-size: 10.67px;">堆栈</a> <a href="/tags/声音信号处理/" style="font-size: 12px;">声音信号处理</a> <a href="/tags/小工具/" style="font-size: 12px;">小工具</a> <a href="/tags/嵌入式/" style="font-size: 15.33px;">嵌入式</a> <a href="/tags/总结/" style="font-size: 10px;">总结</a> <a href="/tags/排序/" style="font-size: 10px;">排序</a> <a href="/tags/数据结构/" style="font-size: 17.33px;">数据结构</a> <a href="/tags/机器学习/" style="font-size: 16.67px;">机器学习</a> <a href="/tags/树/" style="font-size: 12px;">树</a> <a href="/tags/树莓派/" style="font-size: 10px;">树莓派</a> <a href="/tags/概率论/" style="font-size: 18.67px;">概率论</a> <a href="/tags/深度学习/" style="font-size: 16px;">深度学习</a> <a href="/tags/神经网络/" style="font-size: 11.33px;">神经网络</a> <a href="/tags/神经网络量化/" style="font-size: 10px;">神经网络量化</a> <a href="/tags/算法/" style="font-size: 12.67px;">算法</a> <a href="/tags/统计学习方法/" style="font-size: 16px;">统计学习方法</a> <a href="/tags/聚类/" style="font-size: 12px;">聚类</a> <a href="/tags/蓝牙/" style="font-size: 13.33px;">蓝牙</a> <a href="/tags/调参/" style="font-size: 10px;">调参</a> <a href="/tags/资源汇总/" style="font-size: 10px;">资源汇总</a> <a href="/tags/路由/" style="font-size: 10px;">路由</a> <a href="/tags/链表/" style="font-size: 11.33px;">链表</a> <a href="/tags/错误记录/" style="font-size: 19.33px;">错误记录</a> <a href="/tags/风格迁移/" style="font-size: 10px;">风格迁移</a>
+      <a href="/tags/C/" style="font-size: 12.67px;">C</a> <a href="/tags/C/" style="font-size: 12px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10px;">CNN</a> <a href="/tags/GAN/" style="font-size: 10.67px;">GAN</a> <a href="/tags/Linux/" style="font-size: 19.33px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.67px;">PCB</a> <a href="/tags/Qt/" style="font-size: 10px;">Qt</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/c/" style="font-size: 10.67px;">c++</a> <a href="/tags/cmake/" style="font-size: 10px;">cmake</a> <a href="/tags/gan/" style="font-size: 10px;">gan</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 14.67px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 11.33px;">linux</a> <a href="/tags/mindspore/" style="font-size: 10.67px;">mindspore</a> <a href="/tags/mxnet/" style="font-size: 10px;">mxnet</a> <a href="/tags/pfld/" style="font-size: 10px;">pfld</a> <a href="/tags/python/" style="font-size: 18px;">python</a> <a href="/tags/pytorch/" style="font-size: 12px;">pytorch</a> <a href="/tags/retinaface/" style="font-size: 10px;">retinaface</a> <a href="/tags/stm32/" style="font-size: 11.33px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 20px;">tensorflow</a> <a href="/tags/vscode/" style="font-size: 10px;">vscode</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/yolo/" style="font-size: 12.67px;">yolo</a> <a href="/tags/%E4%BA%8C%E5%8F%89%E6%A0%91/" style="font-size: 10px;">二叉树</a> <a href="/tags/%E4%BD%9C%E4%B8%9A/" style="font-size: 14px;">作业</a> <a href="/tags/%E5%85%83%E5%AD%A6%E4%B9%A0/" style="font-size: 10px;">元学习</a> <a href="/tags/%E5%8D%8A%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0/" style="font-size: 15.33px;">半监督学习</a> <a href="/tags/%E5%8D%9A%E5%AE%A2/" style="font-size: 10px;">博客</a> <a href="/tags/%E5%9B%BE%E5%83%8F%E5%A4%84%E7%90%86/" style="font-size: 10px;">图像处理</a> <a href="/tags/%E5%A0%86%E6%A0%88/" style="font-size: 10.67px;">堆栈</a> <a href="/tags/%E5%A3%B0%E9%9F%B3%E4%BF%A1%E5%8F%B7%E5%A4%84%E7%90%86/" style="font-size: 12px;">声音信号处理</a> <a href="/tags/%E5%B0%8F%E5%B7%A5%E5%85%B7/" style="font-size: 12px;">小工具</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" style="font-size: 15.33px;">嵌入式</a> <a href="/tags/%E6%80%BB%E7%BB%93/" style="font-size: 10px;">总结</a> <a href="/tags/%E6%8E%92%E5%BA%8F/" style="font-size: 10px;">排序</a> <a href="/tags/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/" style="font-size: 17.33px;">数据结构</a> <a href="/tags/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/" style="font-size: 16.67px;">机器学习</a> <a href="/tags/%E6%A0%91/" style="font-size: 12px;">树</a> <a href="/tags/%E6%A0%91%E8%8E%93%E6%B4%BE/" style="font-size: 10px;">树莓派</a> <a href="/tags/%E6%A6%82%E7%8E%87%E8%AE%BA/" style="font-size: 18.67px;">概率论</a> <a href="/tags/%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0/" style="font-size: 16px;">深度学习</a> <a href="/tags/%E7%A5%9E%E7%BB%8F%E7%BD%91%E7%BB%9C/" style="font-size: 11.33px;">神经网络</a> <a href="/tags/%E7%A5%9E%E7%BB%8F%E7%BD%91%E7%BB%9C%E9%87%8F%E5%8C%96/" style="font-size: 10px;">神经网络量化</a> <a href="/tags/%E7%AE%97%E6%B3%95/" style="font-size: 12.67px;">算法</a> <a href="/tags/%E7%BB%9F%E8%AE%A1%E5%AD%A6%E4%B9%A0%E6%96%B9%E6%B3%95/" style="font-size: 16px;">统计学习方法</a> <a href="/tags/%E8%81%9A%E7%B1%BB/" style="font-size: 12px;">聚类</a> <a href="/tags/%E8%93%9D%E7%89%99/" style="font-size: 13.33px;">蓝牙</a> <a href="/tags/%E8%B0%83%E5%8F%82/" style="font-size: 10px;">调参</a> <a href="/tags/%E8%B5%84%E6%BA%90%E6%B1%87%E6%80%BB/" style="font-size: 10px;">资源汇总</a> <a href="/tags/%E8%B7%AF%E7%94%B1/" style="font-size: 10px;">路由</a> <a href="/tags/%E9%93%BE%E8%A1%A8/" style="font-size: 11.33px;">链表</a> <a href="/tags/%E9%94%99%E8%AF%AF%E8%AE%B0%E5%BD%95/" style="font-size: 19.33px;">错误记录</a> <a href="/tags/%E9%A3%8E%E6%A0%BC%E8%BF%81%E7%A7%BB/" style="font-size: 10px;">风格迁移</a>
     </div>
   </div>
 
@@ -192,23 +191,23 @@
       <ul>
         
           <li>
+            <a href="/2021/04/29/ncnn-learn/">ncnn学习</a>
+          </li>
+        
+          <li>
+            <a href="/2021/04/25/cpp-trick/">cpp挖坑&amp;爬坑</a>
+          </li>
+        
+          <li>
+            <a href="/2021/04/25/cmake-error/">cmake踩坑&amp;爬坑</a>
+          </li>
+        
+          <li>
             <a href="/2021/04/05/bin-search-template/">二分查找-统一框架</a>
           </li>
         
           <li>
             <a href="/2021/03/27/quant-1/">神经网络量化-基本原理</a>
-          </li>
-        
-          <li>
-            <a href="/2021/01/22/leetcode/">leetcode刷题总结</a>
-          </li>
-        
-          <li>
-            <a href="/2020/11/27/param-free-nsf/">Parameter-Free Style Projection for Arbitrary Style Transfer</a>
-          </li>
-        
-          <li>
-            <a href="/2020/11/15/pytorch-feature-extract/">pytorch从任意层截断并提取数据</a>
           </li>
         
       </ul>
@@ -243,8 +242,13 @@
 <script src="//cdn.staticfile.org/jquery/2.0.3/jquery.min.js"></script>
 
 
-  <link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
-  <script src="/fancybox/jquery.fancybox.pack.js"></script>
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
+
+  
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+
+
 
 
 <script src="/js/script.js"></script>
@@ -252,21 +256,7 @@
 
 
 
-  </div>
-<script type="text/x-mathjax-config">
-    MathJax.Hub.Config({
-        tex2jax: {
-            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
-            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
-            processEscapes: true
-        }
-    });
-    MathJax.Hub.Queue(function() {
-        var all = MathJax.Hub.getAllJax();
-        for (var i = 0; i < all.length; ++i)
-            all[i].SourceElement().parentNode.className += ' has-jax';
-    });
-</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+
+  </div><!-- hexo-inject:begin --><!-- hexo-inject:end -->
 </body>
 </html>
