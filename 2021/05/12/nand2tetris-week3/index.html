@@ -16,8 +16,10 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://zhen8838.github.io/2021/05/12/nand2tetris-week3/time.png">
 <meta property="og:image" content="https://zhen8838.github.io/2021/05/12/nand2tetris-week3/1bitregister.png">
+<meta property="og:image" content="https://zhen8838.github.io/2021/05/12/nand2tetris-week3/multi-bit-register.png">
+<meta property="og:image" content="https://zhen8838.github.io/2021/05/12/nand2tetris-week3/sample_ram.png">
 <meta property="article:published_time" content="2021-05-11T22:16:32.000Z">
-<meta property="article:modified_time" content="2021-05-11T15:56:38.120Z">
+<meta property="article:modified_time" content="2021-05-16T13:48:19.889Z">
 <meta property="article:author" content="NAke">
 <meta property="article:tag" content="计算机体系结构">
 <meta name="twitter:card" content="summary">
@@ -111,8 +113,29 @@
 \end{aligned}
 \]</span></p>
 <h1 id="flip-flop">Flip Flop</h1>
-<p>我们需要一个硬件去记录上一个时间步的状态。这个硬件被称为D Flip Flop。然后需要利用DFF来构建出一个1bit的寄存器:</p>
+<p>我们需要一个硬件去记录上一个时间步的状态。这个硬件被称为D Flip Flop,DFF的公式为<code>out[t]=in[t-1]</code>，他仅仅就是单纯的保留状态，然后需要利用DFF来构建出一个1bit的寄存器:</p>
 <p><img src="/2021/05/12/nand2tetris-week3/1bitregister.png"></p>
+<p>Bit的逻辑也比较简单，通过上一时刻的<code>load</code>与<code>in</code>的状态来决定当前时刻的输出： <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (<span class="built_in">load</span>(t<span class="number">-1</span>))&#123;</span><br><span class="line">    out = <span class="built_in">in</span>(t<span class="number">-1</span>);</span><br><span class="line">&#125;<span class="keyword">else</span>&#123;</span><br><span class="line">    out = <span class="built_in">out</span>(t<span class="number">-1</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure> 不过这门课程是没有教如何从<code>NAND</code>去构建<code>D Flip Flop</code>门。</p>
+<h1 id="memory-units">Memory Units</h1>
+<p>这一课主要介绍的RAM的实现。</p>
+<p>首先将1bit寄存器进行泛化可以得到多位的寄存器，可以把多个bit看作一个word，此课程主要讨论16bit的cpu构建。</p>
+<p><img src="/2021/05/12/nand2tetris-week3/multi-bit-register.png"></p>
+<ol type="1">
+<li>寄存器的读取</li>
+</ol>
+<p>读取就直接检查当前时间节点的输出。</p>
+<ol start="2" type="1">
+<li>寄存器的写入</li>
+</ol>
+<figure class="highlight vhdl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">set <span class="keyword">in</span> = v;</span><br><span class="line">set load = <span class="number">1</span>;</span><br></pre></td></tr></table></figure>
+<p>接下来寄存器内部就存储了v，然后下一个周期的输出即为v。</p>
+<ol start="3" type="1">
+<li>RAM的读取</li>
+</ol>
+<p>RAM就是由一系列的寄存器构成的，通过一个address去索引对应位置的寄存器，然后进行寄存器读写操作。</p>
+<p><img src="/2021/05/12/nand2tetris-week3/sample_ram.png"></p>
+<h1 id="counters">Counters</h1>
+<p>Counters就是一种硬件，他支持重置为0，自增以及随机设置值。</p>
 
       
     </div>
@@ -135,8 +158,29 @@
 \end{aligned}
 \]</span></p>
 <h1 id="flip-flop">Flip Flop</h1>
-<p>我们需要一个硬件去记录上一个时间步的状态。这个硬件被称为D Flip Flop。然后需要利用DFF来构建出一个1bit的寄存器:</p>
+<p>我们需要一个硬件去记录上一个时间步的状态。这个硬件被称为D Flip Flop,DFF的公式为<code>out[t]=in[t-1]</code>，他仅仅就是单纯的保留状态，然后需要利用DFF来构建出一个1bit的寄存器:</p>
 <p><img src="/2021/05/12/nand2tetris-week3/1bitregister.png"></p>
+<p>Bit的逻辑也比较简单，通过上一时刻的<code>load</code>与<code>in</code>的状态来决定当前时刻的输出： <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (<span class="built_in">load</span>(t<span class="number">-1</span>))&#123;</span><br><span class="line">    out = <span class="built_in">in</span>(t<span class="number">-1</span>);</span><br><span class="line">&#125;<span class="keyword">else</span>&#123;</span><br><span class="line">    out = <span class="built_in">out</span>(t<span class="number">-1</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure> 不过这门课程是没有教如何从<code>NAND</code>去构建<code>D Flip Flop</code>门。</p>
+<h1 id="memory-units">Memory Units</h1>
+<p>这一课主要介绍的RAM的实现。</p>
+<p>首先将1bit寄存器进行泛化可以得到多位的寄存器，可以把多个bit看作一个word，此课程主要讨论16bit的cpu构建。</p>
+<p><img src="/2021/05/12/nand2tetris-week3/multi-bit-register.png"></p>
+<ol type="1">
+<li>寄存器的读取</li>
+</ol>
+<p>读取就直接检查当前时间节点的输出。</p>
+<ol start="2" type="1">
+<li>寄存器的写入</li>
+</ol>
+<figure class="highlight vhdl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">set <span class="keyword">in</span> = v;</span><br><span class="line">set load = <span class="number">1</span>;</span><br></pre></td></tr></table></figure>
+<p>接下来寄存器内部就存储了v，然后下一个周期的输出即为v。</p>
+<ol start="3" type="1">
+<li>RAM的读取</li>
+</ol>
+<p>RAM就是由一系列的寄存器构成的，通过一个address去索引对应位置的寄存器，然后进行寄存器读写操作。</p>
+<p><img src="/2021/05/12/nand2tetris-week3/sample_ram.png"></p>
+<h1 id="counters">Counters</h1>
+<p>Counters就是一种硬件，他支持重置为0，自增以及随机设置值。</p>
 
         
       
@@ -153,6 +197,15 @@
   
     
 <nav id="article-nav">
+  
+    <a href="/2021/05/18/docker-remote/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          vscode连接远程服务器中docker
+        
+      </div>
+    </a>
   
   
     <a href="/2021/05/07/nand2tetris-week2/" id="article-nav-older" class="article-nav-link-wrap">
@@ -206,6 +259,10 @@
       <ul>
         
           <li>
+            <a href="/2021/05/18/docker-remote/">vscode连接远程服务器中docker</a>
+          </li>
+        
+          <li>
             <a href="/2021/05/12/nand2tetris-week3/">Nand2Tetris week3</a>
           </li>
         
@@ -219,10 +276,6 @@
         
           <li>
             <a href="/2021/04/29/ncnn-learn/">ncnn学习</a>
-          </li>
-        
-          <li>
-            <a href="/2021/04/25/cpp-trick/">cpp挖坑&amp;爬坑</a>
           </li>
         
       </ul>
