@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><meta charset="utf-8">
+  
+
+  
+  <title>Halide笔记 | </title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="记录一下看halide过程中的内容、问题。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Halide笔记">
+<meta property="og:url" content="https://zhen8838.github.io/2021/06/01/halide-note/index.html">
+<meta property="og:site_name">
+<meta property="og:description" content="记录一下看halide过程中的内容、问题。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://zhen8838.github.io/2021/06/01/halide-note/lesson_05_row_major.gif">
+<meta property="og:image" content="https://zhen8838.github.io/2021/06/01/halide-note/lesson_05_col_major.gif">
+<meta property="og:image" content="https://zhen8838.github.io/2021/06/01/halide-note/lesson_05_tiled.gif">
+<meta property="og:image" content="https://zhen8838.github.io/2021/06/01/halide-note/lesson_05_vectors.gif">
+<meta property="og:image" content="https://zhen8838.github.io/2021/06/01/halide-note/lesson_05_split_7_by_3.gif">
+<meta property="og:image" content="https://zhen8838.github.io/2021/06/01/halide-note/lesson_05_parallel_tiles.gif">
+<meta property="article:published_time" content="2021-06-01T10:51:02.000Z">
+<meta property="article:modified_time" content="2021-06-04T06:40:12.047Z">
+<meta property="article:author" content="NAke">
+<meta property="article:tag" content="优化">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://zhen8838.github.io/2021/06/01/halide-note/lesson_05_row_major.gif">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.lug.ustc.edu.cn/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+    <!-- <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css"> -->
+    <!-- <link href="//fonts.useso.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css"> -->
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+<meta name="generator" content="Hexo 5.4.0"><!-- hexo-inject:begin --><!-- hexo-inject:end --></head>
+
+<body>
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo"></a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+          <a class="main-nav-link" href="/about">about</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+        <a id="nav-search-btn" class="nav-icon" title="搜索"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="https://zhen8838.github.io"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-halide-note" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2021/06/01/halide-note/" class="article-date">
+  <time datetime="2021-06-01T10:51:02.000Z" itemprop="datePublished">2021-06-01</time>
+</a>
+    
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/%E5%AD%A6%E4%B9%A0/">学习</a>
+  </div>
+
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      Halide笔记
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>记录一下看halide过程中的内容、问题。</p>
+<span id="more"></span>
+<h1 id="scheduling方法">scheduling方法</h1>
+<h2 id="example">example</h2>
+<p>假设函数如下，默认将第一个元素放置到循环的最内层，也就是说如果是bchw的输入，在构造函数的时候最好应该构造为<code>fuc(w,h,c,b)</code>的形式（autokernel中就是这么用的）。 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">gradient</span>(x, y) = x + y;</span><br></pre></td></tr></table></figure> <img src="/2021/06/01/halide-note/lesson_05_row_major.gif"> <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> y:</span><br><span class="line">  <span class="keyword">for</span> x:</span><br><span class="line">    gradient(...) = ...</span><br></pre></td></tr></table></figure></p>
+<h2 id="reorder">reorder</h2>
+<p>调整循环顺序,先计算行方向 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gradient.<span class="built_in">reorder</span>(y, x);</span><br></pre></td></tr></table></figure> <img src="/2021/06/01/halide-note/lesson_05_col_major.gif"> <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> x:</span><br><span class="line">  <span class="keyword">for</span> y:</span><br><span class="line">    gradient_col_major(...) = ...</span><br></pre></td></tr></table></figure></p>
+<h2 id="split">split</h2>
+<p>把x分为内外循环，虽然实际上不会有什么改变，但是可以为别的优化方法提供基础。 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Var x_outer, x_inner;</span><br><span class="line">gradient.<span class="built_in">split</span>(x, x_outer, x_inner, <span class="number">2</span>);</span><br></pre></td></tr></table></figure></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> y:</span><br><span class="line">  <span class="keyword">for</span> x.v0:</span><br><span class="line">    <span class="keyword">for</span> x.v1 <span class="keyword">in</span> [0, 1]:</span><br><span class="line">      gradient_split(...) = ...</span><br></pre></td></tr></table></figure>
+<h2 id="fuse">fuse</h2>
+<p>把两层循环合并，与split正好相反 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Var fused;</span><br><span class="line">gradient.<span class="built_in">fuse</span>(x, y, fused);</span><br></pre></td></tr></table></figure></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> x.v2:</span><br><span class="line">  gradient_fused(...) = ...</span><br></pre></td></tr></table></figure>
+<h2 id="tiling">tiling</h2>
+<p>通过以上介绍的方式对运算顺序进行组合，我们可以得到一个比较典型的优化策略tiling,就是把整块的运算拆分为多个小块，然后可以通过层面的并行去同步完成，整体的计算。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Var x_outer, x_inner, y_outer, y_inner;</span><br><span class="line">gradient.<span class="built_in">split</span>(x, x_outer, x_inner, <span class="number">4</span>);</span><br><span class="line">gradient.<span class="built_in">split</span>(y, y_outer, y_inner, <span class="number">4</span>);</span><br><span class="line">gradient.<span class="built_in">reorder</span>(x_inner, y_inner, x_outer, y_outer);</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/06/01/halide-note/lesson_05_tiled.gif"> <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> y.v5:</span><br><span class="line">  <span class="keyword">for</span> x.v3:</span><br><span class="line">    <span class="keyword">for</span> y.v6 <span class="keyword">in</span> [0, 3]:</span><br><span class="line">      <span class="keyword">for</span> x.v4 <span class="keyword">in</span> [0, 3]:</span><br><span class="line">        gradient_tiled(...) = ...</span><br></pre></td></tr></table></figure></p>
+<h2 id="vectorized">vectorized</h2>
+<p>我们可以利用一些单指令多数据并行去同步处理多个数据，此时把数据进行向量化后加载就可以得到相当的大的加速。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Var x_outer, x_inner;</span><br><span class="line">gradient.<span class="built_in">split</span>(x, x_outer, x_inner, <span class="number">4</span>);</span><br><span class="line">gradient.<span class="built_in">vectorize</span>(x_inner);</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/06/01/halide-note/lesson_05_vectors.gif"></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> y:</span><br><span class="line">  <span class="keyword">for</span> x.v7:</span><br><span class="line">    vectorized x.v8 <span class="keyword">in</span> [0, 3]:</span><br><span class="line">      gradient_in_vectors(...) = ...</span><br></pre></td></tr></table></figure>
+<h2 id="unrolling">unrolling</h2>
+<p>循环展开，如果多个像素共享同个数据，这个可以把循环展开避免重复计算。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Var x_outer, x_inner;</span><br><span class="line">gradient.<span class="built_in">split</span>(x, x_outer, x_inner, <span class="number">2</span>);</span><br><span class="line">gradient.<span class="built_in">unroll</span>(x_inner);</span><br></pre></td></tr></table></figure>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> y:</span><br><span class="line">  <span class="keyword">for</span> x.v9:</span><br><span class="line">    unrolled x.v10 <span class="keyword">in</span> [0, 1]:</span><br><span class="line">      gradient_unroll(...) = ...</span><br></pre></td></tr></table></figure>
+<h2 id="splitting-by-factor">splitting by factor</h2>
+<p>如果按比例进行split，会出现一个问题，就是不满足比例的位置被重新计算了，比如7按3分割，那么后面就有两个元素被重复计算了。 <img src="/2021/06/01/halide-note/lesson_05_split_7_by_3.gif"></p>
+<p>这里是实际执行是会出现问题地方，正确的循环是执行2又1次，但是halide默认执行的是： 外循环 = 0 -&gt; (x_extent + factor - 1)/factor = (1+3-1) / 3 = 0 -&gt; 3 次 内循环 3次</p>
+<p>可以看到第三次外循环时对应的值被重复计算了，这个就非常蛋疼了。 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">Store gradient_split_7x2.0(0, 0) = 0</span><br><span class="line">Store gradient_split_7x2.0(1, 0) = 1</span><br><span class="line">Store gradient_split_7x2.0(2, 0) = 2</span><br><span class="line">Store gradient_split_7x2.0(3, 0) = 3</span><br><span class="line">Store gradient_split_7x2.0(4, 0) = 4</span><br><span class="line">Store gradient_split_7x2.0(5, 0) = 5</span><br><span class="line">Store gradient_split_7x2.0(4, 0) = 4</span><br><span class="line">Store gradient_split_7x2.0(5, 0) = 5</span><br><span class="line">Store gradient_split_7x2.0(6, 0) = 6</span><br></pre></td></tr></table></figure></p>
+<h2 id="fusing-tiling-parallelizing.">Fusing + tiling + parallelizing.</h2>
+<p>融合多个优化策略，首先把图像8x8的图像tiling到2x2个4x4，然后把2x2融合为4，相当于4个4x4，再并行4个线程计算 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Var x_outer, y_outer, x_inner, y_inner, tile_index;</span><br><span class="line">gradient.<span class="built_in">tile</span>(x, y, x_outer, y_outer, x_inner, y_inner, <span class="number">4</span>, <span class="number">4</span>);</span><br><span class="line">gradient.<span class="built_in">fuse</span>(x_outer, y_outer, tile_index);</span><br><span class="line">gradient.<span class="built_in">parallel</span>(tile_index);</span><br></pre></td></tr></table></figure></p>
+<p><img src="/2021/06/01/halide-note/lesson_05_parallel_tiles.gif"></p>
+<h2 id="融合多种trick">融合多种trick</h2>
+<p>首先64x64作为tiling <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Var x_outer, y_outer, x_inner, y_inner, tile_index;</span><br><span class="line">gradient_fast</span><br><span class="line">    .<span class="built_in">tile</span>(x, y, x_outer, y_outer, x_inner, y_inner, <span class="number">64</span>, <span class="number">64</span>)</span><br><span class="line">    .<span class="built_in">fuse</span>(x_outer, y_outer, tile_index)</span><br><span class="line">    .<span class="built_in">parallel</span>(tile_index);</span><br></pre></td></tr></table></figure></p>
+<p>然后对每个内部的再tiling到4x2，然后每个x的循环4直接作为向量化计算，y的循环2直接展开。 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Var x_inner_outer, y_inner_outer, x_vectors, y_pairs;</span><br><span class="line">gradient_fast</span><br><span class="line">    .<span class="built_in">tile</span>(x_inner, y_inner, x_inner_outer, y_inner_outer, x_vectors, y_pairs, <span class="number">4</span>, <span class="number">2</span>)</span><br><span class="line">    .<span class="built_in">vectorize</span>(x_vectors)</span><br><span class="line">    .<span class="built_in">unroll</span>(y_pairs);</span><br></pre></td></tr></table></figure> 虽然再tiling到64x64的时候会出现一些重复计算的问题，但是总体来说加速还是很明显的。</p>
+<h1 id="generator代码生成">generator代码生成</h1>
+<h2 id="生成不依赖halidelib的代码">生成不依赖halidelib的代码</h2>
+<p>生成代码部分可以去看他的教程，我们可以在生成代码时加上一些参数: <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">no_runtime,  &#x2F;&#x2F;&#x2F;&lt; Do not include a copy of the Halide runtime in any generated object file or assembly</span><br><span class="line">no_asserts,       &#x2F;&#x2F;&#x2F;&lt; Disable all runtime checks, for slightly tighter code.</span><br></pre></td></tr></table></figure></p>
+<p>生成c代码和头文件之后，我们一般添加头文件<code>HalideBuffer.H</code>就够了。如果生成的是no_runtime的话，生成的c代码里面是不带runtime的，所以我们需要手动添加头文件<code>HalideRuntime.h</code>。</p>
+<h2 id="替换数据类型">替换数据类型</h2>
+<p>生成代码的时候我们只能选择halide内置类型，但是我们实际调用的时候要用自己的类型时候就比较麻烦了，折腾了半天，我才发现可以自定义内置数据，他是构造buffer的时候去检查类型，如果没有对应的类型就直接报错了，但是我们把自己类型注册进去就好了。 下面这个例子就是halide自带的<code>bfloat16</code>类型的组成过程。 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">template</span>&lt;&gt;</span><br><span class="line">HALIDE_ALWAYS_INLINE <span class="keyword">halide_type_t</span> halide_type_of&lt;Halide::<span class="keyword">bfloat16_t</span>&gt;() &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="built_in">halide_type_t</span>(halide_type_bfloat, <span class="number">16</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+
+      
+    </div>
+    <!-- <div class="article-entry" itemprop="articleBody">
+      
+        
+        
+          <p>记录一下看halide过程中的内容、问题。</p>
+<span id="more"></span>
+<h1 id="scheduling方法">scheduling方法</h1>
+<h2 id="example">example</h2>
+<p>假设函数如下，默认将第一个元素放置到循环的最内层，也就是说如果是bchw的输入，在构造函数的时候最好应该构造为<code>fuc(w,h,c,b)</code>的形式（autokernel中就是这么用的）。 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">gradient</span>(x, y) = x + y;</span><br></pre></td></tr></table></figure> <img src="/2021/06/01/halide-note/lesson_05_row_major.gif"> <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> y:</span><br><span class="line">  <span class="keyword">for</span> x:</span><br><span class="line">    gradient(...) = ...</span><br></pre></td></tr></table></figure></p>
+<h2 id="reorder">reorder</h2>
+<p>调整循环顺序,先计算行方向 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gradient.<span class="built_in">reorder</span>(y, x);</span><br></pre></td></tr></table></figure> <img src="/2021/06/01/halide-note/lesson_05_col_major.gif"> <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> x:</span><br><span class="line">  <span class="keyword">for</span> y:</span><br><span class="line">    gradient_col_major(...) = ...</span><br></pre></td></tr></table></figure></p>
+<h2 id="split">split</h2>
+<p>把x分为内外循环，虽然实际上不会有什么改变，但是可以为别的优化方法提供基础。 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Var x_outer, x_inner;</span><br><span class="line">gradient.<span class="built_in">split</span>(x, x_outer, x_inner, <span class="number">2</span>);</span><br></pre></td></tr></table></figure></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> y:</span><br><span class="line">  <span class="keyword">for</span> x.v0:</span><br><span class="line">    <span class="keyword">for</span> x.v1 <span class="keyword">in</span> [0, 1]:</span><br><span class="line">      gradient_split(...) = ...</span><br></pre></td></tr></table></figure>
+<h2 id="fuse">fuse</h2>
+<p>把两层循环合并，与split正好相反 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Var fused;</span><br><span class="line">gradient.<span class="built_in">fuse</span>(x, y, fused);</span><br></pre></td></tr></table></figure></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> x.v2:</span><br><span class="line">  gradient_fused(...) = ...</span><br></pre></td></tr></table></figure>
+<h2 id="tiling">tiling</h2>
+<p>通过以上介绍的方式对运算顺序进行组合，我们可以得到一个比较典型的优化策略tiling,就是把整块的运算拆分为多个小块，然后可以通过层面的并行去同步完成，整体的计算。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Var x_outer, x_inner, y_outer, y_inner;</span><br><span class="line">gradient.<span class="built_in">split</span>(x, x_outer, x_inner, <span class="number">4</span>);</span><br><span class="line">gradient.<span class="built_in">split</span>(y, y_outer, y_inner, <span class="number">4</span>);</span><br><span class="line">gradient.<span class="built_in">reorder</span>(x_inner, y_inner, x_outer, y_outer);</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/06/01/halide-note/lesson_05_tiled.gif"> <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> y.v5:</span><br><span class="line">  <span class="keyword">for</span> x.v3:</span><br><span class="line">    <span class="keyword">for</span> y.v6 <span class="keyword">in</span> [0, 3]:</span><br><span class="line">      <span class="keyword">for</span> x.v4 <span class="keyword">in</span> [0, 3]:</span><br><span class="line">        gradient_tiled(...) = ...</span><br></pre></td></tr></table></figure></p>
+<h2 id="vectorized">vectorized</h2>
+<p>我们可以利用一些单指令多数据并行去同步处理多个数据，此时把数据进行向量化后加载就可以得到相当的大的加速。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Var x_outer, x_inner;</span><br><span class="line">gradient.<span class="built_in">split</span>(x, x_outer, x_inner, <span class="number">4</span>);</span><br><span class="line">gradient.<span class="built_in">vectorize</span>(x_inner);</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/06/01/halide-note/lesson_05_vectors.gif"></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> y:</span><br><span class="line">  <span class="keyword">for</span> x.v7:</span><br><span class="line">    vectorized x.v8 <span class="keyword">in</span> [0, 3]:</span><br><span class="line">      gradient_in_vectors(...) = ...</span><br></pre></td></tr></table></figure>
+<h2 id="unrolling">unrolling</h2>
+<p>循环展开，如果多个像素共享同个数据，这个可以把循环展开避免重复计算。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Var x_outer, x_inner;</span><br><span class="line">gradient.<span class="built_in">split</span>(x, x_outer, x_inner, <span class="number">2</span>);</span><br><span class="line">gradient.<span class="built_in">unroll</span>(x_inner);</span><br></pre></td></tr></table></figure>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> y:</span><br><span class="line">  <span class="keyword">for</span> x.v9:</span><br><span class="line">    unrolled x.v10 <span class="keyword">in</span> [0, 1]:</span><br><span class="line">      gradient_unroll(...) = ...</span><br></pre></td></tr></table></figure>
+<h2 id="splitting-by-factor">splitting by factor</h2>
+<p>如果按比例进行split，会出现一个问题，就是不满足比例的位置被重新计算了，比如7按3分割，那么后面就有两个元素被重复计算了。 <img src="/2021/06/01/halide-note/lesson_05_split_7_by_3.gif"></p>
+<p>这里是实际执行是会出现问题地方，正确的循环是执行2又1次，但是halide默认执行的是： 外循环 = 0 -&gt; (x_extent + factor - 1)/factor = (1+3-1) / 3 = 0 -&gt; 3 次 内循环 3次</p>
+<p>可以看到第三次外循环时对应的值被重复计算了，这个就非常蛋疼了。 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">Store gradient_split_7x2.0(0, 0) = 0</span><br><span class="line">Store gradient_split_7x2.0(1, 0) = 1</span><br><span class="line">Store gradient_split_7x2.0(2, 0) = 2</span><br><span class="line">Store gradient_split_7x2.0(3, 0) = 3</span><br><span class="line">Store gradient_split_7x2.0(4, 0) = 4</span><br><span class="line">Store gradient_split_7x2.0(5, 0) = 5</span><br><span class="line">Store gradient_split_7x2.0(4, 0) = 4</span><br><span class="line">Store gradient_split_7x2.0(5, 0) = 5</span><br><span class="line">Store gradient_split_7x2.0(6, 0) = 6</span><br></pre></td></tr></table></figure></p>
+<h2 id="fusing-tiling-parallelizing.">Fusing + tiling + parallelizing.</h2>
+<p>融合多个优化策略，首先把图像8x8的图像tiling到2x2个4x4，然后把2x2融合为4，相当于4个4x4，再并行4个线程计算 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Var x_outer, y_outer, x_inner, y_inner, tile_index;</span><br><span class="line">gradient.<span class="built_in">tile</span>(x, y, x_outer, y_outer, x_inner, y_inner, <span class="number">4</span>, <span class="number">4</span>);</span><br><span class="line">gradient.<span class="built_in">fuse</span>(x_outer, y_outer, tile_index);</span><br><span class="line">gradient.<span class="built_in">parallel</span>(tile_index);</span><br></pre></td></tr></table></figure></p>
+<p><img src="/2021/06/01/halide-note/lesson_05_parallel_tiles.gif"></p>
+<h2 id="融合多种trick">融合多种trick</h2>
+<p>首先64x64作为tiling <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Var x_outer, y_outer, x_inner, y_inner, tile_index;</span><br><span class="line">gradient_fast</span><br><span class="line">    .<span class="built_in">tile</span>(x, y, x_outer, y_outer, x_inner, y_inner, <span class="number">64</span>, <span class="number">64</span>)</span><br><span class="line">    .<span class="built_in">fuse</span>(x_outer, y_outer, tile_index)</span><br><span class="line">    .<span class="built_in">parallel</span>(tile_index);</span><br></pre></td></tr></table></figure></p>
+<p>然后对每个内部的再tiling到4x2，然后每个x的循环4直接作为向量化计算，y的循环2直接展开。 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Var x_inner_outer, y_inner_outer, x_vectors, y_pairs;</span><br><span class="line">gradient_fast</span><br><span class="line">    .<span class="built_in">tile</span>(x_inner, y_inner, x_inner_outer, y_inner_outer, x_vectors, y_pairs, <span class="number">4</span>, <span class="number">2</span>)</span><br><span class="line">    .<span class="built_in">vectorize</span>(x_vectors)</span><br><span class="line">    .<span class="built_in">unroll</span>(y_pairs);</span><br></pre></td></tr></table></figure> 虽然再tiling到64x64的时候会出现一些重复计算的问题，但是总体来说加速还是很明显的。</p>
+<h1 id="generator代码生成">generator代码生成</h1>
+<h2 id="生成不依赖halidelib的代码">生成不依赖halidelib的代码</h2>
+<p>生成代码部分可以去看他的教程，我们可以在生成代码时加上一些参数: <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">no_runtime,  &#x2F;&#x2F;&#x2F;&lt; Do not include a copy of the Halide runtime in any generated object file or assembly</span><br><span class="line">no_asserts,       &#x2F;&#x2F;&#x2F;&lt; Disable all runtime checks, for slightly tighter code.</span><br></pre></td></tr></table></figure></p>
+<p>生成c代码和头文件之后，我们一般添加头文件<code>HalideBuffer.H</code>就够了。如果生成的是no_runtime的话，生成的c代码里面是不带runtime的，所以我们需要手动添加头文件<code>HalideRuntime.h</code>。</p>
+<h2 id="替换数据类型">替换数据类型</h2>
+<p>生成代码的时候我们只能选择halide内置类型，但是我们实际调用的时候要用自己的类型时候就比较麻烦了，折腾了半天，我才发现可以自定义内置数据，他是构造buffer的时候去检查类型，如果没有对应的类型就直接报错了，但是我们把自己类型注册进去就好了。 下面这个例子就是halide自带的<code>bfloat16</code>类型的组成过程。 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">template</span>&lt;&gt;</span><br><span class="line">HALIDE_ALWAYS_INLINE <span class="keyword">halide_type_t</span> halide_type_of&lt;Halide::<span class="keyword">bfloat16_t</span>&gt;() &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="built_in">halide_type_t</span>(halide_type_bfloat, <span class="number">16</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+
+        
+      
+    </div> -->
+    <footer class="article-footer">
+      <a data-url="https://zhen8838.github.io/2021/06/01/halide-note/" data-id="ckphykgan0000i8fyekph4fhf" class="article-share-link">Share</a>
+      
+      
+      
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E4%BC%98%E5%8C%96/" rel="tag">优化</a></li></ul>
+
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+  
+    <a href="/2021/05/24/nand2tetris-week4/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">Nand2Tetris week4</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">分类</h3>
+    <div class="widget">
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/%E5%AD%A6%E4%B9%A0/">学习</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E7%94%9F%E6%B4%BB/">生活</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">标签云</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/C/" style="font-size: 12.67px;">C</a> <a href="/tags/C/" style="font-size: 12px;">C++</a> <a href="/tags/CMake/" style="font-size: 10px;">CMake</a> <a href="/tags/CNN/" style="font-size: 10px;">CNN</a> <a href="/tags/GAN/" style="font-size: 10.67px;">GAN</a> <a href="/tags/Linux/" style="font-size: 19.33px;">Linux</a> <a href="/tags/Matlab/" style="font-size: 12px;">Matlab</a> <a href="/tags/NB-IOT/" style="font-size: 10px;">NB-IOT</a> <a href="/tags/OJ/" style="font-size: 12px;">OJ</a> <a href="/tags/PCB/" style="font-size: 10.67px;">PCB</a> <a href="/tags/Qt/" style="font-size: 10px;">Qt</a> <a href="/tags/c/" style="font-size: 10px;">c</a> <a href="/tags/c/" style="font-size: 10.67px;">c++</a> <a href="/tags/cmake/" style="font-size: 10px;">cmake</a> <a href="/tags/gan/" style="font-size: 10px;">gan</a> <a href="/tags/git/" style="font-size: 10px;">git</a> <a href="/tags/k210/" style="font-size: 14.67px;">k210</a> <a href="/tags/keras/" style="font-size: 10px;">keras</a> <a href="/tags/linux/" style="font-size: 11.33px;">linux</a> <a href="/tags/mindspore/" style="font-size: 10.67px;">mindspore</a> <a href="/tags/mxnet/" style="font-size: 10px;">mxnet</a> <a href="/tags/pfld/" style="font-size: 10px;">pfld</a> <a href="/tags/python/" style="font-size: 18px;">python</a> <a href="/tags/pytorch/" style="font-size: 12px;">pytorch</a> <a href="/tags/retinaface/" style="font-size: 10px;">retinaface</a> <a href="/tags/stm32/" style="font-size: 11.33px;">stm32</a> <a href="/tags/tensorflow/" style="font-size: 20px;">tensorflow</a> <a href="/tags/vscode/" style="font-size: 10px;">vscode</a> <a href="/tags/wordcloud/" style="font-size: 10px;">wordcloud</a> <a href="/tags/yolo/" style="font-size: 12.67px;">yolo</a> <a href="/tags/%E4%BA%8C%E5%8F%89%E6%A0%91/" style="font-size: 10px;">二叉树</a> <a href="/tags/%E4%BC%98%E5%8C%96/" style="font-size: 10px;">优化</a> <a href="/tags/%E4%BD%9C%E4%B8%9A/" style="font-size: 14px;">作业</a> <a href="/tags/%E5%85%83%E5%AD%A6%E4%B9%A0/" style="font-size: 10px;">元学习</a> <a href="/tags/%E5%8D%8A%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0/" style="font-size: 15.33px;">半监督学习</a> <a href="/tags/%E5%8D%9A%E5%AE%A2/" style="font-size: 10px;">博客</a> <a href="/tags/%E5%9B%BE%E5%83%8F%E5%A4%84%E7%90%86/" style="font-size: 10px;">图像处理</a> <a href="/tags/%E5%A0%86%E6%A0%88/" style="font-size: 10.67px;">堆栈</a> <a href="/tags/%E5%A3%B0%E9%9F%B3%E4%BF%A1%E5%8F%B7%E5%A4%84%E7%90%86/" style="font-size: 12px;">声音信号处理</a> <a href="/tags/%E5%B0%8F%E5%B7%A5%E5%85%B7/" style="font-size: 12px;">小工具</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" style="font-size: 15.33px;">嵌入式</a> <a href="/tags/%E6%80%BB%E7%BB%93/" style="font-size: 10px;">总结</a> <a href="/tags/%E6%8E%92%E5%BA%8F/" style="font-size: 10px;">排序</a> <a href="/tags/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/" style="font-size: 17.33px;">数据结构</a> <a href="/tags/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/" style="font-size: 16.67px;">机器学习</a> <a href="/tags/%E6%A0%91/" style="font-size: 12px;">树</a> <a href="/tags/%E6%A0%91%E8%8E%93%E6%B4%BE/" style="font-size: 10px;">树莓派</a> <a href="/tags/%E6%A6%82%E7%8E%87%E8%AE%BA/" style="font-size: 18.67px;">概率论</a> <a href="/tags/%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0/" style="font-size: 16px;">深度学习</a> <a href="/tags/%E7%A5%9E%E7%BB%8F%E7%BD%91%E7%BB%9C/" style="font-size: 11.33px;">神经网络</a> <a href="/tags/%E7%A5%9E%E7%BB%8F%E7%BD%91%E7%BB%9C%E9%87%8F%E5%8C%96/" style="font-size: 10px;">神经网络量化</a> <a href="/tags/%E7%AE%97%E6%B3%95/" style="font-size: 12.67px;">算法</a> <a href="/tags/%E7%BB%9F%E8%AE%A1%E5%AD%A6%E4%B9%A0%E6%96%B9%E6%B3%95/" style="font-size: 16px;">统计学习方法</a> <a href="/tags/%E8%81%9A%E7%B1%BB/" style="font-size: 12px;">聚类</a> <a href="/tags/%E8%93%9D%E7%89%99/" style="font-size: 13.33px;">蓝牙</a> <a href="/tags/%E8%AE%A1%E7%AE%97%E6%9C%BA%E4%BD%93%E7%B3%BB%E7%BB%93%E6%9E%84/" style="font-size: 12px;">计算机体系结构</a> <a href="/tags/%E8%B0%83%E5%8F%82/" style="font-size: 10px;">调参</a> <a href="/tags/%E8%B5%84%E6%BA%90%E6%B1%87%E6%80%BB/" style="font-size: 10px;">资源汇总</a> <a href="/tags/%E8%B7%AF%E7%94%B1/" style="font-size: 10px;">路由</a> <a href="/tags/%E9%93%BE%E8%A1%A8/" style="font-size: 11.33px;">链表</a> <a href="/tags/%E9%94%99%E8%AF%AF%E8%AE%B0%E5%BD%95/" style="font-size: 19.33px;">错误记录</a> <a href="/tags/%E9%A3%8E%E6%A0%BC%E8%BF%81%E7%A7%BB/" style="font-size: 10px;">风格迁移</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">归档</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/06/">六月 2021</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/05/">五月 2021</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/04/">四月 2021</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/03/">三月 2021</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/01/">一月 2021</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/11/">十一月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/10/">十月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/09/">九月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/08/">八月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/07/">七月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/05/">五月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/04/">四月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/12/">十二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/09/">九月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/08/">八月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/07/">七月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/06/">六月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/05/">五月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">三月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">最新文章</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2021/06/01/halide-note/">Halide笔记</a>
+          </li>
+        
+          <li>
+            <a href="/2021/05/24/nand2tetris-week4/">Nand2Tetris week4</a>
+          </li>
+        
+          <li>
+            <a href="/2021/05/18/docker-remote/">vscode连接远程服务器中docker</a>
+          </li>
+        
+          <li>
+            <a href="/2021/05/12/nand2tetris-week3/">Nand2Tetris week3</a>
+          </li>
+        
+          <li>
+            <a href="/2021/05/07/nand2tetris-week2/">Nand2Tetris week2</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2021 NAke<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+    <a href="/about" class="mobile-nav-link">about</a>
+  
+</nav>
+    
+
+<script src="//cdn.staticfile.org/jquery/2.0.3/jquery.min.js"></script>
+
+
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
+
+  
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+
+
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+
+  </div>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+</body>
+</html>
