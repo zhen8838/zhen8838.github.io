@@ -15,7 +15,7 @@
 <meta property="og:description" content="Conan-center中保存了许多的c++包，但是还是有许多的c++源没有被打包，这次一边学习一边尝试为Clang进行打包">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2021-06-22T11:36:16.000Z">
-<meta property="article:modified_time" content="2021-06-24T13:56:52.976Z">
+<meta property="article:modified_time" content="2021-06-28T06:18:35.255Z">
 <meta property="article:author" content="NAke">
 <meta property="article:tag" content="c++">
 <meta name="twitter:card" content="summary">
@@ -95,41 +95,63 @@
       
         <p>Conan-center中保存了许多的c++包，但是还是有许多的c++源没有被打包，这次一边学习一边尝试为Clang进行打包</p>
 <span id="more"></span>
-<h1 id="为第三方库进行打包">为第三方库进行打包</h1>
-<ol type="1">
+<h1 id="为第三方库进行打包"><a href="#为第三方库进行打包" class="headerlink" title="为第三方库进行打包"></a>为第三方库进行打包</h1><ol>
 <li>构建一个新pkg</li>
 </ol>
 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">conan new Clang/12.0.0 -t </span><br></pre></td></tr></table></figure>
-<ol start="2" type="1">
+<ol>
 <li>修改conanfile.py</li>
 </ol>
 <p>直接去<code>https://github.com/conan-io/conan-center-index/blob/master/recipes/</code>下面参考各种打包的流程即可</p>
-<ol start="3" type="1">
+<ol>
 <li>下载代码到本地调试构建</li>
 </ol>
 <p>注意每次build的时候最好把build目录的CmakeCache.txt删除了再开始，不然有时候你以为你成功，但其实只是偶尔的cache是正确的。</p>
 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">conan <span class="built_in">export</span> . Clang/12.0.0@demo/testing <span class="comment"># 修改代码后需要export才能生效 </span></span><br><span class="line">conan install . --install-folder build_x86_64 -s arch=x86_64 <span class="comment"># 如果我们的当前开发的代码需要依赖别的conan包，可以先把别的包install到对应目录 -s可以修改配置，默认配置在conan config下面</span></span><br><span class="line">conan <span class="built_in">source</span> . --install-folder build_x86_64 --source-folder src  <span class="comment"># 调用source方法下载源码并做修改</span></span><br><span class="line"><span class="comment"># 可以分别调用build的三个阶段使用conan对源码进行编译</span></span><br><span class="line">conan build . --build-folder build_x86_64 --source-folder src --configure</span><br><span class="line">conan build . --build-folder build_x86_64 --source-folder src --build</span><br><span class="line">conan build . --build-folder build_x86_64 --source-folder src --install</span><br><span class="line"><span class="comment"># conan build . --build-folder build_x86_64 --source-folder src # 也可以一步到位</span></span><br><span class="line">conan package . --build-folder build_x86_64 --package-folder=package_x86 <span class="comment"># 打包</span></span><br><span class="line"><span class="comment"># 打包之后还需要同步到local cache中才能被其他包使用，调用这个命令可以自动打包</span></span><br><span class="line">conan export-pkg . Clang/12.0.0@demo/testing --build-folder=build_x86_64 -s arch=x86</span><br></pre></td></tr></table></figure>
-<ol start="4" type="1">
+<ol>
 <li>打包上传云端</li>
 </ol>
-<p>如果上面的步骤之后，本地去include对应的代码可以正常编译，那么就可以导出pkg了 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">conan create .</span><br></pre></td></tr></table></figure></p>
-<h1 id="注意点">注意点</h1>
-<ol type="1">
+<p>如果上面的步骤之后，本地去include对应的代码可以正常编译，那么就可以导出pkg了<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">conan create .</span><br></pre></td></tr></table></figure></p>
+<h1 id="注意点"><a href="#注意点" class="headerlink" title="注意点"></a>注意点</h1><ol>
 <li>如果需要修改第三方库的源码，可以用patch的形式，调用conan的方法进行修改。</li>
 </ol>
 <p>通常都是要在第三方库中添加如下信息的，因为你所有的依赖都是交给conan了，而不是有的通过本机，有的通过Conan。conan会给所有的第三方库都生成一个findxxx.cmake，通过conan_basic_setup去执行，执行完毕后，find_package就可以找到来自与Conan的包了。同时这里的<code>$&#123;CONAN_BIN_DIRS&#125;</code>也可以添加，添加之后可以调用预编译lib中的一些可执行文件。</p>
 <p>还有就是有的库写的find_package都是用xxx_DIR的方式去寻找xxxConfig.cmake的，这种方式和conan的行为不一致，需要修改。</p>
 <figure class="highlight cmake"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">message</span>(STATUS <span class="string">&quot;Loading conan scripts for Clang dependencies...&quot;</span>)</span><br><span class="line"><span class="keyword">include</span>(<span class="string">&quot;$&#123;CMAKE_BINARY_DIR&#125;/conanbuildinfo.cmake&quot;</span>)</span><br><span class="line"><span class="keyword">message</span>(STATUS <span class="string">&quot;Doing conan basic setup&quot;</span>)</span><br><span class="line">conan_basic_setup()</span><br><span class="line"><span class="keyword">list</span>(APPEND CMAKE_PROGRAM_PATH <span class="variable">$&#123;CONAN_BIN_DIRS&#125;</span>)</span><br><span class="line"><span class="keyword">message</span>(STATUS <span class="string">&quot;Conan setup done. CMAKE_PROGRAM_PATH: $&#123;CMAKE_PROGRAM_PATH&#125;&quot;</span>)</span><br></pre></td></tr></table></figure>
 <p><code>list(APPEND CMAKE_PROGRAM_PATH $&#123;CONAN_BIN_DIRS&#125;)</code></p>
-<ol start="2" type="1">
-<li><p>对于LLVM来说，最好不能使用<code>BUILD_SHARED_LIBS</code>，因为LLVM依赖于全局数据，这些数据最终可能会在共享库之间复制可能会导致错误。也就是默认是static的。</p></li>
-<li><p>conan官方的一些包的recipe里面是把他们的一些cmake文件删除了，比如他的llvm-core只有一堆静态库，这就非常蛋疼了，想依赖这个lib去构建clang是不行的。所以还得自己打包。</p></li>
-<li><p>默认的conan的build_folder就是同个目录，他都是打包结束后直接从当前文件夹下面选择性的去拷贝到package_folder下面。当然这个过程可以随便自定义，我觉得直接cmake install到package目录就完事了。</p></li>
-<li><p>报错<code>ConanException: llvm-core/12.0.0 package_info(): Package require 'libxml2' not used in components requires</code></p></li>
+<ol>
+<li><p>对于LLVM来说，最好不能使用<code>BUILD_SHARED_LIBS</code>，因为LLVM依赖于全局数据，这些数据最终可能会在共享库之间复制可能会导致错误。也就是默认是static的。</p>
+</li>
+<li><p>conan官方的一些包的recipe里面是把他们的一些cmake文件删除了，比如他的llvm-core只有一堆静态库，这就非常蛋疼了，想依赖这个lib去构建clang是不行的。所以还得自己打包。</p>
+</li>
 </ol>
+<ol>
+<li>默认的conan的build_folder就是同个目录，他都是打包结束后直接从当前文件夹下面选择性的去拷贝到package_folder下面。当然这个过程可以随便自定义，我觉得直接cmake install到package目录就完事了。</li>
+</ol>
+<ol>
+<li><p>报错<code>ConanException: llvm-core/12.0.0 package_info(): Package require &#39;libxml2&#39; not used in components requires</code></p>
 <p>我用官方的llvm-core就有这个问题，我一开始一直以为是我的问题，然后发现他可能打包的时候就出问题了。conan的设计思路是每个package_info里面提供了每个库的详细信息，像llvm这种库，是由多个组件构成的，为了详细起见，他得把每个component的requires写清楚，所以llvm的打包脚本里面就先用cmake生成依赖关系，然后packeage info里面解析依赖关系添加依赖，这个问题的出现就是因为，明明整个库要求了libxml2，但是里面没有一个component去依赖这个库，那不就说明不需要依赖吗，所以直接报错。</p>
-<p>我找了一下发现libxml2是被LLVMWindowsManifest引用的，但是输出依赖信息：<code>windowsmanifest ['support']</code> ,并没有添加这个依赖。目前猜想要么是patch没有打上，要么是依赖关系没有生成正确。</p>
+<p>我找了一下发现libxml2是被LLVMWindowsManifest引用的，但是输出依赖信息：<code>windowsmanifest [&#39;support&#39;]</code> ,并没有添加这个依赖。目前猜想要么是patch没有打上，要么是依赖关系没有生成正确。</p>
 <p>还有就是他的component.json不知道是哪里弄出来的，cmake和conan的文档里面都没有写生成这个文件的地方。</p>
+</li>
+<li><p>如果直接include整个导出的llvm-core，会报错找不到一些动态链接库，然后我发现llvm官方打包的二进制里面是没有的。应该是conan生成package info的时候没有删除这些不需要的依赖。</p>
+</li>
+<li><p>conan可以生成Conan find package，然后在cmake中调用find package可以找到对应的包</p>
+</li>
+<li><p>用打包出来的llvm-core去链接，一直报错找不到一个函数的定义（那个函数里面有个string），各种尝试才发现是conan自己生成的<code>conan_basic_setup</code>里面默认会从系统的profile中读取定义<code>compiler.libcxx=libstdc++</code>，然后设置<code>-D_GLIBCXX_USE_CXX11_ABI=0</code>。但是问题在于我也是用相同的编译器选项去编译llvm的，为什么生成的llvmlib却需要<code>GLIBCXX_USE_CXX11_ABI=1</code>呢？</p>
+<p>先用命令查看一下目前的编译器abi版本，发现默认是cxx11的</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">gcc -v 2&gt;&amp;1 | sed -n &#39;s&#x2F;.*\(--with-default-libstdcxx-abi&#x3D;new\).*&#x2F;\1&#x2F;p&#39;</span><br><span class="line">--with-default-libstdcxx-abi&#x3D;new</span><br></pre></td></tr></table></figure>
+<p>在cmake中可以用如下命令查看添加了说明编译定义。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">get_directory_property( DirDefs COMPILE_DEFINITIONS )</span><br><span class="line">message( &quot;COMPILE_DEFINITIONS &#x3D; $&#123;DirDefs&#125;&quot; )</span><br></pre></td></tr></table></figure>
+<p>最后发现是我自己忘记在编译llvm的时候添加上conan basic setup了，导致没有指定。</p>
+</li>
+<li><p><code>libxmls nanohttp.c:(.text+0x507): undefined reference to &#39;fcntl64&#39;</code></p>
+<p>发现conan这东西出发点是好的，但是一定得需要把一个包所有的依赖全部展示清楚才好，上面这个问题就是预编译好的xml2需要的fcntl64包我的系统并没有。以后还是不要搞跨平台了，直接都用docker+linux完事了，没有环境问题。不然再怎么打包都会有奇怪的问题。。<br>这个问题估计是因为预编译的libxml2的版本ubuntu20的，但是我是ubuntu18的，所以重新编译安装xml2。</p>
+</li>
+</ol>
+<ol>
+<li><code>LLVM ERROR: inconsistency in registered CommandLine options</code><br>我不知道为啥编译出来的clang居然是动态链接的，而llvm是静态编译的，从而导致的问题。但是clang的cmake根本就不接受动态链接的编译配置啊，重新configure一下编译就解决了。。</li>
+</ol>
 
       
     </div>
@@ -139,41 +161,63 @@
         
           <p>Conan-center中保存了许多的c++包，但是还是有许多的c++源没有被打包，这次一边学习一边尝试为Clang进行打包</p>
 <span id="more"></span>
-<h1 id="为第三方库进行打包">为第三方库进行打包</h1>
-<ol type="1">
+<h1 id="为第三方库进行打包"><a href="#为第三方库进行打包" class="headerlink" title="为第三方库进行打包"></a>为第三方库进行打包</h1><ol>
 <li>构建一个新pkg</li>
 </ol>
 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">conan new Clang/12.0.0 -t </span><br></pre></td></tr></table></figure>
-<ol start="2" type="1">
+<ol>
 <li>修改conanfile.py</li>
 </ol>
 <p>直接去<code>https://github.com/conan-io/conan-center-index/blob/master/recipes/</code>下面参考各种打包的流程即可</p>
-<ol start="3" type="1">
+<ol>
 <li>下载代码到本地调试构建</li>
 </ol>
 <p>注意每次build的时候最好把build目录的CmakeCache.txt删除了再开始，不然有时候你以为你成功，但其实只是偶尔的cache是正确的。</p>
 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">conan <span class="built_in">export</span> . Clang/12.0.0@demo/testing <span class="comment"># 修改代码后需要export才能生效 </span></span><br><span class="line">conan install . --install-folder build_x86_64 -s arch=x86_64 <span class="comment"># 如果我们的当前开发的代码需要依赖别的conan包，可以先把别的包install到对应目录 -s可以修改配置，默认配置在conan config下面</span></span><br><span class="line">conan <span class="built_in">source</span> . --install-folder build_x86_64 --source-folder src  <span class="comment"># 调用source方法下载源码并做修改</span></span><br><span class="line"><span class="comment"># 可以分别调用build的三个阶段使用conan对源码进行编译</span></span><br><span class="line">conan build . --build-folder build_x86_64 --source-folder src --configure</span><br><span class="line">conan build . --build-folder build_x86_64 --source-folder src --build</span><br><span class="line">conan build . --build-folder build_x86_64 --source-folder src --install</span><br><span class="line"><span class="comment"># conan build . --build-folder build_x86_64 --source-folder src # 也可以一步到位</span></span><br><span class="line">conan package . --build-folder build_x86_64 --package-folder=package_x86 <span class="comment"># 打包</span></span><br><span class="line"><span class="comment"># 打包之后还需要同步到local cache中才能被其他包使用，调用这个命令可以自动打包</span></span><br><span class="line">conan export-pkg . Clang/12.0.0@demo/testing --build-folder=build_x86_64 -s arch=x86</span><br></pre></td></tr></table></figure>
-<ol start="4" type="1">
+<ol>
 <li>打包上传云端</li>
 </ol>
-<p>如果上面的步骤之后，本地去include对应的代码可以正常编译，那么就可以导出pkg了 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">conan create .</span><br></pre></td></tr></table></figure></p>
-<h1 id="注意点">注意点</h1>
-<ol type="1">
+<p>如果上面的步骤之后，本地去include对应的代码可以正常编译，那么就可以导出pkg了<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">conan create .</span><br></pre></td></tr></table></figure></p>
+<h1 id="注意点"><a href="#注意点" class="headerlink" title="注意点"></a>注意点</h1><ol>
 <li>如果需要修改第三方库的源码，可以用patch的形式，调用conan的方法进行修改。</li>
 </ol>
 <p>通常都是要在第三方库中添加如下信息的，因为你所有的依赖都是交给conan了，而不是有的通过本机，有的通过Conan。conan会给所有的第三方库都生成一个findxxx.cmake，通过conan_basic_setup去执行，执行完毕后，find_package就可以找到来自与Conan的包了。同时这里的<code>$&#123;CONAN_BIN_DIRS&#125;</code>也可以添加，添加之后可以调用预编译lib中的一些可执行文件。</p>
 <p>还有就是有的库写的find_package都是用xxx_DIR的方式去寻找xxxConfig.cmake的，这种方式和conan的行为不一致，需要修改。</p>
 <figure class="highlight cmake"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">message</span>(STATUS <span class="string">&quot;Loading conan scripts for Clang dependencies...&quot;</span>)</span><br><span class="line"><span class="keyword">include</span>(<span class="string">&quot;$&#123;CMAKE_BINARY_DIR&#125;/conanbuildinfo.cmake&quot;</span>)</span><br><span class="line"><span class="keyword">message</span>(STATUS <span class="string">&quot;Doing conan basic setup&quot;</span>)</span><br><span class="line">conan_basic_setup()</span><br><span class="line"><span class="keyword">list</span>(APPEND CMAKE_PROGRAM_PATH <span class="variable">$&#123;CONAN_BIN_DIRS&#125;</span>)</span><br><span class="line"><span class="keyword">message</span>(STATUS <span class="string">&quot;Conan setup done. CMAKE_PROGRAM_PATH: $&#123;CMAKE_PROGRAM_PATH&#125;&quot;</span>)</span><br></pre></td></tr></table></figure>
 <p><code>list(APPEND CMAKE_PROGRAM_PATH $&#123;CONAN_BIN_DIRS&#125;)</code></p>
-<ol start="2" type="1">
-<li><p>对于LLVM来说，最好不能使用<code>BUILD_SHARED_LIBS</code>，因为LLVM依赖于全局数据，这些数据最终可能会在共享库之间复制可能会导致错误。也就是默认是static的。</p></li>
-<li><p>conan官方的一些包的recipe里面是把他们的一些cmake文件删除了，比如他的llvm-core只有一堆静态库，这就非常蛋疼了，想依赖这个lib去构建clang是不行的。所以还得自己打包。</p></li>
-<li><p>默认的conan的build_folder就是同个目录，他都是打包结束后直接从当前文件夹下面选择性的去拷贝到package_folder下面。当然这个过程可以随便自定义，我觉得直接cmake install到package目录就完事了。</p></li>
-<li><p>报错<code>ConanException: llvm-core/12.0.0 package_info(): Package require 'libxml2' not used in components requires</code></p></li>
+<ol>
+<li><p>对于LLVM来说，最好不能使用<code>BUILD_SHARED_LIBS</code>，因为LLVM依赖于全局数据，这些数据最终可能会在共享库之间复制可能会导致错误。也就是默认是static的。</p>
+</li>
+<li><p>conan官方的一些包的recipe里面是把他们的一些cmake文件删除了，比如他的llvm-core只有一堆静态库，这就非常蛋疼了，想依赖这个lib去构建clang是不行的。所以还得自己打包。</p>
+</li>
 </ol>
+<ol>
+<li>默认的conan的build_folder就是同个目录，他都是打包结束后直接从当前文件夹下面选择性的去拷贝到package_folder下面。当然这个过程可以随便自定义，我觉得直接cmake install到package目录就完事了。</li>
+</ol>
+<ol>
+<li><p>报错<code>ConanException: llvm-core/12.0.0 package_info(): Package require &#39;libxml2&#39; not used in components requires</code></p>
 <p>我用官方的llvm-core就有这个问题，我一开始一直以为是我的问题，然后发现他可能打包的时候就出问题了。conan的设计思路是每个package_info里面提供了每个库的详细信息，像llvm这种库，是由多个组件构成的，为了详细起见，他得把每个component的requires写清楚，所以llvm的打包脚本里面就先用cmake生成依赖关系，然后packeage info里面解析依赖关系添加依赖，这个问题的出现就是因为，明明整个库要求了libxml2，但是里面没有一个component去依赖这个库，那不就说明不需要依赖吗，所以直接报错。</p>
-<p>我找了一下发现libxml2是被LLVMWindowsManifest引用的，但是输出依赖信息：<code>windowsmanifest ['support']</code> ,并没有添加这个依赖。目前猜想要么是patch没有打上，要么是依赖关系没有生成正确。</p>
+<p>我找了一下发现libxml2是被LLVMWindowsManifest引用的，但是输出依赖信息：<code>windowsmanifest [&#39;support&#39;]</code> ,并没有添加这个依赖。目前猜想要么是patch没有打上，要么是依赖关系没有生成正确。</p>
 <p>还有就是他的component.json不知道是哪里弄出来的，cmake和conan的文档里面都没有写生成这个文件的地方。</p>
+</li>
+<li><p>如果直接include整个导出的llvm-core，会报错找不到一些动态链接库，然后我发现llvm官方打包的二进制里面是没有的。应该是conan生成package info的时候没有删除这些不需要的依赖。</p>
+</li>
+<li><p>conan可以生成Conan find package，然后在cmake中调用find package可以找到对应的包</p>
+</li>
+<li><p>用打包出来的llvm-core去链接，一直报错找不到一个函数的定义（那个函数里面有个string），各种尝试才发现是conan自己生成的<code>conan_basic_setup</code>里面默认会从系统的profile中读取定义<code>compiler.libcxx=libstdc++</code>，然后设置<code>-D_GLIBCXX_USE_CXX11_ABI=0</code>。但是问题在于我也是用相同的编译器选项去编译llvm的，为什么生成的llvmlib却需要<code>GLIBCXX_USE_CXX11_ABI=1</code>呢？</p>
+<p>先用命令查看一下目前的编译器abi版本，发现默认是cxx11的</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">gcc -v 2&gt;&amp;1 | sed -n &#39;s&#x2F;.*\(--with-default-libstdcxx-abi&#x3D;new\).*&#x2F;\1&#x2F;p&#39;</span><br><span class="line">--with-default-libstdcxx-abi&#x3D;new</span><br></pre></td></tr></table></figure>
+<p>在cmake中可以用如下命令查看添加了说明编译定义。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">get_directory_property( DirDefs COMPILE_DEFINITIONS )</span><br><span class="line">message( &quot;COMPILE_DEFINITIONS &#x3D; $&#123;DirDefs&#125;&quot; )</span><br></pre></td></tr></table></figure>
+<p>最后发现是我自己忘记在编译llvm的时候添加上conan basic setup了，导致没有指定。</p>
+</li>
+<li><p><code>libxmls nanohttp.c:(.text+0x507): undefined reference to &#39;fcntl64&#39;</code></p>
+<p>发现conan这东西出发点是好的，但是一定得需要把一个包所有的依赖全部展示清楚才好，上面这个问题就是预编译好的xml2需要的fcntl64包我的系统并没有。以后还是不要搞跨平台了，直接都用docker+linux完事了，没有环境问题。不然再怎么打包都会有奇怪的问题。。<br>这个问题估计是因为预编译的libxml2的版本ubuntu20的，但是我是ubuntu18的，所以重新编译安装xml2。</p>
+</li>
+</ol>
+<ol>
+<li><code>LLVM ERROR: inconsistency in registered CommandLine options</code><br>我不知道为啥编译出来的clang居然是动态链接的，而llvm是静态编译的，从而导致的问题。但是clang的cmake根本就不接受动态链接的编译配置啊，重新configure一下编译就解决了。。</li>
+</ol>
 
         
       
