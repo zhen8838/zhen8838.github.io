@@ -48,13 +48,12 @@ Programming and Bayesian Methods for Hackers Chapter 3</h1>
 <p>前两章隐藏了TFP的内部机制，更常见的是来自读者的Markov Chain Monte
 Carlo（MCMC）。包含本章的原因有三个方面。首先，任何关于贝叶斯推理的书都必须讨论MCMC。我不能打这个。责备统计学家。其次，了解MCMC的过程可以让您深入了解您的算法是否已融合（融合到什么？我们将达到这个目标）。第三，我们将理解<em>为什么</em>我们从后验返回了数千个样本作为解决方案，起初认为这可能是奇怪的。</p>
 <h3 id="贝叶斯图像">贝叶斯图像</h3>
-<p>当我们用$ N <span
-class="math inline">\(未知数设置贝叶斯推理问题时，我们隐含地为先前的分布创建\)</span>
-N <span
-class="math inline">\(维空间。与空间相关联是另一个维度，我们可以将其描述为*曲面*，或*曲线*，位于空间的顶部，反映特定点的*先验概率*。空间的表面由我们先前的分布定义。例如，如果我们有两个未知数\)</span>
-p_1 <span class="math inline">\(和\)</span> p_2 <span
-class="math inline">\(，并且两者的先验都是\)</span>
-（0,5）$，则创建的空间是长度为5的正方形，表面是平面位于正方形顶部（表示每个点都有可能）。</p>
+<p>当我们用<span
+class="math inline">\(N\)</span>未知数设置贝叶斯推理问题时，我们隐含地为先前的分布创建<span
+class="math inline">\(N\)</span>维空间。与空间相关联是另一个维度，我们可以将其描述为<em>曲面</em>，或<em>曲线</em>，位于空间的顶部，反映特定点的<em>先验概率</em>。空间的表面由我们先前的分布定义。例如，如果我们有两个未知数<span
+class="math inline">\(p_1\)</span>和<span
+class="math inline">\(p_2\)</span>，并且两者的先验都是<span
+class="math inline">\(\text{Uniform}(0,5)\)</span>，则创建的空间是长度为5的正方形，表面是平面位于正方形顶部（表示每个点都有可能）。</p>
 <figure class="highlight python"><table><tr><td class="code"><pre><span class="line">x_ = y_ = np.linspace(<span class="number">0.</span>, <span class="number">5.</span>, <span class="number">100.</span>, dtype=np.float32)</span><br><span class="line">X_, Y_ = evaluate(tf.meshgrid(x_, y_))</span><br><span class="line"></span><br><span class="line">uni_x_ = evaluate(tfd.Uniform(low=<span class="number">0.</span>, high=<span class="number">5.</span>).prob(x_))</span><br><span class="line">m_ = np.median(uni_x_)</span><br><span class="line"></span><br><span class="line">uni_y_ = evaluate(tfd.Uniform(low=<span class="number">0.</span>, high=<span class="number">5.</span>).prob(y_))</span><br><span class="line">M_ = evaluate(tf.matmul(tf.expand_dims(uni_x_, <span class="number">1</span>), tf.expand_dims(uni_y_, <span class="number">0</span>)))</span><br><span class="line"></span><br><span class="line">plt.figure(figsize(<span class="number">12.5</span>, <span class="number">6</span>))</span><br><span class="line">jet = plt.cm.jet</span><br><span class="line">fig = plt.figure()</span><br><span class="line">plt.subplot(<span class="number">121</span>)</span><br><span class="line"> </span><br><span class="line">im = plt.imshow(M_, interpolation=<span class="string">&#x27;none&#x27;</span>, origin=<span class="string">&#x27;lower&#x27;</span>,</span><br><span class="line">                cmap=jet, vmax=<span class="number">1</span>, vmin=-<span class="number">.15</span>, extent=(<span class="number">0</span>, <span class="number">5</span>, <span class="number">0</span>, <span class="number">5</span>))</span><br><span class="line"></span><br><span class="line">plt.xlim(<span class="number">0</span>, <span class="number">5</span>)</span><br><span class="line">plt.ylim(<span class="number">0</span>, <span class="number">5</span>)</span><br><span class="line">plt.title(<span class="string">&quot;平均分布先验图像.&quot;</span>)</span><br><span class="line"> </span><br><span class="line">ax = fig.add_subplot(<span class="number">122</span>, projection=<span class="string">&#x27;3d&#x27;</span>)</span><br><span class="line">ax.plot_surface(X_, Y_, M_, cmap=plt.cm.jet, vmax=<span class="number">1</span>, vmin=-<span class="number">.15</span>)</span><br><span class="line">ax.view_init(azim=<span class="number">390</span>)</span><br><span class="line">plt.title(<span class="string">&quot;平均分布先验图像; 备用视图&quot;</span>);</span><br><span class="line"></span><br></pre></td></tr></table></figure>
 <pre><code>&lt;Figure size 900x432 with 0 Axes&gt;</code></pre>
 <p><img src="/2019/07/27/tfp-ch3/output_4_1.png" /></p>
@@ -163,19 +162,19 @@ p_1$。</p>
 p_1 <span class="math inline">\(和\)</span> p_2
 $组合成一个它能理解的向量。我们将此向量传递给<code>Categorical</code>变量，以便了解从多个分布中进行选择的可能性。</p>
 <figure class="highlight python"><table><tr><td class="code"><pre><span class="line">p1 = tfd.Uniform(name=<span class="string">&#x27;p&#x27;</span>, low=<span class="number">0.</span>, high=<span class="number">1.</span>).sample()  <span class="comment"># p1 概率</span></span><br><span class="line">p2 = <span class="number">1</span> - p1 <span class="comment"># # p1 概率</span></span><br><span class="line">p = tf.stack([p1, p2]) <span class="comment"># 串联</span></span><br><span class="line"></span><br><span class="line">rv_assignment = tfd.Categorical(name=<span class="string">&quot;assignment&quot;</span>,probs=p)  <span class="comment">#</span></span><br><span class="line">assignment = rv_assignment.sample(sample_shape=data_.shape[<span class="number">0</span>])</span><br><span class="line"></span><br><span class="line">[p_,assignment_] = evaluate([p,assignment])</span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(<span class="string">&quot;先验分配, with p = %.2f:&quot;</span> % p_[<span class="number">0</span>])</span><br><span class="line"><span class="built_in">print</span> (assignment_[:<span class="number">10</span>])</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-<pre><code>先验分配, with p = 0.16:
-[0 1 0 0 1 0 1 0 1 1]</code></pre>
+<blockquote>
+<p>先验分配, with p = 0.16: [0 1 0 0 1 0 1 0 1 1]</p>
+</blockquote>
 <p>看看上面的数据集，我猜想两个法线的标准偏差是不同的。为了保持对标准偏差的未知，我们最初将它们模型化为<code>0</code>到<code>100</code>。我们将使用单行TFP代码在我们的模型中包含两个标准偏差：</p>
 <figure class="highlight python"><table><tr><td class="code"><pre><span class="line">rv_sds = tfd.Uniform(name=<span class="string">&quot;rv_sds&quot;</span>, low=[<span class="number">0.</span>, <span class="number">0.</span>], high=[<span class="number">100.</span>, <span class="number">100.</span>])</span><br></pre></td></tr></table></figure>
 <p>在这里，我们使用批量形状2，创建两个独立的分布，恰好具有相同的参数。查看
 <a
 target="_blank" rel="noopener" href="https://https://github.com/tensorflow/probability/blob/master/tensorflow_probability/examples/jupyter_notebooks/Understanding_TensorFlow_Distributions_Shapes.ipynb">colab
 on TFP shapes</a> 得到更多信息.</p>
-<p>我们还需要在集群的中心指定先验。这些正常分布中的中心实际上是$  mu
-<span
-class="math inline">\(参数。他们的先验可以通过正态分布建模。看看这些数据，我知道这两个中心可能在哪里；虽然我对这些看起来的估计并不十分自信，但我猜的分别在120左右和190左右。因此我将设置\)</span>
-_0 = 120，_1 = 190 <span class="math inline">\(和\)</span> _0 = _1 = 10
-$。</p>
+<p>我们还需要在集群的中心指定先验。这些正常分布中的中心实际上是<span
+class="math inline">\(\mu\)</span>参数。他们的先验可以通过正态分布建模。看看这些数据，我知道这两个中心可能在哪里；虽然我对这些看起来的估计并不十分自信，但我猜的分别在120左右和190左右。因此我将设置<span
+class="math inline">\(\mu_0 = 120,\mu_1 = 190\)</span>和<span
+class="math inline">\(\sigma_0 = \sigma_1 = 10\)</span>。</p>
 <p>最后，我们使用了<a
 target="_blank" rel="noopener" href="https://https://www.tensorflow.org/probability/api_docs/python/tfp/distributions/MixtureSameFamily">MixtureSameFamily</a>
 分布以实现我们的两个正态分布的混合, 使用我们的 <a
@@ -292,9 +291,13 @@ class="math inline">\(，我们有兴趣询问“\)</span>x$在群集1
 <p><span class="math display">\[  P( x=175  | L_x = 1  )P( L_x = 1 )
 \gt  P( x=175  | L_x = 0  )P( L_x = 0 ) \]</span></p>
 <figure class="highlight python"><table><tr><td class="code"><pre><span class="line">p_trace = posterior_prob_2_[<span class="number">25000</span>:]</span><br><span class="line"></span><br><span class="line">x = <span class="number">175</span></span><br><span class="line"></span><br><span class="line">v = (<span class="number">1</span> - p_trace) * evaluate(tfd.Normal(loc=center_trace[<span class="number">25000</span>:, <span class="number">1</span>], </span><br><span class="line">                                        scale=std_trace[<span class="number">25000</span>:, <span class="number">1</span>]).log_prob(x)) &gt; \</span><br><span class="line">                                        p_trace * evaluate(tfd.Normal(loc=center_trace[<span class="number">25000</span>:, <span class="number">0</span>], \</span><br><span class="line">                                        scale=std_trace[<span class="number">25000</span>:, <span class="number">0</span>]).log_prob(x))</span><br><span class="line">    </span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(<span class="string">&quot;属于聚类1的概率:&quot;</span>, (v.mean()))</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-<pre><code>属于聚类1的概率: 0.03192</code></pre>
+<blockquote>
+<p>属于聚类1的概率: 0.03192</p>
+</blockquote>
 <p>给我们一个概率而不是标签是一件非常有用的事情。而不是简单的：</p>
-<pre><code>L = 1 if prob &gt; 0.5 else 0</code></pre>
+<blockquote>
+<p>L = 1 if prob &gt; 0.5 else 0</p>
+</blockquote>
 <p>我们可以使用<em>损失函数</em>来优化我们的猜测，这是第五章的全部内容。</p>
 <h2 id="diagnosing-convergence">Diagnosing Convergence</h2>
 <h3 id="自相关">自相关</h3>
