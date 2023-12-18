@@ -10,9 +10,7 @@
 <p>至少有两种方法可以提高目标质量。一种方法是仔细选择表示的扰动，而不是仅仅施加加性或乘性噪声。另一种方法是谨慎选择<code>teacher</code>模型，而不是仅仅复制<code>student</code>模型。同时，在我们的研究中，<code>Virtual Adversarial Training</code>采用了第一种方法可以产生令人印象深刻的结果。我们采取第二种方法，并将表明它也提供了显著的好处。同时这两种方法是兼容的，并且它们的组合可能会产生更好的结果。</p>
 <p>因此，我们的目标是在没有额外训练的情况下从<code>student</code>模型中形成更好的教师模型。第一步，考虑模型的<code>softmax</code>输出通常不会在训练数据之外提供准确的预测。通过在<code>dropout</code>推理时将噪声添加到模型中，可以部分缓解这种情况，因此，带噪声的<code>teacher</code>可以产生更准确的目标(图1d)。该<code>Π model</code>近来已证明在半监督图像分类中效果很好。我们将使用该名称及其版本作为我们实验的基础。</p>
 <p>可以通过<code>Temporal Ensembling</code>进一步改进<code>Π model</code>，该模型为每个训练示例保持了指数移动平均值(EMA)预测。在每个训练步骤中，都会基于新的预测更新该小批中示例的所有EMA预测。因此，每个示例的EMA预测由模型的当前版本和评估同一示例的早期版本组成。这种集成可以提高预测的质量，并将其用作<code>teacher</code>的预测可以改善结果。然而，由于每个目标每个时期仅更新一次，所以学习的信息以缓慢的速度被合并到训练过程中。数据集越大，更新的时间越长，并且在在线学习的情况下，很难完全使用<code>Temporal Ensembling</code>。(一个时期可以周期性地对所有目标进行一次评估，但要使评估范围保持恒定，则每个时期需要O(n2)次评估，而训练示例的数量也是如此。)</p>
-<div data-align="center">
-<p><img src='ssl-mean-teacher/mean-teacher-1.png' /></p>
-</div>
+<p><img src="/2020/01/30/ssl-mean-teacher/mean-teacher-1.png" /></p>
 <p>带有两个标记示例(大蓝点)和一个无标签样本的二元分类任务的草图，展示了无标签样本(黑色圆圈)如何影响拟合函数(灰色曲线)。<strong>(a)</strong>没有正则化的模型可以自由地拟合任何可以很好地预测带标签样本。<strong>(b)</strong>经过训练的模型带有嘈杂的标记数据(小点)，可以学习为带标签样本周围提供一致的预测
 <strong>(c)</strong>无标签样本周围的噪声一致性提供了额外的平滑度。为了清楚起见，首先将<code>teacher</code>模型(灰色曲线)拟合到标记的样本点中，然后在训练学生模型时保持不变。同样为了清楚起见，我们将省略图d和e中的小点
 <strong>(d)</strong>
@@ -22,9 +20,7 @@
 <h2 id="mean-teacher">mean teacher</h2>
 <p>为了克服<code>Temporal Ensembling</code>的局限性，建议对模型权重取平均而不是预测结果。由于<code>teacher</code>模型是连续的<code>student</code>模型权重平均值，因此将其称为<code>mean teacher</code>方法(图2)。
 在训练步骤的上平均模型权重往往会产生比直接使用最终权重更准确的模型。我们可以在培训过程中利用这一优势来构建更好的目标。与使用学生模型共享权重不同，教师模型使用学生模型的EMA权重。现在，它可以在每个步骤之后而不是每个时期都汇总信息。另外，由于权重平均值改善了所有层的输出，而不仅仅是顶部输出，因此目标模型具有更好的中间表示。这些方面在时间合计方面具有两个实践优势：首先，目标标签更准确可导致学生模型与教师模型之间的反馈回路更快，从而提高测试准确性。其次，该方法可扩展到大型数据集和在线学习。</p>
-<div data-align="center">
-<p><img src='ssl-mean-teacher/mean-teacher-2.png' /></p>
-</div>
+<p><img src="/2020/01/30/ssl-mean-teacher/mean-teacher-2.png" /></p>
 <p>好了到这里其实应该清晰了，<code>mean teacher</code>对于<code>Temporal Ensembling</code>的实际改进其实就在与<code>teacher</code>模型的权重更新方式，使用的是<code>student</code>模型权重的滑动平均，而<code>student</code>模型实际上和<code>Π model</code>相同。</p>
 <h1 id="代码">代码</h1>
 <p>和<code>Π model</code>的区别就在于使用了<code>ema</code>更新<code>teacher</code>模型的权重。</p>

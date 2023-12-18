@@ -6,28 +6,20 @@
 <p>因为我是按原来<code>yolo</code>中交叉求<code>iou</code>的方式统一编写的，所以默认是交叉求<code>iou</code>值的，如果说要按对应元素求<code>iou</code>，那么给<code>boxes2</code>添加一个维度即可：</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">test_bbox</span>():</span><br><span class="line">    boxes1 = tf.constant([[<span class="number">4.0</span>, <span class="number">3.0</span>, <span class="number">7.0</span>, <span class="number">5.0</span>], [<span class="number">5.0</span>, <span class="number">6.0</span>, <span class="number">10.0</span>, <span class="number">7.0</span>]]) / <span class="number">20.</span></span><br><span class="line">    boxes2 = tf.constant([[<span class="number">3.0</span>, <span class="number">4.0</span>, <span class="number">6.0</span>, <span class="number">8.0</span>], [<span class="number">14.0</span>, <span class="number">14.0</span>, <span class="number">15.0</span>, <span class="number">15.0</span>]]) / <span class="number">20.</span></span><br><span class="line">    <span class="string">&quot;&quot;&quot; 按元素求iou &quot;&quot;&quot;</span></span><br><span class="line">    <span class="built_in">print</span>(tf_bbox_iou(boxes1, boxes2[..., <span class="literal">None</span>, :]).numpy())</span><br><span class="line">    <span class="comment"># [[0.12500001] [0.        ]]</span></span><br><span class="line">    <span class="built_in">print</span>(tf_bbox_diou(boxes1, boxes2[..., <span class="literal">None</span>, :]).numpy())</span><br><span class="line">    <span class="comment"># [[ 0.00304878] [-0.6243095 ]]</span></span><br><span class="line">    <span class="built_in">print</span>(tf_bbox_ciou(boxes1, boxes2[..., <span class="literal">None</span>, :]).numpy())</span><br><span class="line">    <span class="comment"># [[ 0.00283995] [-0.6250417 ]]</span></span><br><span class="line">    <span class="built_in">print</span>(tf_bbox_giou(boxes1, boxes2[..., <span class="literal">None</span>, :]).numpy())</span><br><span class="line">    <span class="comment"># [[-0.07499996] [-0.93333334]]</span></span><br><span class="line"></span><br><span class="line">    <span class="string">&quot;&quot;&quot; 交叉求iou &quot;&quot;&quot;</span></span><br><span class="line">    <span class="built_in">print</span>(tf_bbox_iou(boxes1, boxes2).numpy())</span><br><span class="line">    <span class="comment"># [[0.12500001 0.        ] [0.0625     0.        ]]</span></span><br><span class="line">    <span class="built_in">print</span>(tf_bbox_diou(boxes1, boxes2).numpy())</span><br><span class="line">    <span class="comment"># [[ 0.00304878 -0.72169816] [-0.07980768 -0.6243095 ]]</span></span><br><span class="line">    <span class="built_in">print</span>(tf_bbox_ciou(boxes1, boxes2).numpy())</span><br><span class="line">    <span class="comment"># [[ 0.00283995 -0.7217355 ] [-0.08119209 -0.6250417 ]]</span></span><br><span class="line">    <span class="built_in">print</span>(tf_bbox_giou(boxes1, boxes2).numpy())</span><br><span class="line">    <span class="comment"># [[-0.07499996 -0.9469697 ] [-0.3660715  -0.93333334]]</span></span><br></pre></td></tr></table></figure>
 <h1 id="iou">IOU</h1>
-<div data-align="center">
-<p><img src='tf-ious/iou.png' /></p>
-</div>
+<p><img src="/2020/01/25/tf-ious/iou.png" /></p>
 <p><code>iou</code>比较简单，交集除以并集即可，只需要注意没有交集时设置交集为<code>0</code>即可：
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">area_i = tf.reduce_prod(tf.maximum(br - tl, <span class="number">0</span>) + offset, axis=-<span class="number">1</span>)</span><br></pre></td></tr></table></figure></p>
 <h1 id="giou">GIOU</h1>
-传统我们拟合<code>bbox</code>靠<code>mse</code>，如下图：
-<div data-align="center">
-<p><img src='tf-ious/giou-1.png' /></p>
-</div>
+<p>传统我们拟合<code>bbox</code>靠<code>mse</code>，如下图： <img
+src="/2020/01/25/tf-ious/giou-1.png" /></p>
 <p>图<code>a</code>与图<code>b</code>中，<code>mse</code>的值都一样，但是他们的不重叠方式却完全不同，也就是说<code>mse</code>的优化不代表<code>iou</code>就可以变好。那么咱们就直接来优化<code>iou</code>好了，但是直接优化<code>iou</code>又有一系列问题：</p>
 <ol type="1">
 <li><p>两个<code>bbox</code>不相交的时候<code>iou</code>值为<code>0</code>，这样没法优化。</p></li>
 <li><p><code>iou</code>不知道<code>bbox</code>的相交形式，比如下图，三个<code>iou</code>值都相同。</p>
-<div data-align="center">
-<p><img src='tf-ious/giou-2.png' /></p>
-</div></li>
+<p><img src="/2020/01/25/tf-ious/giou-2.png" /></p></li>
 </ol>
 <p>所以<code>giou</code>就是来解决这两个问题的，假如现在有两个矩形：<code>A</code>、<code>B</code>，我们找到一个最小的封闭矩形<code>C</code>，让<code>C</code>可以把<code>A</code>、<code>B</code>包含在内，然后我们计算<code>C</code>中没有覆盖<code>A</code>和<code>B</code>的面积占<code>C</code>总面积的比值，然后用<code>A</code>与<code>B</code>的<code>iou</code>减去这个比值(以下<code>A</code>均代表预测矩形、<code>B</code>均代表标签矩形)：</p>
-<div data-align="center">
-<p><img src='tf-ious/giou-3.png' /></p>
-</div>
+<p><img src="/2020/01/25/tf-ious/giou-3.png" /></p>
 <p>公式化： <span class="math display">\[
 \begin{aligned}
     giou&amp;=iou-\frac{|\frac{C}{A\cup B}|}{|C|},giou\in[-1,1]\\
@@ -39,13 +31,9 @@ class="math inline">\(giou==iou==1\)</span>，当两个矩形重叠区域越少<
 class="math inline">\(giou\rightarrow -1\)</span>,这个性质就相当好。</p>
 <h1 id="diou">DIOU</h1>
 <p>但是<code>giou</code>也有没考虑到的地方，那就是如果一个矩形被另一个矩形包含的时候，他的后一项就退化为了1，也就是说退化为了<code>iou</code>，因此提出<code>diou</code>来解决在矩形重合时的进一步优化问题(此处参考知乎作者，下面的公式我按自己实现的来写)。</p>
-<div data-align="center">
-<p><img src='tf-ious/diou-2.jpg' /></p>
-</div>
-也就是在<code>iou</code>中添加中心点距离作为损失：
-<div data-align="center">
-<p><img src='tf-ious/diou-4.png' /></p>
-</div>
+<p><img src="/2020/01/25/tf-ious/diou-2.jpg" /></p>
+<p>也就是在<code>iou</code>中添加中心点距离作为损失： <img
+src="/2020/01/25/tf-ious/diou-4.png" /></p>
 <p><span class="math display">\[
 \begin{aligned}
     center\ diag&amp;= \sum((A_{cent} -B_{cent})^2)\\
