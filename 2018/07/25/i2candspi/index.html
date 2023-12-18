@@ -2,15 +2,11 @@
 首先我使用的是linux应用层通用的i2c读写，我的读写默认是使用smbus协议进行读写的。</p>
 <span id="more"></span>
 <h1 id="smbus协议">smbus协议</h1>
-先放一张图片合集，接下来就逐一看看这几种方式。
-<div data-align="center">
-<p><img src='./1.png' width="80%"/></p>
-</div>
+<p>先放一张图片合集，接下来就逐一看看这几种方式。 <img
+src="/2018/07/25/i2candspi/1.png" /></p>
 <h1 id="smbus-send-byte">smbus Send Byte</h1>
 <p>这个方式比较少用到，一般我们的传感器都有地址位以及数据位，所以至少传输两位。但是我在使用SHT31这个传感器的就需要用到此方式。先看看SHT31寄存器的读写：</p>
-<div data-align="center">
-<p><img src='./2.png' width="80%"/></p>
-</div>
+<p><img src="/2018/07/25/i2candspi/2.png" /></p>
 <p>这里发现这个传感器没有寄存器地址，但是也要发两位数据，而且是高位先行。
 所以这个时候就需要改写对应的读写函数如下：</p>
 <pre><code>直接按高低位写两位数据即可。</code></pre>
@@ -23,9 +19,7 @@
 因为标准的smbus协议读取16位数据是，都是默认先读到的为低8位，之后读取到的是高8位。
 在使用smbus协议读取fdc2214传感器设备id就会出现问题。</p>
 <p>fdc2214传感器读取协议：</p>
-<div data-align="center">
-<p><img src='./3.png' width="80%"/></p>
-</div>
+<p><img src="/2018/07/25/i2candspi/3.png" /></p>
 <p>可以发现他的读取是默认先高位，再低位。</p>
 <p>所以我们在使用smbus协议读取到数据后要做好数据高低转换的措施：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* 读取16位 先读高8位再读低8位 */</span></span><br><span class="line"><span class="type">static</span> <span class="type">uint16_t</span> <span class="title function_">read16</span><span class="params">(<span class="type">uint8_t</span> reg)</span> &#123;</span><br><span class="line">    <span class="comment">/* 读取两字节 bmp280默认先输出高位再输出低位  */</span></span><br><span class="line">    <span class="comment">/* smbus协议默认先低位再高位 所以需要转换  */</span></span><br><span class="line">    <span class="type">uint16_t</span> temp = (<span class="type">uint16_t</span>)i2c_smbus_read_word_data(bmp280fd, reg);</span><br><span class="line">    <span class="keyword">return</span> temp &gt;&gt; <span class="number">8</span> | temp &lt;&lt; <span class="number">8</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
