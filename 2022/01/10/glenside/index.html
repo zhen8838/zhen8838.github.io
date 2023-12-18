@@ -1,0 +1,351 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description"><title>Pure Tensor Program Rewriting via Access Patterns | Blog</title><link rel="stylesheet" type="text/css" href="/css/style.css?v=1.0.0"><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/normalize/latest/normalize.min.css"><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/pure/latest/pure-min.min.css"><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/pure/latest/grids-responsive-min.min.css"><link rel="stylesheet" href="//lib.baomitu.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//lib.baomitu.com/jquery/latest/jquery.min.js"></script><link rel="icon" mask="" sizes="any" href="/favicon.ico"><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"><script type="text/javascript" src="//lib.baomitu.com/clipboard.js/latest/clipboard.min.js"></script><script type="text/javascript" src="//lib.baomitu.com/toastr.js/latest/toastr.min.js"></script><link rel="stylesheet" href="//lib.baomitu.com/toastr.js/latest/toastr.min.css"><meta name="generator" content="Hexo 7.0.0"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">Pure Tensor Program Rewriting via Access Patterns</h1><a id="logo" href="/.">Blog</a><p class="description"></p></div><div id="nav-menu"><a class="current" href="/."><i class="fa fa-home"> 首页</i></a><a href="/archives/"><i class="fa fa-archive"> 归档</i></a><a href="/about/"><i class="fa fa-user"> 关于</i></a></div></div><div class="pure-g" id="layout"><div class="pure-u-1 pure-u-md-3-4"><div class="content_container"><div class="post"><h1 class="post-title">Pure Tensor Program Rewriting via Access Patterns</h1><div class="post-meta">2022-01-10<span> | </span><span class="category"><a href="/categories/%E5%AD%A6%E4%B9%A0/">学习</a></span><span class="post-time"><span class="post-meta-item-text"> | </span><span class="post-meta-item-icon"><i class="fa fa-keyboard-o"></i><span class="post-count"> 3.9k</span><span class="post-meta-item-text"> 字</span></span></span><span class="post-time"> | <span class="post-meta-item-icon"><i class="fa fa-clock-o"></i><span class="post-count"> 16</span><span class="post-meta-item-text"> 分钟</span></span></span></div><div class="post-content"><p>这是一篇基于<code>EGraph</code>对<code>Tensor</code>级别的<code>IR</code>进行<code>Term Rewrite</code>的文章.
+<span id="more"></span></p>
+<h1 id="abstract">Abstract</h1>
+<p>对于现存的<code>Pure IR</code> 比如<code>relay</code>,
+并不会关注底层的<code>data layout</code> 对于现存的<code>Pure IR</code>
+比如<code>relay</code>, 并不会关注底层的<code>data layout</code>
+相关信息.另一边用于底层优化的<code>IR</code>却并不是<code>Pure IR</code>,难以进行<code>term rewriting</code>.为了解决这个问题,提出了<code>Glenside</code>（<code>Access Pattern</code>）,一种<code>Pure IR</code>可以抽象出<code>low level</code>的硬件表示,同时经过<code>term rewriting</code>后甚至能自动发现<code>im2col</code>这种等效计算方法.</p>
+<h1 id="introduction">Introduction</h1>
+<p><code>TVM</code> 和
+<code>Halide</code>已经通过简单的<code>rewrite system</code>做到了<code>simplify</code>和边界分析,但是现存的<code>IR</code>对于<code>Tensor IR</code>抽象和粒度不匹配还是影响了<code>term rewriting</code>,以上两个项目中都需要写出非常详细的<code>pattern</code>来进行
+<code>simplify</code>的.</p>
+<p><code>term rewriting</code>面对的主要问题就是有副作用的<code>IR</code>,
+因此需要提出一种没有副作用的<code>IR</code>, 同样也能表示这种操作.</p>
+<p>传统的<code>tensor</code>通常用一个正整数<code>tuple</code>作为<code>shape</code>来表示的.
+而<code>Access Pattern</code>替换了传统的表示方法,
+使用两个<code>shape</code>来表示, 例如<span class="math inline">\(((x),\
+(y,\ z))\)</span>
+,通过这种方式把<code>tensor</code>的迭代维度从计算的维度分离开来.</p>
+<p>比如一个三维的<code>Tensor</code>运算,典型如带有<code>Batch</code>的矩阵乘,在<code>Batch</code>维度进行迭代,在后面两个维度进行计算,其示意图如下：
+<img src="/2022/01/10/glenside/accpat.png" alt="access pattern" /></p>
+<h1 id="background-and-related-work">Background and Related Work</h1>
+<h2 id="machine-learning-accelerators">Machine Learning
+Accelerators</h2>
+<p>对于深度学习加速器来说最麻烦的就是如何自动化的把神经网络操作转化为这种加速器所支持的操作.</p>
+<h2 id="tensor-irs-and-compilers">Tensor IRs and Compilers</h2>
+<p><code>Rewriting</code> 和 <code>Polyhedral</code>
+虽然做法不一样,但是他们对于编译器来说是互补的.</p>
+<h2 id="term-rewriting-and-equality-saturation">term rewriting and
+Equality Saturation</h2>
+<p><code>Egg</code>
+已经被应用在<code>DSP Compiler</code>的自动向量化上了.</p>
+<h1 id="from-pure-matmul-to-ir-design-goals">From Pure matMul to IR
+Design Goals</h1>
+<p>要把函数式编程和<code>Term Rewriteing</code>应用到<code>Tensor IR</code>上需要仔细的设计.举个例子,
+我们必须要保证每个<code>op</code>由固定的<code>Tensor Shape</code>组合而成,</p>
+<h2 id="pure-matrix-multiplication">Pure Matrix Multiplication</h2>
+<p>我们用[A]表示一个由A类型组成的向量. 那么可以表示出内积为 <span
+class="math inline">\([f64] \cdot [f64] \rightarrow f64\)</span></p>
+<p>然后<code>2D Tanspose</code>表示为 <span
+class="math inline">\([[f64]] \rightarrow [[f64]]\)</span>
+这里的意思就是一个向量内部由向量组成,那么就是<code>2D</code>矩阵了,
+同时输出也是同样的<code>2D</code>矩阵,(可能维度发生了变化)</p>
+<p><code>2D</code>的矩阵乘的公式如下: <span class="math inline">\(R_{ij}
+= \sum_k P_{ik}Q_{kj} = P_{i} \cdot Q_{j}^T\)</span></p>
+<p>也就是计算输出<span class="math inline">\(ij\)</span>上每对<span
+class="math inline">\(P\)</span>的行和<span
+class="math inline">\(Q\)</span>的列长度为<span
+class="math inline">\(k\)</span>的向量内积.</p>
+<p>因此我们引入map 操作: <span class="math inline">\(map : (A
+\rightarrow B) * [A] \rightarrow [B]\)</span> <span
+class="math inline">\((A -&gt; B)\)</span>
+表示的就是一个函数,他的计算就是把类型A转换为B.</p>
+<p>笛卡尔积: <span class="math inline">\(cardProd : [A] \times [B]
+\rightarrow [A \times B]\)</span></p>
+<p>假设这里的<span class="math inline">\(A\)</span>和<span
+class="math inline">\(B\)</span>都是一维向量[f64],这里<span
+class="math inline">\(A \times
+B\)</span>就是表示的是[[f64]],其中里面的维度是2, 外面维度和<span
+class="math inline">\(A\)</span>相同, 最后外面再加一个维度得到<span
+class="math inline">\([A \times B]\)</span>.</p>
+<p><span class="math inline">\(matmul(P,Q) = map(dotProd, cartProd(P,
+trans2(Q)))\)</span></p>
+<p>这里的思路就是<span class="math inline">\(P\)</span>和<span
+class="math inline">\(Q\)</span>的转置 每个元素组合, 也就是<span
+class="math inline">\(P\)</span>的行和<span
+class="math inline">\(Q\)</span>的列组合,
+组合好后每个数据对都应用内积求结果.</p>
+<p>这个<code>matMul</code>公式实例化就如下所示,
+注意到输出的数据就变成了[f64]. 各位也可以自己将P =
+[[f64]]带入公式中推导一下<code>shape</code>. <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">dotProd</span>(<span class="params">AB</span>):</span><br><span class="line">  (A, B) = AB</span><br><span class="line">  <span class="keyword">assert</span> A.ndim == <span class="number">1</span></span><br><span class="line">  <span class="keyword">return</span> np.dot(A, B)</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">cartProd</span>(<span class="params">A: np.ndarray, B: np.ndarray</span>):</span><br><span class="line">  AB = []</span><br><span class="line">  <span class="keyword">for</span> a <span class="keyword">in</span> A.reshape((-<span class="number">1</span>, A.shape[-<span class="number">1</span>])):</span><br><span class="line">    <span class="keyword">for</span> b <span class="keyword">in</span> B.reshape((-<span class="number">1</span>, A.shape[-<span class="number">1</span>])):      </span><br><span class="line">      AB.append((a, b)) </span><br><span class="line">  <span class="keyword">return</span> AB</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">trans2</span>(<span class="params">A: np.ndarray</span>):</span><br><span class="line">  <span class="keyword">assert</span> A.ndim == <span class="number">2</span></span><br><span class="line">  <span class="keyword">return</span> A.transpose()</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">test_cardproduct</span>():</span><br><span class="line">  P = np.random.rand(<span class="number">3</span>, <span class="number">4</span>)</span><br><span class="line">  Q = np.random.rand(<span class="number">4</span>, <span class="number">5</span>)</span><br><span class="line">  <span class="built_in">print</span>(<span class="built_in">list</span>(<span class="built_in">map</span>(dotProd, cartProd(P, trans2(Q)))))</span><br><span class="line">[<span class="number">0.10732114230108192</span>,</span><br><span class="line"> <span class="number">0.21243371438870884</span>,</span><br><span class="line"> <span class="number">0.34685428666259904</span>,</span><br><span class="line"> <span class="number">0.14556577914149274</span>,</span><br><span class="line"> <span class="number">0.23254688326914144</span>,</span><br><span class="line"> <span class="number">0.5821735344411842</span>,</span><br><span class="line"> <span class="number">0.9735256103240557</span>,</span><br><span class="line"> <span class="number">1.9118977760582447</span>,</span><br><span class="line"> <span class="number">0.5735451588389484</span>,</span><br><span class="line"> <span class="number">0.5549736743719554</span>,</span><br><span class="line"> <span class="number">0.31553182873079905</span>,</span><br><span class="line"> <span class="number">0.582579830538644</span>,</span><br><span class="line"> <span class="number">1.1357542180343412</span>,</span><br><span class="line"> <span class="number">0.20513303615713718</span>,</span><br><span class="line"> <span class="number">0.3916623321089719</span>]</span><br></pre></td></tr></table></figure></p>
+<p>上面那个公式的得到的结果是<code>[f64]</code>,但是实际上我们的<code>2D</code>矩阵乘就是要得到<code>2D</code>的结果.
+经过观察,很明显就是<code>cartProd</code>会将<code>shape</code>给展开,
+因此简单的修改方法则是添加一个新的函数.</p>
+<p><span class="math inline">\(cartProd2D : [A] * [B] -&gt;
+[[A*B]]\)</span></p>
+<p>但是如果用这个函数代替上面的<code>cartProd</code>,
+<code>map</code>时就会出错,他不能把一个<code>[[f64]]</code>的输入传递给<code>dotProd</code>.</p>
+<p>因此添加一个新的<code>mapAt2</code>,
+将<code>map</code>作用在指定维度</p>
+<p><span class="math inline">\(mapAt2 : (A \rightarrow B) * [[A]]
+\rightarrow [[B]]\)</span></p>
+<p>那么要得到<code>[[f4]]</code>的矩阵乘结果,公式如下:</p>
+<p><span class="math inline">\(matMul(P,Q) = mapAt2(dotProd),
+cartProd2D(P, trans2(Q))\)</span></p>
+<p>对应的代码实现如下: <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">cartProd2</span>(<span class="params">A: np.ndarray, B: np.ndarray</span>):</span><br><span class="line">  n, m = <span class="built_in">len</span>(A), <span class="built_in">len</span>(B)</span><br><span class="line">  AB = [[<span class="number">1</span> <span class="keyword">for</span> j <span class="keyword">in</span> <span class="built_in">range</span>(m)] <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(n)]</span><br><span class="line">  <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(n):</span><br><span class="line">    <span class="keyword">for</span> j <span class="keyword">in</span> <span class="built_in">range</span>(m):</span><br><span class="line">      AB[i][j] = (A[i], B[j])</span><br><span class="line">  <span class="keyword">return</span> AB</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">mapAt2</span>(<span class="params">func, A: <span class="built_in">list</span>[<span class="built_in">list</span>[<span class="built_in">any</span>]]</span>):</span><br><span class="line">  n, m = <span class="built_in">len</span>(A), <span class="built_in">len</span>(A[<span class="number">0</span>])</span><br><span class="line">  B = [[<span class="number">1</span> <span class="keyword">for</span> j <span class="keyword">in</span> <span class="built_in">range</span>(m)] <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(n)]</span><br><span class="line">  <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(n):</span><br><span class="line">    <span class="keyword">for</span> j <span class="keyword">in</span> <span class="built_in">range</span>(m):</span><br><span class="line">      B[i][j] = func(A[i][j])        </span><br><span class="line">  <span class="keyword">return</span> B</span><br><span class="line"></span><br><span class="line">P = np.random.rand(<span class="number">3</span>, <span class="number">4</span>)</span><br><span class="line">Q = np.random.rand(<span class="number">4</span>, <span class="number">5</span>)</span><br><span class="line"><span class="built_in">print</span>(np.array(mapAt2(dotProd, cartProd2(P, trans2(Q)))))  </span><br><span class="line">[[<span class="number">1.90265933</span> <span class="number">1.37014723</span> <span class="number">1.90525837</span> <span class="number">2.16506508</span> <span class="number">0.8182536</span> ]</span><br><span class="line"> [<span class="number">1.74624439</span> <span class="number">1.06923152</span> <span class="number">1.74345372</span> <span class="number">1.85747233</span> <span class="number">0.82131666</span>]</span><br><span class="line"> [<span class="number">1.88350644</span> <span class="number">1.49704492</span> <span class="number">1.93444511</span> <span class="number">2.1764349</span>  <span class="number">0.8319122</span> ]]</span><br></pre></td></tr></table></figure></p>
+<h2 id="glenside-design-constraints-and-goals">Glenside Design
+Constraints and Goals</h2>
+<p>我们根据上面提出的函数就能写出一系列的<code>rewrite</code>规则了.但是有个规则时依赖于特定维度的<code>shape</code>,
+如果我们有了更高阶的维度,
+我们首先得实现对应的算子(就像刚才需要添加一个<code>cart Product2D</code>),还得在所有的规则上添加新的规则转换,比如<code>1D</code>转换<code>2D</code>,<code>2D</code>转<code>1D</code>.
+非常容易就出现组合爆炸的问题.</p>
+<p>一种解决方法是添加<code>lambda</code>函数,通过偏函数的方式解决<code>shape align</code>的问题</p>
+<p><span class="math display">\[
+\text{matMul}&#39;\ P\ Q\ :=\ \text{map}&#39;(\lambda\ \text{r}
+\Rightarrow \text{map}&#39; (\text{dotProd}&#39;\ \lambda)\
+(\text{trans2}\ Q))\ P
+\]</span> 或者使用<code>index</code>标记的方式 <span
+class="math display">\[
+\text{matMul}(P,Q)[i,j]\ :=\  \text{dotProd}(P[i],\text{trans2}(Q)[j])
+\]</span></p>
+<p>但是上面两种方法实际上都是要添加<code>name binding</code>的,这对<code>term rewriting</code>来说是很困难的,因为你做<code>rewrite</code>的时候需要分析每个表达式上下文,当前的<code>var bind</code>到的是什么.作者利用<code>egg</code>尝试了实现,但是发现潜在的搜索空间膨胀问题还是难以解决.</p>
+<p>以上所有的约束就是<code>Glenside</code>需要解决的问题:
+提供一个灵活的<code>IR</code>支持高阶的<code>tensor</code>的操作的同时支持高性能的<code>term rewriting</code>.</p>
+<h1 id="glenside">Glenside</h1>
+<h2 id="access-patterns">Access Patterns</h2>
+<p><code>access pattern</code>将通用的<code>tensor IR</code>的<code>dimension</code>分成了<code>iterated over</code>
+和 <code>computed on</code>两部分.
+其中<code>iterated over</code>表示的就是<code>accessed</code>.
+(这种思路和<code>numpy</code>的<code>universal functions</code>比较类似).比如之前的<code>matMul</code>的例子,就是在<code>dim 0</code>进行迭代,在<code>dim 1</code>
+进行计算.</p>
+<p><code>access pattern</code>
+是被<code>tensor shape</code>所定义为两个<code>tuple</code>组成
+<code>paIR</code> <span class="math inline">\((S_a,\
+S_c)\)</span>,<code>tensor</code> 的<code>shape</code>
+等于两个<code>tuple</code>的<code>concat</code>结果.</p>
+<p>对于一个tensor T, 我们用<span
+class="math inline">\(n_A\)</span>表示<span
+class="math inline">\(S_A\)</span>的长度, 此时我们利用语法 <span
+class="math inline">\(\text{access}\ T\
+n_A\)</span>来表示这个tensor的access pattern.</p>
+<p>比如<span class="math inline">\(\text{T.shape} =
+(m,n)\)</span>那么<span class="math inline">\(\text{access}\ T\
+1\)</span>就表示<span class="math inline">\(((m),(n))\)</span></p>
+<h2 id="access-pattern-transformers">Access Pattern Transformers</h2>
+<p><code>access pattern transformer</code>修改一个或多个<code>access pattern</code>生成一个新的<code>access pattern</code>,
+<code>glenside</code>通过这个可以支持复杂的<code>pattern</code>如<code>slice transpose</code>.</p>
+<p>其实就是把一些<code>tensor</code>的<code>operator</code>仅仅用修改<code>access pattern</code>的进行实现了,比如<code>transpose</code>,其本质就是改变了数据的访问顺序,对于<code>pad</code>就是多访问了一些元素.<code>access pattern</code>的妙处就是把很多复杂的操作都看成了对于<code>tensor</code>的访问这种简单的抽象,同时我们还不需要像<code>TVM</code>/<code>MLIR</code>一样定义一套<code>shape infer</code>的图,因为<code>access pattern</code>原生就能表示<code>tensor</code>的<code>shape</code>.</p>
+<p>下面举个🌰： 比如我们要取<code>tensor</code> <span
+class="math inline">\(Q\)</span>的每一列进行矩阵乘,
+此时使用<code>transpose transformer</code>,把<code>access pattern</code>修改成当前需要的结果.</p>
+<p>比如<span class="math inline">\(Q\)</span>的<code>shape</code>为<span
+class="math inline">\((N,O)\)</span>,<span
+class="math inline">\((\text{access}\ Q\
+1)\)</span>表示读取每一行进行计算 <span
+class="math inline">\(((N),(O))\)</span>, <span
+class="math inline">\((\text{transpose}\ (\text{access}\ Q\ 1)\
+(\text{list}\ 1\
+0))\)</span>就表示把读取每一行的访问模式变成了读取每一列进行计算即</p>
+<p><span class="math display">\[
+\begin{aligned}
+(\text{access}\ Q\ 1) &amp;= ((N),(O)) \\
+(\text{transpose}\ (\text{access}\ Q\ 1)\ (\text{list}\ 1\ 0)) &amp;=
+((O),(N))
+\end{aligned}
+\]</span></p>
+<p>接下来对于<code>cartProd</code>的<code>access transformer</code>如下:</p>
+<p><span class="math display">\[
+\begin{aligned}
+  ((a_0,\ldots,a_n),\ (c_0,\ldots,c_p)),\ ((b_0,\ldots,b_n),\ (c_0,
+\ldots,c_p)) \Rightarrow ((a_0,\ldots,a_n,\ b_0,\ldots,b_n),\ (2,\
+c_0,\ldots,c_p))
+\end{aligned}
+\]</span></p>
+<p>其中<span class="math inline">\((2,\
+c_0,\ldots,c_p)\)</span>表示的就是<code>concat</code>起来的两个子<code>tensor</code>.</p>
+<p>在矩阵乘中, <span class="math inline">\(Q = (M,N),\ P =
+(N,O)\)</span>, 读取<span class="math inline">\(Q\)</span>的行与<span
+class="math inline">\(P\)</span>的列<span class="math inline">\((((M),\
+(N)),\ ((O),\ (N))
+)\)</span>,然后带入<code>cartProd</code>的<code>access transformer</code>得到<span
+class="math inline">\(((M,\ O),\ (2,\ N))\)</span>. 那么就表示在<span
+class="math inline">\(Q\)</span>的行与<span
+class="math inline">\(P\)</span>的列上每次取两个长度为<span
+class="math inline">\(N\)</span>的向量进行计算.</p>
+<h2 id="access-pattern-operators">Access Pattern Operators</h2>
+<p><code>operator</code>是<code>Glenside</code>中唯一表示计算的<code>IR</code>.
+他们只在添加<code>compute</code>前缀时才被<code>invoke</code>（区别于<code>access pattern transformer</code>）,
+即把操作映射到<code>access pattern</code>的<code>compute</code>维度上,
+最终返回的<code>access pattern</code>中<code>compute</code>维度会被修改为<code>operator</code>所指示的,简单的说就是计算所调用的函数.</p>
+<table>
+<colgroup>
+<col style="width: 13%" />
+<col style="width: 51%" />
+<col style="width: 35%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Operator</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>reduceSum</td>
+<td><span class="math inline">\((\ldots) \rightarrow ()\)</span></td>
+<td>sum values</td>
+</tr>
+<tr class="even">
+<td>reduceMax</td>
+<td><span class="math inline">\((\ldots) \rightarrow ()\)</span></td>
+<td>max of all values</td>
+</tr>
+<tr class="odd">
+<td>dotProd</td>
+<td><span class="math inline">\((t,s_0,\ldots,s_n) \rightarrow
+()\)</span></td>
+<td>eltwise mul ; sum</td>
+</tr>
+</tbody>
+</table>
+<p>通过<code>cartProd</code>之后得到了<span
+class="math inline">\(((M,O),(2,N))\)</span>的<code>access pattern</code>,
+然后应用dotProd之后的得到了<span
+class="math inline">\(((M,O),())\)</span>,
+最后一个矩阵乘的<code>Glenside</code>表示·就如下所示：</p>
+<p><span class="math display">\[
+\begin{aligned}
+&amp; (\text{compute}\ \text{dotProd}          &amp;;\ \ \ &amp;((M,O),
+()) \\
+&amp; \ (\text{cartProd}                 &amp;;\ \ \ &amp;((M,O), (2,
+N)) \\
+&amp; \ \ (\text{access}\ \text{activations}\ 1)  &amp;;\ \ \ &amp;((M),
+(N)) \\
+&amp; \ \ \ (\text{transpose}              &amp;;\ \ \ &amp;((O), (N))
+\\
+&amp; \ \ \ \ (\text{access}\  \text{weights}\ 1)    &amp;;\ \ \
+&amp;((N), (O)) \\
+&amp; \ \ \ \ \ (\text{list}\ 1\ 0))))
+\end{aligned}
+\]</span></p>
+<h1 id="case-studies">5. Case Studies</h1>
+<p>这里主要是展示<code>Glenside</code>将典型的一些深度学习<code>kernel</code>转换到了加速器上.</p>
+<h2 id="representation-of-common-ml-kernels">5.1 Representation of
+Common ML Kernels</h2>
+<h3 id="d-convolution">2D Convolution</h3>
+<p>卷积的计算公式如下：</p>
+<p><span class="math display">\[
+\begin{aligned}
+&amp;\operatorname{out}[n, o, x, y]= \\
+&amp;\sum_{d x, d y, c}(A[n, c, S[0] \cdot x+d x, S[1] \cdot y+d y]
+\cdot W[o, c, d x, d y])
+\end{aligned}
+\]</span></p>
+<p>转换为<code>Glenside</code>表示： <span class="math display">\[
+\begin{array}{lll}
+\text { (transpose } &amp; ; &amp; \left(\left(N, O, H^{\prime},
+W^{\prime}\right),()\right) \\
+\ \text { (squeeze } &amp; ; &amp; \left(\left(N, H^{\prime},
+W^{\prime}, O\right),()\right) \\
+\ \ \text { (compute dotProd } &amp; ; &amp; \left(\left(N, 1,
+H^{\prime}, W^{\prime}, O\right),()\right) \\
+\ \ \ \text { (cartProd } &amp; ; &amp; \left(\left(N, 1, H^{\prime},
+W^{\prime}, O\right),\left(2, C, K_{h}, K_{w}\right)\right) \\
+\ \ \ \ \text { (windows } &amp; ; &amp; \left(\left(N, 1, H^{\prime},
+W^{\prime}\right),\left(C, K_{h}, K_{w}\right)\right) \\
+\ \ \ \ \ \text { (access activations 1) } &amp; ; &amp; ((N),(C, H, W))
+\\
+\ \ \ \ \ \ \text { (shape C Kh Kw) } &amp; &amp; \\
+\ \ \ \ \ \ \text { (stride 1 Sh Sw)) } &amp; &amp; \\
+\ \ \ \ \ \text { (access weights 1))) } &amp; &amp;
+((O),  \left.\left(C, K_{h}, K_{w}\right)\right) \\
+\ \ \ \ \text { 1) } &amp; &amp; &amp; \\
+\ \ \ \text { (list } 0 \text { 3 1 2) ) } &amp; &amp;
+\end{array}
+\]</span></p>
+<p>首先取出<code>weights</code>的<span
+class="math inline">\((C,K_h,K_w)\)</span>,然后使用<code>windows</code>的操作生成新的<code>access pattern</code>
+<span class="math inline">\(((N,1,H’,W’),(C,K_h,K_w))\)</span>.
+即对于输出的每一个的像素位置,取一个原始的输入窗口. 最后每个窗口和卷积的
+<code>filter</code> 进行外积后计算内积.
+再用<code>squeeze</code>和<code>transpose</code>得到输出的结果.</p>
+<h3 id="max-pooling">Max Pooling</h3>
+<p>其数学公式如下：</p>
+<p><span class="math display">\[
+\begin{aligned}
+&amp;\operatorname{out}[n, c, x, y]= \\
+&amp;\max _{d x, d y}(\text { activations }[n, c, \text { strides }[0]
+\cdot x+d x, \text { strides }[1] \cdot y+d y])
+\end{aligned}
+\]</span></p>
+<p>他的<code>Glenside</code>表示与卷积类似,<code>windows</code>之后<code>reduce</code>即可：</p>
+<p><span class="math display">\[
+\begin{array}{ll}
+\text { (compute reduceMax } &amp; ;\left(\left(N, C, H^{\prime},
+W^{\prime}\right),()\right) \\
+\ \text { (windows } &amp; ;\left(\left(N, C, H^{\prime},
+W^{\prime}\right),\left(K_{h}, K_{w}\right)\right) \\
+\ \ \text { (access activations 2) } &amp; ;((N, C),(H, W)) \\
+\ \ \ \text { (shape Kh Kw) } &amp; \\
+\ \ \ \ \text { (stride Sh Sw))) } &amp;
+\end{array}
+\]</span></p>
+<p>我觉得<code>glenside</code>把访问和计算分离的方式就极大的简化了计算的算子,
+因为访问变换的时候其实包含了传统表述中计算的一部分.比如上面的两个例子中,
+<code>conv2d</code>和<code>maxpool</code>的核心都是取<code>window</code>然后计算,一个是取<code>3d</code>一个取<code>2d</code>,
+但是此时取<code>window</code>的并不是在<code>window</code>函数上配参数,而是直接把这个信息附加到<code>tensor</code>自身上了.</p>
+<p>这种表示方法虽然无法和通常的数学计算流程表示一一对应,但是他作为<code>IR</code>就起到了很好的桥梁作用,并且他这个内积外积设计就和很多加速器的核心逻辑一致.</p>
+<h2 id="mapping-matmul-to-accelerators">Mapping matMul to
+Accelerators</h2>
+<p><code>Glenside</code>所提出的<code>demo</code>是一个<code>weight-stationary</code>的脉动阵列,然后<code>Glenside</code>基于<code>egg</code>的库添加了一系列的规则,下面是将矩阵乘转换为脉动整列计算的规则：</p>
+<p><span class="math display">\[
+\begin{aligned}
+&amp;\text { (compute dotProd (cartProd ?a0 ?a1)) } \Longrightarrow \\
+&amp;\quad \text { (systolicArray ?rows ?cols } \\
+&amp;\quad ? a 0 \text { (access (transpose ?a1 (list } 1\ 0))\ 0) \text
+{ ) } \\
+&amp;\text { where ?a0 is of shape ((?batch), (?rows)) } \\
+&amp;\text { and ?a1 is of shape ((?cols), (?rows)) }
+\end{aligned}
+\]</span></p>
+<p>脉动阵列的形状参数由<span
+class="math inline">\(\text{rows}\)</span>和<span
+class="math inline">\(\text{cols}\)</span>所决定,同时在接下来的<code>access pattern</code>中更加细致的表示硬件如何访问<code>tensor</code>,首先是读取所有的数据<span
+class="math inline">\((\text{hence},(\text{access}\ \ldots\
+0))\)</span>,然后在内存中进行<code>transpose</code>.这种更加细致的表示方法可以提供更加丰富的数据<code>layout</code>信息,对于后续的优化/<code>codegen</code>有潜在的好处.</p>
+<h2 id="flexible-mapping-discovering-im2col">Flexible Mapping:
+Discovering im2col</h2>
+<p><code>im2col</code>的布局转换可以提升计算速度,虽然会导致一部分的内存开销.
+这种<code>transform</code>涉及直接在内存中对<code>windows</code>操作实例化,虽然会导致额外的数据复制,但是只要这个开销小雨取偏移的开销就是有好处的.
+接下来<code>Glenside</code>将展示如何自动发现<code>im2col</code>的<code>transform</code>.</p>
+<p>首先上面提出的脉动整列转换都是只针对单纯两个向量计算的映射,而卷积/矩阵乘最大的问题就是最后的内积/外积操作输入的<code>tensor</code>维度并不确定,所以需要先自动的把<code>access pattern</code>的维度降下来转换到脉动阵列上,不然我们又回到了为每个场景写<code>pass</code>的情况了.</p>
+<p><code>Glenside</code>提出一个<code>exploratory rewrite</code>,即添加一系列看似无效的操作从而引入潜在的<code>rewrite</code>机会.比如把一个<code>access pattern</code>展平之后并<code>reshape</code>为原样,这样就能解决之前规则中维度不匹配的问题.
+<span class="math display">\[
+\begin{aligned}
+?a \Rightarrow (\text{reshape}\ \ (\text{flatten}\ ?a)\ \text{?shape})
+\end{aligned}
+\]</span></p>
+<p>不过这样也带来了一个问题,添加了<code>reshape</code>之后还需要消除它才能真正的进行脉动阵列的转换,因此又添加了关于<code>reshape</code>与<code>cartProd</code>/<code>dotProd</code>计算的<code>composition commutativity</code>规则,将<code>reshape</code>操作从表达式中移除（意思就是这里没什么好办法,直接手动加两个规则规避一下比较简单）.
+<span class="math display">\[
+\begin{array}{r}
+\text { (cartProd (reshape ?a0 ?shape0) (reshape ?a1 ?shape } 1) \text {
+) } \Longrightarrow \text { (reshape (cartProd ?a0 ?a1) ?newShape) } \\
+\text { (compute dotProd (reshape ?a ?shape)) } \Longrightarrow \text {
+(reshape (compute dotProd ?a) ?newShape) }
+\end{array}
+\]</span>
+不过最终的结果证明了只需要寥寥几个规则就可以达到传统手写<code>pass</code>的程度,编写的复杂度更低,同时无需考虑<code>pass ordering</code>的问题.</p>
+<h2 id="flexible-mapping-matmul-blocking">Flexible Mapping: matMul
+Blocking</h2>
+<p>接下来作者探索了用<code>Glenside</code>做<code>tiling</code>,比如把<span
+class="math inline">\(256 \times 256\)</span>转换为多个<span
+class="math inline">\(16 \times 16\)</span>小矩阵乘.
+和脉动阵列一样,作者也是需要一个探索性的rewrite以及一些消除多余operate的<code>rewrite</code>,这里的探索性<code>rewrite</code>那肯定就是<code>slice</code>/<code>concat</code>了:
+<span class="math display">\[
+\begin{aligned}
+  ?a \Rightarrow (\text{concat}\ \ (\text{slice}\ ?a\ ?dim\ ?b0\ ?b1)
+(\text{slice}\ ?a\ ?dim\ ?b1\ ?b2)\ ?dim)
+\end{aligned}
+\]</span>
+不过这个探索性太强了,如果全部都组合肯定直接爆炸,因此作者设置的每次切一半,保证是2的倍数.然后再添加一些规则消除计算前的<code>concat/slice</code>.</p>
+<h1 id="总结">总结</h1>
+<ol type="1">
+<li><code>Glenside</code>有效的解决了底层IR与DSA的映射问题.</li>
+<li>可以利用<code>egraph</code>的特点去做到一些自动发现乘加矩阵融合等优化.</li>
+<li>作者提到<code>rewrite</code>和<code>polyhedral</code>是可以结合起来的,但我发现作者代码中求解<code>tiling</code>的时候用了一个<code>ILP</code>的库去加速搜索,不知道单纯用<code>rewrite</code>能达到两者一起的多少效果.</li>
+</ol>
+</div><div class="tags"><ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/IR/" rel="tag">IR</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/term-rewriting/" rel="tag">term rewriting</a></li></ul></div><div class="post-nav"><a class="pre" href="/2022/02/09/csharp-invoke/">C# P/Invoke 总结</a><a class="next" href="/2021/12/04/tensorir/">TVM TensorIR</a></div></div></div></div><div class="pure-u-1-4 hidden_mid_and_down"><div id="sidebar"><div class="widget"><form class="search-form" action="//www.google.com/search" method="get" accept-charset="utf-8" target="_blank"><input type="text" name="q" maxlength="20" placeholder="Search"/><input type="hidden" name="sitesearch" value="https://zhen8838.github.io"/></form></div><div class="widget"><div class="author-info"><a class="info-avatar" href="/about/" title="关于"><img class="nofancybox" src="/img/avatar.png"/></a><p>A Believing Heart Is Your Magic🪄</p><a class="info-icon" href="mailto:597323109@qq.com" title="Email" target="_blank" style="margin-inline:5px"> <i class="fa fa-envelope-square" style="margin-inline:5px"></i></a><a class="info-icon" href="https://github.com/zhen8838" title="Github" target="_blank" style="margin-inline:5px"> <i class="fa fa-github-square" style="margin-inline:5px"></i></a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-folder-o"> 分类</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/%E5%AD%A6%E4%B9%A0/">学习</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E7%94%9F%E6%B4%BB/">生活</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-star-o"> 标签</i></div><div class="tagcloud"><a href="/tags/Linux/" style="font-size: 15px;">Linux</a> <a href="/tags/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/" style="font-size: 15px;">数据结构</a> <a href="/tags/%E6%A0%91/" style="font-size: 15px;">树</a> <a href="/tags/C/" style="font-size: 15px;">C</a> <a href="/tags/%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0/" style="font-size: 15px;">深度学习</a> <a href="/tags/CNN/" style="font-size: 15px;">CNN</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" style="font-size: 15px;">嵌入式</a> <a href="/tags/%E8%93%9D%E7%89%99/" style="font-size: 15px;">蓝牙</a> <a href="/tags/Matlab/" style="font-size: 15px;">Matlab</a> <a href="/tags/%E9%93%BE%E8%A1%A8/" style="font-size: 15px;">链表</a> <a href="/tags/%E5%8D%8A%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0/" style="font-size: 15px;">半监督学习</a> <a href="/tags/tensorflow/" style="font-size: 15px;">tensorflow</a> <a href="/tags/python/" style="font-size: 15px;">python</a> <a href="/tags/%E5%B0%8F%E5%B7%A5%E5%85%B7/" style="font-size: 15px;">小工具</a> <a href="/tags/%E9%94%99%E8%AF%AF%E8%AE%B0%E5%BD%95/" style="font-size: 15px;">错误记录</a> <a href="/tags/OJ/" style="font-size: 15px;">OJ</a> <a href="/tags/Qt/" style="font-size: 15px;">Qt</a> <a href="/tags/GAN/" style="font-size: 15px;">GAN</a> <a href="/tags/%E6%80%BB%E7%BB%93/" style="font-size: 15px;">总结</a> <a href="/tags/%E5%9B%BE%E5%83%8F%E5%A4%84%E7%90%86/" style="font-size: 15px;">图像处理</a> <a href="/tags/%E7%AE%97%E6%B3%95/" style="font-size: 15px;">算法</a> <a href="/tags/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/" style="font-size: 15px;">机器学习</a> <a href="/tags/%E4%BD%9C%E4%B8%9A/" style="font-size: 15px;">作业</a> <a href="/tags/c/" style="font-size: 15px;">c</a> <a href="/tags/%E7%A5%9E%E7%BB%8F%E7%BD%91%E7%BB%9C/" style="font-size: 15px;">神经网络</a> <a href="/tags/linux/" style="font-size: 15px;">linux</a> <a href="/tags/cmake/" style="font-size: 15px;">cmake</a> <a href="/tags/c/" style="font-size: 15px;">c++</a> <a href="/tags/C/" style="font-size: 15px;">C++</a> <a href="/tags/%E8%81%9A%E7%B1%BB/" style="font-size: 15px;">聚类</a> <a href="/tags/CostModel/" style="font-size: 15px;">CostModel</a> <a href="/tags/%E5%A3%B0%E9%9F%B3%E4%BF%A1%E5%8F%B7%E5%A4%84%E7%90%86/" style="font-size: 15px;">声音信号处理</a> <a href="/tags/TVM/" style="font-size: 15px;">TVM</a> <a href="/tags/%E7%BC%96%E8%AF%91%E4%BC%98%E5%8C%96/" style="font-size: 15px;">编译优化</a> <a href="/tags/%E5%9B%BE%E4%BC%98%E5%8C%96/" style="font-size: 15px;">图优化</a> <a href="/tags/stm32/" style="font-size: 15px;">stm32</a> <a href="/tags/Halide/" style="font-size: 15px;">Halide</a> <a href="/tags/PCB/" style="font-size: 15px;">PCB</a> <a href="/tags/%E5%A0%86%E6%A0%88/" style="font-size: 15px;">堆栈</a> <a href="/tags/k210/" style="font-size: 15px;">k210</a> <a href="/tags/%E5%85%83%E5%AD%A6%E4%B9%A0/" style="font-size: 15px;">元学习</a> <a href="/tags/mindspore/" style="font-size: 15px;">mindspore</a> <a href="/tags/%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86/" style="font-size: 15px;">大语言模型推理</a> <a href="/tags/mlir/" style="font-size: 15px;">mlir</a> <a href="/tags/mxnet/" style="font-size: 15px;">mxnet</a> <a href="/tags/%E8%AE%A1%E7%AE%97%E6%9C%BA%E4%BD%93%E7%B3%BB%E7%BB%93%E6%9E%84/" style="font-size: 15px;">计算机体系结构</a> <a href="/tags/numpy/" style="font-size: 15px;">numpy</a> <a href="/tags/%E9%A3%8E%E6%A0%BC%E8%BF%81%E7%A7%BB/" style="font-size: 15px;">风格迁移</a> <a href="/tags/pfld/" style="font-size: 15px;">pfld</a> <a href="/tags/dotnet/" style="font-size: 15px;">dotnet</a> <a href="/tags/pytorch/" style="font-size: 15px;">pytorch</a> <a href="/tags/%E7%A5%9E%E7%BB%8F%E7%BD%91%E7%BB%9C%E9%87%8F%E5%8C%96/" style="font-size: 15px;">神经网络量化</a> <a href="/tags/%E6%A0%91%E8%8E%93%E6%B4%BE/" style="font-size: 15px;">树莓派</a> <a href="/tags/NB-IOT/" style="font-size: 15px;">NB-IOT</a> <a href="/tags/retinaface/" style="font-size: 15px;">retinaface</a> <a href="/tags/%E6%80%A7%E8%83%BD%E5%BB%BA%E6%A8%A1/" style="font-size: 15px;">性能建模</a> <a href="/tags/%E7%BC%96%E8%AF%91%E5%99%A8/" style="font-size: 15px;">编译器</a> <a href="/tags/%E6%8E%92%E5%BA%8F/" style="font-size: 15px;">排序</a> <a href="/tags/C/" style="font-size: 15px;">C#</a> <a href="/tags/%E4%BB%A3%E7%A0%81%E7%94%9F%E6%88%90/" style="font-size: 15px;">代码生成</a> <a href="/tags/%E7%BB%9F%E8%AE%A1%E5%AD%A6%E4%B9%A0%E6%96%B9%E6%B3%95/" style="font-size: 15px;">统计学习方法</a> <a href="/tags/%E6%A6%82%E7%8E%87%E8%AE%BA/" style="font-size: 15px;">概率论</a> <a href="/tags/keras/" style="font-size: 15px;">keras</a> <a href="/tags/yolo/" style="font-size: 15px;">yolo</a> <a href="/tags/%E8%B0%83%E5%8F%82/" style="font-size: 15px;">调参</a> <a href="/tags/%E8%B7%AF%E7%94%B1/" style="font-size: 15px;">路由</a> <a href="/tags/vscode/" style="font-size: 15px;">vscode</a> <a href="/tags/gan/" style="font-size: 15px;">gan</a> <a href="/tags/wordcloud/" style="font-size: 15px;">wordcloud</a> <a href="/tags/%E7%A1%AC%E4%BB%B6%E5%8A%A0%E9%80%9F/" style="font-size: 15px;">硬件加速</a> <a href="/tags/%E5%B7%A5%E5%85%B7/" style="font-size: 15px;">工具</a> <a href="/tags/git/" style="font-size: 15px;">git</a> <a href="/tags/%E5%8D%9A%E5%AE%A2/" style="font-size: 15px;">博客</a> <a href="/tags/CMake/" style="font-size: 15px;">CMake</a> <a href="/tags/%E8%B5%84%E6%BA%90%E6%B1%87%E6%80%BB/" style="font-size: 15px;">资源汇总</a> <a href="/tags/halide/" style="font-size: 15px;">halide</a> <a href="/tags/csharp/" style="font-size: 15px;">csharp</a> <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F/" style="font-size: 15px;">分布式</a> <a href="/tags/IR/" style="font-size: 15px;">IR</a> <a href="/tags/term-rewriting/" style="font-size: 15px;">term rewriting</a> <a href="/tags/%E4%BC%98%E5%8C%96/" style="font-size: 15px;">优化</a> <a href="/tags/%E4%BA%8C%E5%8F%89%E6%A0%91/" style="font-size: 15px;">二叉树</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-file-o"> 最近文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2023/11/25/mlircsharp/">MLIRSharp</a></li><li class="post-list-item"><a class="post-list-link" href="/2023/11/15/dynamic-shape/">tvm dynamic shape</a></li><li class="post-list-item"><a class="post-list-link" href="/2023/11/01/mlc-llm/">mlc-llm 浅析</a></li><li class="post-list-item"><a class="post-list-link" href="/2023/09/19/easydist/">Alibaba EasyDist 浅析</a></li><li class="post-list-item"><a class="post-list-link" href="/2023/09/06/tiramisu/">Tiramisu Compiler Internals</a></li><li class="post-list-item"><a class="post-list-link" href="/2023/06/16/dl-costmodel/">基于DL的CostModel</a></li><li class="post-list-item"><a class="post-list-link" href="/2023/06/13/roofline/">roofline Model</a></li><li class="post-list-item"><a class="post-list-link" href="/2023/05/31/ppcg-learn/">ppcg 学习</a></li><li class="post-list-item"><a class="post-list-link" href="/2023/04/09/halide-metal/">halide metal 初体验</a></li><li class="post-list-item"><a class="post-list-link" href="/2023/02/23/dsa-schedule/">带宽受限下的DSA后端Compute Schedule</a></li></ul></div></div></div><div class="pure-u-1 pure-u-md-3-4"><div id="footer">Copyright © 2023 <a href="/." rel="nofollow">Blog.</a> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a><a rel="nofollow" target="_blank" href="https://github.com/tufu9441/maupassant-hexo"> Theme</a> by<a rel="nofollow" target="_blank" href="https://github.com/pagecho"> Cho.</a></div></div></div><a class="show" id="rocket" href="#top"></a><script type="text/javascript" src="/js/totop.js?v=1.0.0" async></script><script type="text/javascript" src="//lib.baomitu.com/fancybox/latest/jquery.fancybox.min.js"></script><script type="text/javascript" src="/js/fancybox.js?v=1.0.0"></script><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/fancybox/latest/jquery.fancybox.min.css"><script type="text/javascript" src="/js/copycode.js?v=1.0.0" successtext="复制成功！"></script><link rel="stylesheet" type="text/css" href="/css/copycode.css?v=1.0.0"><script type="text/x-mathjax-config">MathJax.Hub.Config({
+  tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+  });
+</script><script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-MML-AM_CHTML" async></script><script type="text/javascript" src="/js/codeblock-resizer.js?v=1.0.0"></script><script type="text/javascript" src="/js/smartresize.js?v=1.0.0"></script></div></body></html>

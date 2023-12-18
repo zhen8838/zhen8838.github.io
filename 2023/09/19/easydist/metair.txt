@@ -1,0 +1,223 @@
+```puml
+@startuml
+
+namespace DistributedAnnotation {
+  
+enum SPMD {
+    REPLICATE
+    SHARD
+    PARTIAL
+}
+
+
+note left of SPMD
+分布式切分类型, 与oneflow的sbp描述基本一致
+endnote
+
+class VarSPMDStrategy {
+  List[SPMD] var_spmd_strategy
+}
+
+SPMD --* VarSPMDStrategy
+
+note left of VarSPMDStrategy
+相当于ndsbp
+endnote
+
+class VarSPMDStrategyGroup {
+  List[VarSPMDStrategy] var_spmd_strategy_group
+}
+
+note left of VarSPMDStrategyGroup
+相当于多个输入的ndsbp集合
+endnote
+
+VarSPMDStrategy --* VarSPMDStrategyGroup
+
+class NodeSPMDStrategy {
+  VarSPMDStrategyGroup in_strtg_group
+  VarSPMDStrategyGroup out_strtg_group
+}
+
+VarSPMDStrategyGroup --* NodeSPMDStrategy
+
+note left of NodeSPMDStrategy
+描述一个节点的输出/输出切分
+end note
+
+class NodeSPMDStrategyPool {
+  List[NodeSPMDStrategy] strategies
+}
+
+note left of NodeSPMDStrategyPool: 记录了当前节点所有可用的切分策略
+
+NodeSPMDStrategy --* NodeSPMDStrategyPool
+
+}
+
+namespace MetaIR {
+
+
+class MetaVar {
+  int unique_id
+  str name
+  List[int] shape
+  DType dtype
+  MetaNode up_node
+  int idx_for_up
+  List[MetaNode] down_nodes
+  List[int] indice_for_down
+}
+
+note right of MetaVar::down_nodes
+记录使用了当前var的node
+end note
+
+note right of MetaVar::indice_for_down
+记录使用了当前var的node中的参数index
+end note
+
+class MetaNode {
+  int unique_id
+  int cluster_id
+  str name
+  str op_name
+  List[MetaVar] invars
+  List[MetaVar] outvars
+  List[int] compact_out_idx_tbl
+  List[int] compact_in_idx_tbl
+  NodeSPMDStrategyPool strtg_pool
+  unique_key_
+  Dict[str, object] sharding_info
+  bool is_placeholder
+}
+
+MetaVar --* MetaNode
+NodeSPMDStrategyPool --* MetaNode
+
+
+note left of MetaNode::cluster_id
+当前node所属于的MetaNodeCluster的id
+end note
+
+note left of MetaNode::compact_out_idx_tbl
+记录可切分输入的index,比如view(x,128,256), 此时有效的可切分节点为参数0, 因此为`[0,-1,-1]`
+end note
+
+note left of MetaNode::compact_out_idx_tbl
+记录输出的index, 因为这里meta node中不表示tuple, 所以对于多输出会结合getitem, 默认单输出为`[0]`.
+end note
+
+note left of MetaNode::sharding_info
+当前节点的类型标注信息字典, 比如
+sharding_ann: ShardAnnotation([ [ShardDim(1),ShardDim(2)] ]),
+combination_ann: { 1: functools.partial(<f...0>, dim=0), 2: functools.partial(<f...0>, dim=1) }
+end note
+
+note left of MetaNode::is_placeholder
+指示当前节点是否为placeholder
+end note
+
+class ClusterArgs {
+  List[Tuple[MetaNode, int]] descs
+}
+
+note top of ClusterArgs
+输入参数Node以及他对应的var的index
+end note
+
+class MetaNodeCluster {
+  int unique_id
+  ClusterArgs args
+  MetaNode output_node
+  Dict[int, MetaNode] nodes
+  ClusterStrategyPool strategy_pool
+}
+
+note right of MetaNodeCluster 
+  cluster表示的是完整图上的一个子图
+end note
+
+note left of MetaNodeCluster::args
+当前cluster的输入参数描述
+end note
+
+note left of MetaNodeCluster::output_node
+当前cluster的输出节点
+end note
+
+MetaNode --* MetaNodeCluster
+ClusterArgs --* MetaNodeCluster
+
+class ClusterStrategy {
+  in_strtg_group
+  out_strtg_group
+  inner_strtg_group
+  Dict[int, Tuple[int, NodeSPMDStrategy]] node_strategies
+}
+
+note bottom of ClusterStrategy
+仅在构造meta graph时使用, 并没有直接与其他类进行组合.
+end note
+
+note left of ClusterStrategy::node_strategies
+key为节点id, value为策略编号以及对应策略
+end note
+
+class NodeIOStrategies {
+  MetaNode node
+  List[List[VarSPMDStrategy]] in_strategies
+  List[List[VarSPMDStrategy]] out_strategies
+}
+
+note left of NodeIOStrategies::in_strategies
+表示为[输入个数, 切分策略]
+end note
+
+note left of NodeIOStrategies::out_strategies
+表示为[输出个数, 切分策略]
+end note
+
+MetaNode --* NodeIOStrategies
+VarSPMDStrategy --* NodeIOStrategies
+
+class ClusterStrategyPool {
+  MetaNodeCluster cluster
+  Dict[int, NodeIOStrategies] node_io_strategies
+  Dict[int, List[NodeSPMDStrategy]] node_strategies
+  int strtg_num
+}
+
+MetaNodeCluster --* ClusterStrategyPool
+NodeIOStrategies --* ClusterStrategyPool
+NodeSPMDStrategy --* ClusterStrategyPool
+
+class MetaGraph {
+  torch.fx.GraphModule ori_struct
+  List[MetaNode] input_list
+  List[MetaNode] op_list
+  List[MetaVar] output_list
+  List[MetaNodeCluster] node_clusters
+  Dict[MetaNode,MetaVar] state_io_map
+}
+
+MetaNode --* MetaGraph
+MetaVar --* MetaGraph
+MetaNodeCluster --* MetaGraph
+
+note left of MetaGraph::ori_struct
+原始的fx graph
+end note
+
+note left of MetaGraph::input_list
+记录输入节点列表
+end note
+
+note left of MetaGraph::op_list
+记录所有节点列表
+end note
+
+}
+
+@enduml
+```

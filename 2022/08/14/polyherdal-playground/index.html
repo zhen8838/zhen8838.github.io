@@ -1,0 +1,1175 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description"><title>Polyhedral Tutorials | Blog</title><link rel="stylesheet" type="text/css" href="/css/style.css?v=1.0.0"><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/normalize/latest/normalize.min.css"><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/pure/latest/pure-min.min.css"><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/pure/latest/grids-responsive-min.min.css"><link rel="stylesheet" href="//lib.baomitu.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//lib.baomitu.com/jquery/latest/jquery.min.js"></script><link rel="icon" mask="" sizes="any" href="/favicon.ico"><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"><script type="text/javascript" src="//lib.baomitu.com/clipboard.js/latest/clipboard.min.js"></script><script type="text/javascript" src="//lib.baomitu.com/toastr.js/latest/toastr.min.js"></script><link rel="stylesheet" href="//lib.baomitu.com/toastr.js/latest/toastr.min.css"><meta name="generator" content="Hexo 7.0.0"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">Polyhedral Tutorials</h1><a id="logo" href="/.">Blog</a><p class="description"></p></div><div id="nav-menu"><a class="current" href="/."><i class="fa fa-home"> 首页</i></a><a href="/archives/"><i class="fa fa-archive"> 归档</i></a><a href="/about/"><i class="fa fa-user"> 关于</i></a></div></div><div class="pure-g" id="layout"><div class="pure-u-1 pure-u-md-3-4"><div class="content_container"><div class="post"><h1 class="post-title">Polyhedral Tutorials</h1><div class="post-meta">2022-08-14<span> | </span><span class="category"><a href="/categories/%E5%AD%A6%E4%B9%A0/">学习</a></span><span class="post-time"><span class="post-meta-item-text"> | </span><span class="post-meta-item-icon"><i class="fa fa-keyboard-o"></i><span class="post-count"> 13k</span><span class="post-meta-item-text"> 字</span></span></span><span class="post-time"> | <span class="post-meta-item-icon"><i class="fa fa-clock-o"></i><span class="post-count"> 64</span><span class="post-meta-item-text"> 分钟</span></span></span></div><div class="post-content"><p>关于<a target="_blank" rel="noopener" href="http://playground.pollylabs.org">Polyhedral
+Tutorials</a>的一个中文翻译归档,其中所有章节原文位于我的<a
+target="_blank" rel="noopener" href="https://github.com/zhen8838/isl_learn">仓库</a>中.</p>
+<span id="more"></span>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> islpy <span class="keyword">as</span> isl</span><br><span class="line"><span class="keyword">import</span> islplot</span><br><span class="line"><span class="keyword">from</span> islplot.plotter <span class="keyword">import</span> plot_set_points</span><br></pre></td></tr></table></figure>
+<h1 id="quasi-affine-expressions">(Quasi) Affine Expressions</h1>
+<p>Quasi-affine表达式, 即通过常量、变量以及对应基础操作构成的表达式.</p>
+<p><strong>Base</strong> - Constants (<span
+class="math inline">\((c_i)\)</span>) - Parameters (<span
+class="math inline">\((p_i)\)</span>) - Variables (<span
+class="math inline">\((v_i)\)</span>)</p>
+<p><strong>Operations</strong> - Unary negation <span
+class="math inline">\(( (-e) )\)</span> - Addition <span
+class="math inline">\(( ( e\_0 + e\_1 ) )\)</span> - Multiplication by a
+constant <span class="math inline">\(( (c * e) )\)</span> - Constant
+division <span class="math inline">\(( (e / c) )\)</span> - Constant
+remainder <span class="math inline">\(( (e \mod c) )\)</span></p>
+<h3 id="examples">Examples</h3>
+<h4 id="valid-expressions">Valid Expressions</h4>
+<ul>
+<li>42</li>
+<li>n, m</li>
+<li>i, j</li>
+<li>-i, 3 * i + 4</li>
+<li>i / 2, i % 3 ****</li>
+</ul>
+<h4 id="invalid-expressions">Invalid Expressions</h4>
+<ul>
+<li>i * n, n * m</li>
+<li>5 / n, i % j</li>
+</ul>
+<h1 id="presburger-formula">Presburger Formula</h1>
+<p>Presburger 公式就是affine表达式进行二元关系组合:</p>
+<p><strong>Base</strong> - Boolean constants (⊤, ⊥)</p>
+<p><strong>Operations</strong> - Comparisions between quasi-affine
+expressions</p>
+<p><span class="math inline">\((e0 \oplus e1, \oplus \in)\)</span> <span
+class="math inline">\(\{(&lt;, \le, =, \ne, \ge, &gt;) \}\)</span></p>
+<ul>
+<li><p>Boolean operations between Presburger Formulas</p>
+<p><span class="math inline">\((e0 \otimes e1, \otimes \in)\)</span>
+<span class="math inline">\(\{(\land, \lor, not, \Rightarrow,
+\Leftarrow, \Leftrightarrow ) \}\)</span></p></li>
+<li><p>Quantified variables</p>
+<p><span class="math inline">\(( \exists x: p(x, ...) )\)</span></p>
+<p><span class="math inline">\(( \forall x: p(x, ...)
+)\)</span></p></li>
+</ul>
+<h3 id="examples-1">Examples</h3>
+<h4 id="valid-expressions-1">Valid Expressions</h4>
+<ul>
+<li><span class="math inline">\(1 &lt; 0\)</span></li>
+<li><span class="math inline">\((j + 3 \le 0 \land 0 \le
+n)\)</span></li>
+</ul>
+<h4 id="invalid-expressions-1">Invalid Expressions</h4>
+<ul>
+<li>42</li>
+</ul>
+<h1 id="presburger-sets">Presburger Sets</h1>
+<p>Presburger 集合S, 是一个通过Presburger公式定义的整数向量集合.
+通常<span
+class="math inline">\(p\)</span>作为Presburger公式会被执行为true,
+然后<span
+class="math inline">\((\vec{v})\)</span>则是集合包含的所有元素.</p>
+<h2 id="basic-set">Basic Set</h2>
+<p>Basic Set 是 Presburger
+Set的最简单形式,仅允许描述单个凸（但可能是稀疏）集的 Presburger
+公式.</p>
+<p>集合的<strong>space</strong>被tuple的维度定义.一个集合包含pair被称为2维space.</p>
+<h3 id="examples-2">Examples</h3>
+<p>以下两个基本集合 <strong>Triangle</strong> 和 <strong>Square</strong>
+:</p>
+<ul>
+<li><p>Triangle: <span class="math inline">\((\{A[i,j] \mid 0 &lt; i
+&lt; j &lt; 10\})\)</span></p></li>
+<li><p>Square: <span class="math inline">\((\{ A[i,j] \mid 5 &lt; i &lt;
+10 \land 0 &lt; j &lt; 5 \})\)</span></p></li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Triangle = isl.BasicSet(<span class="string">&quot;&#123;A[i,j] : 0 &lt; i &lt; j &lt; 10&#125;&quot;</span>)</span><br><span class="line">Square = isl.BasicSet(<span class="string">&quot;&#123;A[i,j] : 5 &lt; i &lt; 10 and 0 &lt; j &lt; 5&#125;&quot;</span>)</span><br><span class="line">plot_set_points(Triangle,color=<span class="string">&#x27;blue&#x27;</span>)</span><br><span class="line">plot_set_points(Square,color=<span class="string">&#x27;orange&#x27;</span>)</span><br></pre></td></tr></table></figure>
+<p><img
+src="/2022/08/14/polyherdal-playground/01_presburger_sets_6_0.png" /></p>
+<h2 id="sparse-basic-sets">Sparse Basic Sets</h2>
+<p>这个例子中展示了集合中存在取模约束,这样集合元素会变成稀疏的.</p>
+<h3 id="example">Example</h3>
+<p>basic set <strong>Sparse</strong> 是排除某些对角线的正方形.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Sparse = isl.BasicSet(<span class="string">&quot;&#123;A[i,j] : 0 &lt; i,j &lt; 10 and (i + j) % 3 != 0&#125;&quot;</span>)</span><br><span class="line">plot_set_points(Sparse,color=<span class="string">&#x27;blue&#x27;</span>)</span><br></pre></td></tr></table></figure>
+<p><img
+src="/2022/08/14/polyherdal-playground/01_presburger_sets_8_0.png" /></p>
+<h2 id="exercises">Exercises</h2>
+<ol type="a">
+<li>Plot a set <strong>UpperTriangle</strong> with a base of width
+7.</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">      x</span><br><span class="line">    x x x</span><br><span class="line">  x x x x x</span><br><span class="line">x x x x x x x</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">s = isl.BasicSet(<span class="string">&quot;&#123;A[x,y] : 0 &lt;= x &lt; 7 and 0 &lt;= y &lt; 4 and y &lt;= x &lt; 7-y &#125;&quot;</span>)</span><br><span class="line">plot_set_points(s,color=<span class="string">&#x27;blue&#x27;</span>)</span><br></pre></td></tr></table></figure>
+<p><img
+src="/2022/08/14/polyherdal-playground/01_presburger_sets_10_0.png" /></p>
+<ol start="2" type="a">
+<li>Plot a set <strong>LowerTriangle</strong> with a base of width 7
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">x x x x x x x</span><br><span class="line">  x x x x x</span><br><span class="line">    x x x</span><br><span class="line">      x</span><br></pre></td></tr></table></figure></li>
+</ol>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">s = isl.BasicSet(<span class="string">&quot;&#123;A[x,y] : 0 &lt;= x &lt; 7 and -4 &lt; y &lt;= 0 and  (-y) &lt;= x &lt; 7+y &#125;&quot;</span>)</span><br><span class="line">plot_set_points(s,color=<span class="string">&#x27;blue&#x27;</span>)</span><br></pre></td></tr></table></figure>
+<p><img
+src="/2022/08/14/polyherdal-playground/01_presburger_sets_12_0.png" /></p>
+<ol start="3" type="a">
+<li>Plot a set <strong>Diamond</strong> with a width and height of 7.
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">      x</span><br><span class="line">    x x x</span><br><span class="line">  x x x x x</span><br><span class="line">x x x x x x x</span><br><span class="line">  x x x x x</span><br><span class="line">    x x x</span><br><span class="line">      x</span><br></pre></td></tr></table></figure></li>
+</ol>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">s = isl.BasicSet(<span class="string">&quot;&#123;A[x,y] : 0 &lt;= x &lt; 7 and -4 &lt; y &lt; 4 and (-y) &lt;= x &lt; 7+y and y &lt;= x &lt; 7-y &#125;&quot;</span>)</span><br><span class="line">plot_set_points(s,color=<span class="string">&#x27;blue&#x27;</span>)</span><br></pre></td></tr></table></figure>
+<p><img
+src="/2022/08/14/polyherdal-playground/01_presburger_sets_14_0.png" /></p>
+<ol start="4" type="a">
+<li>Plot a set <strong>Parallelogram</strong> with a height of 4 and a
+width of 7 with a slope of 1/2. <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">      x x x x x x x</span><br><span class="line">    x x x x x x x  </span><br><span class="line">  x x x x x x x</span><br><span class="line">x x x x x x x</span><br></pre></td></tr></table></figure></li>
+</ol>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">s = isl.BasicSet(<span class="string">&quot;&#123;A[x,y] : 0 &lt;= y &lt; 4 and y &lt;= x &lt; y + 7 &#125;&quot;</span>)</span><br><span class="line">plot_set_points(s,color=<span class="string">&#x27;blue&#x27;</span>)</span><br></pre></td></tr></table></figure>
+<p><img
+src="/2022/08/14/polyherdal-playground/01_presburger_sets_16_0.png" /></p>
+<h1 id="sets">Sets</h1>
+<p>集合是有限的基础集合的联合, 他们都属于相同的named space中,
+也就是他们的标识维度名都相同.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Combined = Triangle.union(Square)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&quot;Combined: &quot;</span> + <span class="built_in">str</span>(Combined))</span><br><span class="line">plot_set_points(Combined,color=<span class="string">&#x27;blue&#x27;</span>)</span><br></pre></td></tr></table></figure>
+<pre><code>Combined: &#123; A[i, j] : i &gt; 0 and j &lt;= 9 and (j &gt; i or (6 &lt;= i &lt;= 9 and 0 &lt; j &lt;= 4)) &#125;</code></pre>
+<p><img
+src="/2022/08/14/polyherdal-playground/01_presburger_sets_18_1.png" /></p>
+<h1 id="union-set">Union Set</h1>
+<p>不同named spaces的有限集合组成的是union set.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">u = isl.UnionSet(<span class="string">&quot;&#123;A[i,j] : 0 &lt; i,j and  j + i &lt; 10; B[i,j] : 5 &lt;= i,j &lt; 10 &#125;&quot;</span>)</span><br><span class="line">plot_set_points(u,color=<span class="string">&#x27;blue&#x27;</span>)</span><br></pre></td></tr></table></figure>
+<p><img
+src="/2022/08/14/polyherdal-playground/01_presburger_sets_20_0.png" /></p>
+<h1 id="presburger-relations">Presburger Relations</h1>
+<p>Presburger Relations 是一种映射关系, 将多个Presburger
+formula描述的set映射起来.</p>
+<p>通常可以表示为M = <span class="math inline">\(( \{ \vec{v_1}
+\rightarrow \vec{v\_2} \mid \vec{v\_1}, \vec{v\_2} \in \mathbb{Z}^n : p
+(\vec{v\_1}, \vec{v\_2}, \vec{p})\} )\)</span>,其中<code>p</code>是一个
+Presburger 公式, 如果元组对 <span
+class="math inline">\((\vec{v\_1})\)</span> 和 <span
+class="math inline">\((\vec{v\_2})\)</span> 是 M 的元素,
+则计算结果为真.</p>
+<h2 id="basic-map">Basic Map</h2>
+<p>basic map关联了basic set.</p>
+<h3 id="example-1">Example</h3>
+<p>比如下面关联set A和position X.</p>
+<p>Translate = <span class="math inline">\((\{A[i,j] \rightarrow
+X[i+10,j+1]\})\)</span></p>
+<p>To visualize this set, we use it to translate the earlier defined set
+<strong>Triangle</strong>. Without constraining
+<strong>Translate</strong> to <strong>Triangle</strong> the map is
+infinite and cannot be rendered.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> islplot.plotter <span class="keyword">import</span> *</span><br><span class="line">Translate = isl.BasicMap(<span class="string">&quot;&#123;A[i,j] -&gt; X[i+10,j+1]&#125;&quot;</span>)</span><br><span class="line">b  = Triangle.apply(Translate)</span><br><span class="line">Translate = Translate.intersect_domain(Triangle)</span><br><span class="line"></span><br><span class="line">plot_map(Translate)</span><br><span class="line">plot_set_points(Triangle,color=<span class="string">&#x27;blue&#x27;</span>)</span><br><span class="line">plot_set_points(b,color=<span class="string">&#x27;orange&#x27;</span>)</span><br></pre></td></tr></table></figure>
+<p><img
+src="/2022/08/14/polyherdal-playground/01_presburger_sets_23_0.png" /></p>
+<h1 id="polyhedral-representation">Polyhedral Representation</h1>
+<p>将一个命令式语言的statement作为identifer, 加上loop的约束,
+将其转化为Union Set :</p>
+<br>
+<center>
+<table>
+<tr>
+<td>
+<center>
+<b>Imperative Program</b>
+</center>
+</td>
+<td>
+</td>
+<td>
+<center>
+<b>Iteration Domain</b>
+</center>
+</tr>
+<tr>
+<td>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">const</span> <span class="type">int</span> N = <span class="number">100</span>; </span><br><span class="line"><span class="type">double</span> X[N], Y[N], Z[<span class="number">2</span>*N]; </span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &amp;lt;= <span class="number">2</span>*N; ++i) </span><br><span class="line">S:  Z[i] = <span class="number">0.</span>; </span><br><span class="line">  <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &amp;lt;= N; ++i) </span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> j = <span class="number">0</span>; j &amp;lt;= N; ++j) </span><br><span class="line">T:    Z[i + j] += A[i] * B[j]; </span><br></pre></td></tr></table></figure>
+</td>
+<td>
+<p>$ $</p>
+</td>
+<td>
+<center>
+<p><br></p>
+<p><span class="math inline">\(( \{ T[i,j] \mid 0 &lt; i \le j &lt; 10;
+S[i,0] \mid 0 &lt; i \le 20 \})\)</span></p>
+</td>
+</tr>
+</table>
+</center>
+<p><br></p>
+<h2 id="statement-instances">Statement instances</h2>
+<p>考虑以下计算多项式乘积的代码片段 每个多项式都由其系数数组表示</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">const</span> <span class="type">int</span> N = <span class="number">100</span>;</span><br><span class="line"><span class="type">double</span> X[N], Y[N], Z[<span class="number">2</span>*N];</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt;= <span class="number">2</span>*N; ++i)</span><br><span class="line">S:  Z[i] = <span class="number">0.</span>;</span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt;= N; ++i)</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> j = <span class="number">0</span>; j &lt;= N; ++j)</span><br><span class="line">T:      Z[i + j] += A[i] * B[j];</span><br></pre></td></tr></table></figure>
+<p>为其中一些statement添加label作为identifier.</p>
+<p>Statement <code>S</code> 初始化数组<code>Z</code>的元素,statement
+<code>T</code>计算它们. Statement <code>S</code>
+被包含在循环中,他将会按以下顺序被执行 <span
+class="math inline">\(((2\mathtt{N} + 1))\)</span> 次:</p>
+<ul>
+<li><code>Z[0] = 0.; /* i = 0 */</code></li>
+<li><code>Z[1] = 0.; /* i = 1 */</code></li>
+<li>...</li>
+<li><code>Z[2*N] = 0. /* i = 2*N */;</code></li>
+</ul>
+<p>把循环中每个单独执行的statement称为 <strong>statement
+instances</strong>
+这样每个instance可以通过语句label和封闭循环迭代器的值来标识, 例如：</p>
+<ul>
+<li><span class="math inline">\((\mathtt{S}(0))\)</span></li>
+<li><span class="math inline">\((\mathtt{S}(1))\)</span></li>
+<li>...</li>
+<li><span class="math inline">\((\mathtt{S}(2 \mathtt{N}))\)</span></li>
+</ul>
+<p>如果一个statement包含在多个循环中,
+其instance由所有迭代器的值按循环的顺序来标识, 比如statement
+<code>T</code> 会包含以下这些例子:</p>
+<ul>
+<li><span class="math inline">\((\mathtt{T}(0,0))\)</span> for
+<code>Z[0] += A[0] * B[0] /* i = 0, j = 0 */</code>,</li>
+<li><span class="math inline">\((\mathtt{T}(0,1))\)</span> for
+<code>Z[1] += A[0] * B[1] /* i = 0, j = 1 */</code>,</li>
+<li>...</li>
+<li><span
+class="math inline">\((\mathtt{T}(\mathtt{N},\mathtt{N}))\)</span> for
+<code>Z[2*N] += A[N] * B[N] /* i = N, j = N */</code>.</li>
+</ul>
+<h2 id="iteration-domain">Iteration domain</h2>
+<p>一个statement的所有instance的集合被称为 <em>(iteration)
+domain</em>.</p>
+<p>迭代域可以使用 set-builder 表示法来表示:</p>
+<p>比如, <span class="math inline">\(( \mathcal{D}_\mathtt{S} = \{
+\mathtt{S}[i] : 0 \leq i \leq \mathtt{N} \}. )\)</span> 表达式 <span
+class="math inline">\(( 0 \leq i \leq \mathtt{N} )\)</span>
+被循环起始(<code>i=0</code>)到结束(<code>i&lt;=N</code>)所约束.</p>
+<p>注意, 这里 <span class="math inline">\(( \mathtt{N} )\)</span>
+被看作是符号常量. 在多面体模型中,这些符号常量通常被称为 <em>(structure)
+parameters</em>:</p>
+<p><span class="math inline">\(( \mathcal{D}\_\mathtt{S} = [N]
+\rightarrow \{ \mathtt{S}[i] : 0 \leq i \leq N \} )\)</span>,
+本质上是将其转换为从参数值到domain set的具体instance的映射.
+这样的参数集可以在 <em>isl</em> 中如下定义:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> islpy <span class="keyword">as</span> isl</span><br><span class="line">D_S = isl.<span class="type">Set</span>(<span class="string">&quot;[N] -&gt; &#123;S[i] : 0 &lt;= i &lt;= N&#125;&quot;</span>)</span><br><span class="line"><span class="built_in">print</span>(D_S)</span><br></pre></td></tr></table></figure>
+<pre><code>[N] -&gt; &#123; S[i] : 0 &lt;= i &lt;= N &#125;</code></pre>
+<p>同样, 我们可以为statement <code>T</code>定义iteration domain, <span
+class="math inline">\(( \mathcal{D}_\mathcal{T} = [N] \rightarrow \{
+\mathtt{T}(i,j) : 0 \leq i,j \leq N \} )\)</span>.</p>
+<p>这个domain被定义为一组二维向量,
+向量的每个分量都以嵌套顺序对应于一个封闭循环.</p>
+<h3 id="question">Question</h3>
+<p>使用 <em>isl</em> 表示定义变量 <code>D_T</code> 使其包含
+<code>T</code> 的迭代域, 然后打印它.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">D_T = isl.<span class="type">Set</span>(<span class="string">&quot;[N] -&gt; &#123; T[i,j] : 0 &lt;= i, j &lt;= N &#125;&quot;</span>)</span><br><span class="line"><span class="built_in">print</span>(D_T)</span><br></pre></td></tr></table></figure>
+<pre><code>[N] -&gt; &#123; T[i, j] : 0 &lt;= i &lt;= N and 0 &lt;= j &lt;= N &#125;</code></pre>
+<p>如上所示, <em>isl</em> 输出使用连词(logical
+<em>and</em>)来组合不同迭代器周围的不等式,
+这可以很方便循环边界不同的情况.</p>
+<h3 id="question-1">Question</h3>
+<p>使用 <code>and</code> operator 分离 <code>i</code> 和
+<code>j</code>的bounds来重新定义<code>D_T</code> .</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">D_T = isl.<span class="type">Set</span>(<span class="string">&quot; [N] -&gt; &#123; T[i, j] : 0 &lt;= i &lt;= N and 0 &lt;= j &lt;= N &#125;&quot;</span>)</span><br><span class="line"><span class="built_in">print</span>(D_T)</span><br></pre></td></tr></table></figure>
+<pre><code>[N] -&gt; &#123; T[i, j] : 0 &lt;= i &lt;= N and 0 &lt;= j &lt;= N &#125;</code></pre>
+<p>注意, print的输出不一定再现输入的文本形式 相反,
+它表示简化后的同一集合, 比如消除了多余的不等式,
+并使用更简单的方程来表示出现在第一位的分量. 比如下面这个例子:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">print</span>(isl.<span class="type">Set</span>(<span class="string">&quot;&#123;[i,j]: i+j &gt;= 0 and i &gt;= 0 and j &gt; 0 and j &gt;= 1&#125;&quot;</span>))</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; [i, j] : i &gt;= 0 and j &gt; 0 and j &gt;= -i &#125;</code></pre>
+<h2 id="handling-non-unit-strides">Handling Non-Unit Strides</h2>
+<p>考虑以下代码片段, 它取数组中的每个奇数元素的负数. <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">const</span> <span class="type">int</span> N;</span><br><span class="line"><span class="type">double</span> A[<span class="number">2</span>*N];</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">1</span>; i &lt; <span class="number">2</span>*N; i += <span class="number">2</span>)</span><br><span class="line">R:  A[i] = -A[i];</span><br></pre></td></tr></table></figure></p>
+<p>如果数组<code>A</code>存储的是复数的实部和虚部,
+那么上面的代码操作计算复共轭.</p>
+<p><code>R</code> 的迭代域现在应该限制为 <code>i</code> 的奇数值,
+这可以使用模运算符来实现:</p>
+<p>$( _: [N] { [i] : 0 i &lt; N i = 1 } $)</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">D_R = isl.<span class="type">Set</span>(<span class="string">&quot;[N] -&gt; &#123;R[i]: (i mod 2) = 1 and 0 &lt;= i &lt; N&#125;&quot;</span>)</span><br><span class="line"><span class="built_in">print</span>(D_R)</span><br></pre></td></tr></table></figure>
+<pre><code>[N] -&gt; &#123; R[i] : (1 + i) mod 2 = 0 and 0 &lt;= i &lt; N &#125;</code></pre>
+<p><em>isl</em> 将模运算转换为带底舍入的除法,
+这种转换是模运算的两个属性的组合</p>
+<p><span class="math inline">\(( a \mod b = c \Leftrightarrow (a + c)
+\mod b = 0 )\)</span>,</p>
+<p><span class="math inline">\(( a \mod b \equiv a - b \lfloor a/b
+\rfloor )\)</span>.</p>
+<h3 id="question-2">Question</h3>
+<p>在下面的代码中定义代表<code>Q</code>的迭代域的集合, 然后打印出来
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">const</span> <span class="type">int</span> N;</span><br><span class="line"><span class="type">double</span> A[<span class="number">2</span>*N];</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">1</span>; i &lt; <span class="number">2</span>*N; i += <span class="number">2</span>)</span><br><span class="line">Q:  A[i] = -A[i];</span><br></pre></td></tr></table></figure></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">D_Q = isl.<span class="type">Set</span>(<span class="string">&quot;[N] -&gt; &#123;Q[i]: (i mod 2) = 1 and 0 &lt;= i &lt; N&#125;&quot;</span>)</span><br><span class="line"><span class="built_in">print</span>(D_Q)</span><br></pre></td></tr></table></figure>
+<pre><code>[N] -&gt; &#123; Q[i] : (1 + i) mod 2 = 0 and 0 &lt;= i &lt; N &#125;</code></pre>
+<h2 id="handling-conditions">Handling Conditions</h2>
+<p>循环内的条件构造也限制了它们所包含的语句的迭代域,
+复共轭计算也可以使用单位步长循环内的分支语句来重写. <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">const</span> <span class="type">int</span> N;</span><br><span class="line"><span class="type">double</span> A[<span class="number">2</span>*N];</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">1</span>; i &lt; <span class="number">2</span>*N; ++i)</span><br><span class="line">    <span class="keyword">if</span> (i % <span class="number">2</span> == <span class="number">1</span>)</span><br><span class="line">P:    A[i] = -A[i];</span><br></pre></td></tr></table></figure></p>
+<p>迭代域的定义还应该包括语句周围的分支所施加的约束.</p>
+<h3 id="question-3">Question</h3>
+<p>定义代表<code>P</code>的迭代域的集合并打印它.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">D_P = isl.<span class="type">Set</span>(<span class="string">&quot;[N] -&gt; &#123;P[i]: (i mod 2) = 1 and 0 &lt;= i &lt; N&#125;&quot;</span>)</span><br><span class="line"><span class="built_in">print</span>(D_P)</span><br></pre></td></tr></table></figure>
+<pre><code>[N] -&gt; &#123; P[i] : (1 + i) mod 2 = 0 and 0 &lt;= i &lt; N &#125;</code></pre>
+<p>即使 <code>P</code> 和 <code>R</code> 的语句实例集是相同的,
+这些域也会被认为是不同的因为是不同的<em>statement name</em>.</p>
+<h3 id="question-4">Question</h3>
+<p>如何修改<code>D_P</code>, 让他等价于<code>D_R</code>?</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">D_P = isl.<span class="type">Set</span>(<span class="string">&quot;[N] -&gt; &#123;R[i]: i mod 2 = 1 and 0 &lt;= i &lt; N&#125;&quot;</span>)</span><br><span class="line"><span class="built_in">print</span>(D_P.is_equal(D_R))</span><br></pre></td></tr></table></figure>
+<pre><code>True</code></pre>
+<h2 id="iteration-domains-as-presburger-sets">Iteration Domains as
+Presburger Sets</h2>
+<p>由于<em>isl</em>在Presburger Sets上运行,
+因此它可以编码任何可以使用Presburger公式表示的迭代域,
+这通常涉及由具有所谓的<em>static control
+flow</em>的循环和分支包围的语句.</p>
+<p>也就是说, loop bounds和分支条件是外部边界和参数的Presburger公式,
+其中参数的值未知, 但在整个执行过程中必须保持不变.</p>
+<p>作为推论, 控制流不能依赖于被计算的<em>value</em>, 因此,
+适合多面体建模的程序部件被称为<em>static control
+parts</em>或<em>SCoPs</em>.</p>
+<h3 id="question-5">Question</h3>
+<p>定义包含在两个循环和一个具有析取约束的分支中的statement的迭代域.</p>
+<p>Hint: 如果有必要, 请使用运算符<code>or</code>和括号来确保优先级
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; <span class="number">10</span>; ++i)</span><br><span class="line">  <span class="keyword">for</span> (<span class="type">int</span> j = <span class="number">0</span>; j &lt; <span class="number">10</span>; ++j)</span><br><span class="line">    <span class="keyword">if</span> (i &lt; j - <span class="number">1</span> || i &gt; j + <span class="number">1</span>)</span><br><span class="line">      Z[i][j] = <span class="number">0.</span>;</span><br></pre></td></tr></table></figure></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">D_Z = isl.<span class="type">Set</span>(<span class="string">&quot; &#123; Z[i,j] : 0 &lt;= i,j &lt; 10 and (i &lt; j - 1 or i &gt; j + 1) &#125; &quot;</span>)</span><br><span class="line"><span class="built_in">print</span>(D_Z)</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; Z[i, j] : (i &gt;= 0 and 2 + i &lt;= j &lt;= 9) or (i &lt;= 9 and 0 &lt;= j &lt;= -2 + i) &#125;</code></pre>
+<h3 id="section"></h3>
+<p>也可以使用Presburger公式表达某些常见的数学运算:</p>
+<ul>
+<li><code>i &gt;= max(a,b)</code> <span class="math inline">\((
+\Leftrightarrow i \geq a \wedge i \geq b )\)</span> (lower bound
+only)</li>
+<li><code>i &lt;= min(a,b)</code> <span class="math inline">\((
+\Leftrightarrow i \leq a \wedge i \leq b )\)</span> (upper bound
+only)</li>
+<li><code>a = ceil(b/c)</code> <span class="math inline">\((
+\Leftrightarrow a = \lfloor (b - 1)/c \rfloor + 1 )\)</span></li>
+</ul>
+<h2 id="putting-domains-together">Putting Domains Together</h2>
+<p>总之, statement的迭代域是一组受仿射表达式约束的多维向量,
+仿射表达式出现在statement周围的循环边界和分支条件下.</p>
+<p>由于statement名称不同, 多个语句的迭代域存在于不同的<em>Spaces</em>中,
+即使它们被相同的循环包围, 通过将它们放入<em>Union
+set</em>中可以统一操作, 比如组合domain: <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; <span class="number">10</span>; ++i)</span><br><span class="line">  <span class="keyword">for</span> (<span class="type">int</span> j = <span class="number">0</span>; j &lt; <span class="number">10</span>; ++j) &#123;</span><br><span class="line">    <span class="keyword">if</span> (i &lt; j - <span class="number">1</span>)</span><br><span class="line">S1:   Z[i][j] = <span class="number">0.</span>;</span><br><span class="line">    <span class="keyword">if</span> (i &gt; j + <span class="number">1</span>)</span><br><span class="line">S2:   Z[i][j] = <span class="number">0.</span>;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure></p>
+<p>被定义为: $( = {[i,j]: 0 i,j &lt; 10 i &lt; j - 1 } {[i,j]: 0 i,j
+&lt; 10 i &gt; j + 1 }, $)</p>
+<p><em>isl</em>表示如下:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">D = isl.UnionSet(<span class="string">&quot;&#123;S1[i,j]: 0 &lt;= i,j &lt;= 10 and i &lt; j - 1; S2[i,j]: 0 &lt;= i,j &lt;= 10 and i &gt; j + 1&#125;&quot;</span>)</span><br><span class="line"><span class="built_in">print</span>(D)</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; S2[i, j] : 0 &lt;= i &lt;= 10 and 0 &lt;= j &lt;= 10 and j &lt;= -2 + i; S1[i, j] : 0 &lt;= i &lt;= 10 and j &gt;= 2 + i and 0 &lt;= j &lt;= 10 &#125;</code></pre>
+<h2 id="plotting-iteration-domains">Plotting Iteration Domains</h2>
+<p>可以绘制1D/2D的非参数迭代域集合:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> islplot.plotter <span class="keyword">import</span> *</span><br><span class="line">plot_set_points(D,color=<span class="string">&#x27;blue&#x27;</span>)</span><br></pre></td></tr></table></figure>
+<p><img
+src="/2022/08/14/polyherdal-playground/02_iteration-domains_25_0.png" /></p>
+<p>可视化可以有效的检查domain的size或者独立的domain交集.</p>
+<p>这里例子中,domain完全不相交,意味他们可以被分离的循环所穿过.</p>
+<p>如果domain是参数化的,我们首先需要<em>fix</em>所有的参数到constant,
+通过以下几种方法:</p>
+<ul>
+<li>创建一个参数集, 其中域值是固定的;</li>
+<li>将domain与这个新set相交;</li>
+<li>映射所有参数.</li>
+</ul>
+<p>下面是对第一个例子的<code>T</code> statement 的操作方法:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">fixer = isl.<span class="type">Set</span>(<span class="string">&quot;[N] -&gt; &#123;T[i,j]: N = 5&#125;&quot;</span>)</span><br><span class="line">D_T = D_T.intersect(fixer)</span><br><span class="line">D_T = D_T.project_out(isl.dim_type.param, <span class="number">0</span>, <span class="number">1</span>)</span><br><span class="line">plot_set_points(D_T)</span><br></pre></td></tr></table></figure>
+<p><img
+src="/2022/08/14/polyherdal-playground/02_iteration-domains_27_0.png" /></p>
+<p><code>isl.dim_type.param</code>表示你想映射的参数,
+后面两个数据分别是第一个参数的位置和将要映射的连续参数的数量.</p>
+<p>为了plot出来, 因此把所有维度都映射出来.注意,
+如果忘记<em>fix</em>参数大小, 该集将变得unbounds, 无法plot.</p>
+<p>与参数类似, 在plot之前可以投影domain dimensions获得两个维度.
+使用'isl.dim_type.set'来获取这些</p>
+<h3 id="question-6">Question</h3>
+<p>下面执行LU分解的代码:</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; N; i++) &#123;</span><br><span class="line">  <span class="keyword">for</span> (j = <span class="number">0</span>; j &lt; i; j++) &#123;</span><br><span class="line">    <span class="keyword">for</span> (k = <span class="number">0</span>; k &lt; j; k++) &#123;</span><br><span class="line">Sa:    A[i][j] -= A[i][k] * A[k][j];</span><br><span class="line">    &#125;</span><br><span class="line">Sb: A[i][j] /= A[j][j];</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">for</span> (j = i; j &lt; N; j++) &#123;</span><br><span class="line">    <span class="keyword">for</span> (k = <span class="number">0</span>; k &lt; i; k++) &#123;</span><br><span class="line">Sc:   A[i][j] -= A[i][k] * A[k][j];</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ol type="1">
+<li>为所有的iteration domain定义union set.</li>
+<li>检查iteration domain <code>Sa</code> 和 <code>Sc</code>
+是否有overlap</li>
+<li>绘制domain在(i,j)和(j,k)</li>
+</ol>
+<p>Hint: 不能<em>直接</em>从union set中映射出domain
+dimension,因为他们可能存在不同的space中,
+但是可以从set中做union得到他.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">D_Sa = isl.<span class="type">Set</span>(<span class="string">&quot;[N] -&gt; &#123; Sa[i,j,k] :0 &lt;= k &lt; j &lt; i &lt; N &#125;&quot;</span>)</span><br><span class="line">D_Sb = isl.<span class="type">Set</span>(<span class="string">&quot;[N] -&gt; &#123; Sb[i,j] :0 &lt;= j &lt; i &lt; N &#125;&quot;</span>)</span><br><span class="line">D_Sc = isl.<span class="type">Set</span>(<span class="string">&quot;[N] -&gt; &#123; Sc[i,j,k] :0 &lt;= k &lt; i &lt;= j &lt; N &#125;&quot;</span>)</span><br><span class="line">D = isl.UnionSet(D_Sa).union(D_Sb).union(D_Sc)</span><br><span class="line"><span class="built_in">print</span>(D)</span><br></pre></td></tr></table></figure>
+<pre><code>[N] -&gt; &#123; Sc[i, j, k] : i &lt;= j &lt; N and 0 &lt;= k &lt; i; Sa[i, j, k] : i &lt; N and j &lt; i and 0 &lt;= k &lt; j; Sb[i, j] : i &lt; N and 0 &lt;= j &lt; i &#125;</code></pre>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># NOTE 这里需要去掉标识名再做交集.</span></span><br><span class="line">D_Sa_ = isl.<span class="type">Set</span>(<span class="string">&quot;[N] -&gt; &#123; [i,j,k] :0 &lt;= k &lt; j &lt; i &lt; N &#125;&quot;</span>)</span><br><span class="line">D_Sc_ = isl.<span class="type">Set</span>(<span class="string">&quot;[N] -&gt; &#123; [i,j,k] :0 &lt;= k &lt; i &lt;= j &lt; N &#125;&quot;</span>)</span><br><span class="line">D_Sa_.intersect(D_Sc_).is_empty()</span><br></pre></td></tr></table></figure>
+<pre><code>True</code></pre>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">D_Sa = D_Sa.intersect(isl.<span class="type">Set</span>(<span class="string">&quot;[N] -&gt; &#123; Sa[i,j,k]: N = 8&#125;&quot;</span>))</span><br><span class="line">D_Sb = D_Sb.intersect(isl.<span class="type">Set</span>(<span class="string">&quot;[N] -&gt; &#123; Sb[i,j]: N = 8&#125;&quot;</span>))</span><br><span class="line">D_Sc = D_Sc.intersect(isl.<span class="type">Set</span>(<span class="string">&quot;[N] -&gt; &#123; Sc[i,j,k]: N = 8&#125;&quot;</span>))</span><br><span class="line">D_Sa = D_Sa.project_out(isl.dim_type.param, <span class="number">0</span>, <span class="number">1</span>)</span><br><span class="line">D_Sb = D_Sb.project_out(isl.dim_type.param, <span class="number">0</span>, <span class="number">1</span>)</span><br><span class="line">D_Sc = D_Sc.project_out(isl.dim_type.param, <span class="number">0</span>, <span class="number">1</span>)</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">D_Sa_ = D_Sa.project_out(isl.dim_type.<span class="built_in">set</span>, <span class="number">2</span>, <span class="number">1</span>)</span><br><span class="line">D_Sc_ = D_Sc.project_out(isl.dim_type.<span class="built_in">set</span>, <span class="number">2</span>, <span class="number">1</span>)</span><br><span class="line">D_ij = isl.UnionSet(D_Sa_).union(D_Sb).union(D_Sc_)</span><br><span class="line"><span class="built_in">print</span>(D_ij)</span><br><span class="line">plot_set_points(D_ij)</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; [i, j] : (i &lt;= 7 and 0 &lt; j &lt; i) or (i &gt; 0 and i &lt;= j &lt;= 7); Sb[i, j] : i &lt;= 7 and 0 &lt;= j &lt; i &#125;</code></pre>
+<p><img
+src="/2022/08/14/polyherdal-playground/02_iteration-domains_32_1.png" /></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">D_Sa_ = D_Sa.project_out(isl.dim_type.<span class="built_in">set</span>, <span class="number">0</span>, <span class="number">1</span>)</span><br><span class="line">D_Sc_ = D_Sc.project_out(isl.dim_type.<span class="built_in">set</span>, <span class="number">0</span>, <span class="number">1</span>)</span><br><span class="line">D_jk = isl.UnionSet(D_Sa_).union(D_Sc_)</span><br><span class="line"><span class="built_in">print</span>(D_jk)</span><br><span class="line">plot_set_points(D_jk)</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; [j, k] : j &lt;= 7 and 0 &lt;= k &lt; j &#125;</code></pre>
+<p><img
+src="/2022/08/14/polyherdal-playground/02_iteration-domains_33_1.png" /></p>
+<h1 id="schedules">Schedules</h1>
+<p>$ { (i,j,k) (i+j, k, i) }$</p>
+<h2 id="definition">Definition</h2>
+<p>statement的iteration
+domain给出了<em>instances</em>的执行信息,但是并没有指定执行顺序.</p>
+<p>实际上, 我们可以通过为每个statement
+instance分配逻辑执行顺序来指定分段 quasi-linear 的顺序.</p>
+<p>简而言之, 此<em>schedule</em>可以表示为statement
+instance和逻辑顺序之间的Presburger映射.</p>
+<h2 id="identity-schedule">Identity Schedule</h2>
+<p>默认情况下, statement instances按照循环迭代顺序执行.
+这可以使用<em>identity</em> schedule relation来表示.</p>
+<p>比如一个简单的循环初始化: <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; N; ++i)</span><br><span class="line">S:  A[i] = <span class="number">0.0</span>;</span><br></pre></td></tr></table></figure></p>
+<p>iteration domain:</p>
+<p><span class="math inline">\(( \mathcal{D}\_\mathtt{S} = [N]
+\rightarrow \{ \mathtt{S}(i) : 0 \leq i &lt; N \} )\)</span></p>
+<p>对应的identity schedule:</p>
+<p><span class="math inline">\(( \mathcal{T}\_\mathtt{S} = [N]
+\rightarrow \{ \mathtt{S}(i) \rightarrow (t_0) : t_0 = i \}
+)\)</span>.</p>
+<p>In <em>isl</em> notation:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> islpy <span class="keyword">as</span> isl</span><br><span class="line">D_S = isl.<span class="type">Set</span>(<span class="string">&quot;[N] -&gt; &#123; S[i]: 0 &lt;= i &lt; N &#125;&quot;</span>) <span class="comment"># 迭代域</span></span><br><span class="line">T_S = isl.Map(<span class="string">&quot;[N] -&gt; &#123;S[i] -&gt; [t0]: t0 = i&#125;&quot;</span>) <span class="comment"># schedule</span></span><br><span class="line"><span class="built_in">print</span>(T_S)</span><br></pre></td></tr></table></figure>
+<pre><code>[N] -&gt; &#123; S[i] -&gt; [t0 = i] &#125;</code></pre>
+<h2 id="multidimensional-schedules">Multidimensional Schedules</h2>
+<p>如果一个statement instance由多个元素的向量标识,
+则表示这个statement包含在多个嵌套循环中,
+它通常映射到<em>multidimensional</em>逻辑顺序.</p>
+<p>下面的例子中, statement instances以逻辑顺序的<em>lexicographical
+order</em>进行执行.</p>
+<p>比如<span class="math inline">\(((0,42))\)</span>在<span
+class="math inline">\(((100,0))\)</span>之前, 写作<span
+class="math inline">\(((0,42) \prec (100,0))\)</span>.</p>
+<p>lexicographical order通常扩展到比较不同大小的向量.</p>
+<p>短的的向量, 是和较长向量的前缀比较, 例如<span
+class="math inline">\(((0,42) \prec (0,42,0))\)</span>.</p>
+<p>比如, 多维下的初始化: <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; N; ++i)</span><br><span class="line">  <span class="keyword">for</span> (j = <span class="number">0</span>; j &lt; N; ++j)</span><br><span class="line">S:  A[i][j] = <span class="number">0.0</span>;</span><br></pre></td></tr></table></figure></p>
+<p>iteration domain:</p>
+<p><span class="math inline">\(( \mathcal{D}_\mathtt{S} = [N]
+\rightarrow \{ \mathtt{S}(i): 0 \leq i,j &lt; N \} )\)</span></p>
+<p>identity schedule:</p>
+<p><span class="math inline">\(( \mathcal{T}_\mathtt{S} = [N]
+\rightarrow \{ \mathtt{S}(i,j) \rightarrow (t_0, t_1) : t_0 = i \wedge
+t_1 = j \} )\)</span>.</p>
+<p>In <em>isl</em> notation:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">D_S = isl.<span class="type">Set</span>(<span class="string">&quot;[N] -&gt; &#123;S[i,j]: 0 &lt;= i,j &lt; N&#125;&quot;</span>)</span><br><span class="line">T_S = isl.Map(<span class="string">&quot;[N] -&gt; &#123;S[i,j] -&gt; [t0,t1]: t0 = i and t1 = j&#125;&quot;</span>)</span><br><span class="line"><span class="built_in">print</span>(T_S)</span><br></pre></td></tr></table></figure>
+<pre><code>[N] -&gt; &#123; S[i, j] -&gt; [t0 = i, t1 = j] &#125;</code></pre>
+<p>即使理论上schedule可以用单维度来表示:</p>
+<p><span class="math inline">\(( \mathcal{T}_\mathtt{S} = [N]
+\rightarrow \{ \mathtt{S}(i,j) \rightarrow (t_0) : t_0 = Ni + j \}
+)\)</span></p>
+<p>但由于存在变量的乘法, 这种表达式是不能表示为Presburger映射的.</p>
+<p>不过当使用实际常量而不是常量参数时, 是可以构建这样的schedule的.</p>
+<h3 id="question-7">Question</h3>
+<p>写出三维数组循环初始化的identity schedule <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; N; ++i)</span><br><span class="line">  <span class="keyword">for</span> (j = <span class="number">0</span>; j &lt; N; ++j)</span><br><span class="line">    <span class="keyword">for</span> (k = <span class="number">0</span>; k &lt; N; ++k)</span><br><span class="line">T:    A[i][j] = <span class="number">0.0</span>;</span><br></pre></td></tr></table></figure></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">D_T = isl.<span class="type">Set</span>(<span class="string">&quot;[N] -&gt; &#123; A[i,j,k] : 0 &lt;= i,j,k &lt; N &#125;&quot;</span>)</span><br><span class="line">T_T = isl.Map(<span class="string">&quot;[N] -&gt; &#123; A[i,j,k] -&gt; [t0 = i,t1 = j,t2 = k] &#125;&quot;</span>)</span><br><span class="line">T_T</span><br></pre></td></tr></table></figure>
+<pre><code>Map(&quot;[N] -&gt; &#123; A[i, j, k] -&gt; [t0 = i, t1 = j, t2 = k] &#125;&quot;)</code></pre>
+<h3 id="question-8">Question</h3>
+<p>尝试为同一域定义一个具有乘法的一维计划（会出现错误）.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">try</span>:</span><br><span class="line">  T_T_err = isl.Map(<span class="string">&quot;[N] -&gt; &#123;S[i,j,k] -&gt; [t0]: t0 = N*N*i + N*j + k&#125;&quot;</span>)</span><br><span class="line"><span class="keyword">except</span>:</span><br><span class="line">  <span class="built_in">print</span>(<span class="string">&quot;got error&quot;</span>)</span><br></pre></td></tr></table></figure>
+<pre><code>got error</code></pre>
+<h2 id="representing-lexical-order">Representing Lexical Order</h2>
+<p>考虑一个循环中包含两个statement: <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; <span class="number">10</span>; ++i) &#123;</span><br><span class="line">P:  A[i] = <span class="number">0.0</span>;</span><br><span class="line">Q:  B[i] = <span class="number">1.0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>对两个statement使用简单的identity
+schedule将导致他们具有<em>相同的</em>执行顺序.</p>
+<p>然而, 从代码中可以清楚地看出,
+<code>Q</code>的是在<code>P</code>之后执行的, statement的<em>lexical
+order</em>可以使用<em>auxiliary</em>维度在schedule中编码.</p>
+<p>他分配一个常量,
+以便在<code>Q</code>之前强制执行<code>P</code>的statement,
+即<code>P</code>的常数小于<code>Q</code>的常数.</p>
+<p>由于顺序存在于循环中<em>内部</em>,
+因此辅助维度放置在循环维度之后.</p>
+<p><span class="math inline">\(( \mathcal{T} =  \{ P(i) \rightarrow
+(t\_0, t\_1) : t\_0 = i \wedge t\_1 = 0 \} \cup  \{ Q(i) \rightarrow
+(t\_0, t\_1) : t\_0 = i \wedge t\_1 = 1 \} )\)</span></p>
+<p>这个map会将顺序<span
+class="math inline">\(((i,0))\)</span>分配到<code>P</code>, 然后<span
+class="math inline">\(((i,1))\)</span>分配到<code>Q</code>.</p>
+<p>从而清晰的表示<span class="math inline">\(( \forall i, (i,0) \prec
+(i,1) )\)</span></p>
+<p><em>isl</em>中, 不同的 statements的schedules 可以被结合为 union
+map.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">D = isl.UnionSet(<span class="string">&quot;&#123;P[i]: 0 &lt;= i &lt; 10; Q[i]: 0 &lt;= i &lt; 10&#125;&quot;</span>) <span class="comment"># 首先列出两个statement的set</span></span><br><span class="line">S = isl.UnionMap(<span class="string">&quot;&#123;P[i] -&gt; [t0,t1]: t0 = i and t1 = 0; Q[i] -&gt; [t0,t1]: t0 = i and t1 = 1&#125;&quot;</span>) <span class="comment"># 为他们分别分配额外的执行顺序, P = 0, Q = 1</span></span><br><span class="line"><span class="built_in">print</span>(S)</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; Q[i] -&gt; [t0 = i, t1 = 1]; P[i] -&gt; [t0 = i, t1 = 0] &#125;</code></pre>
+<h3 id="section-1"></h3>
+<p>考虑两个循环组成的<code>SCoP</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; <span class="number">10</span>; ++i) &#123;</span><br><span class="line">U:  A[i] = <span class="number">0.0</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; <span class="number">10</span>; ++i) &#123;</span><br><span class="line">V:  B[i] = <span class="number">1.0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这个例子中,<em>所有的</em><code>U</code>的实例都在<em>所有的</em><code>V</code>的实例之前执行,</p>
+<p>因此辅助维度会在循环维度之前加入:</p>
+<p><span class="math inline">\(( \mathcal{T} =  \{ \mathtt{U}(i)
+\rightarrow (t_0, t_1) : t_0 = 0 \wedge t_1 = i \} \cup  \{
+\mathtt{V}(i) \rightarrow (t_0, t_1) : t_0 = 1 \wedge t_1 = i \}.
+)\)</span></p>
+<p>Or, in <em>isl</em> notation:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">D2 = isl.UnionSet(<span class="string">&quot;&#123;U[i]: 0 &lt;= i &lt; 10; V[i]: 0 &lt;= i &lt; 10&#125;&quot;</span>) <span class="comment"># 两个statement分别的set</span></span><br><span class="line">S2 = isl.UnionMap(<span class="string">&quot;&#123;U[i] -&gt; [t0,t1]: t0 = 0 and t1 = i; V[i] -&gt; [t0,t1]: t0 = 1 and t1 = i&#125;&quot;</span>) <span class="comment"># 这里把t1作为loop 维度, t0作为辅助维度, 也就是表示两个statement执行循环顺序相同,但是执行整个循环的顺序不同.</span></span><br><span class="line"><span class="built_in">print</span>(S2)</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; U[i] -&gt; [t0 = 0, t1 = i]; V[i] -&gt; [t0 = 1, t1 = i] &#125;</code></pre>
+<p>绘制两个<em>scheduled domain</em>可以发现不同:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> islplot.plotter <span class="keyword">import</span> *</span><br><span class="line">plot_set_points(D.apply(S))</span><br><span class="line"><span class="built_in">print</span>(D.apply(S)) <span class="comment"># t0表示是外部循环的顺序, t1 表示的内部statement的执行顺序, 此时外部循环0~9, 内部执行顺序0~1</span></span><br></pre></td></tr></table></figure>
+<pre><code>&#123; [t0, t1 = 1] : 0 &lt;= t0 &lt;= 9; [t0, t1 = 0] : 0 &lt;= t0 &lt;= 9 &#125;</code></pre>
+<p><img
+src="/2022/08/14/polyherdal-playground/03_schedules_15_1.png" /></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">plot_set_points(D2.apply(S2))</span><br><span class="line"><span class="built_in">print</span>(D2.apply(S2)) <span class="comment"># t0表示是循环外部的顺序, t1表示循环内statement的执行顺序, 此时循环外部有先后顺序, 循环内顺序 0~9</span></span><br></pre></td></tr></table></figure>
+<pre><code>&#123; [t0 = 1, t1] : 0 &lt;= t1 &lt;= 9; [t0 = 0, t1] : 0 &lt;= t1 &lt;= 9 &#125;</code></pre>
+<p><img
+src="/2022/08/14/polyherdal-playground/03_schedules_16_1.png" /></p>
+<p>注意, 因为上面将logical
+dates和所有statement的实例绘制在同一个space中,所以比较难辨认.</p>
+<h3 id="question-9">Question</h3>
+<p>通常,如果auxiliary dimension被statement共享,
+那么定义在循环的最内部,</p>
+<p>如果没有被任何loop共享, 那么放到最前面.</p>
+<p>为下面的schedule定义auxiliary dimension:</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; <span class="number">10</span>; ++i) &#123;</span><br><span class="line">  <span class="keyword">for</span> (j = <span class="number">0</span>; j &lt; <span class="number">5</span>; ++j)</span><br><span class="line">S1: A[i][j] = <span class="number">0.</span>;</span><br><span class="line">  <span class="keyword">for</span> (j = <span class="number">0</span>; j &lt; <span class="number">5</span>; ++j)</span><br><span class="line">S2: B[i][j] = <span class="number">0.</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">D = isl.UnionSet(<span class="string">&quot;&#123; S1[i,j] : 0 &lt;= i &lt; 10 and 0 &lt;= j &lt; 5 ; S2[i,j] : 0 &lt;= i &lt; 10 and 0 &lt;= j &lt; 5 &#125;&quot;</span>)</span><br><span class="line">S = isl.UnionMap(<span class="string">&quot;&#123; S1[i,j] -&gt; [t0 = i,t1 = 0,t2 = j]; S2[i,j] -&gt; [t0 = i,t1 = 1,t2 = j]; &#125;&quot;</span>)</span><br><span class="line"><span class="built_in">print</span>(S) <span class="comment"># t0 作为共享循环i, t1 控制循环j外部的顺序, t2 分别为每个循环j的顺序.</span></span><br></pre></td></tr></table></figure>
+<pre><code>&#123; S1[i, j] -&gt; [t0 = i, t1 = 0, t2 = j]; S2[i, j] -&gt; [t0 = i, t1 = 1, t2 = j] &#125;</code></pre>
+<h1 id="modeling-memory-accesses">Modeling memory accesses</h1>
+<h2 id="access-relations">Access Relations</h2>
+<p>每个statement instance可能会访问一个或多个的variables/ scalars/
+arrays.</p>
+<p>如果数组的下标索引是loop iterators 和 structure parameters的仿射形式,
+那么可以定义Presburger relation来将statement
+instances和他们访问的数组元素关联起来. 为了简单起见,在polyhedral
+model中将scalar作为0维数组来表示.</p>
+<p>考虑一个矩阵乘的算子: <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">double</span> X[<span class="number">100</span>], Y[<span class="number">100</span>], Z[<span class="number">200</span>];</span><br><span class="line"><span class="type">double</span> zero = <span class="number">0.</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt;= <span class="number">200</span>; ++i)</span><br><span class="line">S:  Z[i] = zero;</span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt;= <span class="number">100</span>; ++i)</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> j = <span class="number">0</span>; j &lt;= <span class="number">100</span>; ++j)</span><br><span class="line">T:      Z[i + j] += A[i] * B[j];</span><br></pre></td></tr></table></figure></p>
+<p>如果只使用句法术语, 可以称为statement <code>S</code> 访问 array
+<code>Z</code>.</p>
+<p>但是,对于每一个独立的<em>instance</em><span class="math inline">\((
+\mathtt{S}(i) )\)</span> 只访问其中的一个元素<code>Z[i]</code>.</p>
+<p>这可以被编码为 <span class="math inline">\(( \{ \mathtt{S}(i)
+\rightarrow \mathtt{Z}(a): a = i \} )\)</span>.</p>
+<p>进一步, 我们知道array
+<code>Z</code>的size,因此可以定义额外的约束来避免index out of range.</p>
+<p><span class="math inline">\(( \{ \mathtt{Z}(a): 0 \leq a \leq 200 \}
+)\)</span>.</p>
+<p>同时<code>S</code>的iteration domain为:</p>
+<p><span class="math inline">\(( \{ \mathtt{S}(i): 0 \leq i \leq 200 \}
+)\)</span>.</p>
+<p>在access relation中加入了以上约束后, 我们可以将上述set和statement
+domain进行intersect.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> islpy <span class="keyword">as</span> isl</span><br><span class="line">A_S_Z = isl.Map(<span class="string">&quot;&#123;S[i] -&gt; Z[a]: a = i&#125;&quot;</span>) <span class="comment"># s访问数组z的映射</span></span><br><span class="line">D_S = isl.<span class="type">Set</span>(<span class="string">&quot;&#123;S[i]: 0 &lt;= i &lt;= 200&#125;&quot;</span>) <span class="comment"># S的迭代域</span></span><br><span class="line">C_Z = isl.<span class="type">Set</span>(<span class="string">&quot;&#123;Z[a]: 0 &lt;= a &lt;= 200&#125;&quot;</span>) <span class="comment"># 数组Z的domain</span></span><br><span class="line">A_S_Z = A_S_Z.intersect_domain(D_S).intersect_range(C_Z) <span class="comment"># 对schedule添加instance domain和数组的range.</span></span><br><span class="line"><span class="built_in">print</span>(A_S_Z)</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; S[i] -&gt; Z[a = i] : 0 &lt;= i &lt;= 200 &#125;</code></pre>
+<p>上面最终加入约束后的例子中并没有显式对<span
+class="math inline">\((a)\)</span>的范围约束,因为存在了隐式的约束<span
+class="math inline">\((a = i)\)</span>,所以isl会简化最终的表示.</p>
+<p>scalar不存在下标索引, 因此他们表示为0维的向量.</p>
+<p>但是这个range依旧存在一个name, 比如用<code>zero</code>来表示.</p>
+<p><span class="math inline">\(( \{ \mathtt{S}(i) \rightarrow
+\mathtt{zero}(): 0 \leq i \leq 200 \} )\)</span>.</p>
+<p>此时额外的<span class="math inline">\((i)\)</span>的约束将从iteration
+domain <code>S</code>中获取.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">A_S_zero = isl.Map(<span class="string">&quot;&#123;S[i] -&gt; zero[]:&#125;&quot;</span>) <span class="comment"># s访问zero的映射</span></span><br><span class="line">A_S_zero = A_S_zero.intersect_domain(D_S) <span class="comment"># 因为zero没有range,所以这里只需要添加domain信息即可.</span></span><br><span class="line"><span class="built_in">print</span>(A_S_zero)</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; S[i] -&gt; zero[] : 0 &lt;= i &lt;= 200 &#125;</code></pre>
+<p>最终,
+可以将不同数组的访问关系组合成一个描述语句所有访问的联合映射.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">A_S = isl.UnionMap(A_S_Z).union(A_S_zero)</span><br><span class="line"><span class="built_in">print</span>(A_S) <span class="comment"># 这里表示的初始化循环中, S访问了浮点值0和Z[i]的relation</span></span><br></pre></td></tr></table></figure>
+<pre><code>&#123; S[i] -&gt; Z[a = i] : 0 &lt;= i &lt;= 200; S[i] -&gt; zero[] : 0 &lt;= i &lt;= 200 &#125;</code></pre>
+<p>因为我们想要区分<em>reads</em> 和 <em>writes</em>的顺序,
+因此我们可以分离不同的access relations的unions.</p>
+<p>有时候他们会同时触发,
+在这里例子中就是一个statement同时读写相同的variable.</p>
+<h3 id="question-10">Question</h3>
+<p>定义map <code>A_T_Z</code>并联合statement <code>T</code>和array
+<code>Z</code>:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">A_T_Z = isl.Map(<span class="string">&quot; &#123; T[i,j] -&gt; Z[a = i + j]&#125; &quot;</span>) <span class="comment"># T访问Z的relation.</span></span><br><span class="line"><span class="built_in">print</span>(A_T_Z)</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; T[i, j] -&gt; Z[a = i + j] &#125;</code></pre>
+<h3 id="question-11">Question</h3>
+<p>分别定义<code>A_T_reads</code> and <code>A_T_writes</code>的union
+map:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">A_T_reads = isl.UnionMap(<span class="string">&quot; &#123; T[i,j] -&gt; Z[a = i + j] ; T[i,j] -&gt; A[a = i] ; T[i,j] -&gt; B[a = j]&#125; &quot;</span>)</span><br><span class="line"><span class="built_in">print</span>(A_T_reads)</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; T[i, j] -&gt; A[a = i]; T[i, j] -&gt; Z[a = i + j]; T[i, j] -&gt; B[a = j] &#125;</code></pre>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">A_T_writes = isl.Map(<span class="string">&quot;&#123; T[i,j] -&gt; Z[a = i + j] &#125;&quot;</span>)</span><br><span class="line"><span class="built_in">print</span>(A_T_writes)</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; T[i, j] -&gt; Z[a = i + j] &#125;</code></pre>
+<h2 id="detecting-out-of-bounds-accesses">Detecting Out-of-Bounds
+Accesses</h2>
+<p>通过将iteration domain和array size
+约束set进行结合,就可以检测出越界访问,</p>
+<p>考虑如下代码:</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">double</span> A[<span class="number">99</span>];</span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt;= <span class="number">99</span>; i++)</span><br><span class="line">X:  A[i+<span class="number">1</span>] = <span class="number">0.</span>;</span><br></pre></td></tr></table></figure>
+<p>其中的access relation表示为<span class="math inline">\(( a = i + 1
+)\)</span></p>
+<p>首先将 <code>S</code>的iteration domain
+和他的数组<code>A</code>的range约束进行intersect.</p>
+<p>返回的access relation中包含了所有的<em>access instances</em>,
+也就是所有的statement instance和array 元素的pair.</p>
+<p>从domain约束过的relation中减去这个relation得到的结果就是<em>invalid
+accesses</em>,</p>
+<p>表示了所有越界访问的statement instance.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">A_X_A = isl.Map(<span class="string">&quot;&#123;X[i]-&gt;A[a]: a = i+1&#125;&quot;</span>) <span class="comment"># X的access relation</span></span><br><span class="line">C_A = isl.<span class="type">Set</span>(<span class="string">&quot;&#123;A[i]: 0 &lt;= i &lt;= 99&#125;&quot;</span>) <span class="comment"># 添加数组range信息</span></span><br><span class="line">D_X = isl.<span class="type">Set</span>(<span class="string">&quot;&#123;X[i]: 0 &lt;= i &lt;= 99&#125;&quot;</span>) <span class="comment"># 添加statement domain信息</span></span><br><span class="line">correct = A_X_A.intersect_domain(D_X).intersect_range(C_A) <span class="comment"># 同时约束domain和range的则是可以执行的statement.</span></span><br><span class="line">incorrect = A_X_A.intersect_domain(D_X).subtract(correct) <span class="comment"># 只约束domain的情况下,他的statement set将会大于等于 correct</span></span><br><span class="line"><span class="built_in">print</span>(correct)</span><br><span class="line"><span class="built_in">print</span>(incorrect)</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; X[i] -&gt; A[a = 1 + i] : 0 &lt;= i &lt;= 98 &#125;
+&#123; X[i = 99] -&gt; A[a = 100] &#125;</code></pre>
+<p>在上面的例子中,statement instance <span
+class="math inline">\(X(99)\)</span>
+就对数组<code>A</code>执行了越界的访问,
+这个可以通过将循环上界修改为<code>i &lt; 99</code>来完成修复.</p>
+<h3 id="question-12">Question</h3>
+<p>验证修复后的结果是正确的, 即检查subtract后的集合为空.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">A_X_A = isl.Map(<span class="string">&quot;&#123;X[i]-&gt;A[a]: a = i+1&#125;&quot;</span>) <span class="comment"># 首先定义访问关系</span></span><br><span class="line">C_A = isl.<span class="type">Set</span>(<span class="string">&quot;&#123;A[i]: 0 &lt;= i &lt;= 99&#125;&quot;</span>) <span class="comment"># 添加数组range信息</span></span><br><span class="line">D_X = isl.<span class="type">Set</span>(<span class="string">&quot;&#123;X[i]: 0 &lt;= i &lt; 99&#125;&quot;</span>) <span class="comment"># 添加statement domain信息</span></span><br><span class="line">correct = A_X_A.intersect_domain(D_X).intersect_range(C_A) <span class="comment"># 同时约束domain和range的则是可以执行的statement.</span></span><br><span class="line">incorrect = A_X_A.intersect_domain(D_X).subtract(correct) <span class="comment"># 只约束domain的情况下,他的statement set将会大于等于 correct</span></span><br><span class="line"><span class="keyword">assert</span> incorrect.is_empty() == <span class="literal">True</span></span><br></pre></td></tr></table></figure>
+<p>公式<span class="math inline">\((1 = 0)\)</span>为false.</p>
+<p>在Presburger sets表示中,
+这被用于表示一个空的集合,但不丢失name和维度信息.</p>
+<h2 id="potentially-dependent-instances">Potentially Dependent
+Instances</h2>
+<p>现在来定义<em>inverse</em> access relation,
+即映射数组元素到每个访问了这个元素的statement instance.</p>
+<p>首先获取原始的access relation:</p>
+<p><span class="math inline">\(( \mathcal{A}\_{\mathtt{S} \rightarrow
+\mathtt{Z}} = \{ \mathtt{S}(i) \rightarrow \mathtt{Z}(a):  a = i \wedge
+0 \leq a,i \leq 200 \} )\)</span>,</p>
+<p><em>inverse</em> access
+relation被<em>相同的约束</em>定义的,但是交换了其中的<code>domain</code>和<code>range</code>.</p>
+<p><span class="math inline">\(( \mathcal{A}\_{\mathtt{S} \rightarrow
+\mathtt{Z}}^{-1} = \{ \mathtt{Z}(a) \rightarrow \mathtt{S}(i):  a = i
+\wedge 0 \leq a,i \leq 200 \} )\)</span>.</p>
+<p><em>isl</em> can compute inverse relations using:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">A_S_Z_inv = A_S_Z.reverse()</span><br><span class="line"><span class="built_in">print</span>(A_S_Z)</span><br><span class="line"><span class="built_in">print</span>(A_S_Z_inv)</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; S[i] -&gt; Z[a = i] : 0 &lt;= i &lt;= 200 &#125;
+&#123; Z[a] -&gt; S[i = a] : 0 &lt;= a &lt;= 200 &#125;</code></pre>
+<p>如果两个statement instances访问了<em>相同的</em>array element,
+他们可能会互相干扰.</p>
+<p>比如,第一个instance写入了值,然后后面第二个instance去读取他.</p>
+<p>在没有<code>volatile</code>限定符的情况下,两个statement<em>读取</em>相同的元素是不会被干扰的.</p>
+<p>将此定义转换为relations, 我们需要在访问相同数组元素的statement
+instances之间定义一个映射.</p>
+<p>通过access relation, 我们知道statement instance访问了哪些元素.</p>
+<p>使用inverse access relation,我们能知道哪些其他的 statement
+instances访问了数组元素.</p>
+<p>结合这两个access relation和数组下标索引,
+可以为我们提供潜在的statement instances之间的依赖关系(potentially
+dependent).</p>
+<p>这可以通过access relation之间的组合来完成:</p>
+<p><span class="math inline">\(( \mathcal{X} \circ \mathcal{Y} = \{
+\pmb{x} \rightarrow \pmb{y} \mid  \exists \pmb{z} : (\pmb{x},\pmb{z})
+\in \mathcal{X} \wedge (\pmb{z},\pmb{y}) \in \mathcal{Y} \}
+)\)</span>.</p>
+<p><em>isl</em>中可以使用<code>apply range</code>操作来进行access
+relation之间的组合.</p>
+<p>比如计算statement <code>S</code>访问相同元素<code>Z</code>的关系:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">dep_S_Z = A_S_Z.apply_range(A_S_Z.reverse()) <span class="comment"># A_S_Z 表示S访问数组Z的关系, A_S_Z_inv表示数组Z被S访问的关系.</span></span><br><span class="line"><span class="built_in">print</span>(dep_S_Z) <span class="comment"># 得到了potentially dependent</span></span><br></pre></td></tr></table></figure>
+<pre><code>&#123; S[i] -&gt; S[i&#39; = i] : 0 &lt;= i &lt;= 200 &#125;</code></pre>
+<p>得到了statement instances集合<code>S</code>的map结果.</p>
+<p>在这个例子中,本质上是一个恒等的关系, 因为<span
+class="math inline">\((i^\prime = i)\)</span>是相等的.</p>
+<p>这表示不同的<code>S</code>的instance实际访问的是不同的数组元素.</p>
+<h3 id="question-13">Question</h3>
+<p>定义关于instance
+<code>S</code>访问标量<code>zero</code>的映射<code>dep_S_zero</code>:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">dep_S_zero = A_S_zero.apply_range(A_S_zero.reverse())</span><br><span class="line"><span class="built_in">print</span>(dep_S_zero)</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; S[i] -&gt; S[i&#39;] : 0 &lt;= i &lt;= 200 and 0 &lt;= i&#39; &lt;= 200 &#125;</code></pre>
+<p>上面就可以发现<code>S</code>的每个实例都是相关关联的,
+因为他们访问的都是同一个标量值.</p>
+<p>不过目前他们只读取这个值, 并没有修改他, 因此是不会与其他的statement
+instance产生干扰.</p>
+<h2 id="reads-and-writes">Reads and Writes</h2>
+<p>通常,只有至少一次访问为<em>write</em>的时候才会被看作是潜在依赖.</p>
+<p>因此,还是需要将read/write分离为不同的relation.</p>
+<p>现在用一个更小的数据范围的例子来说明问题: <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">double</span> X[<span class="number">10</span>], Y[<span class="number">10</span>], Z[<span class="number">20</span>];</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt;= <span class="number">20</span>; ++i)</span><br><span class="line">S:  Z[i] = <span class="number">0.</span>;</span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt;= <span class="number">10</span>; ++i)</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> j = <span class="number">0</span>; j &lt;= <span class="number">10</span>; ++j)</span><br><span class="line">T:      Z[i + j] += A[i] * B[j];</span><br></pre></td></tr></table></figure></p>
+<p>NOTE
+在<em>isl</em>中,复杂度取决于依赖的数量,而不是集合中的数据量.</p>
+<p>由于union中的map可以存在于不同的空间中,
+因此可以通过组合来自不同语句的单个access (union)
+map来定义所有读取和写入的映射.</p>
+<h3 id="question-14">Question</h3>
+<p>下面给出了每个单独的access relations,
+定义整个<em>SCoP</em>的<code>reads</code> and <code>writes</code> union
+map.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">A_S_Z = isl.Map(<span class="string">&quot;&#123;S[i]-&gt;Z[a]: a = i and 0 &lt;= a,i &lt;= 20&#125;&quot;</span>) <span class="comment"># S 访问数组Z的 access relation</span></span><br><span class="line">A_T_Z = isl.Map(<span class="string">&quot;&#123;T[i,j]-&gt;Z[a]: a = i + j and 0 &lt;= i,j &lt;= 10 and 0 &lt;= a &lt;= 20&#125;&quot;</span>) <span class="comment"># T 访问数组Z的access relation</span></span><br><span class="line">A_T_A = isl.Map(<span class="string">&quot;&#123;T[i,j]-&gt;A[a]: a = i and 0 &lt;= a &lt;= 20 and 0 &lt;= i,j &lt;= 10&#125;&quot;</span>) <span class="comment"># T 访问数组A的access relation</span></span><br><span class="line">A_T_B = isl.Map(<span class="string">&quot;&#123;T[i,j]-&gt;B[a]: a = j and 0 &lt;= a &lt;= 20 and 0 &lt;= i,j &lt;= 10&#125;&quot;</span>) <span class="comment"># T 访问数组B的access relation</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">writes = isl.UnionMap(A_S_Z).union(A_T_Z) <span class="comment"># S写入Z[i], T写入Z[i+j]</span></span><br><span class="line">reads = isl.UnionMap(A_T_Z).union(A_T_A).union(A_T_B) <span class="comment"># T读Z[i+j], A[i], B[j]</span></span><br><span class="line"><span class="built_in">print</span>(reads)</span><br><span class="line"><span class="built_in">print</span>(writes)</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; T[i, j] -&gt; A[a = i] : 0 &lt;= i &lt;= 10 and 0 &lt;= j &lt;= 10; T[i, j] -&gt; Z[a = i + j] : 0 &lt;= i &lt;= 10 and j &gt;= 0 and -i &lt;= j &lt;= 20 - i and j &lt;= 10; T[i, j] -&gt; B[a = j] : 0 &lt;= i &lt;= 10 and 0 &lt;= j &lt;= 10 &#125;
+&#123; T[i, j] -&gt; Z[a = i + j] : 0 &lt;= i &lt;= 10 and j &gt;= 0 and -i &lt;= j &lt;= 20 - i and j &lt;= 10; S[i] -&gt; Z[a = i] : 0 &lt;= i &lt;= 20 &#125;</code></pre>
+<h2 id="selecting-one-write">Selecting one Write</h2>
+<p>为了避免将read access与read access组合的情况,
+我们必须确保<code>reads</code>不会同时出现在组合的两边:</p>
+<p><span class="math inline">\(( (\mathtt{reads} \circ
+\mathtt{writes}^{-1}) \cup  (\mathtt{writes} \circ \mathtt{reads}^{-1})
+\cup  (\mathtt{writes} \circ \mathtt{writes}^{-1}) )\)</span></p>
+<p>注意 <code>writes</code>在右边出现了两次, 因此可以将表达式简化为:</p>
+<p><span class="math inline">\(( ((\mathtt{reads} \cup \mathtt{writes})
+\circ \mathtt{writes}^{-1}) \cup (\mathtt{writes} \circ
+\mathtt{reads}^{-1}) )\)</span>.</p>
+<p>现在来计算union的第一部分:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">reads_writes = reads.union(writes)</span><br><span class="line">left_part = reads_writes.apply_range(writes.reverse())</span><br><span class="line"><span class="built_in">print</span>(left_part)</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; S[i] -&gt; S[i&#39; = i] : 0 &lt;= i &lt;= 20; T[i, j] -&gt; S[i&#39; = i + j] : 0 &lt;= i &lt;= 10 and j &gt;= 0 and -i &lt;= j &lt;= 20 - i and j &lt;= 10; T[i, j] -&gt; T[i&#39;, j&#39; = i + j - i&#39;] : 0 &lt;= i &lt;= 10 and j &gt;= 0 and -i &lt;= j &lt;= 20 - i and j &lt;= 10 and i&#39; &gt;= -10 + i + j and 0 &lt;= i&#39; &lt;= 10 and i&#39; &lt;= i + j; S[i] -&gt; T[i&#39;, j = i - i&#39;] : 0 &lt;= i &lt;= 20 and i&#39; &gt;= -10 + i and 0 &lt;= i&#39; &lt;= 10 and i&#39; &lt;= i &#125;</code></pre>
+<h3 id="question-15">Question</h3>
+<p>计算整个union的第二部分:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">right_part = writes.apply_range(reads.reverse()) <span class="comment"># (writes ∘ reads⁻¹)</span></span><br><span class="line">union = left_part.union(right_part) <span class="comment"># 再进行union</span></span><br><span class="line"><span class="built_in">print</span>(union)</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; S[i] -&gt; T[i&#39;, j = i - i&#39;] : i&#39; &gt;= -10 + i and 0 &lt;= i&#39; &lt;= 10 and i&#39; &lt;= i; T[i, j] -&gt; S[i&#39; = i + j] : 0 &lt;= i &lt;= 10 and j &gt;= 0 and -i &lt;= j &lt;= 20 - i and j &lt;= 10; S[i] -&gt; S[i&#39; = i] : 0 &lt;= i &lt;= 20; T[i, j] -&gt; T[i&#39;, j&#39; = i + j - i&#39;] : 0 &lt;= i &lt;= 10 and 0 &lt;= j &lt;= 10 and i&#39; &gt;= -10 + i + j and 0 &lt;= i&#39; &lt;= 10 and i&#39; &lt;= i + j &#125;</code></pre>
+<h3 id="question-16">Question:</h3>
+<p>现在单独计算连接读取相同元素的statement
+instances的<code>two_reads</code>的relation:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">two_reads = reads.apply_range(reads.reverse())</span><br><span class="line"><span class="built_in">print</span>(two_reads)</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; T[i, j] -&gt; T[i&#39;, j&#39; = i + j - i&#39;] : 0 &lt;= i &lt;= 10 and 0 &lt;= j &lt;= 10 and i&#39; &gt;= -10 + i + j and 0 &lt;= i&#39; &lt;= 10 and i&#39; &lt;= i + j; T[i, j] -&gt; T[i&#39; = i, j&#39;] : 0 &lt;= i &lt;= 10 and 0 &lt;= j &lt;= 10 and 0 &lt;= j&#39; &lt;= 10; T[i, j] -&gt; T[i&#39;, j&#39; = j] : 0 &lt;= i &lt;= 10 and 0 &lt;= j &lt;= 10 and 0 &lt;= i&#39; &lt;= 10 &#125;</code></pre>
+<h3 id="section-2"></h3>
+<p>比较以上这些relation, 即使它们以不同的顺序打印,
+<code>union</code>和<code>left_part</code>也完全相同.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">print</span>(union.is_equal(left_part))</span><br></pre></td></tr></table></figure>
+<pre><code>True</code></pre>
+<p>这里是因为在这个例子中<code>left_part</code>实际上就是<code>right_part</code>的一个子集,</p>
+<p>因为<code>T</code>读写的都是相同的元素, 因此pair <span
+class="math inline">\(( \mathtt{S}(i) \rightarrow
+\mathtt{T}(i&#39;,j=i-i&#39;) )\)</span></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">print</span>(right_part.is_subset(left_part))</span><br></pre></td></tr></table></figure>
+<pre><code>True</code></pre>
+<p>因此,我们不能只计算潜在依赖statement
+pair的整体集合,然后减去那些有两次reads的集合.
+如果其中出现两次相同的write的关系,就会被抵消.</p>
+<h3 id="question-17">Question</h3>
+<p>使用read和write的statement instance pair之间的relation, 从中减去
+<code>two_reads</code> 并检查它确实只是 <code>union</code>
+的一个子集.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">all_pairs = reads_writes.apply_range(reads_writes.reverse())</span><br><span class="line">all_pairs = all_pairs.subtract(two_reads)</span><br><span class="line"><span class="built_in">print</span>(all_pairs.is_equal(union))</span><br><span class="line"><span class="built_in">print</span>(all_pairs.is_subset(union))</span><br></pre></td></tr></table></figure>
+<pre><code>False
+True</code></pre>
+<h2 id="visualizing-potentially-dependent-instances">Visualizing
+Potentially Dependent Instances</h2>
+<p>现在把限制只放在<code>T</code>的实例上</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">T_only = isl.Map(<span class="string">&quot;&#123; T[i,j] -&gt; T[i&#x27;,j&#x27;]: &#125;&quot;</span>) <span class="comment"># 过滤出访问点.</span></span><br><span class="line">new_union = union.intersect(T_only)</span><br><span class="line"><span class="keyword">from</span> islplot.plotter <span class="keyword">import</span> *</span><br><span class="line"><span class="keyword">import</span> matplotlib.pyplot <span class="keyword">as</span> plt</span><br><span class="line">plt.figure(figsize=(<span class="number">10</span>, <span class="number">7</span>), dpi=<span class="number">80</span>)</span><br><span class="line">plot_map(new_union)</span><br><span class="line"><span class="built_in">print</span>(new_union)</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; T[i, j] -&gt; T[i&#39;, j&#39; = i + j - i&#39;] : 0 &lt;= i &lt;= 10 and 0 &lt;= j &lt;= 10 and i&#39; &gt;= -10 + i + j and 0 &lt;= i&#39; &lt;= 10 and i&#39; &lt;= i + j &#125;</code></pre>
+<p><img
+src="/2022/08/14/polyherdal-playground/04_memory_39_1.png" /></p>
+<p>如上图所示, 每个statement instance都与 <em>他自己</em>
+以及同一对角线上的一个或多个instance相关.</p>
+<h3 id="question-18">Question</h3>
+<p>定义一个map <code>left_42</code> 只包含 <span
+class="math inline">\((\mathtt{T}(4,2) )\)</span> 在左边的pair,
+和一个map <code>right_42</code>, 它只包含它在右边的pair</p>
+<p><em>提示</em>：map domain和range是集合, 可以对其进行操作</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">left_42 = union.intersect_domain(isl.<span class="type">Set</span>(<span class="string">&quot;&#123; T[i = 4,j = 2] &#125;&quot;</span>))</span><br><span class="line"><span class="built_in">print</span>(left_42)</span><br><span class="line">right_42 = union.intersect_range(isl.<span class="type">Set</span>(<span class="string">&quot;&#123; T[i = 4,j = 2] &#125;&quot;</span>))</span><br><span class="line"><span class="built_in">print</span>(right_42)</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; T[i = 4, j = 2] -&gt; S[i&#39; = 6]; T[i = 4, j = 2] -&gt; T[i&#39;, j&#39; = 6 - i&#39;] : 0 &lt;= i&#39; &lt;= 6 &#125;
+&#123; T[i, j = 6 - i] -&gt; T[i&#39; = 4, j&#39; = 2] : 0 &lt;= i &lt;= 6; S[i = 6] -&gt; T[i&#39; = 4, j = 2] &#125;</code></pre>
+<p>从图上比较这些relation:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">plt.figure(figsize=(<span class="number">10</span>, <span class="number">7</span>))</span><br><span class="line">plot_map(left_42)</span><br></pre></td></tr></table></figure>
+<p><img
+src="/2022/08/14/polyherdal-playground/04_memory_43_0.png" /></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">plt.figure(figsize=(<span class="number">10</span>, <span class="number">7</span>), dpi=<span class="number">80</span>)</span><br><span class="line">plot_map(right_42)</span><br></pre></td></tr></table></figure>
+<p><img
+src="/2022/08/14/polyherdal-playground/04_memory_44_0.png" /></p>
+<p>从上图可以看出, 两个relation是相同的.</p>
+<p>这又是因为对 <code>Z[i+j]</code> 的唯一访问是read和write.</p>
+<p>statement instance被连接到了访问相同数据的所有其他statement
+instance.</p>
+<p>但是, 它并不一定会创建<em>依赖</em>. 例如, 依赖于自身并不完全有意义.
+对于两个<em>依赖</em>的statement instance,
+其中一个应该在另一个<em>之前</em>执行. 也就是说,
+第一个statement要么生成第二个statement所需的一些数据,
+要么使用一些将被第二个statement覆盖的数据.
+依赖计算需要知道statement执行的<em>顺序</em>.</p>
+<h3 id="question-19">Question</h3>
+<p>给定以下代码, 计算和可视化访问相同数组元素的statement pair,
+并且至少其中一个访问是write.</p>
+<p><em>Hint:</em>
+使用disjunction对同一数组的不同引用中的不同下标进行编码.</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; <span class="number">6</span>; ++i)</span><br><span class="line">  <span class="keyword">for</span> (j = <span class="number">0</span>; j &lt; <span class="number">5</span>; ++j)</span><br><span class="line">S1: X[i][j] = i * j;</span><br><span class="line"><span class="keyword">for</span> (i = <span class="number">8</span>; i &lt; <span class="number">13</span>; ++i)</span><br><span class="line">  <span class="keyword">for</span> (j = <span class="number">11</span>; j &lt; <span class="number">15</span>; ++j)</span><br><span class="line">S2: Y[i][j] = X[i - <span class="number">8</span>][j - <span class="number">10</span>] - X[i - <span class="number">7</span>][j - <span class="number">11</span>];</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># step 1. 定义每个statement instance的domain</span></span><br><span class="line">domain = isl.UnionSet(<span class="string">&quot; &#123; S1[i,j] : 0 &lt;= i &lt; 6 and 0 &lt;= j &lt; 5 ; S2[i,j] : 8 &lt;= i &lt; 13 and 11 &lt;= j &lt; 15 &#125; &quot;</span>)</span><br><span class="line"><span class="comment"># S1写入X ; S2写入Y</span></span><br><span class="line">writes = isl.UnionMap(<span class="string">&quot; &#123; S1[i,j] -&gt; X[a = i, b = j]; S2[i,j] -&gt; Y[a = i, b = j] &#125;&quot;</span>)</span><br><span class="line"><span class="comment"># S2读取X</span></span><br><span class="line">reads = isl.UnionMap(<span class="string">&quot; &#123; S2[i,j] -&gt; X[a,b] : (a = i-8 and b = j-10) or ( a= i-7 and b = j - 11) &#125;&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 添加domain约束</span></span><br><span class="line">writes = writes.intersect_domain(domain)</span><br><span class="line">reads = reads.intersect_domain(domain)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 依赖计算</span></span><br><span class="line">deps = writes.apply_range(reads.reverse())</span><br><span class="line"><span class="built_in">print</span>(deps)</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; S1[i, j] -&gt; S2[i&#39; = 7 + i, j&#39; = 11 + j] : 0 &lt; i &lt;= 5 and 0 &lt;= j &lt;= 3; S1[i, j] -&gt; S2[i&#39; = 8 + i, j&#39; = 10 + j] : 0 &lt;= i &lt;= 4 and 0 &lt; j &lt;= 4 &#125;</code></pre>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">plt.figure(figsize=(<span class="number">10</span>, <span class="number">7</span>), dpi=<span class="number">80</span>)</span><br><span class="line">plot_map(deps)</span><br></pre></td></tr></table></figure>
+<p><img
+src="/2022/08/14/polyherdal-playground/04_memory_48_0.png" /></p>
+<h3 id="question-20">Question</h3>
+<p>选择 <code>S1</code> 和 <code>S2</code> 的 <em>sample</em> 实例,
+并绘制访问同一数组元素的其他语句的实例.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">point_22 = isl.<span class="type">Set</span>(<span class="string">&quot;&#123;S1[i,j]: i = 2 and j = 2&#125;&quot;</span>) <span class="comment"># S1 写入X[2,2]</span></span><br><span class="line">point_1012 = isl.<span class="type">Set</span>(<span class="string">&quot;&#123;S2[i,j]: i = 10 and j = 12&#125;&quot;</span>) <span class="comment"># S2 读取 X[2][2] 和 X[3][1];</span></span><br><span class="line">sinks = deps.intersect_domain(point_22)</span><br><span class="line">sources = deps.intersect_range(point_1012)</span><br><span class="line">plt.figure(figsize=(<span class="number">10</span>, <span class="number">7</span>), dpi=<span class="number">80</span>)</span><br><span class="line">plot_map([sinks,sources])</span><br></pre></td></tr></table></figure>
+<p><img
+src="/2022/08/14/polyherdal-playground/04_memory_50_0.png" /></p>
+<h1 id="dependence-analysis">Dependence Analysis</h1>
+<p>当程序被转换时,保留程序语义的关键在于确保相同的值以相同的顺序写入和读取内存.</p>
+<p>传统上,这是使用<em>data dependences</em>来表示的,
+它对程序施加了部分执行顺序约束.
+多面体模型的强大之处在于它能够在statement instance级别计算精确的data
+dependences.</p>
+<p>如果一个statement instances在另一个statement instances之前执行,
+则两个语句实例被称为<em>依赖</em>, 它们访问相同的数组元素,
+并且至少一个访问权限写入该元素.</p>
+<p>在<code>Schedules</code>章节中, 我们学习了如何定义statement
+instance的执行顺序. 在<code>Memory Access</code>章节中,
+我们定义了<em>potentially dependent</em>的statement instance的关系,
+即访问了相同的数组元素并且至少一个访问是写入.</p>
+<p>最简单的依赖分析就是将两部分结合起来,
+首先我们给出一个多项式乘积的kernel: <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">double</span> A[<span class="number">10</span>], B[<span class="number">10</span>], Z[<span class="number">20</span>];</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt;= <span class="number">20</span>; ++i)</span><br><span class="line">S:  Z[i] = <span class="number">0.</span>;</span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt;= <span class="number">10</span>; ++i)</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> j = <span class="number">0</span>; j &lt;= <span class="number">10</span>; ++j)</span><br><span class="line">T:      Z[i + j] += A[i] * B[j];</span><br></pre></td></tr></table></figure></p>
+<p>然后定义对应的domain/schedule/access relations:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> islpy <span class="keyword">as</span> isl</span><br><span class="line">domain = isl.UnionSet(<span class="string">&quot;&#123;S[i]: 0 &lt;= i &lt;= 20; T[i,j]: 0 &lt;= i,j &lt;= 10&#125;&quot;</span>)</span><br><span class="line"><span class="comment"># t0是最外层的辅助维度, 用于标记外部的执行顺序. t1/t2则是内部循环的执行顺序.</span></span><br><span class="line">schedule = isl.UnionMap(</span><br><span class="line">    <span class="string">&quot;&#123;S[i]-&gt;[t0,t1,t2]: t0 = 0 and t1 = i and t2 = 0; T[i,j]-&gt;[t0,t1,t2]: t0=1 and t1=i and t2=j&#125;&quot;</span>)</span><br><span class="line">A_S_Z = isl.Map(<span class="string">&quot;&#123;S[i]-&gt;Z[a]: a = i and 0 &lt;= a,i &lt;= 20&#125;&quot;</span>)  <span class="comment"># S 写入Z[i]</span></span><br><span class="line">A_T_Z = isl.Map(<span class="string">&quot;&#123;T[i,j]-&gt;Z[a]: a = i + j and 0 &lt;= i,j &lt;= 10 and 0 &lt;= a &lt;= 20&#125;&quot;</span>)  <span class="comment"># T写入Z[i+j]</span></span><br><span class="line">A_T_A = isl.Map(<span class="string">&quot;&#123;T[i,j]-&gt;A[a]: a = i and 0 &lt;= a &lt;= 20 and 0 &lt;= i,j &lt;= 10&#125;&quot;</span>)  <span class="comment"># T读取A[i]</span></span><br><span class="line">A_T_B = isl.Map(<span class="string">&quot;&#123;T[i,j]-&gt;B[a]: a = j and 0 &lt;= a &lt;= 20 and 0 &lt;= i,j &lt;= 10&#125;&quot;</span>)  <span class="comment"># T读取B[i]</span></span><br><span class="line">writes = isl.UnionMap(A_S_Z).union(A_T_Z) </span><br><span class="line">reads = isl.UnionMap(A_T_Z).union(A_T_A).union(A_T_B)</span><br></pre></td></tr></table></figure>
+<p>我们还可以计算访问相同数组元素的statement instance pair集合.</p>
+<h2 id="plugging-in-schedule-information">Plugging in Schedule
+Information</h2>
+<p>因为statement instances是按照它们各自词典序执行的,
+因此我们需要一种在relation中表达它的方法.</p>
+<p>最简单的例子就是强制所有的statements的schedule都在相同的<em>space</em>中,
+比如我们添加一个辅助维度<span
+class="math inline">\((t\_2)\)</span>到schedule
+<code>S</code>的statement <code>T</code>中</p>
+<p><em>isl</em>
+允许我们定义<code>lexicographic less-than</code>的映射:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">schedule_space = isl.<span class="type">Set</span>(<span class="string">&quot;&#123;[t0,t1,t2]:&#125;&quot;</span>).get_space()</span><br><span class="line">precedes = isl.Map.lex_lt(schedule_space)</span><br><span class="line"><span class="built_in">print</span>(precedes)</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; [t0, t1, t2] -&gt; [t0&#39;, t1&#39;, t2&#39;] : t0&#39; &gt; t0; [t0, t1, t2] -&gt; [t0&#39; = t0, t1&#39;, t2&#39;] : t1&#39; &gt; t1; [t0, t1, t2] -&gt; [t0&#39; = t0, t1&#39; = t1, t2&#39;] : t2&#39; &gt; t2 &#125;</code></pre>
+<p>上面的map按照词典序的定义执行, 先比较第一对元素,如果一个在另一个之前,
+则顺序成立. 否则假设它们相等并比较第二对, 继续直到最后一对.</p>
+<p><code>precedes</code> relation
+即前一个词典上在后一个之前成对元组的集合.</p>
+<h3 id="question-21">Question</h3>
+<p>将 <code>schedule</code> 应用到 <code>domain</code>
+以便将其映射到调度空间, 将结果保存为 <code>scheduled_domain</code>.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">scheduled_domain = domain.apply(schedule)</span><br><span class="line"><span class="built_in">print</span>(scheduled_domain)</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; [t0 = 1, t1, t2] : 0 &lt;= t1 &lt;= 10 and 0 &lt;= t2 &lt;= 10; [t0 = 0, t1, t2 = 0] : 0 &lt;= t1 &lt;= 20 &#125;</code></pre>
+<p>现在我们知道如何将relation从domain空间移动到schedule空间: 将schedule
+relation apply到domain空间中的所有内容上.</p>
+<h3 id="question-22">Question</h3>
+<p>检查 <span class="math inline">\(( \mathtt{S}(2) )\)</span> 在 <span
+class="math inline">\(( \mathtt{T}(0,0) )\)</span> 之前执行.</p>
+<p><em>Hint 1</em>: 在两个instances之间定义映射.</p>
+<p><em>Hint 2</em>: 在schedule
+space中,可以检查relation是否是precedes的子集.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">rel = isl.UnionMap(<span class="string">&quot;&#123;S[i] -&gt; T[a,b]: i = 2 and a = 0 and b = 0&#125;&quot;</span>) <span class="comment"># 构造出对应循环点的instance.</span></span><br><span class="line">rel = rel.apply_domain(schedule).apply_range(schedule) <span class="comment"># 为instance添加约束.</span></span><br><span class="line"><span class="built_in">print</span>(rel)</span><br><span class="line"><span class="built_in">print</span>(rel.is_subset(precedes))</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; [t0 = 0, t1 = 2, t2 = 0] -&gt; [t0&#39; = 1, t1&#39; = 0, t2&#39; = 0] &#125;
+True</code></pre>
+<h2 id="memory-based-dependence-analysis">Memory-based Dependence
+Analysis</h2>
+<h3 id="flow-dependences">Flow Dependences</h3>
+<p>当数组元素首先由一个statement instance 写入然后由另一个statement
+instance 读取时, 就会出现数据流依赖性, 必须首先执行<code>writer</code>
+instance.</p>
+<p>因此, 我们首先将左侧的 <code>writes</code> union map与右侧的反向
+<code>reads</code> union map组合在一起, <span class="math inline">\((
+\mathtt{writes} \circ \mathtt{reads}^{-1} )\)</span>.</p>
+<p>然后我们将其转换为schedule space, 并将结果与schedule
+space中的词典序relation相交, 从而 只保留依赖
+<em>source</em>(第一个时间点)在其
+<em>sink</em>(第二个时间点)之前执行的对.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">dep_flow = writes.apply_range(reads.reverse()) <span class="comment"># 获取潜在依赖</span></span><br><span class="line">dep_flow = dep_flow.apply_domain(schedule).apply_range(schedule) <span class="comment"># 添加约束.</span></span><br><span class="line">dep_flow = dep_flow.intersect(precedes) <span class="comment"># 和词典序做交集.</span></span><br><span class="line"><span class="built_in">print</span>(dep_flow) <span class="comment"># 这里得到了执行顺序的交集</span></span><br></pre></td></tr></table></figure>
+<pre><code>&#123; [t0 = 1, t1, t2] -&gt; [t0&#39; = 1, t1&#39;, t2&#39; = t1 + t2 - t1&#39;] : 0 &lt;= t1 &lt;= 10 and 0 &lt;= t2 &lt;= 10 and t1&#39; &gt;= -10 + t1 + t2 and t1&#39; &gt; t1 and 0 &lt;= t1&#39; &lt;= 10 and t1&#39; &lt;= t1 + t2; [t0 = 0, t1, t2 = 0] -&gt; [t0&#39; = 1, t1&#39;, t2&#39; = t1 - t1&#39;] : t1&#39; &gt;= -10 + t1 and 0 &lt;= t1&#39; &lt;= 10 and t1&#39; &lt;= t1 &#125;</code></pre>
+<p>由此产生的relation是在<em>执行时间点</em>之间,而不是在点之间.
+要将其转换回domain space,重新调用一下relation可以很容易地反转.
+即反向schedule relation将执行时间点映射到statement instances.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">dep_flow = dep_flow.apply_domain(schedule.reverse()).apply_range(schedule.reverse()) <span class="comment"># 再将其反向映射到数据点上, </span></span><br><span class="line"><span class="built_in">print</span>(dep_flow)</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; T[i, j] -&gt; T[i&#39;, j&#39; = i + j - i&#39;] : 0 &lt;= i &lt;= 10 and 0 &lt;= j &lt;= 10 and i&#39; &gt;= -10 + i + j and i&#39; &gt; i and 0 &lt;= i&#39; &lt;= 10 and i&#39; &lt;= i + j; S[i] -&gt; T[i&#39;, j = i - i&#39;] : i&#39; &gt;= -10 + i and 0 &lt;= i&#39; &lt;= 10 and i&#39; &lt;= i &#125;</code></pre>
+<p>现在得到了 <code>T</code> 的不同instance之间的依赖关系,
+我们可以分析它并与 <em>potentially</em> 依赖语句关系进行比较.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">dep_flow_T = dep_flow.intersect(isl.UnionMap(<span class="string">&quot;&#123;T[i,j]-&gt;T[i&#x27;,j&#x27;]:&#125;&quot;</span>))</span><br><span class="line">potential = writes.apply_range(reads.reverse())</span><br><span class="line">potential = potential.intersect(isl.UnionMap(<span class="string">&quot;&#123;T[i,j]-&gt;T[i&#x27;,j&#x27;]:&#125;&quot;</span>))</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> islplot.plotter <span class="keyword">import</span> *</span><br><span class="line"><span class="keyword">import</span> matplotlib.pyplot <span class="keyword">as</span> plt</span><br><span class="line">plt.figure(figsize=(<span class="number">10</span>,<span class="number">7</span>))</span><br><span class="line">plot_map(dep_flow_T)</span><br></pre></td></tr></table></figure>
+<p><img
+src="/2022/08/14/polyherdal-playground/05_dependences_14_0.png" /></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">plt.figure(figsize=(<span class="number">10</span>,<span class="number">7</span>))</span><br><span class="line">plot_map(potential)</span><br></pre></td></tr></table></figure>
+<p><img
+src="/2022/08/14/polyherdal-playground/05_dependences_15_0.png" /></p>
+<p>实际上每个statement instance是不能在其自身之前被执行,
+因此观察到statement instances的self-dependences消失了.</p>
+<h3 id="question-23">Question</h3>
+<p>绘制instance $ (4,2) $ instance 的依赖 <em>samples</em>,
+即它所依赖的statement instances和依赖它的statement instances.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">point = isl.<span class="type">Set</span>(<span class="string">&quot;&#123;T[i,j]: i = 4 and j = 2&#125;&quot;</span>) <span class="comment"># 添加instance point约束</span></span><br><span class="line">sources = dep_flow_T.intersect_range(point) </span><br><span class="line">sinks = dep_flow_T.intersect_domain(point)</span><br><span class="line"><span class="built_in">print</span>(sources)</span><br><span class="line"><span class="built_in">print</span>(sinks)</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; T[i, j = 6 - i] -&gt; T[i&#39; = 4, j&#39; = 2] : 0 &lt;= i &lt;= 3 &#125;
+&#123; T[i = 4, j = 2] -&gt; T[i&#39;, j&#39; = 6 - i&#39;] : 5 &lt;= i&#39; &lt;= 6 &#125;</code></pre>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># sources : 4 + 2 = 6, 他依赖于 [0,6], [1,5], [2,4], [3,3] 这些instance.</span></span><br><span class="line"><span class="comment"># sinks: [5,1],[6,0]依赖于[4,2]</span></span><br><span class="line">plt.figure(figsize=(<span class="number">10</span>,<span class="number">7</span>))</span><br><span class="line">plot_map([sources, sinks], marker_size=<span class="number">10</span>)  </span><br></pre></td></tr></table></figure>
+<p><img
+src="/2022/08/14/polyherdal-playground/05_dependences_18_0.png" /></p>
+<p>现在可以看到依赖于给定statement
+instances的实例都是访问相同数组元素并在它之前执行的实例, 类似地,
+在给定statement instances之后执行的语句实例依赖于它.</p>
+<h3 id="anti-and-output-dependences">Anti and Output Dependences</h3>
+<p>Anti-dependences是flow dependencs的reverse,即先读后写,
+考虑Anti-dependences意味着在读取之前不覆盖他的值, Output
+dependences,或写后再写,需要保留写的顺序.</p>
+<p>这些通常都被称为 <em>false</em> dependences,因为 <em>sink</em>
+实例实际上并不 <strong>依赖</strong> <em>source</em> 语句实例产生的
+<em>data</em>, 而是需要在后面执行以避免干扰其他实例.</p>
+<p>false dependences的 <em>sink</em>
+通常是写访问,而<em>source</em>可以是读或写,
+因此我们将左侧的读写union与右侧的reverse写组合:</p>
+<p><span class="math inline">\(( (\mathtt{reads} \cup \mathtt{writes})
+\circ \mathtt{writes}^{-1} )\)</span>.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">dep_false = writes.union(reads).apply_range(writes.reverse())</span><br><span class="line">dep_false = dep_false.apply_domain(schedule).apply_range(schedule)</span><br><span class="line">dep_false = dep_false.intersect(precedes)</span><br><span class="line">dep_false = dep_false.apply_domain(schedule.reverse()).apply_range(schedule.reverse())</span><br><span class="line"><span class="built_in">print</span>(dep_false)</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; T[i, j] -&gt; T[i&#39;, j&#39; = i + j - i&#39;] : 0 &lt;= i &lt;= 10 and 0 &lt;= j &lt;= 10 and i&#39; &gt;= -10 + i + j and i&#39; &gt; i and 0 &lt;= i&#39; &lt;= 10 and i&#39; &lt;= i + j; S[i] -&gt; T[i&#39;, j = i - i&#39;] : i&#39; &gt;= -10 + i and 0 &lt;= i&#39; &lt;= 10 and i&#39; &lt;= i &#125;</code></pre>
+<p>在这个例子中,false dependences与flow
+dependences完全对应,因为<code>S</code>只写入,而<code>T</code>只读取和写入相同的元素.
+实际上一般情况并非如此.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">print</span>(dep_false.is_equal(dep_flow))</span><br></pre></td></tr></table></figure>
+<pre><code>True</code></pre>
+<h3 id="question-input-dependences">Question: Input Dependences</h3>
+<p>即使<em>input</em> 或连续读取通常不被强制执行,
+但这个得到他们的依赖关系在程序优化中也很有用.
+因此与前两种情况类似地计算input dependences:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">dep_input = reads.apply_range(reads.reverse()) <span class="comment"># 获得reads after reads的map</span></span><br><span class="line">dep_input = dep_input.apply_domain(schedule).apply_range(schedule) <span class="comment"># 添加约束.</span></span><br><span class="line">dep_input = dep_input.intersect(precedes) <span class="comment"># 和词典序做交集.</span></span><br><span class="line">dep_input = dep_input.apply_domain(schedule.reverse()).apply_range(schedule.reverse()) <span class="comment"># 再将其反向映射到数据点上, </span></span><br><span class="line"><span class="built_in">print</span>(dep_input)</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; T[i, j] -&gt; T[i&#39;, j&#39; = i + j - i&#39;] : 0 &lt;= i &lt;= 10 and 0 &lt;= j &lt;= 10 and i&#39; &gt;= -10 + i + j and i&#39; &gt; i and 0 &lt;= i&#39; &lt;= 10 and i&#39; &lt;= i + j; T[i, j] -&gt; T[i&#39; = i, j&#39;] : 0 &lt;= i &lt;= 10 and 0 &lt;= j &lt;= 10 and j&#39; &gt; j and 0 &lt;= j&#39; &lt;= 10; T[i, j] -&gt; T[i&#39;, j&#39; = j] : 0 &lt;= i &lt;= 10 and 0 &lt;= j &lt;= 10 and i&#39; &gt; i and 0 &lt;= i&#39; &lt;= 10 &#125;</code></pre>
+<p>Input dependence看起来和flow dependence/false dependence不同,
+其中只出现了<code>T</code>的实例,
+这是因为<code>S</code>从来没有读过任何值.</p>
+<h3 id="question-24">Question</h3>
+<p>绘制input dependence的<em>samples</em>:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">point = isl.<span class="type">Set</span>(<span class="string">&quot;&#123;T[i,j]: i = 4 and j = 2&#125;&quot;</span>)</span><br><span class="line"><span class="comment"># sources 其中竖线表示B[0,1,2]时多次读取A[4]的依赖, 横线表示B[2]时多次读取A[0,1,2,3]的依赖, 斜线表示Z[4,2]对Z[(0+6),(1+5),(2+4),(3+3)]的依赖</span></span><br><span class="line">sources = dep_input.intersect_range(point) </span><br><span class="line">sinks = dep_input.intersect_domain(point)</span><br><span class="line">plt.figure(figsize=(<span class="number">10</span>,<span class="number">7</span>))</span><br><span class="line">plot_map([sources, sinks], marker_size=<span class="number">5</span>)</span><br></pre></td></tr></table></figure>
+<p><img
+src="/2022/08/14/polyherdal-playground/05_dependences_27_0.png" /></p>
+<p>复杂的依赖pattern会导致同一个statement
+instance从多个不同的array读取数据.</p>
+<h2 id="value-based-analysis">Value-based Analysis</h2>
+<p>可以观察到每个statement
+instance依赖了<em>所有</em>访问相同数组元素的实例,但是其实并不是必要的.
+比如<code>T(4,2)</code>和<code>T(5,1)</code>的flow dependence:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">point1 = isl.<span class="type">Set</span>(<span class="string">&quot;&#123;T[i,j]: i = 4 and j = 2&#125;&quot;</span>)</span><br><span class="line">point2 = isl.<span class="type">Set</span>(<span class="string">&quot;&#123;T[i,j]: i = 5 and j = 1&#125;&quot;</span>)</span><br><span class="line">sources1 = dep_flow_T.intersect_range(point1)</span><br><span class="line">sources2 = dep_flow_T.intersect_range(point2)</span><br><span class="line">plt.figure(figsize=(<span class="number">10</span>,<span class="number">7</span>))</span><br><span class="line">plot_map([sources1, sources2],marker_size=<span class="number">10</span>)</span><br></pre></td></tr></table></figure>
+<p><img
+src="/2022/08/14/polyherdal-playground/05_dependences_29_0.png" /></p>
+<p>其中<code>T(5,1)</code>
+依赖<code>T(4,2)</code>所依赖的所有实例以及<code>T(4,2)</code>本身.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">print</span>(sources2.domain().subtract(point1).is_equal(sources1.domain())) <span class="comment"># 检查是否是子集.</span></span><br></pre></td></tr></table></figure>
+<pre><code>True</code></pre>
+<p>如果将<code>T(4,2)</code>调度到<code>T(3,3)</code>之后,
+那么<code>T(5,1)</code>也需要被调度到<code>T(4,2)</code>之后,
+然后<code>T(5,1)</code>也需要调度到<code>T(3,3)</code>之后.
+所以这两个实例之间的依赖关系<em>transitively
+covered(传递地覆盖)</em>其他实例之间的依赖.</p>
+<p>我们可以安全地移除传递覆盖的flow dependence.
+通过计算词典序最大的source instance对于任意sink
+instance的依赖,然后删除其他的source instance来完成.</p>
+<p>但以上的计算是non- trivial的,并且可能涉及到线性优化问题的求解,
+<em>isl</em>提供了<em>value-based</em>分析的功能.
+但是,它会使用更加精确的树结构来调度, 对于这个例子,
+我们将直接提供这个schedule:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">schedule = isl.Schedule(<span class="string">&#x27;&#123; domain: &quot;&#123; T[i, j] : 0 &lt;= i &lt;= 10 and 0 &lt;= j &lt;= 10; S[i] : 0 &lt;= i &lt;= 20 &#125;&quot;, child: &#123; sequence: [&#123; filter: &quot;&#123; S[i] &#125;&quot;, child: &#123; schedule: &quot;[&#123;S[i] -&gt; [(i)]&#125;, &#123;S[i] -&gt; [(0)]&#125;]&quot; &#125;&#125;, &#123; filter: &quot;&#123; T[i, j] &#125;&quot;, child: &#123; schedule: &quot;[&#123;T[i, j] -&gt; [(i)]&#125;, &#123;T[i, j] -&gt; [(j)]&#125;]&quot; &#125;&#125; ] &#125; &#125;&#x27;</span>)</span><br></pre></td></tr></table></figure>
+<p>现在可以来进行<em>value-based</em>的依赖分析:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">uai = isl.UnionAccessInfo.from_sink(reads)</span><br><span class="line">uai = uai.set_must_source(writes)</span><br><span class="line">uai = uai.set_schedule(schedule)</span><br><span class="line">flow = uai.compute_flow()</span><br><span class="line">dep_flow_precise = flow.get_may_dependence()</span><br><span class="line"><span class="built_in">print</span>(dep_flow_precise)</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; S[i] -&gt; T[i&#39; = -10 + i, j = 10] : 10 &lt;= i &lt;= 20; S[i] -&gt; T[i&#39; = 0, j = i] : 0 &lt;= i &lt;= 9; T[i, j] -&gt; T[i&#39; = 1 + i, j&#39; = -1 + j] : 0 &lt;= i &lt;= 9 and 0 &lt; j &lt;= 10 &#125;</code></pre>
+<p>现在依赖关系已经不再包含transitively covered的例子了.</p>
+<h3 id="question-25">Question</h3>
+<p>将依赖关系限制在<code>T</code>上, 然后绘制<code>T(4,2)</code> 和
+<code>T(5,1)</code>的samples,
+并将他们<em>memory-based</em>的分析结果进行比较.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">dep_flow_precise_T = dep_flow_precise.intersect(isl.UnionMap(<span class="string">&quot;&#123;T[i,j]-&gt;T[i&#x27;,j&#x27;]:&#125;&quot;</span>))</span><br><span class="line">sources1 = dep_flow_precise_T.intersect_range(point1)</span><br><span class="line">sources2 = dep_flow_precise_T.intersect_range(point2)</span><br><span class="line">plt.figure(figsize=(<span class="number">10</span>,<span class="number">7</span>))</span><br><span class="line">plot_map([sources1, sources2], marker_size=<span class="number">10</span>)</span><br></pre></td></tr></table></figure>
+<p><img
+src="/2022/08/14/polyherdal-playground/05_dependences_37_0.png" /></p>
+<h3 id="section-3"></h3>
+<p>可以发现,每个<code>T</code>的实例限制只依赖一个其他<code>T</code>的实例.</p>
+<p><em>Memory-based</em> dependences可以通过计算依赖关系的transitive
+closure来从<em>value-based</em> dependences恢复出来:</p>
+<h3 id="question-26">Question</h3>
+<p>使用<em>value-based</em>的过程计算input dependences, 并且可视化:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">uai = isl.UnionAccessInfo.from_sink(reads)</span><br><span class="line">uai = uai.set_must_source(reads)</span><br><span class="line">uai = uai.set_schedule(schedule)</span><br><span class="line">flow = uai.compute_flow()</span><br><span class="line">dep_input_precise = flow.get_may_dependence()</span><br><span class="line"><span class="built_in">print</span>(dep_input_precise)</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; T[i, j] -&gt; T[i&#39; = i, j&#39; = 1 + j] : 0 &lt;= i &lt;= 10 and 0 &lt;= j &lt;= 9; T[i, j] -&gt; T[i&#39; = 1 + i, j&#39; = j] : 0 &lt;= i &lt;= 9 and 0 &lt;= j &lt;= 10; T[i, j] -&gt; T[i&#39; = 1 + i, j&#39; = -1 + j] : 0 &lt;= i &lt;= 9 and 0 &lt; j &lt;= 10 &#125;</code></pre>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">dep_flow_precise_T = dep_flow_precise.intersect(isl.UnionMap(<span class="string">&quot;&#123;T[i,j]-&gt;T[i&#x27;,j&#x27;]:&#125;&quot;</span>))</span><br><span class="line">sources1 = dep_flow_precise_T.intersect_range(point1)</span><br><span class="line">sources2 = dep_flow_precise_T.intersect_range(point2)</span><br><span class="line">plt.figure(figsize=(<span class="number">10</span>,<span class="number">7</span>))</span><br><span class="line">plot_map([sources1, sources2], marker_size=<span class="number">10</span>)</span><br></pre></td></tr></table></figure>
+<p><img
+src="/2022/08/14/polyherdal-playground/05_dependences_41_0.png" /></p>
+<h1 id="classical-loop-transformations">Classical Loop
+Transformations</h1>
+<h3 id="setup-ast-generation-infrastructure">Setup AST generation
+infrastructure</h3>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> islpy <span class="keyword">as</span> isl</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">CSource</span>():</span><br><span class="line">  <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, ast</span>):</span><br><span class="line">    self.source = ast</span><br><span class="line"></span><br><span class="line">  <span class="keyword">def</span> <span class="title function_">_repr_html_</span>(<span class="params">self</span>):</span><br><span class="line">    <span class="keyword">return</span> <span class="string">&quot;&lt;pre class=&#x27;code&#x27;&gt;&lt;code class=\&quot;cpp hljs\&quot;&gt;&quot;</span> + self.source.to_C_str() + <span class="string">&quot;&lt;/code&gt;&lt;/pre&gt;&quot;</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">CSourceComparer</span>():</span><br><span class="line">  <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, before: CSource, after: CSource</span>):</span><br><span class="line">    self.before = before</span><br><span class="line">    self.after = after</span><br><span class="line"></span><br><span class="line">  <span class="keyword">def</span> <span class="title function_">_repr_html_</span>(<span class="params">self</span>):</span><br><span class="line">    s = <span class="string">&quot;&lt;b&gt;Before Transform:&lt;/b&gt;\n&quot;</span></span><br><span class="line">    s += self.before._repr_html_()</span><br><span class="line">    s += <span class="string">&quot;&lt;b&gt;After Transform:&lt;/b&gt;\n&quot;</span></span><br><span class="line">    s += self.after._repr_html_()</span><br><span class="line">    <span class="keyword">return</span> s</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">print_before_after</span>(<span class="params">domain, schedule_original, schedule_new</span>):</span><br><span class="line">  context = isl.<span class="type">Set</span>(<span class="string">&quot;&#123; : &#125;&quot;</span>)</span><br><span class="line">  build = isl.AstBuild.from_context(context)</span><br><span class="line">  schedule_original = schedule_original.intersect_domain(domain)</span><br><span class="line">  schedule_new = schedule_new.intersect_domain(domain)</span><br><span class="line">  <span class="keyword">return</span> CSourceComparer(CSource(build.node_from_schedule_map(schedule_original)),</span><br><span class="line">                         CSource(build.node_from_schedule_map(schedule_new)))</span><br><span class="line">  <span class="comment"># print(&quot;&lt;b&gt;Before Transform:&lt;/b&gt;&quot;)</span></span><br><span class="line">  <span class="comment"># ast = build.node_from_schedule_map(schedule_original)</span></span><br><span class="line">  <span class="comment"># print_code(ast)</span></span><br><span class="line">  <span class="comment"># print(&quot;&lt;b&gt;After Transform:&lt;/b&gt;&quot;)</span></span><br><span class="line">  <span class="comment"># ast = build.node_from_schedule_map(schedule_new)</span></span><br><span class="line">  <span class="comment"># print_code(ast)</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<h2 id="loop-reversal">Loop Reversal</h2>
+<p>循环反转可以改变循环元素被访问的方向, 反转之后,
+之前迭代的第一个元素将会被最后执行, 最后一个元素将会被第一个执行.</p>
+<p><strong>Benefits</strong>:</p>
+<ul>
+<li>可以被用来缩短依赖</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">domain = isl.UnionSet(<span class="string">&quot;[n] -&gt; &#123;S[i] : 0 &lt;= i &lt; n&#125;&quot;</span>) <span class="comment"># 原始迭代域</span></span><br><span class="line">original = isl.UnionMap(<span class="string">&quot;&#123;S[i] -&gt; [i]&#125;&quot;</span>) <span class="comment"># 原始schedule</span></span><br><span class="line">transformation = isl.UnionMap(<span class="string">&quot;&#123;[i] -&gt; [-i]&#125;&quot;</span>)</span><br><span class="line"></span><br><span class="line">transformed = original.apply_range(transformation) <span class="comment"># 实施transform.</span></span><br><span class="line">print_before_after(domain, original, transformed) <span class="comment"># i \in [0,n-1] =&gt; [-n+1,0]</span></span><br></pre></td></tr></table></figure>
+<b>Before Transform:</b>
+<pre class='code'><code class="cpp hljs">for (int c0 = 0; c0 < n; c0 += 1)
+  S(c0);
+</code></pre>
+<b>After Transform:</b>
+<pre class='code'><code class="cpp hljs">for (int c0 = -n + 1; c0 <= 0; c0 += 1)
+  S(-c0);
+</code></pre>
+<h1 id="loop-fusion">Loop Fusion</h1>
+<p>之前分离在两个不同循环的中的statement将会被放到同一个循环中.</p>
+<p><strong>Benefits:</strong></p>
+<ul>
+<li>提高数据局部性</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">domain = isl.UnionSet(<span class="string">&quot;[n] -&gt; &#123;S[i] : 0 &lt;= i &lt;= n; T[i] : 0 &lt;= i &lt;= n&#125;&quot;</span>) <span class="comment"># 原始两个循环, S和T</span></span><br><span class="line">original = isl.UnionMap(<span class="string">&quot;&#123;S[i] -&gt; [0, i]; T[i] -&gt; [1, i]&#125;&quot;</span>) <span class="comment"># 原始schedule, 是在循环外部安排顺序</span></span><br><span class="line">transformation = isl.UnionMap(<span class="string">&quot;&#123;[0, i] -&gt; [i,0]; [1, i] -&gt; [i, 1]&#125;&quot;</span>) <span class="comment"># 将顺序安排在同一个循环内部.</span></span><br><span class="line">transformed = original.apply_range(transformation) <span class="comment"># NOTE 现实中要考虑是否存在数据依赖问题.</span></span><br><span class="line">print_before_after(domain, original, transformed)</span><br></pre></td></tr></table></figure>
+<b>Before Transform:</b>
+<pre class='code'><code class="cpp hljs">&#123;
+  for (int c1 = 0; c1 <= n; c1 += 1)
+    S(c1);
+  for (int c1 = 0; c1 <= n; c1 += 1)
+    T(c1);
+&#125;
+</code></pre>
+<b>After Transform:</b>
+<pre class='code'><code class="cpp hljs">for (int c0 = 0; c0 <= n; c0 += 1) &#123;
+  S(c0);
+  T(c0);
+&#125;
+</code></pre>
+<h1 id="loop-fission-loop-distribution">Loop Fission (Loop
+Distribution)</h1>
+<p>Loop fission
+是指将在同一个循环中执行的statement分配到两个不同的循环中去.</p>
+<p><strong>Benefits:</strong></p>
+<ul>
+<li>减少寄存器压力(在同一个循环中就意味着使用更多的寄存器存储数组地址/索引等)</li>
+<li>可以开启其他的优化,
+比如一个循环中只有一个statement可以进行<code>SIMDization</code>,此时可以将其分离出去单独进行并行化.</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">domain = isl.UnionSet(<span class="string">&quot;[n] -&gt; &#123;S[i] : 0 &lt;= i &lt;= n; T[i] : 0 &lt;= i &lt;= n&#125;&quot;</span>)</span><br><span class="line">original = isl.UnionMap(<span class="string">&quot;&#123;S[i] -&gt; [i, 0]; T[i] -&gt; [i, 1]&#125;&quot;</span>)</span><br><span class="line">transformation = isl.UnionMap(<span class="string">&quot;&#123;[i, 0] -&gt; [0, i]; [i, 1] -&gt; [1, i]&#125;&quot;</span>)</span><br><span class="line"></span><br><span class="line">transformed = original.apply_range(transformation)</span><br><span class="line">print_before_after(domain, original, transformed)</span><br></pre></td></tr></table></figure>
+<b>Before Transform:</b>
+<pre class='code'><code class="cpp hljs">for (int c0 = 0; c0 <= n; c0 += 1) &#123;
+  S(c0);
+  T(c0);
+&#125;
+</code></pre>
+<b>After Transform:</b>
+<pre class='code'><code class="cpp hljs">&#123;
+  for (int c1 = 0; c1 <= n; c1 += 1)
+    S(c1);
+  for (int c1 = 0; c1 <= n; c1 += 1)
+    T(c1);
+&#125;
+</code></pre>
+<h1 id="loop-interchange">Loop Interchange</h1>
+<p>循环顺序交换</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">domain = isl.UnionSet(<span class="string">&quot;[n,m] -&gt; &#123;S[i,j] : 0 &lt;= i &lt;= n and 0 &lt;= j &lt;= m &#125;&quot;</span>)</span><br><span class="line">original = isl.UnionMap(<span class="string">&quot;&#123;S[i,j] -&gt; [i, j]&#125;&quot;</span>)</span><br><span class="line">transformation = isl.UnionMap(<span class="string">&quot;&#123;[i, j] -&gt; [j, i]&#125;&quot;</span>)</span><br><span class="line"></span><br><span class="line">transformed = original.apply_range(transformation)</span><br><span class="line">print_before_after(domain, original, transformed)</span><br></pre></td></tr></table></figure>
+<b>Before Transform:</b>
+<pre class='code'><code class="cpp hljs">for (int c0 = 0; c0 <= n; c0 += 1)
+  for (int c1 = 0; c1 <= m; c1 += 1)
+    S(c0, c1);
+</code></pre>
+<b>After Transform:</b>
+<pre class='code'><code class="cpp hljs">for (int c0 = 0; c0 <= m; c0 += 1)
+  for (int c1 = 0; c1 <= n; c1 += 1)
+    S(c1, c0);
+</code></pre>
+<h1 id="strip-mining">Strip Mining</h1>
+<p>Strip mining是将单个循环按chunk分离为两个循环,
+外循环在每个blocks上迭代, 内循环在每个block内部进行迭代.</p>
+<p><strong>Benefits:</strong></p>
+<ul>
+<li>构建loop tiling和unroll-and-jam的block</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">domain = isl.UnionSet(<span class="string">&quot;&#123;S[i] : 0 &lt;= i &lt; 1024 &#125;&quot;</span>)</span><br><span class="line">original = isl.UnionMap(<span class="string">&quot;&#123;S[i] -&gt; [i]&#125;&quot;</span>)</span><br><span class="line">transformation = isl.UnionMap(<span class="string">&quot;&#123;[i] -&gt; [floor(i/4), i % 4]&#125;&quot;</span>)</span><br><span class="line"></span><br><span class="line">transformed = original.apply_range(transformation)</span><br><span class="line">print_before_after(domain, original, transformed)</span><br></pre></td></tr></table></figure>
+<b>Before Transform:</b>
+<pre class='code'><code class="cpp hljs">for (int c0 = 0; c0 <= 1023; c0 += 1)
+  S(c0);
+</code></pre>
+<b>After Transform:</b>
+<pre class='code'><code class="cpp hljs">for (int c0 = 0; c0 <= 255; c0 += 1)
+  for (int c1 = 0; c1 <= 3; c1 += 1)
+    S(4 * c0 + c1);
+</code></pre>
+<h1 id="loop-tiling">Loop Tiling</h1>
+<p>loop tiling是将多维循环切分为group,即tile.
+首先一组外部循环在外部循环在所有的tile上迭代, point
+loops则在每个tile的points上迭代.</p>
+<p><strong>Benefits:</strong></p>
+<ul>
+<li>增加数据局部性</li>
+<li>更加粗粒度的并行</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">domain = isl.UnionSet(<span class="string">&quot;&#123;S[i,j] : 0 &lt;= i,j &lt; 1024 &#125;&quot;</span>)</span><br><span class="line">original = isl.UnionMap(<span class="string">&quot;&#123;S[i,j] -&gt; [i,j]&#125;&quot;</span>)</span><br><span class="line">transformation = isl.UnionMap(<span class="string">&quot;&#123;[i,j] -&gt; [floor(i/4), i % 4, floor(j/4), j % 4]&#125;&quot;</span>) <span class="comment"># 和strip mining类似.</span></span><br><span class="line"></span><br><span class="line">transformed = original.apply_range(transformation)</span><br><span class="line">print_before_after(domain, original, transformed)</span><br></pre></td></tr></table></figure>
+<b>Before Transform:</b>
+<pre class='code'><code class="cpp hljs">for (int c0 = 0; c0 <= 1023; c0 += 1)
+  for (int c1 = 0; c1 <= 1023; c1 += 1)
+    S(c0, c1);
+</code></pre>
+<b>After Transform:</b>
+<pre class='code'><code class="cpp hljs">for (int c0 = 0; c0 <= 255; c0 += 1)
+  for (int c1 = 0; c1 <= 3; c1 += 1)
+    for (int c2 = 0; c2 <= 255; c2 += 1)
+      for (int c3 = 0; c3 <= 3; c3 += 1)
+        S(4 * c0 + c1, 4 * c2 + c3);
+</code></pre>
+<h1 id="unroll-and-jam">Unroll-and-jam</h1>
+<p>Unroll-and-jam是将外部循环进行strip-mining分离为tile和point
+循环,然后交换point loop和最内层的循环.</p>
+<p><strong>Benefits:</strong></p>
+<ul>
+<li>使得外部循环向量化.</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">domain = isl.UnionSet(<span class="string">&quot;&#123;S[i,j] : 0 &lt;= i,j &lt; 1024 &#125;&quot;</span>)</span><br><span class="line">original = isl.UnionMap(<span class="string">&quot;&#123;S[i,j] -&gt; [i,j]&#125;&quot;</span>)</span><br><span class="line">transformation = isl.UnionMap(<span class="string">&quot;&#123;[i,j] -&gt; [floor(i/4), j, i % 4] &#125;&quot;</span>)</span><br><span class="line"></span><br><span class="line">transformed = original.apply_range(transformation)</span><br><span class="line">print_before_after(domain, original, transformed)</span><br></pre></td></tr></table></figure>
+<b>Before Transform:</b>
+<pre class='code'><code class="cpp hljs">for (int c0 = 0; c0 <= 1023; c0 += 1)
+  for (int c1 = 0; c1 <= 1023; c1 += 1)
+    S(c0, c1);
+</code></pre>
+<b>After Transform:</b>
+<pre class='code'><code class="cpp hljs">for (int c0 = 0; c0 <= 255; c0 += 1)
+  for (int c1 = 0; c1 <= 1023; c1 += 1)
+    for (int c2 = 0; c2 <= 3; c2 += 1)
+      S(4 * c0 + c2, c1);
+</code></pre>
+<h1 id="skewing">Skewing</h1>
+<p>倾斜迭代域</p>
+<p><strong>Benefits:</strong> - 使得部分无依赖的statement得以并行化.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">domain = isl.UnionSet(<span class="string">&quot;[n] -&gt; &#123;S[i,j] : 0 &lt;= i,j &lt; n &#125;&quot;</span>)</span><br><span class="line">original = isl.UnionMap(<span class="string">&quot;&#123;S[i,j] -&gt; [i,j]&#125;&quot;</span>)</span><br><span class="line">transformation = isl.UnionMap(<span class="string">&quot;&#123;[i,j] -&gt; [i, i + j]&#125;&quot;</span>)</span><br><span class="line"></span><br><span class="line">transformed = original.apply_range(transformation)</span><br><span class="line">print_before_after(domain, original, transformed)</span><br></pre></td></tr></table></figure>
+<b>Before Transform:</b>
+<pre class='code'><code class="cpp hljs">for (int c0 = 0; c0 < n; c0 += 1)
+  for (int c1 = 0; c1 < n; c1 += 1)
+    S(c0, c1);
+</code></pre>
+<b>After Transform:</b>
+<pre class='code'><code class="cpp hljs">for (int c0 = 0; c0 < n; c0 += 1)
+  for (int c1 = c0; c1 < n + c0; c1 += 1)
+    S(c0, -c0 + c1);
+</code></pre>
+<h1 id="ast-generation">AST Generation</h1>
+<br>
+<center>
+<table>
+<tr>
+<td>
+<center>
+<b>Polyhedral Model</b>
+</center>
+</td>
+<td>
+</td>
+<td>
+<center>
+<b>Imperative Program</b>
+</center>
+</tr>
+<tr>
+<td>
+<p><b>Iteration Domain</b><br />
+<br></p>
+<p>$ { T[i,j] &lt; i j &lt; 10; S[i,0] &lt; i }$</p>
+<p><br> <br></p>
+<p><b>Schedule</b> <br></p>
+<p>$ { T[i,j] ; S[i,0] }$</p>
+</td>
+<td>
+<p>      $ $      </p>
+</td>
+<td>
+<center>
+<p><br></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">const</span> <span class="type">int</span> N = <span class="number">10</span>;</span><br><span class="line"><span class="type">double</span> X[N], Y[N], Z[<span class="number">2</span>*N];</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt;= <span class="number">2</span>*N; ++i)</span><br><span class="line">S:  Z[i] = <span class="number">0.</span>;</span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">1</span>; i &lt;= N; ++i)</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> j = i; j &lt;= N; ++j)</span><br><span class="line">T:      Z[i + j] += A[i] * B[j];</span><br></pre></td></tr></table></figure>
+</td>
+</tr>
+</table>
+</center>
+<p><br></p>
+<p><a target="_blank" rel="noopener" href="https://dl.acm.org/doi/10.1145/2743016">Polyhedral AST
+generation is more than scanning polyhedra</a></p>
+<h2 id="generate-an-ast">Generate an AST</h2>
+<h3 id="define-a-simple-polyhedral-program-description">Define a simple
+polyhedral program description</h3>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> islpy <span class="keyword">as</span> isl</span><br><span class="line"><span class="keyword">from</span> islplot.plotter <span class="keyword">import</span> *</span><br><span class="line"><span class="keyword">import</span> matplotlib.pyplot <span class="keyword">as</span> plt</span><br><span class="line">context = isl.<span class="type">Set</span>(<span class="string">&quot;&#123; : &#125;&quot;</span>)</span><br><span class="line">domain = isl.<span class="type">Set</span>(<span class="string">&quot;&#123; S[t,i] : 1 &lt;=t&lt;=5 and 1&lt;=i&lt;=10 &#125;&quot;</span>)</span><br><span class="line">schedule = isl.Map(<span class="string">&quot;&#123; S[t,i] -&gt; T[t+1,i+t+10] &#125;&quot;</span>)</span><br><span class="line"></span><br><span class="line">schedule_domain = schedule.intersect_domain(domain)</span><br><span class="line">plt.figure(figsize=[<span class="number">10</span>, <span class="number">7</span>])</span><br><span class="line">plot_set_points(domain)</span><br><span class="line">plot_map(schedule_domain)</span><br></pre></td></tr></table></figure>
+<p><img
+src="/2022/08/14/polyherdal-playground/07_ast-generation_1_0.png" /></p>
+<h2 id="translate-polyhedral-program-description-to-an-ast">Translate
+polyhedral program description to an AST</h2>
+<p>最终生成的AST是实际的AST, 可以通过树操作对其进行遍历和检查.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">CSource</span>():</span><br><span class="line">  <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, ast</span>):</span><br><span class="line">    self.source = ast</span><br><span class="line"></span><br><span class="line">  <span class="keyword">def</span> <span class="title function_">_repr_html_</span>(<span class="params">self</span>):</span><br><span class="line">    <span class="keyword">return</span> <span class="string">&quot;&lt;pre class=&#x27;code&#x27;&gt;&lt;code class=\&quot;cpp hljs\&quot;&gt;&quot;</span> + self.source.to_C_str() + <span class="string">&quot;&lt;/code&gt;&lt;/pre&gt;&quot;</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">CSourceComparer</span>():</span><br><span class="line">  <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, before: CSource, after: CSource</span>):</span><br><span class="line">    self.before = before</span><br><span class="line">    self.after = after</span><br><span class="line"></span><br><span class="line">  <span class="keyword">def</span> <span class="title function_">_repr_html_</span>(<span class="params">self</span>):</span><br><span class="line">    s = <span class="string">&quot;&lt;b&gt;Before Transform:&lt;/b&gt;\n&quot;</span></span><br><span class="line">    s += self.before._repr_html_()</span><br><span class="line">    s += <span class="string">&quot;&lt;b&gt;After Transform:&lt;/b&gt;\n&quot;</span></span><br><span class="line">    s += self.after._repr_html_()</span><br><span class="line">    <span class="keyword">return</span> s</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">print_code</span>(<span class="params">ast</span>):</span><br><span class="line">  <span class="keyword">return</span> CSource(ast)</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">build = isl.AstBuild.from_context(context) </span><br><span class="line">ast = build.node_from_schedule_map(schedule.intersect_domain(domain))</span><br><span class="line">print_code(ast) <span class="comment"># 这里生成的domain实际上被isl进行了优化.</span></span><br></pre></td></tr></table></figure>
+<pre class='code'><code class="cpp hljs">for (int c0 = 2; c0 <= 6; c0 += 1)
+  for (int c1 = c0 + 10; c1 <= c0 + 19; c1 += 1)
+    S(c0 - 1, -c0 + c1 - 9);
+</code></pre>
+<h2 id="ast-generation-for-constraint-sets">AST Generation for
+Constraint Sets</h2>
+<p>通常只有当满足特定条件时才可以使用一些transformation优化程序,
+要始终实施这种优化方式的话, 那么需要将代码分为不同版本,
+当满足特定条件时执行优化后的代码, 否则执行非优化的代码.</p>
+<p>一个简单的例子:</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">foo</span><span class="params">(<span class="type">long</span> n, A[][<span class="number">100</span>])</span> &#123;</span><br><span class="line">  <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; n; i++)</span><br><span class="line">    <span class="keyword">for</span> (j = <span class="number">0</span>; j &lt; n; j++)</span><br><span class="line">      A[i][j] += i+j;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这个代码代码当j小于100时会有更简单的依赖,
+也就是要求<code>n&lt;100</code>.
+那么就可以使用如下的方法来保证优化后不出错误.</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">foo</span><span class="params">(<span class="type">long</span> n, A[][<span class="number">100</span>])</span> &#123;</span><br><span class="line">  <span class="keyword">if</span> (n &lt; <span class="number">100</span>)</span><br><span class="line">    <span class="comment">// optimized code</span></span><br><span class="line">  <span class="keyword">else</span></span><br><span class="line">    <span class="comment">// otherwise</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>isl的AST generator允许生成任意来自isl的约束bool条件集合.</p>
+<h2 id="a-simple-constraint-set">A simple constraint set</h2>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">condition = isl.<span class="type">Set</span>(<span class="string">&quot;[n] -&gt; &#123;: n &lt; 100&#125;&quot;</span>)</span><br><span class="line">expr = build.expr_from_set(condition)</span><br><span class="line"><span class="built_in">print</span>(expr.to_C_str())</span><br></pre></td></tr></table></figure>
+<pre><code>n &lt;= 99</code></pre>
+<h2 id="recovery-of-modulo-expressions">Recovery of modulo
+expressions</h2>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">condition = isl.<span class="type">Set</span>(<span class="string">&quot;[n, m] -&gt; &#123;: n % 100 = 2&#125;&quot;</span>)</span><br><span class="line">expr = build.expr_from_set(condition)</span><br><span class="line"><span class="built_in">print</span>(expr.to_C_str())</span><br></pre></td></tr></table></figure>
+<pre><code>(n - 2) % 100 == 0</code></pre>
+<h2 id="verification-of-complex-conditions">Verification of complex
+conditions</h2>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">condition = isl.<span class="type">Set</span>(<span class="string">&quot;[n, m] -&gt; &#123;: (n != 0 implies m = 5) or n + m = 42&#125;&quot;</span>)</span><br><span class="line">expr = build.expr_from_set(condition)</span><br><span class="line"><span class="built_in">print</span>(expr.to_C_str())</span><br></pre></td></tr></table></figure>
+<pre><code>m == 5 || n == 0 || n + m == 42</code></pre>
+<h1 id="parse-c-code">Parse C Code</h1>
+<p>需要手动编译安装pet库.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> pet</span><br><span class="line"><span class="keyword">import</span> sys</span><br><span class="line"><span class="keyword">import</span> tempfile</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">parse_code</span>(<span class="params">source: <span class="built_in">str</span>, func_name: <span class="built_in">str</span></span>):</span><br><span class="line">  <span class="keyword">with</span> <span class="built_in">open</span>(<span class="string">&quot;/tmp/parse_code.c&quot;</span>, <span class="string">&quot;w&quot;</span>) <span class="keyword">as</span> f:</span><br><span class="line">    f.write(source)</span><br><span class="line">  scop = pet.scop.extract_from_C_source(<span class="string">&quot;/tmp/parse_code.c&quot;</span>, func_name)</span><br><span class="line">  context = scop.get_context()</span><br><span class="line">  schedule = scop.get_schedule()</span><br><span class="line">  reads = scop.get_may_reads()</span><br><span class="line">  writes = scop.get_may_writes()</span><br><span class="line">  <span class="keyword">return</span> (context, schedule, reads, writes)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">context, schedule, reads, writes = parse_code(<span class="string">&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">void rotate(int N, int A[N], int B[N])</span></span><br><span class="line"><span class="string">&#123;</span></span><br><span class="line"><span class="string">#pragma scop</span></span><br><span class="line"><span class="string">	for (int i = 0; i &lt; N; ++i)</span></span><br><span class="line"><span class="string">		A[i] = i == 0 ? B[N - 1] : B[i - 1];</span></span><br><span class="line"><span class="string">#pragma endscop</span></span><br><span class="line"><span class="string">&#125;</span></span><br><span class="line"><span class="string">&quot;&quot;&quot;</span>, <span class="string">&quot;rotate&quot;</span>)</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<pre><code>[N] -&gt; &#123;  : -2147483648 &lt;= N &lt;= 2147483647 &#125;
+&#123; domain: &quot;[N] -&gt; &#123; S_0[i] : 0 &lt;= i &lt; N &#125;&quot;, child: &#123; schedule: &quot;[N] -&gt; L_0[&#123; S_0[i] -&gt; [(i)] &#125;]&quot; &#125; &#125;
+[N] -&gt; &#123; S_0[i] -&gt; B[-1 + i] : 0 &lt; i &lt; N; S_0[i = 0] -&gt; B[-1 + N] : N &gt; 0 &#125;
+[N] -&gt; &#123; S_0[i] -&gt; A[i] : 0 &lt;= i &lt; N &#125;</code></pre>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">print</span>(context)</span><br></pre></td></tr></table></figure>
+<pre><code>[N] -&gt; &#123;  : -2147483648 &lt;= N &lt;= 2147483647 &#125;</code></pre>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">print</span>(schedule)</span><br></pre></td></tr></table></figure>
+<pre><code>&#123; domain: &quot;[N] -&gt; &#123; S_0[i] : 0 &lt;= i &lt; N &#125;&quot;, child: &#123; schedule: &quot;[N] -&gt; L_0[&#123; S_0[i] -&gt; [(i)] &#125;]&quot; &#125; &#125;</code></pre>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">print</span>(reads)</span><br></pre></td></tr></table></figure>
+<pre><code>[N] -&gt; &#123; S_0[i] -&gt; B[-1 + i] : 0 &lt; i &lt; N; S_0[i = 0] -&gt; B[-1 + N] : N &gt; 0 &#125;</code></pre>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">print</span>(writes)</span><br></pre></td></tr></table></figure>
+<pre><code>[N] -&gt; &#123; S_0[i] -&gt; A[i] : 0 &lt;= i &lt; N &#125;</code></pre>
+</div><div class="tags"><ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E7%AE%97%E6%B3%95/" rel="tag">算法</a></li></ul></div><div class="post-nav"><a class="pre" href="/2022/10/17/akg-learn/">AKG 学习</a><a class="next" href="/2022/06/30/zhihu-markdown/">zhihu markdown导入(2022年6月)</a></div></div></div></div><div class="pure-u-1-4 hidden_mid_and_down"><div id="sidebar"><div class="widget"><form class="search-form" action="//www.google.com/search" method="get" accept-charset="utf-8" target="_blank"><input type="text" name="q" maxlength="20" placeholder="Search"/><input type="hidden" name="sitesearch" value="https://zhen8838.github.io"/></form></div><div class="widget"><div class="author-info"><a class="info-avatar" href="/about/" title="关于"><img class="nofancybox" src="/img/avatar.png"/></a><p>A Believing Heart Is Your Magic🪄</p><a class="info-icon" href="mailto:597323109@qq.com" title="Email" target="_blank" style="margin-inline:5px"> <i class="fa fa-envelope-square" style="margin-inline:5px"></i></a><a class="info-icon" href="https://github.com/zhen8838" title="Github" target="_blank" style="margin-inline:5px"> <i class="fa fa-github-square" style="margin-inline:5px"></i></a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-folder-o"> 分类</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/%E5%AD%A6%E4%B9%A0/">学习</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E7%94%9F%E6%B4%BB/">生活</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-star-o"> 标签</i></div><div class="tagcloud"><a href="/tags/Linux/" style="font-size: 15px;">Linux</a> <a href="/tags/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/" style="font-size: 15px;">数据结构</a> <a href="/tags/%E6%A0%91/" style="font-size: 15px;">树</a> <a href="/tags/C/" style="font-size: 15px;">C</a> <a href="/tags/%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0/" style="font-size: 15px;">深度学习</a> <a href="/tags/CNN/" style="font-size: 15px;">CNN</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" style="font-size: 15px;">嵌入式</a> <a href="/tags/%E8%93%9D%E7%89%99/" style="font-size: 15px;">蓝牙</a> <a href="/tags/Matlab/" style="font-size: 15px;">Matlab</a> <a href="/tags/%E9%93%BE%E8%A1%A8/" style="font-size: 15px;">链表</a> <a href="/tags/%E5%8D%8A%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0/" style="font-size: 15px;">半监督学习</a> <a href="/tags/tensorflow/" style="font-size: 15px;">tensorflow</a> <a href="/tags/python/" style="font-size: 15px;">python</a> <a href="/tags/%E5%B0%8F%E5%B7%A5%E5%85%B7/" style="font-size: 15px;">小工具</a> <a href="/tags/%E9%94%99%E8%AF%AF%E8%AE%B0%E5%BD%95/" style="font-size: 15px;">错误记录</a> <a href="/tags/OJ/" style="font-size: 15px;">OJ</a> <a href="/tags/Qt/" style="font-size: 15px;">Qt</a> <a href="/tags/GAN/" style="font-size: 15px;">GAN</a> <a href="/tags/%E6%80%BB%E7%BB%93/" style="font-size: 15px;">总结</a> <a href="/tags/%E5%9B%BE%E5%83%8F%E5%A4%84%E7%90%86/" style="font-size: 15px;">图像处理</a> <a href="/tags/%E7%AE%97%E6%B3%95/" style="font-size: 15px;">算法</a> <a href="/tags/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/" style="font-size: 15px;">机器学习</a> <a href="/tags/%E4%BD%9C%E4%B8%9A/" style="font-size: 15px;">作业</a> <a href="/tags/c/" style="font-size: 15px;">c</a> <a href="/tags/%E7%A5%9E%E7%BB%8F%E7%BD%91%E7%BB%9C/" style="font-size: 15px;">神经网络</a> <a href="/tags/linux/" style="font-size: 15px;">linux</a> <a href="/tags/cmake/" style="font-size: 15px;">cmake</a> <a href="/tags/c/" style="font-size: 15px;">c++</a> <a href="/tags/C/" style="font-size: 15px;">C++</a> <a href="/tags/%E8%81%9A%E7%B1%BB/" style="font-size: 15px;">聚类</a> <a href="/tags/CostModel/" style="font-size: 15px;">CostModel</a> <a href="/tags/%E5%A3%B0%E9%9F%B3%E4%BF%A1%E5%8F%B7%E5%A4%84%E7%90%86/" style="font-size: 15px;">声音信号处理</a> <a href="/tags/TVM/" style="font-size: 15px;">TVM</a> <a href="/tags/%E7%BC%96%E8%AF%91%E4%BC%98%E5%8C%96/" style="font-size: 15px;">编译优化</a> <a href="/tags/%E5%9B%BE%E4%BC%98%E5%8C%96/" style="font-size: 15px;">图优化</a> <a href="/tags/stm32/" style="font-size: 15px;">stm32</a> <a href="/tags/Halide/" style="font-size: 15px;">Halide</a> <a href="/tags/PCB/" style="font-size: 15px;">PCB</a> <a href="/tags/%E5%A0%86%E6%A0%88/" style="font-size: 15px;">堆栈</a> <a href="/tags/k210/" style="font-size: 15px;">k210</a> <a href="/tags/%E5%85%83%E5%AD%A6%E4%B9%A0/" style="font-size: 15px;">元学习</a> <a href="/tags/mindspore/" style="font-size: 15px;">mindspore</a> <a href="/tags/%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86/" style="font-size: 15px;">大语言模型推理</a> <a href="/tags/mlir/" style="font-size: 15px;">mlir</a> <a href="/tags/mxnet/" style="font-size: 15px;">mxnet</a> <a href="/tags/%E8%AE%A1%E7%AE%97%E6%9C%BA%E4%BD%93%E7%B3%BB%E7%BB%93%E6%9E%84/" style="font-size: 15px;">计算机体系结构</a> <a href="/tags/numpy/" style="font-size: 15px;">numpy</a> <a href="/tags/%E9%A3%8E%E6%A0%BC%E8%BF%81%E7%A7%BB/" style="font-size: 15px;">风格迁移</a> <a href="/tags/pfld/" style="font-size: 15px;">pfld</a> <a href="/tags/dotnet/" style="font-size: 15px;">dotnet</a> <a href="/tags/pytorch/" style="font-size: 15px;">pytorch</a> <a href="/tags/%E7%A5%9E%E7%BB%8F%E7%BD%91%E7%BB%9C%E9%87%8F%E5%8C%96/" style="font-size: 15px;">神经网络量化</a> <a href="/tags/%E6%A0%91%E8%8E%93%E6%B4%BE/" style="font-size: 15px;">树莓派</a> <a href="/tags/NB-IOT/" style="font-size: 15px;">NB-IOT</a> <a href="/tags/retinaface/" style="font-size: 15px;">retinaface</a> <a href="/tags/%E6%80%A7%E8%83%BD%E5%BB%BA%E6%A8%A1/" style="font-size: 15px;">性能建模</a> <a href="/tags/%E7%BC%96%E8%AF%91%E5%99%A8/" style="font-size: 15px;">编译器</a> <a href="/tags/%E6%8E%92%E5%BA%8F/" style="font-size: 15px;">排序</a> <a href="/tags/C/" style="font-size: 15px;">C#</a> <a href="/tags/%E4%BB%A3%E7%A0%81%E7%94%9F%E6%88%90/" style="font-size: 15px;">代码生成</a> <a href="/tags/%E7%BB%9F%E8%AE%A1%E5%AD%A6%E4%B9%A0%E6%96%B9%E6%B3%95/" style="font-size: 15px;">统计学习方法</a> <a href="/tags/%E6%A6%82%E7%8E%87%E8%AE%BA/" style="font-size: 15px;">概率论</a> <a href="/tags/keras/" style="font-size: 15px;">keras</a> <a href="/tags/yolo/" style="font-size: 15px;">yolo</a> <a href="/tags/%E8%B0%83%E5%8F%82/" style="font-size: 15px;">调参</a> <a href="/tags/%E8%B7%AF%E7%94%B1/" style="font-size: 15px;">路由</a> <a href="/tags/vscode/" style="font-size: 15px;">vscode</a> <a href="/tags/gan/" style="font-size: 15px;">gan</a> <a href="/tags/wordcloud/" style="font-size: 15px;">wordcloud</a> <a href="/tags/%E7%A1%AC%E4%BB%B6%E5%8A%A0%E9%80%9F/" style="font-size: 15px;">硬件加速</a> <a href="/tags/%E5%B7%A5%E5%85%B7/" style="font-size: 15px;">工具</a> <a href="/tags/git/" style="font-size: 15px;">git</a> <a href="/tags/%E5%8D%9A%E5%AE%A2/" style="font-size: 15px;">博客</a> <a href="/tags/CMake/" style="font-size: 15px;">CMake</a> <a href="/tags/%E8%B5%84%E6%BA%90%E6%B1%87%E6%80%BB/" style="font-size: 15px;">资源汇总</a> <a href="/tags/halide/" style="font-size: 15px;">halide</a> <a href="/tags/csharp/" style="font-size: 15px;">csharp</a> <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F/" style="font-size: 15px;">分布式</a> <a href="/tags/IR/" style="font-size: 15px;">IR</a> <a href="/tags/term-rewriting/" style="font-size: 15px;">term rewriting</a> <a href="/tags/%E4%BC%98%E5%8C%96/" style="font-size: 15px;">优化</a> <a href="/tags/%E4%BA%8C%E5%8F%89%E6%A0%91/" style="font-size: 15px;">二叉树</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-file-o"> 最近文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2023/11/25/mlircsharp/">MLIRSharp</a></li><li class="post-list-item"><a class="post-list-link" href="/2023/11/15/dynamic-shape/">tvm dynamic shape</a></li><li class="post-list-item"><a class="post-list-link" href="/2023/11/01/mlc-llm/">mlc-llm 浅析</a></li><li class="post-list-item"><a class="post-list-link" href="/2023/09/19/easydist/">Alibaba EasyDist 浅析</a></li><li class="post-list-item"><a class="post-list-link" href="/2023/09/06/tiramisu/">Tiramisu Compiler Internals</a></li><li class="post-list-item"><a class="post-list-link" href="/2023/06/16/dl-costmodel/">基于DL的CostModel</a></li><li class="post-list-item"><a class="post-list-link" href="/2023/06/13/roofline/">roofline Model</a></li><li class="post-list-item"><a class="post-list-link" href="/2023/05/31/ppcg-learn/">ppcg 学习</a></li><li class="post-list-item"><a class="post-list-link" href="/2023/04/09/halide-metal/">halide metal 初体验</a></li><li class="post-list-item"><a class="post-list-link" href="/2023/02/23/dsa-schedule/">带宽受限下的DSA后端Compute Schedule</a></li></ul></div></div></div><div class="pure-u-1 pure-u-md-3-4"><div id="footer">Copyright © 2023 <a href="/." rel="nofollow">Blog.</a> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a><a rel="nofollow" target="_blank" href="https://github.com/tufu9441/maupassant-hexo"> Theme</a> by<a rel="nofollow" target="_blank" href="https://github.com/pagecho"> Cho.</a></div></div></div><a class="show" id="rocket" href="#top"></a><script type="text/javascript" src="/js/totop.js?v=1.0.0" async></script><script type="text/javascript" src="//lib.baomitu.com/fancybox/latest/jquery.fancybox.min.js"></script><script type="text/javascript" src="/js/fancybox.js?v=1.0.0"></script><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/fancybox/latest/jquery.fancybox.min.css"><script type="text/javascript" src="/js/copycode.js?v=1.0.0" successtext="复制成功！"></script><link rel="stylesheet" type="text/css" href="/css/copycode.css?v=1.0.0"><script type="text/x-mathjax-config">MathJax.Hub.Config({
+  tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+  });
+</script><script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-MML-AM_CHTML" async></script><script type="text/javascript" src="/js/codeblock-resizer.js?v=1.0.0"></script><script type="text/javascript" src="/js/smartresize.js?v=1.0.0"></script></div></body></html>

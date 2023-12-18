@@ -1,0 +1,305 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description"><title>Automatically Scheduling Halide Image Processing Pipelines | Blog</title><link rel="stylesheet" type="text/css" href="/css/style.css?v=1.0.0"><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/normalize/latest/normalize.min.css"><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/pure/latest/pure-min.min.css"><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/pure/latest/grids-responsive-min.min.css"><link rel="stylesheet" href="//lib.baomitu.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//lib.baomitu.com/jquery/latest/jquery.min.js"></script><link rel="icon" mask="" sizes="any" href="/favicon.ico"><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"><script type="text/javascript" src="//lib.baomitu.com/clipboard.js/latest/clipboard.min.js"></script><script type="text/javascript" src="//lib.baomitu.com/toastr.js/latest/toastr.min.js"></script><link rel="stylesheet" href="//lib.baomitu.com/toastr.js/latest/toastr.min.css"><meta name="generator" content="Hexo 7.0.0"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">Automatically Scheduling Halide Image Processing Pipelines</h1><a id="logo" href="/.">Blog</a><p class="description"></p></div><div id="nav-menu"><a class="current" href="/."><i class="fa fa-home"> 首页</i></a><a href="/archives/"><i class="fa fa-archive"> 归档</i></a><a href="/about/"><i class="fa fa-user"> 关于</i></a></div></div><div class="pure-g" id="layout"><div class="pure-u-1 pure-u-md-3-4"><div class="content_container"><div class="post"><h1 class="post-title">Automatically Scheduling Halide Image Processing Pipelines</h1><div class="post-meta">2021-11-14<span> | </span><span class="category"><a href="/categories/%E5%AD%A6%E4%B9%A0/">学习</a></span><span class="post-time"><span class="post-meta-item-text"> | </span><span class="post-meta-item-icon"><i class="fa fa-keyboard-o"></i><span class="post-count"> 5.6k</span><span class="post-meta-item-text"> 字</span></span></span><span class="post-time"> | <span class="post-meta-item-icon"><i class="fa fa-clock-o"></i><span class="post-count"> 22</span><span class="post-meta-item-text"> 分钟</span></span></span></div><div class="post-content"><p>关于halide中自动调度baseline算法的论文笔记.
+二作目前还在维护halide.</p>
+<span id="more"></span>
+<h1 id="abstract">0. Abstract</h1>
+<p>在本文中,提供了一种用于自动生成halide程序的高性能调度策略的算法.
+此解决方案扩展了已经存在于halide编译器中的边界分析,来自动实施典型的halide的局部性转换和并行执行调度策略.
+该算法不需要非常大的自动搜索空间,在几秒钟内就能为广泛的图像处理算法创造性能对标的大型图像处理库的调度结果,同时支持CPU以及GPU.</p>
+<h1 id="introduction">1. Introduction</h1>
+<p>本文的方法利用了halide自身的函数边界分析,
+来自动的执行提升函数局部性的transform.
+因为分析系统使用了halide内置的系统,本文算法可以支持原生的任何halide程序.</p>
+<h1 id="prior-work">2. Prior Work</h1>
+<p>这篇文章的作者在2015年已经使用了polyhedral的机制去进行调度(PolyMage).
+但是由于polyhedral的机制很难去对数据reuse的情况进行分析,
+所以本文抛弃了组合后tiling的方式, 采用交错分析等方法.
+PolyMage对于输出图像上的fusion/overlapped tiling有比较好的调度结果,
+它在stage fusion之后使用polyhedral分析来生成有效的嵌套循环,
+但它依赖于在一系列的tiling sizes上做出stage-fusion的决策.
+一些数据相关的操作(直方图/lookup
+table),没有仿射变换的程序,以及严重依赖数据reuse的神经网络等,受限于模板和上/下采样,
+无法被PolyMage的overlapped tiling analysis比较好的支持.
+因此本文吸收了PolyMage分组后tiling的方法,并且使用区间分析而不是polyhedral分析.因此这种方法不需要autotuning(需要巨大的搜索空间),
+并且可以生成人类更加容易理解的调度结果.</p>
+<h1 id="representing-and-scheduling-programs">3. Representing and
+Scheduling Programs</h1>
+<p>Halide的算法是基于数据流的,其中DAG上每个节点都对应于在一个N-D维度上的函数.</p>
+<p>如下的halide代码就对应了一个简单的计算图,
+包含两个函数(Blurx和Out),每个函数在由变量x和y参数化的2维上进行计算.
+DAG中的边对应于函数之间的数据依赖性,
+即有一个边从Blurx到Out,因为每个out的值是Blurx产生的三个值的总和.</p>
+<p><img src="/2021/11/14/Mullapudi2016/program1.png" /></p>
+<p>一个halide的算法只关注于他在函数输出上的domain中所需要计算的每个点,
+不关心这个domain上点的计算顺序或者产生这些点中间过程的顺序.
+调度的目标就是调整所有的输出domain上point的计算顺序,使其得到最高的效率.</p>
+<h2 id="scheduling-for-producer-consumer-locality">3.1 Scheduling for
+Producer-Consumer Locality</h2>
+<p>对于上面的代码,
+第一个简单的调度方式如下,当需要输出一个图像时,首先计算生成blurx所有需要的元素,
+将这些数据放到一个大的buffer中,然后再使用这个buffer计算最终的结果.
+这种调度将会受限于带宽.</p>
+<p><img src="/2021/11/14/Mullapudi2016/schedule1.png" /></p>
+<p>此时换一种调度方式, 将计算blurx放到不同的循环位置,
+那么计算完blurx立刻被消耗, 不同的循环位置决定了不同的data reuse
+distance. 当前这种方式最大化了producer-consumer locality,
+但是也带来了recompute的问题, 即多算了3次.</p>
+<p><img src="/2021/11/14/Mullapudi2016/schedule2.png" /></p>
+<p>为了更好的平衡了局部性和冗余计算的问题, 可以采用新的调度.
+因为中间数据量比较小,因此可以开一个大一些的local
+buffer,这样每次的recompute只是在tile的边界区域,减少了冗余计算的次数.
+接下来就需要选择合理的tling大小,
+让并行的计算提升超过冗余计算带来的开销.</p>
+<p><img src="/2021/11/14/Mullapudi2016/schedule3.png" /></p>
+<p>即使在这个简单的例子中,全局循环reorder也对程序的性能产生了大量影响.
+真实世界图像处理管道可能包含数百个function,为了有效地调度它们,我们要调整多维tiling的大小/生产者和消费者在循环中的位置,
+从而在局部性/并行性/冗余计算之间的trade-off.</p>
+<h2 id="scheduling-for-input-reuse">3.2 Scheduling for Input Reuse</h2>
+<p>除了调整producer的位置放到consumer里距离更近的地方来增加局部性.
+当data reuse比producer-consumer locality重要时,
+建议通过调整consumer的位置增加读取相同数据局部性.</p>
+<p>比如矩阵乘的例子, 当在尺寸<span class="math inline">\(N\times
+N\)</span>的输入A和B上执行该程序时,计算C将每次n次访问A和B的每个元素.
+如下图所示,在访问到相同的输入值之间访问输入函数的整个行或列(重用距离与输入矩阵的大小成比例).
+对于大输入矩阵,输入值将不再留在在处理器的缓存中,导致低性能.</p>
+<p><img src="/2021/11/14/Mullapudi2016/matmul.png" /></p>
+<p>此时可以利用tiling将问题减少到一个较小的矩阵乘法序列,这样可以把输入保存在高速cache中.</p>
+<p><img src="/2021/11/14/Mullapudi2016/matmul2.png" /></p>
+<p>综上, 利用循环tiling来最大化输入局部性是计算过程中的关键优化.</p>
+<h2 id="function-bounds-analysis">3.3 Function Bounds Analysis</h2>
+<p>Halide的一些调度原语 (compute_at, reorder, tile)
+可以帮助我们做到上面那些事情,但是为了量化如何做,
+编译器必须能够确定适当的loop bound和中间buffer的大小.</p>
+<p>比如上面在计算blur的out时, 必须得先计算出blurx的(x,
+y-1..y+1)三个值并保存.
+halide通过对基于表达式的区间分析来推导出每个符号函数的边界.</p>
+<p>比如计算blur的function中, out是的在<span
+class="math inline">\((x_{min}..x_{max},
+y_{min}..y_{max})\)</span>的domain上定义的. 然后halide反推出symbolic
+bounds expression:</p>
+<p><span class="math display">\[
+\begin{aligned}
+&amp;blurx: (x_{min}..x_{max}, &amp;y_{min}-1..y_{max}+1) \\
+&amp;in: (x_{min}-1..x_{max}+1, &amp;y_{min}-1..y_{max}+1)
+\end{aligned}
+\]</span></p>
+<p>如果我们设置固定的输出信息, 比如设置out为<span
+class="math inline">\((5..10,10..20)\)</span> 那么将得到 <span
+class="math display">\[
+\begin{aligned}
+&amp;blurx: (5..10,&amp;9..21)\\
+&amp;in: (4..11,&amp;9..21)
+\end{aligned}
+\]</span></p>
+<p>从输出函数开始,边界推理依据函数依赖关系链式传播,
+然后将边界信息更新到整个DAG.如果halide无法推理整个函数的边界信息时(比如隐式依赖导致无法建立传播链),
+我们也可以直接显式的为函数设置边界信息,
+因为自动化的schedule是离不开边界分析所提供做决策的信息的,所以无论如何必须要可以获得它.</p>
+<h1 id="algorithm">4. Algorithm</h1>
+<p>本论文自动调度方法如下图所示:</p>
+<p><img src="/2021/11/14/Mullapudi2016/Algorithm1.png" /></p>
+<p>将整个halide的function,分离到多个function group然后在每个小的function
+group中独立的调度从而优化 producer-consumer locality和input reuse
+locality.</p>
+<p>halide虽然允许我们随意的调整每个group中的循环order,
+来扩大优化的解空间,但是本文考虑缩小调度的空间,只考虑在function
+输出的循环上做 tiling.</p>
+<p>因为当输出被tiling之后,当前group的其他producer
+function也会被放到被tiled的循环中(为所有生产者指定唯一的计算位置).
+在第5节中,作者证明了可以在在这种子搜索空间中找到高性能的调度解.</p>
+<p><img src="/2021/11/14/Mullapudi2016/autoschedule.png" /></p>
+<p>在上图中展示了一种可能的schedule方案,
+注意到所有的function都会在这个group的输出function中计算(灰色区域),
+此时同一个group中的producer-consumer关系通过一个比较小的local
+buffer(A,C,D)进行管理, 实际运行时他们很容易被保存在cache上.
+然后每个group之间则通过main memory进行通信(Buffer B).</p>
+<p>本文的自动调度器可以分析当前halide所有能表达的代码, 只有一种例外:
+输入程序被约束了只能为每个函数更新一次规则.(也就是没有被调度过)</p>
+<p>到目前为止作者还没有发现这个情况会带来多少限制,至少作者验证过当前所有paper中halide程序的.
+(PS: 我测了直接调度整个resnet50 直接core dump 😂)</p>
+<p>除了需要输入halide的源程序外,还要求设定输出function的边界信息.
+这种要求也是是非常合理的,如果不知道一些静态信息,就将无法通过数据依赖性访问而无法推断出界限,
+也无法知道每个buffer所需要的大小。</p>
+<h1 id="function-preprocessing">4.1 Function Preprocessing</h1>
+<h4 id="estimate-arithmetic-cost.">1. Estimate arithmetic cost.</h4>
+<p>即估计数学运算的cost, 比如除法等计算,cost要高于其他计算.</p>
+<h4 id="compute-concrete-bounds">2. Compute concrete bounds</h4>
+<p>即利用内置的bounds analysis计算所有函数的边界.</p>
+<h4 id="compute-per-direction-input-reuse.">3. Compute per-direction
+input reuse.</h4>
+<p>为了辅助决策, 对于每个函数需要计算它在哪一个loop
+order上进行迭代可以产生更高的输入数据reuse. 如下图所示,
+考虑以行先的顺序计算输出out的元素,
+每个元素只需要从相同的blurx的列进行取数,因此每个our所需要的元素都是一组新的input集合,
+这样就没有重叠的数据reuse了. 相比之下,如果以列在先的顺序计算out,
+那么每次都可以两到三个数据reuse.</p>
+<p><img src="/2021/11/14/Mullapudi2016/datareuse.png" /></p>
+<p>我们可以直接通过bounds计算出输出重用率,
+比如给定一个索引,经过bounds的变化之后检查是否还是同一个(取交集),
+如果交集越大,那么表示多个输入得到了相同的index, 数据reuse就高,
+比如计算在在 x 方向上的遍历的重用结果: <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">mid = c_xmin + (c_xmin + c_xmax) / <span class="number">2</span> </span><br><span class="line">b1 = <span class="built_in">bounds</span>(f, g, mid..mid+<span class="number">1</span>, c_ymin..c_ymax, ...) </span><br><span class="line">b2 = <span class="built_in">bounds</span>(f, g, mid+<span class="number">1.</span>.mid+<span class="number">2</span>, c_ymin..c_ymax, ...) </span><br><span class="line">b_reuse = <span class="built_in">intersect</span>(b1, b2)</span><br></pre></td></tr></table></figure></p>
+<p>其中函数bounds会返回给定边界的函数f计算时所需要的函数g的边界信息.
+预处理的步骤就是计算所有迭代方向上函数f祖先的数据reuse.</p>
+<h2 id="function-grouping-and-tiling">4.2 Function Grouping and
+Tiling</h2>
+<p>经过预处理之后, 开始进行函数分组,
+分组则是为了找到程序中有益于重组计算顺序来提升 producer-consumer
+locality的一个点. 这就需要确定如何tiling
+consumer的循环,以及在那个循环级别放置producer.</p>
+<p>本文算法使用迭代的贪心方法将halide program进行分组.分组后,
+每个组执行独立的reordering/tiling schedule.
+每个组中包含多个halide的funcion, 但是每个组也只能有一个output
+funcion(分离出所有来自于同一函数的依赖边),
+所有组中的其他函数都将在output
+function的循环中进行计算(也就是producer放到consumer的那层循环).</p>
+<p>首先将每个函数分为一个group, 对于每个单例组寻找到可以最大化input data
+reuse的tiling
+size(如果可以reuse).然后每个迭代中尝试将合并两个组来检查是否能增加producer-
+consumer locality. 当调度器无法再进行merge group的操作时,停止迭代.
+每个function 分组迭代包含了以下几个步骤:</p>
+<ol type="1">
+<li>枚举所有剩余的group合并机会</li>
+<li>对于每个可merge的机会,评估收益(merge之后tiling
+size是否需要修改?和前面group合并还是后面的group合并?)</li>
+<li>选择产生最大的提升的group进行合并</li>
+</ol>
+<h3 id="initialization-tiling-for-input-data-reuse">4.2.1
+Initialization: Tiling for Input Data Reuse</h3>
+<p>调度器尝试查找通过每个non-pure的函数来改进输入数据访问的循环tiling。(pure-function
+即不包含任何halide更新定义或reduce
+domain的函数,例如不用tiling直接就具备良好的input locality),
+然后采用了一个单级存储层级的简单模型进行分析,其执行的伪代码如下:</p>
+<p><img src="/2021/11/14/Mullapudi2016/tile_single_func.png" /></p>
+<p>主要就是检查一系列的tiling size 是不是可以满足l1 cache size等.
+然后通过计算load ops检查数据重用的机会,找到满足条件的最优tiling.</p>
+<p>这个方法假设所有的非纯函数都还没有被tiling过,所有的输入数据都是cache
+misses(通过total_load_op计算得到). 然后tiling所有输出需要的输入,
+让这些输入可以放到cache中,
+最后算法找到计算输出所需要的最少load次数时的tile size.</p>
+<p>为了加速tile size的搜索, 本文将tile size向着可以得到更大input data
+reuse的方向上增加tile size.同时自动调度器还考虑到tile
+size下tile的个数能不能满足最小的并行化限度.(这里默认能做parallel肯定会更快)</p>
+<h3 id="enumerating-merging-opportunities">4.2.2 Enumerating Merging
+Opportunities</h3>
+<p>Grouping是为了增加组中函数的producer-comsumer locality. 因此,
+如果两个组g1和g2,
+g1将被g2中的某个函数所消耗,那么将他们作为一个candidate.</p>
+<p>由于在两个不同的loop nests中取计算同一个function将会造成重复执行,
+因此grouping只会尝试合并唯一消耗g1的输出的那个组. 比如<a
+href="/2021/11/14/Mullapudi2016/Algorithm1.png">上图</a>所示,
+函数对A-B,C-E,D-E都是candidate.
+但是B-C和B-D不是,因为B的输出同时被C和D所消耗了.</p>
+<h3 id="evaluating-potential-merges">4.2.3 Evaluating Potential
+Merges</h3>
+<p>评估整体代码的performce收益来确定是否进行mege.
+通过函数evaluate_group_merge来确定合并当前两个group的最佳schedule,
+然后返回估计的benefit.</p>
+<p><img src="/2021/11/14/Mullapudi2016/list2.png" /></p>
+<h4 id="generating-tile-sizes.">Generating tile sizes.</h4>
+<p>计算tile size对于性能的影响很大,但是对于一个高维的nest
+loop,遍历去evaluate所有的tile size来计算cost是也是不现实的.
+因此本文按章节4.1中所描述的, 按照group 输出function的data
+reuse方向取选择潜在的tile size. 具体地,本文将tile
+size约束为N-D的hypercubes,并在最大的输出函数data reuse的方向上拉伸。
+当tile变大时可以有效减少因为tile所引入的冗余计算。 进一步我们要求tile
+在最内的循环上扩展最小的维度,同时把最小值设置为目标机器向量宽度的小倍数,保证不会超出cache
+size同时可以轻易的vectorize。
+后面再由评估函数group_tile_footprint(行28)要求编译器通过根据候选区块大小调度group的循环顺序来确定所需临时buffer分配的大小.</p>
+<h4 id="comparing-costs.">Comparing costs.</h4>
+<p>对于每个候选的tilie
+size,需要估计并比较执行grouping的成本,对于不合并的cost由生产者和消费者组的算术成本(Arith_cost,加上每个组的内存载入cost(Group_loads)组成。
+总的load次数(整个程序的执行)由其输出函数(11-12行)的具体边界和group当前设置的tile
+size给出。 其中LOAD_COST则是从mian memory中加载数据cost的系数.</p>
+<p>假设所有的被merge的group所产生的intermediate buffer都存储在cache上,
+那么merged
+output的一个tile的cost则是由算数操作加上所需要的input的load(gropu_tile_loads)所组成.
+总的merged cost则是每个tile cost的乘积.</p>
+<p>最后evaluate_group_merge 返回找到的最佳tile下的performance.</p>
+<h2 id="function-inlining">4.3 Function Inlining</h2>
+<p>此外将producer函数内联到consumer中可能是有利的(如果是手动编写的Halide
+schedule是需要显式的使用inline指令).</p>
+<p>虽然inline的概念类似于在grouping的过程中选择tile size,
+但是inline后所产生的code 会更加高效(中间计算结果不通过load store,
+直接存储在寄存器中).</p>
+<p>本文在这里描述function inling,但是其实际执行的位置是在recompute之后,
+merge group之前.</p>
+<p>内联也是通过类似的贪心迭代方法得到的, 但是有如下的区别:</p>
+<ol type="1">
+<li><p>为了简单起见, 调度器是综合每个函数的基础上确定是否inling.
+一个函数要么inline到他所有的consumer上(最终从dag上移除),
+要么不做任何inline(后续在group merge中进行优化).</p></li>
+<li><p>如果当前一个函数可以被inline到consumer中,
+计算cost的时候会计算把当前函数inline到每个consumer后的cost.
+而不是像group merge一样只考虑当前两个group merge后的cost.</p></li>
+<li><p>自动调度器不是用边界分析来估计inline后的arithmetic cost. 相反,
+他是将producer的表达式直接替换成consumer, 然后估计consumer的cost,
+这样可以得到更加精确的预测结果.</p></li>
+</ol>
+<h2 id="final-schedule-generation">4.4. Final Schedule Generation</h2>
+<p>当inline和merge group结束之后,
+调度器返回了一堆group,每个group固定了一个loop tiling.
+调度的最后一步就是为每个group生成完整的优化调度.</p>
+<p>首先是reorder每个group的output function, 达到最高的input locality.
+为了保证数据访问的空间局部性和vectorize的能力, loop
+reorder是不会将最内侧的循环从其起始位置进行移动.</p>
+<p>接下来auto-scheduler unroll这些一些小循环,
+最后再添加一些外部循环上的并行.</p>
+<p>在这些操作之后,每个group都有完整的schedule。后续就是codegen了.</p>
+<h1 id="evaluation">Evaluation</h1>
+<p>本文使用了14个halide
+的典型算法进行评估.可以发现最终结果还是不错的,在VGG/ConvLayer这种人工调优麻烦的场景下,可以取的不错的效果.
+同时相比于大规模的auto-tune搜索的方式来说又节约了不少时间.
+值得注意是基于polyhedral的方法polymage的表现在多个stage的算法面前就比较差了.</p>
+<p><img src="/2021/11/14/Mullapudi2016/result.png" /></p>
+<h1 id="代码实现">代码实现</h1>
+<h2 id="find_transitive_calls">0. find_transitive_calls</h2>
+<p>遍历最后输出的outputs func, 每个funcion accept
+一个<code>FindCall visitor</code>.
+这个<code>FindCall visitor</code>就是把所有<code>call &#123;Type=Halide&#125;</code>的节点全部取出来.</p>
+<p>这里我觉得accept是个比较好的设计, 因为expr
+visitor只能通过visitor自己去遍历expr,但是如果你定义了一堆非expr的数据结构,然后你的visitor还得扩展visit函数,非常麻烦.
+那么应该是每个扩展的数据结构中自定义accept函数,主动调用visitor进行遍历.这样就可以支持各种形式的遍历了.</p>
+<h2 id="topological_order">1. topological_order</h2>
+<p>得到调用顺序</p>
+<h2 id="validating-no-partial-schedules">2. Validating no partial
+schedules</h2>
+<p>当前的auto schedule无法对一些已经schedule的program进行进一步调度.
+需要先排除.</p>
+<h2 id="checking-estimates-on-outputs">3. Checking estimates on
+outputs</h2>
+<p>遍历每个output的index var, 然后检查bounds的min max是否被定义,
+只是单纯检查有没有定义,还没有进行边界计算</p>
+<h2 id="inlining-all-trivial-functions">4. Inlining all trivial
+functions</h2>
+<p>把可以inline的函数都进行内敛.</p>
+<h2 id="realization_order">5. realization_order</h2>
+<p>暂时不是很理解, 可能是消除了一些输入节点的函数实例化的顺序</p>
+<h2 id="inlining-all-element-wise-functions">6. Inlining all
+element-wise functions</h2>
+<p>这里是要对一些局部定义的function进行inline. 比如: <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">f1(x) = x</span><br><span class="line">f2(x) = f1(x) + <span class="number">2</span></span><br><span class="line">f3(x) = f1(x) * <span class="number">2</span></span><br><span class="line">f4(x) = f2(x) + f3(x)</span><br><span class="line">f5(x) = f4(x) + <span class="number">3</span></span><br></pre></td></tr></table></figure>
+第一次inline把f3、和f2集成到f4中了,然后现在f1也可以被inline到f4中了.</p>
+<h2 id="computing-function-value-bounds">7. Computing function value
+bounds</h2>
+<p>这里是正经的计算所有function
+值的bounds.做法就是把所有的bound的expr推导出来,然后做一些常量消除. NOTE
+这里是推断的具体的数值区间,而不是shape.</p>
+<h2 id="initializing-region-costs">8. Initializing region costs</h2>
+<p>cost中包含了数学运算以及memory的信息, 到时候利用memory去计算load
+store的cost. 也是利用vistor的方式收集信息,不过他这里和论文有所出入,
+实际上所有的binary的cost都是1. 对于除法并没有给定额外的cost值.</p>
+<p>对于halide的call, cost =( arith+1, memory+ types.bytes).
+然后将当前call的数据bytes存储下来,给后面需要用这个函数的地方使用.
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (call-&gt;call_type == Call::Halide || call-&gt;call_type == Call::Image) &#123;</span><br><span class="line">    <span class="comment">// Each call also counts as an op since it results in a load instruction.</span></span><br><span class="line">    arith += <span class="number">1</span>;</span><br><span class="line">    memory += call-&gt;type.<span class="built_in">bytes</span>();</span><br><span class="line">    detailed_byte_loads[call-&gt;name] += (<span class="type">int64_t</span>)call-&gt;type.<span class="built_in">bytes</span>();</span><br></pre></td></tr></table></figure></p>
+<p>下面是一个function的cost计算结果,后面的<code>((int64)9, (int64)16)</code>分别表示数学cost和
+memory cost.</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">(((float32)repeat_edge(x, y, <span class="number">2</span>)*<span class="number">0.114000</span>f) + (((float32)repeat_edge(x, y, <span class="number">0</span>)*<span class="number">0.299000</span>f) + ((float32)repeat_edge(x, y, <span class="number">1</span>)*<span class="number">0.587000</span>f)))</span><br><span class="line">(f0, 0) -&gt; ((int64)<span class="number">9</span>, (int64)<span class="number">16</span>)</span><br><span class="line">(((float32)f0(x + <span class="number">1</span>, y + <span class="number">1</span>) + ((((float32)f0(x, y + <span class="number">1</span>)*<span class="number">2.000000</span>f) + (((float32)f0(x, y + -<span class="number">1</span>)*-<span class="number">2.000000</span>f) + ((float32)f0(x + -<span class="number">1</span>, y + <span class="number">1</span>) - (float32)f0(x + -<span class="number">1</span>, y + -<span class="number">1</span>)))) - (float32)f0(x + 1, y + -1)))*0.083333f)</span><br><span class="line">(f1, 0) -&gt; ((int64)<span class="number">25</span>, (int64)<span class="number">28</span>)</span><br><span class="line">(let t3 = (((float32)f3(x + <span class="number">1</span>, y + <span class="number">1</span>) + ((float32)f3(x + <span class="number">1</span>, y) + ((float32)f3(x + <span class="number">1</span>, y + -<span class="number">1</span>) + ((float32)f3(x, y + <span class="number">1</span>) + ((float32)f3(x, y) + ((float32)f3(x, y + -<span class="number">1</span>) + ((float32)f3(x + -<span class="number">1</span>, y + <span class="number">1</span>) + ((float32)f3(x + -<span class="number">1</span>, y + -<span class="number">1</span>) + (float32)f3(x + -<span class="number">1</span>, y))))))))) + ((float32)f4(x + <span class="number">1</span>, y + <span class="number">1</span>) + ((float32)f4(x + <span class="number">1</span>, y) + ((float32)f4(x + <span class="number">1</span>, y + -<span class="number">1</span>) + ((float32)f4(x, y + <span class="number">1</span>) + ((float32)f4(x, y) + ((float32)f4(x, y + -<span class="number">1</span>) + ((float32)f4(x + -<span class="number">1</span>, y + <span class="number">1</span>) + ((float32)f4(x + -<span class="number">1</span>, y + -<span class="number">1</span>) + (float32)f4(x + -<span class="number">1</span>, y)))))))))) <span class="keyword">in</span> ((let f9.t2 = ((float32)f5(x + <span class="number">1</span>, y + <span class="number">1</span>) + ((float32)f5(x + <span class="number">1</span>, y) + ((float32)f5(x + <span class="number">1</span>, y + -<span class="number">1</span>) + ((float32)f5(x, y + <span class="number">1</span>) + ((float32)f5(x, y) + ((float32)f5(x, y + -<span class="number">1</span>) + ((float32)f5(x + -<span class="number">1</span>, y + <span class="number">1</span>) + ((float32)f5(x + -<span class="number">1</span>, y + -<span class="number">1</span>) + (float32)f5(x + -<span class="number">1</span>, y))))))))) <span class="keyword">in</span> ((((float32)f3(x + <span class="number">1</span>, y + <span class="number">1</span>) + ((float32)f3(x + <span class="number">1</span>, y) + ((float32)f3(x + <span class="number">1</span>, y + -<span class="number">1</span>) + ((float32)f3(x, y + <span class="number">1</span>) + ((float32)f3(x, y) + ((float32)f3(x, y + -<span class="number">1</span>) + ((float32)f3(x + -<span class="number">1</span>, y + <span class="number">1</span>) + ((float32)f3(x + -<span class="number">1</span>, y + -<span class="number">1</span>) + (float32)f3(x + -<span class="number">1</span>, y)))))))))*((float32)f4(x + <span class="number">1</span>, y + <span class="number">1</span>) + ((float32)f4(x + <span class="number">1</span>, y) + ((float32)f4(x + <span class="number">1</span>, y + -<span class="number">1</span>) + ((float32)f4(x, y + <span class="number">1</span>) + ((float32)f4(x, y) + ((float32)f4(x, y + -<span class="number">1</span>) + ((float32)f4(x + -<span class="number">1</span>, y + <span class="number">1</span>) + ((float32)f4(x + -<span class="number">1</span>, y + -<span class="number">1</span>) + (float32)f4(x + -<span class="number">1</span>, y)))))))))) - (f9.t2*f9.t2))) - ((t3*t3)*<span class="number">0.040000</span>f)))</span><br><span class="line">(f11, 0) -&gt; ((int64)<span class="number">153</span>, (int64)<span class="number">184</span>)</span><br><span class="line">(((float32)f0(x + <span class="number">1</span>, y + <span class="number">1</span>) + ((((float32)f0(x + <span class="number">1</span>, y)*<span class="number">2.000000</span>f) + (((float32)f0(x + -<span class="number">1</span>, y)*-<span class="number">2.000000</span>f) + ((float32)f0(x + <span class="number">1</span>, y + -<span class="number">1</span>) - (float32)f0(x + -<span class="number">1</span>, y + -<span class="number">1</span>)))) - (float32)f0(x + -1, y + 1)))*0.083333f)</span><br><span class="line">(f2, 0) -&gt; ((int64)<span class="number">25</span>, (int64)<span class="number">28</span>)</span><br><span class="line">(let t0 = (float32)f2(x, y) in (t0*t0))</span><br><span class="line">(f3, 0) -&gt; ((int64)<span class="number">3</span>, (int64)<span class="number">8</span>)</span><br><span class="line">(let t1 = (float32)f1(x, y) in (t1*t1))</span><br><span class="line">(f4, 0) -&gt; ((int64)<span class="number">3</span>, (int64)<span class="number">8</span>)</span><br><span class="line">((float32)f2(x, y)*(float32)f1(x, y))</span><br><span class="line">(f5, 0) -&gt; ((int64)<span class="number">4</span>, (int64)<span class="number">12</span>)</span><br><span class="line">(float32)f11(x + <span class="number">2</span>, y + <span class="number">2</span>)</span><br><span class="line">(output1, <span class="number">0</span>) -&gt; ((int64)<span class="number">4</span>, (int64)<span class="number">8</span>)</span><br><span class="line">((float32)f11(x + <span class="number">2</span>, y + <span class="number">2</span>)*(float32)factor)</span><br><span class="line">(output2, <span class="number">0</span>) -&gt; ((int64)<span class="number">5</span>, (int64)<span class="number">8</span>)</span><br><span class="line">(let lambda_0._2 = max(min(likely(_2), (input.extent.<span class="number">2</span> + input.min.<span class="number">2</span>) + -<span class="number">1</span>), input.min.<span class="number">2</span>) in (let lambda_0._1 = max(min(likely(_1), (input.extent.<span class="number">1</span> + input.min.<span class="number">1</span>) + -<span class="number">1</span>), input.min.<span class="number">1</span>) in (let lambda_0._0 = max(min(likely(_0), (input.extent.<span class="number">0</span> + input.min.<span class="number">0</span>) + -<span class="number">1</span>), input.min.<span class="number">0</span>) in (float32)input(lambda_0._0, lambda_0._1, lambda_0._2))))</span><br><span class="line">(repeat_edge, 0) -&gt; ((int64)<span class="number">14</span>, (int64)<span class="number">8</span>)</span><br></pre></td></tr></table></figure>
+<h2 id="dependence-analysis-and-computing-pipeline-bounds">9. dependence
+analysis and Computing pipeline bounds</h2>
+<p>通过依赖分析以及给定参数的estimates推理整个pipeline的bounds.
+halide的var其实表示的就是index的,
+这里他把输出看做一个box,我觉得可以叫tensor,每个维度上有自己的min max.
+得到的结果如下: <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">================</span><br><span class="line">Pipeline graph:</span><br><span class="line">================</span><br><span class="line">f0: &#123;f1, f2&#125;</span><br><span class="line">f1: &#123;f4, f5&#125;</span><br><span class="line">f11: &#123;output1, output2&#125;</span><br><span class="line">f2: &#123;f3, f5&#125;</span><br><span class="line">f3: &#123;f11&#125;</span><br><span class="line">f4: &#123;f11&#125;</span><br><span class="line">f5: &#123;f11&#125;</span><br><span class="line">repeat_edge: &#123;f0&#125;</span><br><span class="line">================</span><br><span class="line"></span><br><span class="line">================</span><br><span class="line">Pipeline bounds:</span><br><span class="line">================</span><br><span class="line">f0 -&gt; &#123;[0, 1027], [0, 1027]&#125;</span><br><span class="line">f1 -&gt; &#123;[1, 1026], [1, 1026]&#125;</span><br><span class="line">f11 -&gt; &#123;[2, 1025], [2, 1025]&#125;</span><br><span class="line">f2 -&gt; &#123;[1, 1026], [1, 1026]&#125;</span><br><span class="line">f3 -&gt; &#123;[1, 1026], [1, 1026]&#125;</span><br><span class="line">f4 -&gt; &#123;[1, 1026], [1, 1026]&#125;</span><br><span class="line">f5 -&gt; &#123;[1, 1026], [1, 1026]&#125;</span><br><span class="line">input -&gt; &#123;[0, 1023], [0, 1023], [0, 2]&#125;</span><br><span class="line">output1 -&gt; &#123;[0, 1023], [0, 1023]&#125;</span><br><span class="line">output2 -&gt; &#123;[0, 1023], [0, 1023]&#125;</span><br><span class="line">repeat_edge -&gt; &#123;[0, 1027], [0, 1027], [0, 2]&#125;</span><br><span class="line">===============</span><br></pre></td></tr></table></figure></p>
+<h2 id="initializing-partitioner">10. Initializing partitioner</h2>
+</div><div class="tags"><ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/halide/" rel="tag">halide</a></li></ul></div><div class="post-nav"><a class="pre" href="/2021/11/18/torchsharp/">关于如何在M1上使用TorchSharp</a><a class="next" href="/2021/11/12/pythonnet/">Pythonnet踩坑</a></div></div></div></div><div class="pure-u-1-4 hidden_mid_and_down"><div id="sidebar"><div class="widget"><form class="search-form" action="//www.google.com/search" method="get" accept-charset="utf-8" target="_blank"><input type="text" name="q" maxlength="20" placeholder="Search"/><input type="hidden" name="sitesearch" value="https://zhen8838.github.io"/></form></div><div class="widget"><div class="author-info"><a class="info-avatar" href="/about/" title="关于"><img class="nofancybox" src="/img/avatar.png"/></a><p>A Believing Heart Is Your Magic🪄</p><a class="info-icon" href="mailto:597323109@qq.com" title="Email" target="_blank" style="margin-inline:5px"> <i class="fa fa-envelope-square" style="margin-inline:5px"></i></a><a class="info-icon" href="https://github.com/zhen8838" title="Github" target="_blank" style="margin-inline:5px"> <i class="fa fa-github-square" style="margin-inline:5px"></i></a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-folder-o"> 分类</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/%E5%AD%A6%E4%B9%A0/">学习</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E7%94%9F%E6%B4%BB/">生活</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-star-o"> 标签</i></div><div class="tagcloud"><a href="/tags/Linux/" style="font-size: 15px;">Linux</a> <a href="/tags/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/" style="font-size: 15px;">数据结构</a> <a href="/tags/%E6%A0%91/" style="font-size: 15px;">树</a> <a href="/tags/C/" style="font-size: 15px;">C</a> <a href="/tags/%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0/" style="font-size: 15px;">深度学习</a> <a href="/tags/CNN/" style="font-size: 15px;">CNN</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" style="font-size: 15px;">嵌入式</a> <a href="/tags/%E8%93%9D%E7%89%99/" style="font-size: 15px;">蓝牙</a> <a href="/tags/Matlab/" style="font-size: 15px;">Matlab</a> <a href="/tags/%E9%93%BE%E8%A1%A8/" style="font-size: 15px;">链表</a> <a href="/tags/%E5%8D%8A%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0/" style="font-size: 15px;">半监督学习</a> <a href="/tags/tensorflow/" style="font-size: 15px;">tensorflow</a> <a href="/tags/python/" style="font-size: 15px;">python</a> <a href="/tags/%E5%B0%8F%E5%B7%A5%E5%85%B7/" style="font-size: 15px;">小工具</a> <a href="/tags/%E9%94%99%E8%AF%AF%E8%AE%B0%E5%BD%95/" style="font-size: 15px;">错误记录</a> <a href="/tags/OJ/" style="font-size: 15px;">OJ</a> <a href="/tags/Qt/" style="font-size: 15px;">Qt</a> <a href="/tags/GAN/" style="font-size: 15px;">GAN</a> <a href="/tags/%E6%80%BB%E7%BB%93/" style="font-size: 15px;">总结</a> <a href="/tags/%E5%9B%BE%E5%83%8F%E5%A4%84%E7%90%86/" style="font-size: 15px;">图像处理</a> <a href="/tags/%E7%AE%97%E6%B3%95/" style="font-size: 15px;">算法</a> <a href="/tags/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/" style="font-size: 15px;">机器学习</a> <a href="/tags/%E4%BD%9C%E4%B8%9A/" style="font-size: 15px;">作业</a> <a href="/tags/c/" style="font-size: 15px;">c</a> <a href="/tags/%E7%A5%9E%E7%BB%8F%E7%BD%91%E7%BB%9C/" style="font-size: 15px;">神经网络</a> <a href="/tags/linux/" style="font-size: 15px;">linux</a> <a href="/tags/cmake/" style="font-size: 15px;">cmake</a> <a href="/tags/c/" style="font-size: 15px;">c++</a> <a href="/tags/C/" style="font-size: 15px;">C++</a> <a href="/tags/%E8%81%9A%E7%B1%BB/" style="font-size: 15px;">聚类</a> <a href="/tags/CostModel/" style="font-size: 15px;">CostModel</a> <a href="/tags/%E5%A3%B0%E9%9F%B3%E4%BF%A1%E5%8F%B7%E5%A4%84%E7%90%86/" style="font-size: 15px;">声音信号处理</a> <a href="/tags/TVM/" style="font-size: 15px;">TVM</a> <a href="/tags/%E7%BC%96%E8%AF%91%E4%BC%98%E5%8C%96/" style="font-size: 15px;">编译优化</a> <a href="/tags/%E5%9B%BE%E4%BC%98%E5%8C%96/" style="font-size: 15px;">图优化</a> <a href="/tags/stm32/" style="font-size: 15px;">stm32</a> <a href="/tags/Halide/" style="font-size: 15px;">Halide</a> <a href="/tags/PCB/" style="font-size: 15px;">PCB</a> <a href="/tags/%E5%A0%86%E6%A0%88/" style="font-size: 15px;">堆栈</a> <a href="/tags/k210/" style="font-size: 15px;">k210</a> <a href="/tags/%E5%85%83%E5%AD%A6%E4%B9%A0/" style="font-size: 15px;">元学习</a> <a href="/tags/mindspore/" style="font-size: 15px;">mindspore</a> <a href="/tags/%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86/" style="font-size: 15px;">大语言模型推理</a> <a href="/tags/mlir/" style="font-size: 15px;">mlir</a> <a href="/tags/mxnet/" style="font-size: 15px;">mxnet</a> <a href="/tags/%E8%AE%A1%E7%AE%97%E6%9C%BA%E4%BD%93%E7%B3%BB%E7%BB%93%E6%9E%84/" style="font-size: 15px;">计算机体系结构</a> <a href="/tags/numpy/" style="font-size: 15px;">numpy</a> <a href="/tags/%E9%A3%8E%E6%A0%BC%E8%BF%81%E7%A7%BB/" style="font-size: 15px;">风格迁移</a> <a href="/tags/pfld/" style="font-size: 15px;">pfld</a> <a href="/tags/dotnet/" style="font-size: 15px;">dotnet</a> <a href="/tags/pytorch/" style="font-size: 15px;">pytorch</a> <a href="/tags/%E7%A5%9E%E7%BB%8F%E7%BD%91%E7%BB%9C%E9%87%8F%E5%8C%96/" style="font-size: 15px;">神经网络量化</a> <a href="/tags/%E6%A0%91%E8%8E%93%E6%B4%BE/" style="font-size: 15px;">树莓派</a> <a href="/tags/NB-IOT/" style="font-size: 15px;">NB-IOT</a> <a href="/tags/retinaface/" style="font-size: 15px;">retinaface</a> <a href="/tags/%E6%80%A7%E8%83%BD%E5%BB%BA%E6%A8%A1/" style="font-size: 15px;">性能建模</a> <a href="/tags/%E7%BC%96%E8%AF%91%E5%99%A8/" style="font-size: 15px;">编译器</a> <a href="/tags/%E6%8E%92%E5%BA%8F/" style="font-size: 15px;">排序</a> <a href="/tags/C/" style="font-size: 15px;">C#</a> <a href="/tags/%E4%BB%A3%E7%A0%81%E7%94%9F%E6%88%90/" style="font-size: 15px;">代码生成</a> <a href="/tags/%E7%BB%9F%E8%AE%A1%E5%AD%A6%E4%B9%A0%E6%96%B9%E6%B3%95/" style="font-size: 15px;">统计学习方法</a> <a href="/tags/%E6%A6%82%E7%8E%87%E8%AE%BA/" style="font-size: 15px;">概率论</a> <a href="/tags/keras/" style="font-size: 15px;">keras</a> <a href="/tags/yolo/" style="font-size: 15px;">yolo</a> <a href="/tags/%E8%B0%83%E5%8F%82/" style="font-size: 15px;">调参</a> <a href="/tags/%E8%B7%AF%E7%94%B1/" style="font-size: 15px;">路由</a> <a href="/tags/vscode/" style="font-size: 15px;">vscode</a> <a href="/tags/gan/" style="font-size: 15px;">gan</a> <a href="/tags/wordcloud/" style="font-size: 15px;">wordcloud</a> <a href="/tags/%E7%A1%AC%E4%BB%B6%E5%8A%A0%E9%80%9F/" style="font-size: 15px;">硬件加速</a> <a href="/tags/%E5%B7%A5%E5%85%B7/" style="font-size: 15px;">工具</a> <a href="/tags/git/" style="font-size: 15px;">git</a> <a href="/tags/%E5%8D%9A%E5%AE%A2/" style="font-size: 15px;">博客</a> <a href="/tags/CMake/" style="font-size: 15px;">CMake</a> <a href="/tags/%E8%B5%84%E6%BA%90%E6%B1%87%E6%80%BB/" style="font-size: 15px;">资源汇总</a> <a href="/tags/halide/" style="font-size: 15px;">halide</a> <a href="/tags/csharp/" style="font-size: 15px;">csharp</a> <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F/" style="font-size: 15px;">分布式</a> <a href="/tags/IR/" style="font-size: 15px;">IR</a> <a href="/tags/term-rewriting/" style="font-size: 15px;">term rewriting</a> <a href="/tags/%E4%BC%98%E5%8C%96/" style="font-size: 15px;">优化</a> <a href="/tags/%E4%BA%8C%E5%8F%89%E6%A0%91/" style="font-size: 15px;">二叉树</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-file-o"> 最近文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2023/11/25/mlircsharp/">MLIRSharp</a></li><li class="post-list-item"><a class="post-list-link" href="/2023/11/15/dynamic-shape/">tvm dynamic shape</a></li><li class="post-list-item"><a class="post-list-link" href="/2023/11/01/mlc-llm/">mlc-llm 浅析</a></li><li class="post-list-item"><a class="post-list-link" href="/2023/09/19/easydist/">Alibaba EasyDist 浅析</a></li><li class="post-list-item"><a class="post-list-link" href="/2023/09/06/tiramisu/">Tiramisu Compiler Internals</a></li><li class="post-list-item"><a class="post-list-link" href="/2023/06/16/dl-costmodel/">基于DL的CostModel</a></li><li class="post-list-item"><a class="post-list-link" href="/2023/06/13/roofline/">roofline Model</a></li><li class="post-list-item"><a class="post-list-link" href="/2023/05/31/ppcg-learn/">ppcg 学习</a></li><li class="post-list-item"><a class="post-list-link" href="/2023/04/09/halide-metal/">halide metal 初体验</a></li><li class="post-list-item"><a class="post-list-link" href="/2023/02/23/dsa-schedule/">带宽受限下的DSA后端Compute Schedule</a></li></ul></div></div></div><div class="pure-u-1 pure-u-md-3-4"><div id="footer">Copyright © 2023 <a href="/." rel="nofollow">Blog.</a> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a><a rel="nofollow" target="_blank" href="https://github.com/tufu9441/maupassant-hexo"> Theme</a> by<a rel="nofollow" target="_blank" href="https://github.com/pagecho"> Cho.</a></div></div></div><a class="show" id="rocket" href="#top"></a><script type="text/javascript" src="/js/totop.js?v=1.0.0" async></script><script type="text/javascript" src="//lib.baomitu.com/fancybox/latest/jquery.fancybox.min.js"></script><script type="text/javascript" src="/js/fancybox.js?v=1.0.0"></script><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/fancybox/latest/jquery.fancybox.min.css"><script type="text/javascript" src="/js/copycode.js?v=1.0.0" successtext="复制成功！"></script><link rel="stylesheet" type="text/css" href="/css/copycode.css?v=1.0.0"><script type="text/x-mathjax-config">MathJax.Hub.Config({
+  tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+  });
+</script><script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-MML-AM_CHTML" async></script><script type="text/javascript" src="/js/codeblock-resizer.js?v=1.0.0"></script><script type="text/javascript" src="/js/smartresize.js?v=1.0.0"></script></div></body></html>
