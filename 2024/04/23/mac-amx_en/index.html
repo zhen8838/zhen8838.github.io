@@ -1,0 +1,580 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description"><title>Explore AMX instructions: Unlock the performance of Apple Silicon | Zheng's Notes</title><link rel="stylesheet" type="text/css" href="/css/style.css?v=1.0.0"><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/normalize/latest/normalize.min.css"><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/pure/latest/pure-min.min.css"><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/pure/latest/grids-responsive-min.min.css"><link rel="stylesheet" href="//lib.baomitu.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//lib.baomitu.com/jquery/latest/jquery.min.js"></script><link rel="icon" mask="" sizes="any" href="/favicon.ico"><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"><script type="text/javascript" src="//lib.baomitu.com/clipboard.js/latest/clipboard.min.js"></script><script type="text/javascript" src="//lib.baomitu.com/toastr.js/latest/toastr.min.js"></script><link rel="stylesheet" href="//lib.baomitu.com/toastr.js/latest/toastr.min.css"><meta name="generator" content="Hexo 7.0.0"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">Explore AMX instructions: Unlock the performance of Apple Silicon</h1><a id="logo" href="/.">Zheng's Notes</a><p class="description"></p></div><div id="nav-menu"><a class="current" href="/."><i class="fa fa-home"> 首页</i></a><a href="/archives/"><i class="fa fa-archive"> 归档</i></a><a href="/about/"><i class="fa fa-user"> 关于</i></a></div></div><div class="pure-g" id="layout"><div class="pure-u-1 pure-u-md-3-4"><div class="content_container"><div class="post"><h1 class="post-title">Explore AMX instructions: Unlock the performance of Apple Silicon</h1><div class="post-meta">2024-04-23<span> | </span><span class="category"><a href="/categories/%E4%BD%93%E7%B3%BB%E7%BB%93%E6%9E%84/">体系结构</a></span><span class="post-time"><span class="post-meta-item-text"> | </span><span class="post-meta-item-icon"><i class="fa fa-keyboard-o"></i><span class="post-count"> 3.2k</span><span class="post-meta-item-text"> 字</span></span></span><span class="post-time"> | <span class="post-meta-item-icon"><i class="fa fa-clock-o"></i><span class="post-count"> 20</span><span class="post-meta-item-text"> 分钟</span></span></span></div><div class="post-content"><p>Since 2020, Apple has published M1/M2/M3. They have at least four
+different ways to perform high-intensity computing tasks.</p>
+<ol type="1">
+<li><p>Standard arm NEON instructions.</p></li>
+<li><p>Undocumented AMX (Apple Matrix Co-processor) instructions. Issued
+by the CPU and performed on the co-processor.</p></li>
+<li><p>Apple Neural Engine</p></li>
+<li><p>Metal GPU</p></li>
+</ol>
+<p>If we use ARM NEON instructions to accelerate the sgemm kernel on the
+single core of the M1 Max, It can achieve a <a
+target="_blank" rel="noopener" href="https://github.com/pigirons/conv3x3_m1">performance of around 102
+GFLOPS</a>. But if use AMX instructions it can <a
+target="_blank" rel="noopener" href="https://github.com/corsix/amx/blob/main/fma.md#performance-m1-max">achieve
+1475 GFLOPS</a>!</p>
+<p>In this article, I will introduce how you can leverage the AMX
+instructions to unlock the potential performance of Apple Silicon. And
+the all code I used in <a
+target="_blank" rel="noopener" href="https://github.com/zhen8838/leetcode/blob/main/meta_program/test_amx.cpp">here</a>
+(Verified on M2 Pro). This article refers to the <a
+target="_blank" rel="noopener" href="https://github.com/corsix/amx">work of Peter Cawley et al</a>,
+which contains more instructions and usage methods.</p>
+<span id="more"></span>
+<h1 id="overview">1. Overview</h1>
+<p>A good one-image summary of AMX is the following figure from
+abandoned patent US20180074824A1. Consider a 32x32 grid of compute
+units, where each unit can perform 16-bit multiply-accumulate, or a 2x2
+subgrid of units can perform 32-bit multiply-accumulate, or a 4x4
+subgrid can perform 64-bit multiply-accumulate. To feed this grid, there
+is a pool of X registers each containing 32 16-bit elements (or 16
+32-bit elements, or 8 64-bit elements) and a pool of Y registers
+similarly containing 32 16-bit elements (or 16 32-bit elements, or 8
+64-bit elements). A single instruction can perform a full outer product:
+multiply every element of an X register with every element of a Y
+register, and accumulate with the Z element in the corresponding
+position.</p>
+<figure>
+<img src="/2024/04/23/mac-amx_en/fig2.png"
+alt="abandoned patent US20180074824A1" />
+<figcaption aria-hidden="true">abandoned patent
+US20180074824A1</figcaption>
+</figure>
+<p>AMX provides LDX/LDY, FMA, LDZ/SDZ instructions. Where FMA has Matrix
+Mode and Vector Mode corresponding to outer product and inner product
+computation methods. The following two diagrams illustrate how the inner
+and outer products are calculated:</p>
+<figure>
+<img src="/2024/04/23/mac-amx_en/inner%20product.png"
+alt="inner product" />
+<figcaption aria-hidden="true">inner product</figcaption>
+</figure>
+<figure>
+<img src="/2024/04/23/mac-amx_en/outer%20product.png"
+alt="outer product" />
+<figcaption aria-hidden="true">outer product</figcaption>
+</figure>
+<p>According to the diagrams, we know that the outer product has more
+hardware parallelism than the inner product.</p>
+<h1 id="minimum-workflow">2. Minimum Workflow</h1>
+<p>We also use one-image to explain the minimum calculation process and
+register specifications in AMX.</p>
+<p>First, the X/Y register pool, each of them has 8 registers with a
+width of 64 bytes, can store data of type fp16/32/64 or i8/16/32,
+u8/16/32. Then there is the Z register pool, which has 64 registers with
+a width of 64 bytes, used to store the result of the outer product or
+inner product of the X/Y registers.</p>
+<p>According to the description in the first section, the 2x2 cell
+subgrid performs 32-bit product, so 16 registers are required to perform
+the outer product, so the 64 registers are divided into 16 groups, and
+the interval of each group is 4 (64/16), that is, the outer product
+results are not stored continuously by register. (⚠️ AMX only supports
+loading and storage from main memory, and cannot be loaded and stored
+through general purpose registers/vector registers)</p>
+<figure>
+<img src="/2024/04/23/mac-amx_en/workflow.png" alt="minimum workflow" />
+<figcaption aria-hidden="true">minimum workflow</figcaption>
+</figure>
+<p>We can obtain a partial sum stored in the Z register pool through the
+outer product execution, and then we can switch the K dimension(matmul's
+reduction dimension) to accumulate the partial sum to get the complete
+result.</p>
+<figure>
+<img src="/2024/04/23/mac-amx_en/workflow%20switch%20k.png"
+alt="switch reduction dimension" />
+<figcaption aria-hidden="true">switch reduction dimension</figcaption>
+</figure>
+<p>Reload the tile from A/B matrices of different K dimensions and then
+accumulate results to the same Z register group.</p>
+<p>Or iterate the M/N dimension. In this example, we keep M unchanged
+and iterate to the next N. Meanwhile, we need to choose another group in
+the Z register pool to store the partial sum of the current M/N.</p>
+<figure>
+<img src="/2024/04/23/mac-amx_en/workflow%20switch%20n.png"
+alt="switch n dimension" />
+<figcaption aria-hidden="true">switch n dimension</figcaption>
+</figure>
+<h1 id="theoretical-performance-metrics">3. Theoretical Performance
+Metrics</h1>
+<p>In order to make good use of AMX, we must first understand the
+relevant metrics of AMX. So I have designed several tests to verify the
+theoretical performance metrics.</p>
+<h2 id="computation-performance">3.1 Computation Performance</h2>
+<p>From the previous section, we clearly know that the Z register group
+is divided into 16 groups in float32 datatype, and a computation results
+in a column in each group, so the ALU is actually divided into 4 groups.
+Here is to verify the peak performance of different ALU number
+enabled:</p>
+<figure class="highlight cpp"><table><tr><td class="code"><pre><span class="line">perf_func = [&amp;z_nums]() &#123;</span><br><span class="line">  <span class="keyword">constexpr</span> <span class="type">uint64_t</span> a = <span class="built_in">matfp</span>().<span class="built_in">dtype_mode</span>(<span class="type">matfp_dtype_t</span>::f32f32).<span class="built_in">z_row</span>(<span class="number">0</span>);</span><br><span class="line">  <span class="keyword">constexpr</span> <span class="type">uint64_t</span> b = <span class="built_in">matfp</span>().<span class="built_in">dtype_mode</span>(<span class="type">matfp_dtype_t</span>::f32f32).<span class="built_in">z_row</span>(<span class="number">1</span>);</span><br><span class="line">  <span class="keyword">constexpr</span> <span class="type">uint64_t</span> c = <span class="built_in">matfp</span>().<span class="built_in">dtype_mode</span>(<span class="type">matfp_dtype_t</span>::f32f32).<span class="built_in">z_row</span>(<span class="number">2</span>);</span><br><span class="line">  <span class="keyword">constexpr</span> <span class="type">uint64_t</span> d = <span class="built_in">matfp</span>().<span class="built_in">dtype_mode</span>(<span class="type">matfp_dtype_t</span>::f32f32).<span class="built_in">z_row</span>(<span class="number">3</span>);</span><br><span class="line">  <span class="built_in">AMX_MATFP</span>(a);</span><br><span class="line">  <span class="keyword">if</span> (z_nums &gt; <span class="number">1</span>)</span><br><span class="line">    <span class="built_in">AMX_MATFP</span>(b);</span><br><span class="line">  <span class="keyword">if</span> (z_nums &gt; <span class="number">2</span>)</span><br><span class="line">    <span class="built_in">AMX_MATFP</span>(c);</span><br><span class="line">  <span class="keyword">if</span> (z_nums &gt; <span class="number">3</span>)</span><br><span class="line">    <span class="built_in">AMX_MATFP</span>(d);</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>The results as following:</p>
+<table>
+<thead>
+<tr class="header">
+<th>ALU Nums</th>
+<th>Gflop/s</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>405.530</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>826.912</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>1244.570</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td>1666.952</td>
+</tr>
+</tbody>
+</table>
+<p>This shows that although each group of ALUs is individually
+configured and emitted, but they can be executed in parallel.</p>
+<h2 id="load-performance">3.2 Load Performance</h2>
+<p>Here is the load performance test case I designed, where
+<code>reg nums</code> represents the whether to load data into the X and
+Y register at the same time. <code>near</code> indicates whether to read
+consecutive addresses in memory. In M2 Pro, the l1 Dcache size is
+<code>65536</code>, so <code>K</code> is designed larger than the l1
+Dcache size. When <code>near == 0</code>, it needs to cross double cache
+size to load data. <code>width</code> indicates the number of registers
+used to read at once, The maximum number is 4 in M2.</p>
+<figure class="highlight cpp"><table><tr><td class="code"><pre><span class="line"><span class="keyword">constexpr</span> <span class="type">size_t</span> K = (<span class="number">65536</span> / <span class="number">4</span> / (<span class="number">16</span> * <span class="number">4</span>)) * <span class="number">4</span>;</span><br><span class="line"><span class="type">float</span> M[K * <span class="number">2</span>][<span class="number">16</span> * <span class="number">4</span>]&#123;&#125;;</span><br><span class="line"><span class="type">float</span> N[K * <span class="number">2</span>][<span class="number">16</span> * <span class="number">4</span>]&#123;&#125;;</span><br><span class="line">perf_func = [&amp;M, &amp;N, &amp;near, &amp;reg_num, &amp;x_width, &amp;y_width]() &#123;</span><br><span class="line">  <span class="keyword">auto</span> ldx = <span class="built_in">ldxy</span>().<span class="built_in">register_index</span>(<span class="number">0</span>);</span><br><span class="line">  <span class="keyword">auto</span> ldy = <span class="built_in">ldxy</span>().<span class="built_in">register_index</span>(<span class="number">0</span>);</span><br><span class="line">  <span class="keyword">if</span> (x_width &gt;= <span class="number">2</span>)</span><br><span class="line">    ldx = ldx.<span class="built_in">multiple</span>();</span><br><span class="line">  <span class="keyword">if</span> (x_width &gt;= <span class="number">4</span>)</span><br><span class="line">    ldx = ldx.<span class="built_in">multiple_four</span>();</span><br><span class="line">  <span class="keyword">if</span> (reg_num &gt; <span class="number">1</span>) &#123;</span><br><span class="line">    <span class="keyword">if</span> (y_width &gt;= <span class="number">2</span>)</span><br><span class="line">      ldy = ldy.<span class="built_in">multiple</span>();</span><br><span class="line">    <span class="keyword">if</span> (y_width &gt;= <span class="number">4</span>)</span><br><span class="line">      ldy = ldy.<span class="built_in">multiple_four</span>();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (near) &#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">size_t</span> i = <span class="number">0</span>; i &lt; K; i++) &#123;</span><br><span class="line">      <span class="built_in">AMX_LDX</span>(ldx.<span class="built_in">bind</span>(M[i]));</span><br><span class="line">      <span class="keyword">if</span> (reg_num &gt; <span class="number">1</span>) &#123;</span><br><span class="line">        <span class="built_in">AMX_LDY</span>(ldy.<span class="built_in">bind</span>(N[i]));</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">size_t</span> i = <span class="number">0</span>; i &lt; K / <span class="number">2</span>; i++) &#123;</span><br><span class="line">      <span class="keyword">for</span> (<span class="type">size_t</span> j = <span class="number">0</span>; j &lt; <span class="number">2</span>; j++) &#123;</span><br><span class="line">        <span class="built_in">AMX_LDX</span>(ldx.<span class="built_in">bind</span>(M[j * K + i]));</span><br><span class="line">        <span class="keyword">if</span> (reg_num &gt; <span class="number">1</span>) &#123;</span><br><span class="line">          <span class="built_in">AMX_LDY</span>(ldy.<span class="built_in">bind</span>(N[j * K + i]));</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>After running this test, we have collected load performance metrics
+table:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Reg Nums</th>
+<th>Near</th>
+<th>X Width</th>
+<th>Y Width</th>
+<th>GB/s</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td>0</td>
+<td>87.1489</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td>1</td>
+<td>2</td>
+<td>0</td>
+<td>213.164</td>
+</tr>
+<tr class="odd">
+<td>1</td>
+<td>1</td>
+<td>4</td>
+<td>0</td>
+<td>456.332</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td>0</td>
+<td>1</td>
+<td>0</td>
+<td>120.796</td>
+</tr>
+<tr class="odd">
+<td>1</td>
+<td>0</td>
+<td>2</td>
+<td>0</td>
+<td>260.115</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td>0</td>
+<td>4</td>
+<td>0</td>
+<td>483.285</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td>134.33</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>1</td>
+<td>1</td>
+<td>2</td>
+<td>162.084</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>1</td>
+<td>1</td>
+<td>4</td>
+<td>297.15</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>1</td>
+<td>2</td>
+<td>1</td>
+<td>201.658</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>1</td>
+<td>2</td>
+<td>2</td>
+<td>214.772</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>1</td>
+<td>2</td>
+<td>4</td>
+<td>350.554</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>1</td>
+<td>4</td>
+<td>1</td>
+<td>384.614</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>1</td>
+<td>4</td>
+<td>2</td>
+<td>349.528</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>1</td>
+<td>4</td>
+<td>4</td>
+<td>476.722</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>0</td>
+<td>1</td>
+<td>1</td>
+<td>130.604</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>0</td>
+<td>1</td>
+<td>2</td>
+<td>163.91</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>0</td>
+<td>1</td>
+<td>4</td>
+<td>254.922</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>0</td>
+<td>2</td>
+<td>1</td>
+<td>195.612</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>0</td>
+<td>2</td>
+<td>2</td>
+<td>213.61</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>0</td>
+<td>2</td>
+<td>4</td>
+<td>298.603</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>0</td>
+<td>4</td>
+<td>1</td>
+<td>310.308</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>0</td>
+<td>4</td>
+<td>2</td>
+<td>302.767</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>0</td>
+<td>4</td>
+<td>4</td>
+<td>325.193</td>
+</tr>
+</tbody>
+</table>
+<p>We can get some analysis from the table above. 1. increasing the
+<code>width</code> can double the bandwidth, so this is a free lunch. 2.
+consecutive reads is fast than non-consecutive reads, indicating we
+should optimize the data layout. 3. loading two registers and loading
+two groups in same register pool at the same time also not result in
+bandwidth reduction, indicating that the A/B matrix can be loaded at the
+same time.</p>
+<h2 id="store-performance">3.3 Store Performance</h2>
+<p>Same like above, in store performance test also has
+<code>reg_num</code>,<code>near</code>,<code>width</code> options. But
+notice that the <code>STZ</code> instruction will store 16 groups from
+the Z register pool at the same time.</p>
+<figure class="highlight cpp"><table><tr><td class="code"><pre><span class="line"><span class="keyword">constexpr</span> <span class="type">size_t</span> K = (<span class="number">65536</span> / <span class="number">4</span> / (<span class="number">16</span> * <span class="number">4</span>)) * <span class="number">2</span>;</span><br><span class="line"><span class="type">float</span> CNear[<span class="number">16</span>][<span class="number">16</span> * <span class="number">4</span>]&#123;&#125;;</span><br><span class="line"><span class="type">float</span> C[<span class="number">16</span>][K]&#123;&#125;;</span><br><span class="line">perf_func = [&amp;C, &amp;CNear, &amp;near, &amp;z_num, &amp;width]() &#123;</span><br><span class="line">  <span class="keyword">auto</span> ldst = width == <span class="number">2</span> ? <span class="built_in">ldstz</span>().<span class="built_in">multiple</span>() : <span class="built_in">ldstz</span>();</span><br><span class="line">  <span class="keyword">for</span> (<span class="type">size_t</span> z = <span class="number">0</span>; z &lt; z_num; z++) &#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">size_t</span> m = <span class="number">0</span>; m &lt; <span class="number">16</span>; m++) &#123;</span><br><span class="line">      <span class="built_in">AMX_STZ</span>(ldst.<span class="built_in">row_index</span>(m * <span class="number">4</span> + z * width)</span><br><span class="line">                  .<span class="built_in">bind</span>(near ? CNear[m] + <span class="number">16</span> * z * width</span><br><span class="line">                              : C[m] + <span class="number">16</span> * z * width));</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>Result:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Reg Nums</th>
+<th>Near</th>
+<th>Width</th>
+<th>GB/s</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td>10.3769</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td>1</td>
+<td>2</td>
+<td>8.93052</td>
+</tr>
+<tr class="odd">
+<td>1</td>
+<td>0</td>
+<td>1</td>
+<td>12.9423</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td>0</td>
+<td>2</td>
+<td>12.3377</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>1</td>
+<td>1</td>
+<td>5.69731</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>1</td>
+<td>2</td>
+<td>12.3658</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>0</td>
+<td>1</td>
+<td>7.55092</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>0</td>
+<td>2</td>
+<td>13.0133</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>1</td>
+<td>1</td>
+<td>6.58085</td>
+</tr>
+<tr class="even">
+<td>3</td>
+<td>0</td>
+<td>1</td>
+<td>11.4118</td>
+</tr>
+<tr class="odd">
+<td>4</td>
+<td>1</td>
+<td>1</td>
+<td>8.8847</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td>0</td>
+<td>1</td>
+<td>9.85956</td>
+</tr>
+</tbody>
+</table>
+<p>It can be found that using multiple registers does not increase
+bandwidth, indicating that it is basically a serial store, but twice the
+width can still effectively increase bandwidth. However, the overall
+speed is several times slower than computing and loading, indicating
+that we cannot load and store Z frequently.</p>
+<h1 id="design-micro-kernel">4. Design Micro Kernel</h1>
+<p>Based on the previous section's observation, we can trying to build
+the sgemm kernel. For efficiency, we design it according to the
+bottom-up principle. First we need to design a micro kernel that makes
+full use of the hardware's computing performance, then call the micro
+kernel in blocks to ensure the overall performance.</p>
+<p>Review the most basic calculation process, load a column of M, load a
+row of N, and calculate a piece of MxN. it is obvious that the X/Y/Z
+register pool is not fully filled, especially the Z register pool, which
+means that only <span class="math inline">\(\frac{1}{4}\)</span> is
+used, so the first goal is to use it up.</p>
+<p><img src="/2024/04/23/mac-amx_en/micro%20kernel%200.png" /></p>
+<p>From the previous section, we know the maximum theoretical
+computational performance and bandwidth, so according to the formula we
+can calculate how many nanoseconds are needed for computation and
+loading.: <span class="math display">\[
+\begin{aligned}
+Compute Time  &amp;= \frac{FLOPs}{GFLOPS}\ ~NanoSeconds\\
+Load Time  &amp;= \frac{Bytes}{GBS}\ ~NanoSeconds
+\end{aligned}
+\]</span></p>
+<p>Next we design different calculation strategies based on the
+performance data and formulas.</p>
+<h2 id="strategy-1-load-1m-and-4n">4.1 Strategy 1: Load 1M and 4N</h2>
+<p>In my M2 Pro, AMX can load up to <code>4 * 64</code> bytes at a time,
+so it can load <code>1</code> group of M and <code>4</code> groups of N,
+and use the full 4 ALU for to get <code>M * 4N</code>, and then switch
+different K in the next loop. In total, it is loaded once and calculated
+4 times, and can only be cached once more due to the size limit of the X
+register pool.</p>
+<p><img src="/2024/04/23/mac-amx_en/micro%20kernel%201.png" /></p>
+<p>Looking up the table, we can see that the loading bandwidth is 297.15
+GB/s, and the compute time and load time are respectively: <span
+class="math display">\[
+\begin{aligned}
+FLOPs &amp;= 2 * M * N * ALU = 2 * 16 * 16 * 4 = 2048 \\
+Compute Time &amp;= FLOPs / 1666  = 1.229~NanoSeconds \\
+Bytes &amp;= (1 * M + 4 * N) * 4 = 320 \\
+Load Time &amp;= Bytes / 297.15 = 1.076~NanoSeconds
+\end{aligned}
+\]</span></p>
+<p>The difference between they times is only <code>0.15</code>ns, which
+is not enough to load the data required for the next loop, causing the
+ALU to fail to working continuously.</p>
+<h2 id="strategy-2-load-4m-and-1n">4.2 Strategy 2: Load 4M and 1N</h2>
+<p>Similar to the previous strategy, but there is an additional problem
+here that the column direction of the A matrix is non-contiguous, and it
+needs to be transposed <code>4</code> times M by the CPU before loading,
+so it is not considered.</p>
+<p><img src="/2024/04/23/mac-amx_en/micro%20kernel%202.png" /></p>
+<h2 id="strategy-3-load-2m-and-2n">4.3 Strategy 3: Load 2M and 2N</h2>
+<p>In order to balance the storage usage of X/Y registers, we consider
+loading M/N of the same size, that is, loading 2 groups. We can
+calculate <code>4</code> times to get the <code>2M * 2N</code>
+output.</p>
+<p>In my M2 Pro, the maximum loaded data is <code>4 * 64</code> bytesat
+a time, so if load 2M and 2N of two different K, it means that can
+actually be calculated <code>8</code> times, maximizing the utilization
+of ALU. And we can prepare the next loop's input data in a free space of
+the X/Y register pools.</p>
+<p><img src="/2024/04/23/mac-amx_en/micro%20kernel%203.png" /></p>
+<p>Look up the table and get a bandwidth of 476.722 GB/s, which is taken
+into the formula to calculate: <span class="math display">\[
+\begin{aligned}
+FLOPs &amp;= 2 * M * N * 4 * 2 = 4096 \\
+Compute Time &amp;= FLOPs / 1666  = 2.458~NanoSeconds \\
+Bytes &amp;= (4 * M + 4 * N) * 4 \\
+Load Time &amp;= Bytes / 476.722 = 1.074~NanoSeconds
+\end{aligned}
+\]</span></p>
+<p>The compute time minus the load time is <code>1.384</code> ns, which
+is greater than the next load time of <code>1.074</code> ns, indicating
+that we can perfectly stream the computation, thus exerting the maximum
+computing performance.</p>
+<h2 id="verify-strategy-3">4.4 Verify Strategy 3</h2>
+<p>In order to achieve peak data loading performance, we need to
+optimize the layout of the matrix, that is, pack the A/B matrix with a
+width of 32, so that the loading is satisfied with contiguous memory
+reading, and the result of <code>2 * M * N</code> can be calculated at
+one time. The specific iteration flowchart is as follows:</p>
+<p><img
+src="/2024/04/23/mac-amx_en/micro%20kernel%203%20detail.png" /></p>
+<p>For the simplicity, I assume that M/K/N are multiples of the smallest
+computing unit, and the input A/B matrix is required to be optimized for
+layout. Here is the code: <figure class="highlight cpp"><table><tr><td class="code"><pre><span class="line"><span class="keyword">template</span> &lt;<span class="type">bool</span> LoadC, <span class="type">bool</span> StoreC, <span class="type">size_t</span> KTile, <span class="type">size_t</span> M, <span class="type">size_t</span> N&gt;</span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">gepdot</span><span class="params">(<span class="type">size_t</span> curM, <span class="type">size_t</span> curK, <span class="type">size_t</span> curN,</span></span></span><br><span class="line"><span class="params"><span class="function">            <span class="type">const</span> <span class="type">float</span> packedA[KTile][<span class="number">32</span>], <span class="type">const</span> <span class="type">float</span> packedB[KTile][<span class="number">32</span>],</span></span></span><br><span class="line"><span class="params"><span class="function">            <span class="type">float</span> C[M][N])</span> </span>&#123;</span><br><span class="line">  <span class="built_in">static_assert</span>(KTile % <span class="number">4</span> == <span class="number">0</span>, <span class="string">&quot;not support k%4!=0&quot;</span>);</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">if</span> <span class="title">constexpr</span> <span class="params">(LoadC)</span> </span>&#123;</span><br><span class="line">    <span class="comment">// load acc value.</span></span><br><span class="line">    <span class="keyword">for</span> (<span class="type">size_t</span> om = <span class="number">0</span>; om &lt; <span class="number">2</span>; om++) &#123;</span><br><span class="line">      <span class="keyword">for</span> (<span class="type">size_t</span> m = <span class="number">0</span>; m &lt; <span class="number">16</span>; m++) &#123;</span><br><span class="line">        <span class="built_in">AMX_STZ</span>(</span><br><span class="line">            <span class="built_in">ldstz</span>().<span class="built_in">row_index</span>(m * <span class="number">4</span> + om * <span class="number">2</span>).<span class="built_in">multiple</span>().<span class="built_in">bind</span>(C[om * <span class="number">16</span> + m]));</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">for</span> (<span class="type">size_t</span> k = curK; k &lt; curK + KTile; k += <span class="number">4</span>) &#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">size_t</span> ok = k; ok &lt; k + <span class="number">4</span>; ok += <span class="number">2</span>) &#123;</span><br><span class="line">      <span class="comment">// load [m0,k0], [m1,k0], [m0,k1], [m1,k1]</span></span><br><span class="line">      <span class="built_in">AMX_LDY</span>(<span class="built_in">ldxy</span>().<span class="built_in">register_index</span>(<span class="number">0</span>).<span class="built_in">multiple</span>().<span class="built_in">multiple_four</span>().<span class="built_in">bind</span>(</span><br><span class="line">          (<span class="type">void</span> *)packedA[ok]));</span><br><span class="line">      <span class="comment">// load [n0,k0], [n1,k0], [n0,k1], [n1,k1]</span></span><br><span class="line">      <span class="built_in">AMX_LDX</span>(<span class="built_in">ldxy</span>().<span class="built_in">register_index</span>(<span class="number">0</span>).<span class="built_in">multiple</span>().<span class="built_in">multiple_four</span>().<span class="built_in">bind</span>(</span><br><span class="line">          (<span class="type">void</span> *)packedB[ok]));</span><br><span class="line">      <span class="comment">// compute 8 times.</span></span><br><span class="line">      <span class="comment">// [[m0,n0],[m0,n1],</span></span><br><span class="line">      <span class="comment">//  [m1,n0],[m1,n1]]</span></span><br><span class="line">      <span class="keyword">for</span> (<span class="type">size_t</span> ik = ok; ik &lt; ok + <span class="number">2</span>; ik++) &#123;</span><br><span class="line">        <span class="keyword">auto</span> fma = ik == <span class="number">0</span> ? <span class="built_in">fma32</span>().<span class="built_in">skip_z</span>() : <span class="built_in">fma32</span>();</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">size_t</span> m = <span class="number">0</span>; m &lt; <span class="number">2</span>; m++) &#123;</span><br><span class="line">          <span class="keyword">for</span> (<span class="type">size_t</span> n = <span class="number">0</span>; n &lt; <span class="number">2</span>; n++) &#123;</span><br><span class="line">            <span class="built_in">AMX_FMA32</span>(fma.<span class="built_in">z_row</span>(m * <span class="number">2</span> + n)</span><br><span class="line">                          .<span class="built_in">y_offset</span>((ik - ok) * <span class="number">2</span> * <span class="number">16</span> * <span class="number">4</span> + m * <span class="number">16</span> * <span class="number">4</span>)</span><br><span class="line">                          .<span class="built_in">x_offset</span>((ik - ok) * <span class="number">2</span> * <span class="number">16</span> * <span class="number">4</span> + n * <span class="number">16</span> * <span class="number">4</span>));</span><br><span class="line">          &#125;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// last time need store C.</span></span><br><span class="line">  <span class="function"><span class="keyword">if</span> <span class="title">constexpr</span> <span class="params">(StoreC)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">size_t</span> om = <span class="number">0</span>; om &lt; <span class="number">2</span>; om++) &#123;</span><br><span class="line">      <span class="keyword">for</span> (<span class="type">size_t</span> m = <span class="number">0</span>; m &lt; <span class="number">16</span>; m++) &#123;</span><br><span class="line">        <span class="built_in">AMX_STZ</span>(</span><br><span class="line">            <span class="built_in">ldstz</span>().<span class="built_in">row_index</span>(m * <span class="number">4</span> + om * <span class="number">2</span>).<span class="built_in">multiple</span>().<span class="built_in">bind</span>(C[om * <span class="number">16</span> + m]));</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>Tested under the conditions of
+<code>M = 16 * 2, K = 8192, N = 16 * 2</code>, we obtained
+<code>1632.13 Gflop/s</code> performance, reaching <code>97.9%</code> of
+the peak performance.</p>
+<figure class="highlight sh"><table><tr><td class="code"><pre><span class="line">[----------] 1 <span class="built_in">test</span> from test_amx</span><br><span class="line">[ RUN      ] test_amx.test_gepdot</span><br><span class="line">             Gflop/s: 1632.13</span><br><span class="line">[       OK ] test_amx.test_gepdot (1032 ms)</span><br><span class="line">[----------] 1 <span class="built_in">test</span> from test_amx (1032 ms total)</span><br></pre></td></tr></table></figure>
+<h1 id="design-online-packing-scheme">5. Design Online Packing
+Scheme</h1>
+<p>If the layout of the input data is not optimized, then it is
+necessary to perform packing while considering the calculation. And in
+the example in the previous section, I did not set a large M and N, but
+in reality, I need to switch M and N, which brings another tiling size
+problem.</p>
+<p>If we are using SIMD instructions for calculation, then a good online
+packing solution has been proposed in the paper <a
+target="_blank" rel="noopener" href="https://dl.acm.org/doi/10.1145/1356052.1356053">Anatomy of
+High-Performance Matrix Multiplication</a>:</p>
+<p><img src="/2024/04/23/mac-amx_en/goto%20blas.png" /></p>
+<p>this paper choose the <code>GEBP</code> as micro kernel, However,
+<code>GEBP</code> requires repeated load and store of the C matrix. For
+CPU general purpose registers, its bandwidth is large enough. As long as
+<code>Nr</code> is much larger than <code>Kc</code>, the memory overhead
+of accessing the C matrix can be averaged.</p>
+<p>But for AMX instructions, the bandwidth of the Z registers is only a
+few tenths of the bandwidth of the X/Y register, which obviously cannot
+be averaged. Therefore, we have to design a new method.</p>
+<p><img src="/2024/04/23/mac-amx_en/gebp.png" /></p>
+<p>So I have implemented a simple two-level tiling strategy here. The
+loop <code>N</code> in <code>M</code> is used to reuse the A matrix, and
+the <code>K</code> dimension is placed in the innermost layer of the
+loop to fit the <code>gepdot</code> kernel.</p>
+<p>At the same time, a small piece of <code>A</code> is packed in each
+<code>KTile</code> and cached, so that recompute can be avoided when
+looping <code>N</code>:</p>
+<p><img src="/2024/04/23/mac-amx_en/gepdot%20general.png" /></p>
+<p>final code: <figure class="highlight cpp"><table><tr><td class="code"><pre><span class="line"><span class="keyword">auto</span> matmul = [&amp;]() -&gt; <span class="type">void</span> &#123;</span><br><span class="line">  <span class="keyword">constexpr</span> <span class="type">size_t</span> KTile = <span class="number">32</span>, MTile = <span class="number">32</span>, NTile = <span class="number">32</span>;</span><br><span class="line">  <span class="keyword">for</span> (<span class="type">size_t</span> mo = <span class="number">0</span>; mo &lt; M; mo += MTile) &#123;</span><br><span class="line">    <span class="type">float</span> PackedA[K][MTile];</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">size_t</span> no = <span class="number">0</span>; no &lt; N; no += NTile) &#123;</span><br><span class="line">      <span class="keyword">for</span> (<span class="type">size_t</span> ko = <span class="number">0</span>; ko &lt; K; ko += KTile) &#123;</span><br><span class="line">        <span class="comment">// each time pack local innertile.</span></span><br><span class="line">        <span class="keyword">if</span> (no == <span class="number">0</span>) &#123;</span><br><span class="line">          <span class="keyword">for</span> (<span class="type">size_t</span> mi = <span class="number">0</span>; mi &lt; MTile; mi++) &#123;</span><br><span class="line">            <span class="keyword">for</span> (<span class="type">size_t</span> i = ko; i &lt; ko + KTile; i++) &#123;</span><br><span class="line">              PackedA[i][mi] = A[mo + mi][i];</span><br><span class="line">            &#125;</span><br><span class="line">          &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="built_in">gepdot_general</span>&lt;KTile, M, K, N&gt;(<span class="literal">false</span>, (ko + KTile == K), mo, ko, no,</span><br><span class="line">                                        PackedA + ko, B, C);</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure></p>
+<p>The test performance achieved 70% of the performance of the libraries
+provided by Apple CBlas:</p>
+<figure class="highlight sh"><table><tr><td class="code"><pre><span class="line">[ RUN      ] test_amx.test_gepdot_general</span><br><span class="line">gepdot general   Gflop/s: 998.291</span><br><span class="line">cblas_sgemm      Gflop/s: 1398.95</span><br><span class="line">[       OK ] test_amx.test_gepdot_general (582 ms)</span><br></pre></td></tr></table></figure>
+<p>In fact, the strategy 3 is the bottleneck of the calculation,
+according to the theoretical performance value of the calculation of the
+pipeline after the actual remaining about "0.3ns" time can be assigned
+to the data load. Theoretically it can hidden the A matrix packing
+overhead, so as to reach the peak performance. So Beyond the Apple
+closed source library this challenging task to the readers 👻.</p>
+<h1 id="further-questions">5. Further Questions</h1>
+<p>I have designed a test case to check whether AMX loading data updates
+the cache: <figure class="highlight cpp"><table><tr><td class="code"><pre><span class="line"><span class="keyword">constexpr</span> <span class="type">size_t</span> K = (<span class="number">65536</span> / <span class="number">4</span> / (<span class="number">16</span> * <span class="number">2</span>)) * <span class="number">8</span>; <span class="comment">/* 65536 是cache size */</span></span><br><span class="line"><span class="type">float</span> N[<span class="number">1</span>][<span class="number">16</span> * <span class="number">2</span>]&#123;&#125;;</span><br><span class="line"><span class="type">float</span> M[K][<span class="number">16</span> * <span class="number">2</span>]&#123;&#125;;</span><br><span class="line"><span class="type">float</span> *C = (<span class="type">float</span> *)<span class="built_in">malloc</span>(K * <span class="number">65536</span>);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">auto</span> func1 = [&amp;N]() &#123;</span><br><span class="line">  <span class="keyword">for</span> (<span class="type">size_t</span> i = <span class="number">0</span>; i &lt; K; i++) &#123;</span><br><span class="line">    <span class="built_in">AMX_LDX</span>(<span class="built_in">ldxy</span>().<span class="built_in">multiple</span>().<span class="built_in">register_index</span>(<span class="number">0</span>).<span class="built_in">bind</span>((<span class="type">void</span> *)N[<span class="number">0</span>]));</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">auto</span> func2 = [&amp;M]() &#123;</span><br><span class="line">  <span class="keyword">for</span> (<span class="type">size_t</span> i = <span class="number">0</span>; i &lt; K; i++) &#123;</span><br><span class="line">    <span class="built_in">AMX_LDX</span>(<span class="built_in">ldxy</span>().<span class="built_in">multiple</span>().<span class="built_in">register_index</span>(<span class="number">0</span>).<span class="built_in">bind</span>((<span class="type">void</span> *)M[i]));</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">auto</span> func3 = [&amp;C]() &#123;</span><br><span class="line">  <span class="keyword">for</span> (<span class="type">size_t</span> i = <span class="number">0</span>; i &lt; K; i++) &#123;</span><br><span class="line">    <span class="built_in">AMX_LDX</span>(</span><br><span class="line">        <span class="built_in">ldxy</span>().<span class="built_in">multiple</span>().<span class="built_in">register_index</span>(<span class="number">0</span>).<span class="built_in">bind</span>((<span class="type">void</span> *)(C + i * K)));</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>Where <code>func1</code> always loads data at the same location,
+<code>func2</code> loads consecutive data in sequence, and
+<code>func3</code> loads data with a stride greater than l1 Dcache size
+each time. The final result is as follows: <figure class="highlight sh"><table><tr><td class="code"><pre><span class="line">func1: 29.9743 GB/s</span><br><span class="line">func2: 219.201 GB/s</span><br><span class="line">func3: 9.74711 GB/s</span><br></pre></td></tr></table></figure></p>
+<p>The results of <code>func2</code> and <code>func3</code> indicate
+that the l1 Dcache is also important for AMX, but I can't understand the
+difference between <code>func1</code> and <code>func2</code>.
+Theoretically, the accessed data should be cached in the cache, but from
+the results, it seems that the cached data is the data behind the
+current loading address. This question may require readers who know more
+about the architecture to answer.</p>
+</div><div class="tags"><ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Apple/" rel="tag">Apple</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E6%8C%87%E4%BB%A4%E9%9B%86/" rel="tag">指令集</a></li></ul></div><div class="post-nav"><a class="pre" href="/2024/04/23/mac-amx/">探索AMX: 解锁Apple Silicon隐藏性能</a><a class="next" href="/2024/03/13/macos-bundle/">macos中bundle的使用</a></div><script src="https://utteranc.es/client.js" repo="zhen8838/zhen8838.github.io" issue-term="url" theme="github-light" crossorigin="anonymous" async></script></div></div></div><div class="pure-u-1-4 hidden_mid_and_down"><div id="sidebar"><div class="widget"><form class="search-form" action="//www.google.com/search" method="get" accept-charset="utf-8" target="_blank"><input type="text" name="q" maxlength="20" placeholder="Search"/><input type="hidden" name="sitesearch" value="https://zhen8838.github.io"/></form></div><div class="widget"><div class="author-info"><a class="info-avatar" href="/about/" title="关于"><img class="nofancybox" src="/img/avatar.png"/></a><p>A Believing Heart Is Your Magic</p><a class="info-icon" href="mailto:597323109@qq.com" title="Email" target="_blank" style="margin-inline:5px"> <i class="fa fa-envelope-square" style="margin-inline:5px"></i></a><a class="info-icon" href="https://github.com/zhen8838" title="Github" target="_blank" style="margin-inline:5px"> <i class="fa fa-github-square" style="margin-inline:5px"></i></a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-folder-o"> 分类</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/%E4%BD%93%E7%B3%BB%E7%BB%93%E6%9E%84/">体系结构</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E5%B7%A5%E5%85%B7%E4%BD%BF%E7%94%A8/">工具使用</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">操作系统</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/">数据结构</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/">机器学习</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0/">深度学习</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E7%94%9F%E6%B4%BB/">生活</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80/">编程语言</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E7%BC%96%E8%AF%91%E5%99%A8/">编译器</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E8%BE%B9%E7%BC%98%E8%AE%A1%E7%AE%97/">边缘计算</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E8%BF%90%E7%AD%B9%E5%AD%A6/">运筹学</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-star-o"> 标签</i></div><div class="tagcloud"><a href="/tags/Linux/" style="font-size: 15px;">Linux</a> <a href="/tags/%E6%A0%91/" style="font-size: 15px;">树</a> <a href="/tags/C/" style="font-size: 15px;">C</a> <a href="/tags/Tensorflow/" style="font-size: 15px;">Tensorflow</a> <a href="/tags/%E6%A0%91%E8%8E%93%E6%B4%BE/" style="font-size: 15px;">树莓派</a> <a href="/tags/%E8%93%9D%E7%89%99/" style="font-size: 15px;">蓝牙</a> <a href="/tags/Matlab/" style="font-size: 15px;">Matlab</a> <a href="/tags/%E9%81%97%E4%BC%A0%E7%AE%97%E6%B3%95/" style="font-size: 15px;">遗传算法</a> <a href="/tags/SVM/" style="font-size: 15px;">SVM</a> <a href="/tags/%E9%93%BE%E8%A1%A8/" style="font-size: 15px;">链表</a> <a href="/tags/%E5%8D%8A%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0/" style="font-size: 15px;">半监督学习</a> <a href="/tags/GAN/" style="font-size: 15px;">GAN</a> <a href="/tags/%E6%A6%82%E7%8E%87%E8%AE%BA/" style="font-size: 15px;">概率论</a> <a href="/tags/Python/" style="font-size: 15px;">Python</a> <a href="/tags/%E9%A6%99%E6%A9%99%E6%B4%BE/" style="font-size: 15px;">香橙派</a> <a href="/tags/%E8%B8%A9%E5%9D%91%E7%BB%8F%E9%AA%8C/" style="font-size: 15px;">踩坑经验</a> <a href="/tags/LeetCode/" style="font-size: 15px;">LeetCode</a> <a href="/tags/Qt/" style="font-size: 15px;">Qt</a> <a href="/tags/%E5%A4%9A%E9%9D%A2%E4%BD%93%E6%A8%A1%E5%9E%8B/" style="font-size: 15px;">多面体模型</a> <a href="/tags/%E5%90%8E%E7%AB%AF%E4%BC%98%E5%8C%96/" style="font-size: 15px;">后端优化</a> <a href="/tags/Ampl/" style="font-size: 15px;">Ampl</a> <a href="/tags/%E5%9B%BE%E5%83%8F%E5%A4%84%E7%90%86/" style="font-size: 15px;">图像处理</a> <a href="/tags/K210/" style="font-size: 15px;">K210</a> <a href="/tags/%E4%BA%8C%E5%88%86%E6%B3%95/" style="font-size: 15px;">二分法</a> <a href="/tags/%E7%A7%91%E5%AD%A6%E4%B8%8A%E7%BD%91/" style="font-size: 15px;">科学上网</a> <a href="/tags/%E6%8D%9F%E5%A4%B1%E5%87%BD%E6%95%B0/" style="font-size: 15px;">损失函数</a> <a href="/tags/cmake/" style="font-size: 15px;">cmake</a> <a href="/tags/CPP/" style="font-size: 15px;">CPP</a> <a href="/tags/Conan/" style="font-size: 15px;">Conan</a> <a href="/tags/OrTools/" style="font-size: 15px;">OrTools</a> <a href="/tags/CSharp/" style="font-size: 15px;">CSharp</a> <a href="/tags/%E6%95%B0%E6%8D%AE%E5%A2%9E%E5%BC%BA/" style="font-size: 15px;">数据增强</a> <a href="/tags/VAE/" style="font-size: 15px;">VAE</a> <a href="/tags/%E8%81%9A%E7%B1%BB%E6%96%B9%E6%B3%95/" style="font-size: 15px;">聚类方法</a> <a href="/tags/CostModel/" style="font-size: 15px;">CostModel</a> <a href="/tags/Vscode/" style="font-size: 15px;">Vscode</a> <a href="/tags/%E5%A3%B0%E9%9F%B3%E4%BF%A1%E5%8F%B7%E5%A4%84%E7%90%86/" style="font-size: 15px;">声音信号处理</a> <a href="/tags/TVM/" style="font-size: 15px;">TVM</a> <a href="/tags/%E5%8A%A8%E6%80%81shape/" style="font-size: 15px;">动态shape</a> <a href="/tags/%E4%B8%AD%E7%AB%AF%E4%BC%98%E5%8C%96/" style="font-size: 15px;">中端优化</a> <a href="/tags/Equality-Saturation/" style="font-size: 15px;">Equality Saturation</a> <a href="/tags/stm32/" style="font-size: 15px;">stm32</a> <a href="/tags/Keras/" style="font-size: 15px;">Keras</a> <a href="/tags/Halide/" style="font-size: 15px;">Halide</a> <a href="/tags/DSL/" style="font-size: 15px;">DSL</a> <a href="/tags/%E5%A0%86%E6%A0%88/" style="font-size: 15px;">堆栈</a> <a href="/tags/%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B/" style="font-size: 15px;">大语言模型</a> <a href="/tags/llama/" style="font-size: 15px;">llama</a> <a href="/tags/%E5%BD%92%E4%B8%80%E5%8C%96/" style="font-size: 15px;">归一化</a> <a href="/tags/Makefile/" style="font-size: 15px;">Makefile</a> <a href="/tags/%E5%85%83%E5%AD%A6%E4%B9%A0/" style="font-size: 15px;">元学习</a> <a href="/tags/%E6%A8%A1%E6%9D%BF%E5%85%83%E7%BC%96%E7%A8%8B/" style="font-size: 15px;">模板元编程</a> <a href="/tags/mindspore/" style="font-size: 15px;">mindspore</a> <a href="/tags/LLM/" style="font-size: 15px;">LLM</a> <a href="/tags/tvm/" style="font-size: 15px;">tvm</a> <a href="/tags/mlir/" style="font-size: 15px;">mlir</a> <a href="/tags/%E6%80%A7%E8%83%BD%E5%BB%BA%E6%A8%A1/" style="font-size: 15px;">性能建模</a> <a href="/tags/mxnet/" style="font-size: 15px;">mxnet</a> <a href="/tags/Nand2Tetris/" style="font-size: 15px;">Nand2Tetris</a> <a href="/tags/ncnn/" style="font-size: 15px;">ncnn</a> <a href="/tags/Numpy/" style="font-size: 15px;">Numpy</a> <a href="/tags/PCB/" style="font-size: 15px;">PCB</a> <a href="/tags/%E5%A7%BF%E6%80%81%E4%BC%B0%E8%AE%A1/" style="font-size: 15px;">姿态估计</a> <a href="/tags/%E4%BA%BA%E8%84%B8%E6%A3%80%E6%B5%8B/" style="font-size: 15px;">人脸检测</a> <a href="/tags/%E7%A5%9E%E7%BB%8F%E7%BD%91%E7%BB%9C%E9%87%8F%E5%8C%96/" style="font-size: 15px;">神经网络量化</a> <a href="/tags/Yolo/" style="font-size: 15px;">Yolo</a> <a href="/tags/Pytorch/" style="font-size: 15px;">Pytorch</a> <a href="/tags/NB-IOT/" style="font-size: 15px;">NB-IOT</a> <a href="/tags/Retinaface/" style="font-size: 15px;">Retinaface</a> <a href="/tags/%E7%9B%AE%E6%A0%87%E6%A3%80%E6%B5%8B/" style="font-size: 15px;">目标检测</a> <a href="/tags/%E6%8C%87%E4%BB%A4%E9%9B%86/" style="font-size: 15px;">指令集</a> <a href="/tags/%E6%8E%92%E5%BA%8F/" style="font-size: 15px;">排序</a> <a href="/tags/%E7%BB%9F%E8%AE%A1%E5%AD%A6%E4%B9%A0%E6%96%B9%E6%B3%95/" style="font-size: 15px;">统计学习方法</a> <a href="/tags/%E4%BA%BA%E8%84%B8%E8%AF%86%E5%88%AB/" style="font-size: 15px;">人脸识别</a> <a href="/tags/%E4%BC%98%E5%8C%96%E5%99%A8/" style="font-size: 15px;">优化器</a> <a href="/tags/%E5%90%B4%E6%81%A9%E8%BE%BE%E8%AF%BE%E7%A8%8B/" style="font-size: 15px;">吴恩达课程</a> <a href="/tags/WordCloud/" style="font-size: 15px;">WordCloud</a> <a href="/tags/Zhihu/" style="font-size: 15px;">Zhihu</a> <a href="/tags/git/" style="font-size: 15px;">git</a> <a href="/tags/%E5%9B%9B%E8%BD%B4%E9%A3%9E%E8%A1%8C%E5%99%A8/" style="font-size: 15px;">四轴飞行器</a> <a href="/tags/%E8%B5%84%E6%BA%90%E6%B1%87%E6%80%BB/" style="font-size: 15px;">资源汇总</a> <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F/" style="font-size: 15px;">分布式</a> <a href="/tags/%E6%97%A0%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0/" style="font-size: 15px;">无监督学习</a> <a href="/tags/Apple/" style="font-size: 15px;">Apple</a> <a href="/tags/Jittor/" style="font-size: 15px;">Jittor</a> <a href="/tags/Tiramisu/" style="font-size: 15px;">Tiramisu</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-file-o"> 最近文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2024/11/07/mesh-matmul/">分布式存储架构下的矩阵乘与编译器</a></li><li class="post-list-item"><a class="post-list-link" href="/2024/08/08/mlc-tutorial/">机器学习编译概念科普</a></li><li class="post-list-item"><a class="post-list-link" href="/2024/08/08/benchmark-notes/">benchmark的经验与技巧</a></li><li class="post-list-item"><a class="post-list-link" href="/2024/06/14/ampl-learn/">Ampl学习</a></li><li class="post-list-item"><a class="post-list-link" href="/2024/05/08/constraints-solver-internals/">Constraints Solver Internals</a></li><li class="post-list-item"><a class="post-list-link" href="/2024/04/30/model-driven-optimization/">Model Driven Optimization</a></li><li class="post-list-item"><a class="post-list-link" href="/2024/04/23/mac-amx/">探索AMX: 解锁Apple Silicon隐藏性能</a></li><li class="post-list-item"><a class="post-list-link" href="/2024/04/23/mac-amx_en/">Explore AMX instructions: Unlock the performance of Apple Silicon</a></li><li class="post-list-item"><a class="post-list-link" href="/2024/03/13/macos-bundle/">macos中bundle的使用</a></li><li class="post-list-item"><a class="post-list-link" href="/2024/01/11/affine-fusion/">Affine Fusion Pass浅析</a></li></ul></div></div></div><div class="pure-u-1 pure-u-md-3-4"><div id="footer">Copyright © 2024 <a href="/." rel="nofollow">Zheng's Notes.</a> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a><a rel="nofollow" target="_blank" href="https://github.com/tufu9441/maupassant-hexo"> Theme</a> by<a rel="nofollow" target="_blank" href="https://github.com/pagecho"> Cho.</a></div></div></div><a class="show" id="rocket" href="#top"></a><script type="text/javascript" src="/js/totop.js?v=1.0.0" async></script><script type="text/javascript" src="//lib.baomitu.com/fancybox/latest/jquery.fancybox.min.js"></script><script type="text/javascript" src="/js/fancybox.js?v=1.0.0"></script><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/fancybox/latest/jquery.fancybox.min.css"><script type="text/javascript" src="/js/copycode.js?v=1.0.0" successtext="复制成功！"></script><link rel="stylesheet" type="text/css" href="/css/copycode.css?v=1.0.0"><script type="text/x-mathjax-config">MathJax.Hub.Config({
+  tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+  });
+</script><script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-MML-AM_CHTML" async></script><script type="text/javascript" src="/js/codeblock-resizer.js?v=1.0.0"></script><script type="text/javascript" src="/js/smartresize.js?v=1.0.0"></script></div></body></html>

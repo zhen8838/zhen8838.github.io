@@ -1,0 +1,253 @@
+```puml
+@startuml
+abstract class Object {
+}
+
+class BaseExprNode {
+  + Span span
+}
+
+BaseExprNode -|> Object
+
+class DLDataType {
+  - uint8_t code
+  - uint8_t bits
+  - uint16_t lanes
+}
+
+class DataType {
+  - DLDataType data_
+}
+
+class PrimExprNode {
+  + DataType dtype
+}
+
+PrimExprNode -|> BaseExprNode
+PrimExprNode *-- DataType
+DataType *-- DLDataType
+
+note left of DLDataType
+与halide一致
+endnote
+
+note left of PrimExprNode
+用于低层级代码优化以及整数分析.
+endnote
+
+package Relay {
+  class RelayExprNode {
+    + Type checked_type_
+    + Optional<ObjectRef> struct_info_
+    + ObjectRef virtual_device_
+  }
+
+  RelayExprNode -|> BaseExprNode
+
+
+  class GlobalVarNode {
+
+  }
+
+  class BaseFuncNode {
+
+  }
+
+  class OpNode {
+
+  }
+
+  GlobalVarNode -|> RelayExprNode
+  BaseFuncNode -|> RelayExprNode
+  OpNode -|> RelayExprNode
+
+  note left of RelayExprNode
+  支持Tensor Types/functions
+  /ADT作为一等公民.
+  endnote
+}
+
+package Relax {
+  class StructInfoNode {
+    + Span span
+  }
+  
+  StructInfoNode -|> Object
+
+  note left of StructInfoNode
+  存储在编译期的结构化信息, 比如静态类型和运行时shape等, 也可以存储expr
+  endnote
+
+  class CallNode {
+    + RelayExpr op
+    + Array<RelayExpr> args
+    + Array<StructInfo> sinfo_args
+  }
+  
+  CallNode *-- RelayExprNode
+  CallNode *-- StructInfoNode
+
+  class LeafExprNode {
+
+  }
+
+  LeafExprNode -|> RelayExprNode
+
+  note left of LeafExprNode
+  所有非函数的表达式基类
+  endnote
+
+  class ShapeExprNode {
+    + Array<PrimExpr> 
+  }
+ 
+  note left of ShapeExprNode
+  支持表达式构造shape.
+  end note
+
+  ShapeExprNode -|> LeafExprNode
+  ShapeExprNode *-- PrimExprNode
+
+  note left of ShapeExprNode
+  支持表达式构造shape.
+  end note
+
+  class VarNode {
+    + Id vid
+  }
+
+  VarNode -|> LeafExprNode
+
+  class DataflowVarNode {
+    
+  }
+  
+  note left of DataflowVarNode
+  标记数据流的变量
+  end note
+
+  DataflowVarNode -|> VarNode
+
+
+  class BindingNode {
+    + Var var
+    + Span span
+  }
+
+  BindingNode -|> Object
+  BindingNode *-- VarNode
+
+  class BindingBlockNode {
+    + Span span
+    + Array<Binding> bindings
+  }
+
+  BindingBlockNode -|> Object 
+  BindingBlockNode *-- BindingNode
+
+
+  class MatchCastNode {
+    + Expr value
+    + StructInfo struct_info
+  }
+
+  MatchCastNode -|> BindingNode
+
+  note left of MatchCastNode 
+  重新匹配struct info的值
+  end note
+
+  class VarBindingNode {
+    + Expr value
+  }
+
+  VarBindingNode -|> BindingNode
+
+  note left of VarBindingNode
+  绑定Var到value.
+  end note
+
+
+  class DataflowBlockNode {
+  }
+
+  DataflowBlockNode -|> BindingBlock
+
+  class SeqExprNode {
+    + Array<BindingBlock> blocks
+    + Expr body
+  }
+
+  SeqExprNode -|> RelayExprNode
+  SeqExprNode *-- BindingBlockNode
+
+  class FunctionNode {
+    + Array<Var> params
+    + Expr body
+    + StructInfo ret_struct_info
+    + bool is_pure
+  }
+
+  FunctionNode -|> BaseFuncNode
+  FunctionNode *-- VarNode
+  FunctionNode *-- StructInfoNode
+
+  class ObjectStructInfoNode {
+    
+  }
+
+  ObjectStructInfoNode -|> StructInfoNode
+
+  class PrimStructInfoNode {
+    + Optional<PrimExpr> value
+    + DataType dtype
+  }
+
+  note left of PrimStructInfoNode
+  基于prim expr的info
+  end note
+
+  PrimStructInfoNode -|> StructInfoNode
+
+  class ShapeStructInfoNode {
+    + Optional<Array<PrimExpr>> values
+    + int ndim
+  }
+
+  note left of ShapeStructInfoNode
+  shape的info
+  end note
+
+  ShapeStructInfoNode -|> StructInfoNode
+
+  class TensorStructInfoNode {
+    + Optional<Expr> shape
+    + Optional<VDevice> vdevice
+    + DataType dtype
+    + int ndim
+  }
+
+  TensorStructInfoNode -|> StructInfoNode
+
+  class TupleStructInfoNode {
+    + Array<StructInfo> fields
+  }
+
+  TupleStructInfoNode -|> StructInfoNode
+  TupleStructInfoNode *-- StructInfoNode
+
+  class FuncStructInfoNode {
+    + Optional<Array<StructInfo>> params
+    + StructInfo ret
+    + Optional<StructInfoDeriveFunc> derive_func
+  }
+
+  FuncStructInfoNode -|> StructInfoNode
+  FuncStructInfoNode *-- StructInfoNode
+
+
+
+}
+
+@enduml
+```

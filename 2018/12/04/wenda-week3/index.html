@@ -1,0 +1,284 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description"><title>机器学习作业第三周 | Zheng's Notes</title><link rel="stylesheet" type="text/css" href="/css/style.css?v=1.0.0"><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/normalize/latest/normalize.min.css"><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/pure/latest/pure-min.min.css"><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/pure/latest/grids-responsive-min.min.css"><link rel="stylesheet" href="//lib.baomitu.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//lib.baomitu.com/jquery/latest/jquery.min.js"></script><link rel="icon" mask="" sizes="any" href="/favicon.ico"><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"><script type="text/javascript" src="//lib.baomitu.com/clipboard.js/latest/clipboard.min.js"></script><script type="text/javascript" src="//lib.baomitu.com/toastr.js/latest/toastr.min.js"></script><link rel="stylesheet" href="//lib.baomitu.com/toastr.js/latest/toastr.min.css"><meta name="generator" content="Hexo 7.0.0"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">机器学习作业第三周</h1><a id="logo" href="/.">Zheng's Notes</a><p class="description"></p></div><div id="nav-menu"><a class="current" href="/."><i class="fa fa-home"> 首页</i></a><a href="/archives/"><i class="fa fa-archive"> 归档</i></a><a href="/about/"><i class="fa fa-user"> 关于</i></a></div></div><div class="pure-g" id="layout"><div class="pure-u-1 pure-u-md-3-4"><div class="content_container"><div class="post"><h1 class="post-title">机器学习作业第三周</h1><div class="post-meta">2018-12-04<span> | </span><span class="category"><a href="/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/">机器学习</a></span><span class="post-time"><span class="post-meta-item-text"> | </span><span class="post-meta-item-icon"><i class="fa fa-keyboard-o"></i><span class="post-count"> 3.1k</span><span class="post-meta-item-text"> 字</span></span></span><span class="post-time"> | <span class="post-meta-item-icon"><i class="fa fa-clock-o"></i><span class="post-count"> 18</span><span class="post-meta-item-text"> 分钟</span></span></span></div><div class="post-content"><p>这个是第三周的作业,是一个多类的正则化逻辑回归和神经网络.</p>
+<span id="more"></span>
+<h1 id="注意要点">注意要点:</h1>
+<ol type="1">
+<li><p><strong>正则化损失函数</strong></p>
+<p><span class="math display">\[ \begin{aligned}
+    J(\Theta)&amp;=\frac{1}{2m}\sum^m_{i=1}[((h_\theta(x)-y)^2+\lambda\sum^n_{j=1}\theta_j^2)]\\
+\end{aligned} \]</span></p>
+<p>这里的<code>j</code>是从<code>1</code>开始的,但是这个<span
+class="math inline">\(X*\Theta=\theta_0+\theta_1x_1+\theta_2x_2+\ldots\theta_nx_n\)</span>,为了补全这个<span
+class="math inline">\(\theta_0\)</span>需要将<span
+class="math inline">\(\Theta\)</span>矩阵加一行.</p></li>
+<li><p><strong>正则化梯度函数</strong></p>
+<p><span class="math display">\[ \begin{aligned}
+    \theta_0&amp;=\theta_0-a\frac{1}{m}\sum^m_{i=1}((h_\theta(x^i)-y^i)x_0^i)
+\\
+    \theta_j&amp;=\theta_j-a[\frac{1}{m}\sum^m_{i=1}((h_\theta(x^i)-y^i)x_j^i)+\frac{\lambda}{m}\theta_j]
+\\
+\end{aligned} \]</span></p>
+<p>这里<span
+class="math inline">\(\theta_0\)</span>在正则化的时候没有了,所以在乘上<span
+class="math inline">\(\Theta\)</span>的时候要<code>copy</code>一个新的<code>temp</code>让其第一行为<code>0</code>.</p></li>
+<li><p><strong>维度匹配</strong></p>
+<p>因为<span
+class="math inline">\(\Theta\)</span>加了一行,所以我的<code>X</code>也要加一列,用于矩阵运算维数匹配.</p></li>
+<li><p><strong>预测下标问题</strong></p>
+<p>因为<code>python</code>的数组下标为<code>0</code>开始,但是手写数字识别的数据是从<code>matlab</code>中来的,是从<code>1</code>开始的,所以在<code>argmax</code>之后需要将返回值加<code>1</code>.</p></li>
+</ol>
+<h1 id="ex3.py">ex3.py</h1>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">from</span> numpy.core <span class="keyword">import</span> *</span><br><span class="line"><span class="keyword">from</span> numpy <span class="keyword">import</span> c_</span><br><span class="line"><span class="keyword">from</span> numpy.random <span class="keyword">import</span> *</span><br><span class="line"><span class="keyword">import</span> matplotlib.pyplot <span class="keyword">as</span> plt</span><br><span class="line"><span class="keyword">from</span> fucs3 <span class="keyword">import</span> displayData, lrCostFunction,\</span><br><span class="line">    oneVsAll, costFuc, gradFuc, predictOneVsAll</span><br><span class="line"><span class="keyword">from</span> scipy.io <span class="keyword">import</span> loadmat</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">&quot;__main__&quot;</span>:</span><br><span class="line">    <span class="comment"># Machine Learning Online Class - Exercise 3 | Part 1: One-vs-all</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">#  Instructions</span></span><br><span class="line">    <span class="comment">#  ------------</span></span><br><span class="line">    <span class="comment">#</span></span><br><span class="line">    <span class="comment">#  This file contains code that helps you get started on the</span></span><br><span class="line">    <span class="comment">#  linear exercise. You will need to complete the following functions</span></span><br><span class="line">    <span class="comment">#  in this exericse:</span></span><br><span class="line">    <span class="comment">#</span></span><br><span class="line">    <span class="comment">#     lrCostFunction.m (logistic regression cost function)</span></span><br><span class="line">    <span class="comment">#     oneVsAll.m</span></span><br><span class="line">    <span class="comment">#     predictOneVsAll.m</span></span><br><span class="line">    <span class="comment">#     predict.m</span></span><br><span class="line">    <span class="comment">#</span></span><br><span class="line">    <span class="comment">#  For this exercise, you will not need to change any code in this file,</span></span><br><span class="line">    <span class="comment">#  or any other files other than those mentioned above.</span></span><br><span class="line">    <span class="comment">#</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># Initialization</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># Setup the parameters you will use for this part of the exercise</span></span><br><span class="line">    input_layer_size = <span class="number">400</span>  <span class="comment"># 20x20 Input Images of Digits</span></span><br><span class="line">    num_labels = <span class="number">10</span>          <span class="comment"># 10 labels, from 1 to 10</span></span><br><span class="line">    <span class="comment"># (note that we have mapped &quot;0&quot; to label 10)</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># =========== Part 1: Loading and Visualizing Data =============</span></span><br><span class="line">    <span class="comment">#  We start the exercise by first loading and visualizing the dataset.</span></span><br><span class="line">    <span class="comment">#  You will be working with a dataset that contains handwritten digits.</span></span><br><span class="line">    <span class="comment">#</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># Load Training Data</span></span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27;Loading and Visualizing Data ...&#x27;</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># training data stored in arrays X, y</span></span><br><span class="line">    data = loadmat(<span class="string">&#x27;machine_learning_exam/week3/ex3data1.mat&#x27;</span>)</span><br><span class="line">    X = data[<span class="string">&#x27;X&#x27;</span>]  <span class="comment"># type:ndarray</span></span><br><span class="line">    y = data[<span class="string">&#x27;y&#x27;</span>]  <span class="comment"># type:ndarray</span></span><br><span class="line"></span><br><span class="line">    m = size(X, <span class="number">0</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># Randomly select 100 data points to display</span></span><br><span class="line">    rand_indices = choice(m, <span class="number">100</span>)</span><br><span class="line">    sel = X[rand_indices, :]</span><br><span class="line">    displayData(sel)</span><br><span class="line"></span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27;Program paused. Press enter to continue.&#x27;</span>)</span><br><span class="line">    <span class="comment"># # pause</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># ============ Part 2a: Vectorize Logistic Regression ============</span></span><br><span class="line">    <span class="comment">#  In this part of the exercise, you will reuse your logistic regression</span></span><br><span class="line">    <span class="comment">#  code from the last exercise. You task here is to make sure that your</span></span><br><span class="line">    <span class="comment">#  regularized logistic regression implementation is vectorized. After</span></span><br><span class="line">    <span class="comment">#  that, you will implement one-vs-all classification for the handwritten</span></span><br><span class="line">    <span class="comment">#  digit dataset.</span></span><br><span class="line">    <span class="comment">#</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># Test case for lrCostFunction</span></span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27;Testing lrCostFunction() with regularization&#x27;</span>)</span><br><span class="line"></span><br><span class="line">    theta_t = array([-<span class="number">2.</span>, - <span class="number">1.</span>, <span class="number">1.</span>, <span class="number">2.</span>]).reshape(-<span class="number">1</span>, <span class="number">1</span>)</span><br><span class="line">    <span class="comment"># [ones((5, 1)) reshape(1:15, 5, 3)/10]</span></span><br><span class="line">    X_t = c_[ones((<span class="number">5</span>, <span class="number">1</span>)), arange(</span><br><span class="line">        <span class="number">1</span>, <span class="number">16</span>, dtype=<span class="built_in">float</span>).reshape((<span class="number">5</span>, <span class="number">3</span>), order=<span class="string">&#x27;F&#x27;</span>)/<span class="number">10</span>]</span><br><span class="line">    y_t = array([<span class="number">1.</span>, <span class="number">0.</span>, <span class="number">1.</span>, <span class="number">0.</span>, <span class="number">1.</span>]).reshape(-<span class="number">1</span>, <span class="number">1</span>)</span><br><span class="line">    lambda_t = <span class="number">3</span></span><br><span class="line">    <span class="comment"># print(&#x27;theta&#x27;, theta_t)</span></span><br><span class="line">    <span class="comment"># print(&#x27;x&#x27;, X_t)</span></span><br><span class="line">    <span class="comment"># print(&#x27;y&#x27;, y_t)</span></span><br><span class="line">    J, grad = lrCostFunction(theta_t, X_t, y_t, lambda_t)</span><br><span class="line"></span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27;Cost: &#123;&#125;&#x27;</span>.<span class="built_in">format</span>(J))</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27;Expected cost: 2.534819&#x27;</span>)</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27;Gradients:&#x27;</span>)</span><br><span class="line">    <span class="built_in">print</span>(grad)</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27;Expected gradients:&#x27;</span>)</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27; 0.146561 -0.548558 0.724722 1.398003&#x27;</span>)</span><br><span class="line"></span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27;Program paused. Press enter to continue.&#x27;</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># # ============ Part 2b: One-vs-All Training ============</span></span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27;Training One-vs-All Logistic Regression...&#x27;</span>)</span><br><span class="line"></span><br><span class="line">    lamda = <span class="number">0.1</span></span><br><span class="line"></span><br><span class="line">    all_theta = oneVsAll(X, y, num_labels, lamda)</span><br><span class="line"></span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27;Program paused. Press enter to continue.&#x27;</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># # ================ Part 3: Predict for One-Vs-All ================</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># y是1~10之间的 所以pred要加1</span></span><br><span class="line">    pred = predictOneVsAll(all_theta, X).reshape(-<span class="number">1</span>, <span class="number">1</span>)+<span class="number">1</span></span><br><span class="line"></span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27;Training Set Accuracy: &#123;&#125;%&#x27;</span>.<span class="built_in">format</span>(mean(array(pred == y)) * <span class="number">100</span>))</span><br><span class="line">    plt.show()</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<h2 id="效果">效果</h2>
+<figure>
+<img src="/2018/12/04/wenda-week3/1.png" alt="图像" />
+<figcaption aria-hidden="true">图像</figcaption>
+</figure>
+<p><strong>下面的waring是因为达到我设定的迭代次数</strong></p>
+<figure class="highlight sh"><table><tr><td class="code"><pre><span class="line">➜  Machine_learning /usr/bin/python3 /media/zqh/程序与工程/Python_study/Machine_learning/machine_learning_exam/week3/ex3.py</span><br><span class="line">Loading and Visualizing Data ...</span><br><span class="line">Program paused. Press enter to <span class="built_in">continue</span>.</span><br><span class="line">Testing lrCostFunction() with regularization</span><br><span class="line">Cost: [[2.5348194]]</span><br><span class="line">Expected cost: 2.534819</span><br><span class="line">Gradients:</span><br><span class="line">[[ 0.14656137]</span><br><span class="line"> [-0.54855841]</span><br><span class="line"> [ 0.72472227]</span><br><span class="line"> [ 1.39800296]]</span><br><span class="line">Expected gradients:</span><br><span class="line"> 0.146561 -0.548558 0.724722 1.398003</span><br><span class="line">Program paused. Press enter to <span class="built_in">continue</span>.</span><br><span class="line">Training One-vs-All Logistic Regression...</span><br><span class="line">Warning: Maximum number of iterations has been exceeded.</span><br><span class="line">         Current <span class="keyword">function</span> value: 0.013718</span><br><span class="line">         Iterations: 50</span><br><span class="line">         Function evaluations: 183</span><br><span class="line">         Gradient evaluations: 183</span><br><span class="line">Warning: Maximum number of iterations has been exceeded.</span><br><span class="line">         Current <span class="keyword">function</span> value: 0.056204</span><br><span class="line">         Iterations: 50</span><br><span class="line">         Function evaluations: 141</span><br><span class="line">         Gradient evaluations: 141</span><br><span class="line">Warning: Maximum number of iterations has been exceeded.</span><br><span class="line">         Current <span class="keyword">function</span> value: 0.061957</span><br><span class="line">         Iterations: 50</span><br><span class="line">         Function evaluations: 139</span><br><span class="line">         Gradient evaluations: 139</span><br><span class="line">Warning: Maximum number of iterations has been exceeded.</span><br><span class="line">         Current <span class="keyword">function</span> value: 0.037384</span><br><span class="line">         Iterations: 50</span><br><span class="line">         Function evaluations: 154</span><br><span class="line">         Gradient evaluations: 154</span><br><span class="line">Warning: Maximum number of iterations has been exceeded.</span><br><span class="line">         Current <span class="keyword">function</span> value: 0.064096</span><br><span class="line">         Iterations: 50</span><br><span class="line">         Function evaluations: 131</span><br><span class="line">         Gradient evaluations: 131</span><br><span class="line">Warning: Maximum number of iterations has been exceeded.</span><br><span class="line">         Current <span class="keyword">function</span> value: 0.020031</span><br><span class="line">         Iterations: 50</span><br><span class="line">         Function evaluations: 175</span><br><span class="line">         Gradient evaluations: 175</span><br><span class="line">Warning: Maximum number of iterations has been exceeded.</span><br><span class="line">         Current <span class="keyword">function</span> value: 0.033819</span><br><span class="line">         Iterations: 50</span><br><span class="line">         Function evaluations: 161</span><br><span class="line">         Gradient evaluations: 161</span><br><span class="line">Warning: Maximum number of iterations has been exceeded.</span><br><span class="line">         Current <span class="keyword">function</span> value: 0.085543</span><br><span class="line">         Iterations: 50</span><br><span class="line">         Function evaluations: 130</span><br><span class="line">         Gradient evaluations: 130</span><br><span class="line">Warning: Maximum number of iterations has been exceeded.</span><br><span class="line">         Current <span class="keyword">function</span> value: 0.076294</span><br><span class="line">         Iterations: 50</span><br><span class="line">         Function evaluations: 136</span><br><span class="line">         Gradient evaluations: 136</span><br><span class="line">Warning: Maximum number of iterations has been exceeded.</span><br><span class="line">         Current <span class="keyword">function</span> value: 0.009110</span><br><span class="line">         Iterations: 50</span><br><span class="line">         Function evaluations: 182</span><br><span class="line">         Gradient evaluations: 182</span><br><span class="line">Program paused. Press enter to <span class="built_in">continue</span>.</span><br><span class="line">Training Set Accuracy: 95.12%</span><br></pre></td></tr></table></figure>
+<h1 id="ex3_nn.py">ex3_nn.py</h1>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">from</span> numpy.core <span class="keyword">import</span> *</span><br><span class="line"><span class="keyword">from</span> numpy.matrixlib <span class="keyword">import</span> mat</span><br><span class="line"><span class="keyword">from</span> numpy.random <span class="keyword">import</span> choice, shuffle</span><br><span class="line"><span class="keyword">from</span> scipy.io <span class="keyword">import</span> loadmat</span><br><span class="line"><span class="keyword">import</span> matplotlib.pyplot <span class="keyword">as</span> plt</span><br><span class="line"><span class="keyword">from</span> fucs3 <span class="keyword">import</span> displayData, predict</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">&quot;__main__&quot;</span>:</span><br><span class="line">    <span class="comment"># Machine Learning Online Class - Exercise 3 | Part 2: Neural Networks</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">#  Instructions</span></span><br><span class="line">    <span class="comment">#  ------------</span></span><br><span class="line">    <span class="comment">#</span></span><br><span class="line">    <span class="comment">#  This file contains code that helps you get started on the</span></span><br><span class="line">    <span class="comment">#  linear exercise. You will need to complete the following functions</span></span><br><span class="line">    <span class="comment">#  in this exericse:</span></span><br><span class="line">    <span class="comment">#</span></span><br><span class="line">    <span class="comment">#     lrCostFunction.m (logistic regression cost function)</span></span><br><span class="line">    <span class="comment">#     oneVsAll.m</span></span><br><span class="line">    <span class="comment">#     predictOneVsAll.m</span></span><br><span class="line">    <span class="comment">#     predict.m</span></span><br><span class="line">    <span class="comment">#</span></span><br><span class="line">    <span class="comment">#  For this exercise, you will not need to change any code in this file,</span></span><br><span class="line">    <span class="comment">#  or any other files other than those mentioned above.</span></span><br><span class="line">    <span class="comment">#</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># Setup the parameters you will use for this exercise</span></span><br><span class="line">    input_layer_size = <span class="number">400</span>  <span class="comment"># 20x20 Input Images of Digits</span></span><br><span class="line">    hidden_layer_size = <span class="number">25</span>   <span class="comment"># 25 hidden units</span></span><br><span class="line">    num_labels = <span class="number">10</span>          <span class="comment"># 10 labels, from 1 to 10</span></span><br><span class="line">    <span class="comment"># (note that we have mapped &quot;0&quot; to label 10)</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># =========== Part 1: Loading and Visualizing Data =============</span></span><br><span class="line">    <span class="comment">#  We start the exercise by first loading and visualizing the dataset.</span></span><br><span class="line">    <span class="comment">#  You will be working with a dataset that contains handwritten digits.</span></span><br><span class="line">    <span class="comment">#</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># Load Training Data</span></span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27;Loading and Visualizing Data ...&#x27;</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># training data stored in arrays X, y</span></span><br><span class="line">    data = loadmat(<span class="string">&#x27;machine_learning_exam/week3/ex3data1.mat&#x27;</span>)</span><br><span class="line">    X = data[<span class="string">&#x27;X&#x27;</span>]  <span class="comment"># type:ndarray</span></span><br><span class="line">    y = data[<span class="string">&#x27;y&#x27;</span>]  <span class="comment"># type:ndarray</span></span><br><span class="line"></span><br><span class="line">    m = size(X, <span class="number">0</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># Randomly select 100 data points to display</span></span><br><span class="line">    rand_indices = choice(m, <span class="number">100</span>)</span><br><span class="line">    sel = X[rand_indices, :]</span><br><span class="line">    displayData(sel)</span><br><span class="line">    plt.show()</span><br><span class="line"></span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27;Program paused. Press enter to continue.&#x27;</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># ================ Part 2: Loading Pameters ================</span></span><br><span class="line">    <span class="comment"># In this part of the exercise, we load some pre-initialized</span></span><br><span class="line">    <span class="comment"># neural network parameters.</span></span><br><span class="line"></span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27;Loading Saved Neural Network Parameters ...&#x27;</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># Load the weights into variables Theta1 and Theta2</span></span><br><span class="line">    weightdata = loadmat(<span class="string">&#x27;machine_learning_exam/week3/ex3weights.mat&#x27;</span>)</span><br><span class="line">    Theta1 = weightdata[<span class="string">&#x27;Theta1&#x27;</span>]</span><br><span class="line">    Theta2 = weightdata[<span class="string">&#x27;Theta2&#x27;</span>]</span><br><span class="line">    <span class="comment"># ================= Part 3: Implement Predict =================</span></span><br><span class="line">    <span class="comment">#  After training the neural network, we would like to use it to predict</span></span><br><span class="line">    <span class="comment">#  the labels. You will now implement the &quot;predict&quot; function to use the</span></span><br><span class="line">    <span class="comment">#  neural network to predict the labels of the training set. This lets</span></span><br><span class="line">    <span class="comment">#  you compute the training set accuracy.</span></span><br><span class="line"></span><br><span class="line">    pred = predict(Theta1, Theta2, X)</span><br><span class="line"></span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27;Training Set Accuracy: &#123;&#125;%&#x27;</span>.<span class="built_in">format</span>(mean((pred == y)) * <span class="number">100</span>))</span><br><span class="line"></span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27;Program paused. Press enter to continue.&#x27;</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment">#  To give you an idea of the network&#x27;s output, you can also run</span></span><br><span class="line">    <span class="comment">#  through the examples one at the a time to see what it is predicting.</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">#  Randomly permute examples</span></span><br><span class="line">    rp = arange(m)</span><br><span class="line">    shuffle(rp)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">10</span>):</span><br><span class="line">        <span class="comment"># Display</span></span><br><span class="line">        <span class="built_in">print</span>(<span class="string">&#x27;Displaying Example Image&#x27;</span>)</span><br><span class="line">        displayData(mat(X[rp[i, ], :]))</span><br><span class="line"></span><br><span class="line">        pred = predict(Theta1, Theta2, mat(X[rp[i, ], :]))</span><br><span class="line">        <span class="built_in">print</span>(<span class="string">&#x27;Neural Network Prediction: &#123;&#125; (digit &#123;&#125;)&#x27;</span>.<span class="built_in">format</span>(pred,</span><br><span class="line">                                                                pred % <span class="number">10</span>))</span><br><span class="line">        plt.show()</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<h2 id="效果-1">效果</h2>
+<figure class="highlight sh"><table><tr><td class="code"><pre><span class="line">➜  Machine_learning /usr/bin/python3 /media/zqh/程序与工程/Python_study/Machine_learning/machine_learning_exam/week3/ex3_nn.py</span><br><span class="line">Loading and Visualizing Data ...</span><br><span class="line">Program paused. Press enter to <span class="built_in">continue</span>.</span><br><span class="line">Loading Saved Neural Network Parameters ...</span><br><span class="line">Training Set Accuracy: 97.52%</span><br><span class="line">Program paused. Press enter to <span class="built_in">continue</span>.</span><br><span class="line">Displaying Example Image</span><br><span class="line">Neural Network Prediction: [[8]] (digit [[8]])</span><br><span class="line">Displaying Example Image</span><br><span class="line">Neural Network Prediction: [[5]] (digit [[5]])</span><br><span class="line">Displaying Example Image</span><br><span class="line">Neural Network Prediction: [[10]] (digit [[0]])</span><br><span class="line">Displaying Example Image</span><br><span class="line">Neural Network Prediction: [[5]] (digit [[5]])</span><br><span class="line">Displaying Example Image</span><br><span class="line">Neural Network Prediction: [[10]] (digit [[0]])</span><br><span class="line">Displaying Example Image</span><br><span class="line">Neural Network Prediction: [[8]] (digit [[8]])</span><br><span class="line">Displaying Example Image</span><br><span class="line">Neural Network Prediction: [[6]] (digit [[6]])</span><br><span class="line">Displaying Example Image</span><br><span class="line">Neural Network Prediction: [[10]] (digit [[0]])</span><br><span class="line">Displaying Example Image</span><br><span class="line">Neural Network Prediction: [[2]] (digit [[2]])</span><br><span class="line">Displaying Example Image</span><br><span class="line">Neural Network Prediction: [[3]] (digit [[3]])</span><br></pre></td></tr></table></figure>
+<h1 id="fuc3.py">fuc3.py</h1>
+<p>```python from scipy.optimize import minimize import
+matplotlib.pyplot as plt import numpy as np from scipy.special import
+expit from scipy.optimize import fmin_cg import math</p>
+<p>def displayData(X: np.ndarray, e_width=0): if e_width == 0: e_width =
+int(round(math.sqrt(X.shape[1]))) m, n = X.shape</p>
+<pre><code># 单独一个样本的像素大小
+e_height = int(n/e_width)
+
+# 分割线
+pad = 1
+
+# 整一副图的像素大小
+d_rows = math.floor(math.sqrt(m))
+d_cols = math.ceil(m / d_rows)
+d_array = np.mat(
+    np.ones((pad+d_rows*(e_height+pad), pad + d_cols * (e_width+pad))))
+
+curr_ex = 0
+for j in range(d_rows):
+    for i in range(d_cols):
+        if curr_ex &gt; m:
+            break
+        max_val = np.max(abs(X[curr_ex, :]))
+        d_array[pad+j*(e_height+pad) + 0:pad+j*(e_height+pad) + e_height,
+                pad+i*(e_width+pad)+0:pad+i*(e_width+pad) + e_width] = \
+            X[curr_ex, :].reshape(e_height, e_width)/max_val
+        curr_ex += 1
+    if curr_ex &gt; m:
+        break
+# 转置一下放正
+plt.imshow(d_array.T, cmap=&#39;Greys&#39;)</code></pre>
+<p>def lrCostFunction(theta: np.ndarray, X: np.ndarray, y: np.ndarray,
+lamda): # LRCOSTFUNCTION Compute cost and gradient for logistic
+regression with # regularization # J = LRCOSTFUNCTION(theta, X, y,
+lambda) computes the cost of using # theta as the parameter for
+regularized logistic regression and the # gradient of the cost w.r.t. to
+the parameters.</p>
+<pre><code># Initialize some useful values
+m = y.shape[0]  # number of training examples
+
+# You need to return the following variables correctly
+J = 0
+theta = theta.reshape(-1, 1)
+grad = np.zeros(theta.shape)
+y = np.asfarray(y)  # y转为float array
+
+# ====================== YOUR CODE HERE ======================
+# Instructions: Compute the cost of a particular choice of theta.
+#               You should set J to the cost.
+#               Compute the partial derivatives and set grad to the partial
+#               derivatives of the cost w.r.t. each parameter in theta
+#
+# Hint: The computation of the cost function and gradients can be
+#       efficiently vectorized. For example, consider the computation
+#
+#           sigmoid(X * theta)
+#
+#       Each row of the resulting matrix will contain the value of the
+#       prediction for that example. You can make use of this to vectorize
+#       the cost function and gradient computations.
+#
+# Hint: When computing the gradient of the regularized cost function,
+#       there&#39;re many possible vectorized solutions, but one solution
+#       looks like:
+#           grad = (unregularized gradient for logistic regression)
+#           temp = theta;
+#           temp(1) = 0;   # because we don&#39;t add anything for j = 0
+#           grad = grad + YOUR_CODE_HERE (using the temp variable)
+#
+
+# 把theta的第一行变成0,但是不能改变原来的theta!
+temp = theta.copy()
+temp[0, :] = 0
+
+h = expit(X@theta)  # h:[m,1]
+
+J = np.sum(-y*np.log(h)-(1-y)*np.log(1-h)) / m \
+    + lamda * temp.T@temp / (2*m)
+# 梯度
+grad = (X.T@(h-y)+lamda * temp) / m
+
+# =============================================================
+return J, grad</code></pre>
+<h1
+id="只计算损失用于适配scipy的函数">只计算损失，用于适配scipy的函数</h1>
+<p>def costFuc(theta: np.ndarray, X: np.ndarray, y: np.ndarray, lamda):
+m = y.shape[0] J = 0 theta = theta.reshape(-1, 1) grad =
+np.zeros(theta.shape) y = np.asfarray(y) # y转为float array</p>
+<pre><code># 把theta的第一行变成0,但是不能改变原来的theta!
+temp = theta.copy()
+temp[0, :] = 0
+
+h = expit(X@theta)  # h:[m,1]
+
+J = np.sum(-y*np.log(h)-(1-y)*np.log(1-h)) / m \
+    + lamda * temp.T@temp / (2*m)
+return J</code></pre>
+<h1
+id="只计算梯度用于适配scipy的函数">只计算梯度，用于适配scipy的函数</h1>
+<p>def gradFuc(theta: np.ndarray, X: np.ndarray, y: np.ndarray, lamda):
+m = y.shape[0] J = 0 theta = theta.reshape(-1, 1) grad =
+np.zeros(theta.shape) y = np.asfarray(y) # y转为float array</p>
+<pre><code># 把theta的第一行变成0,但是不能改变原来的theta!
+temp = theta.copy()
+temp[0, :] = 0
+
+h = expit(X@theta)  # h:[m,1]
+
+# 梯度
+grad = (X.T@(h-y)+lamda * temp) / m  # tpye:np.ndarray
+return grad.flatten()</code></pre>
+<p>def oneVsAll(X: np.ndarray, y: np.ndarray, num_labels: np.ndarray,
+lamda): # ONEVSALL trains multiple logistic regression classifiers and
+returns all # the classifiers in a matrix all_theta, where the i-th row
+of all_theta # corresponds to the classifier for label i # [all_theta] =
+ONEVSALL(X, y, num_labels, lambda) trains num_labels # logistic
+regression classifiers and returns each of these classifiers # in a
+matrix all_theta, where the i-th row of all_theta corresponds # to the
+classifier for label i</p>
+<pre><code># Some useful variables
+m, n = X.shape
+
+# You need to return the following variables correctly
+all_theta = np.zeros((num_labels, n+1))
+
+# Add ones to the X data matrix
+X = np.c_[np.ones((m, 1), dtype=float), X]
+
+# ====================== YOUR CODE HERE ======================
+# Instructions: You should complete the following code to train num_labels
+#               logistic regression classifiers with regularization
+#               parameter lambda.
+#
+# Hint: theta(:) will return a column vector.
+#
+# Hint: You can use y == c to obtain a vector of 1&#39;s and 0&#39;s that tell you
+#       whether the ground truth is true/false for this class.
+#
+# Note: For this assignment, we recommend using fmincg to optimize the cost
+#       function. It is okay to use a for-loop (for c = 1:num_labels) to
+#       loop over the different classes.
+#
+#       fmincg works similarly to fminunc, but is more efficient when we
+#       are dealing with large number of parameters.
+#
+# Example Code for fmincg:
+#
+#     # Set Initial theta
+#     initial_theta = zeros(n + 1, 1);
+#
+#     # Set options for fminunc
+#     options = optimset(&#39;GradObj&#39;, &#39;on&#39;, &#39;MaxIter&#39;, 50);
+#
+#     # Run fmincg to obtain the optimal theta
+#     # This function will return theta and the cost
+#     [theta] = ...
+#         fmincg (@(t)(lrCostFunction(t, X, (y == c), lambda)), ...
+#                 initial_theta, options);
+#
+initial_theta = np.zeros((n+1, 1))
+for c in range(1, num_labels+1):
+    all_theta[c-1, :] = fmin_cg(costFuc, initial_theta, gradFuc,
+                                (X, y == c, lamda), maxiter=50)
+
+# =========================================================================
+return all_theta</code></pre>
+<p>def predictOneVsAll(all_theta: np.ndarray, X: np.ndarray): # PREDICT
+Predict the label for a trained one-vs-all classifier. The labels # are
+in the range 1..K, where K = size(all_theta, 1). # p =
+PREDICTONEVSALL(all_theta, X) will return a vector of predictions # for
+each example in the matrix X. Note that X contains the examples in #
+rows. all_theta is a matrix where the i-th row is a trained logistic #
+regression theta vector for the i-th class. You should set p to a vector
+# of values from 1..K (e.g., p = [1; 3; 1; 2] predicts classes 1, 3, 1,
+2 # for 4 examples)</p>
+<pre><code>m = X.shape[0]
+num_labels = all_theta.shape[0]
+
+# You need to return the following variables correctly
+p = np.zeros((m, 1))
+
+# Add ones to the X data matrix
+X = np.c_[np.ones((m, 1), dtype=float), X]
+
+# ====================== YOUR CODE HERE ======================
+# Instructions: Complete the following code to make predictions using
+#               your learned logistic regression parameters (one-vs-all).
+#               You should set p to a vector of predictions (from 1 to
+#               num_labels).
+#
+# Hint: This code can be done all vectorized using the max function.
+#       In particular, the max function can also return the index of the
+#       max element, for more information see &#39;help max&#39;. If your examples
+#       are in rows, then, you can use max(A, [], 2) to obtain the max
+#       for each row.
+#
+# x=[5000,401] theta=[10,401]
+p = np.argmax(expit(X@all_theta.T), axis=1).reshape(-1, 1)+1  # 这里的p是0~9
+
+# =========================================================================
+
+return p</code></pre>
+<p>def predict(Theta1: np.ndarray, Theta2: np.ndarray, X: np.ndarray): #
+PREDICT Predict the label of an input given a trained neural network # p
+= PREDICT(Theta1, Theta2, X) outputs the predicted # label of X given
+the # trained weights of a neural network (Theta1, Theta2)</p>
+<pre><code># Useful values
+m = X.shape[0]
+num_labels = Theta2.shape[0]
+
+# You need to return the following variables correctly
+p = np.zeros((m, 1))
+
+# ====================== YOUR CODE HERE ======================
+# Instructions: Complete the following code to make predictions using
+#               your learned neural network. You should set p to a
+#               vector containing labels between 1 to num_labels.
+#
+# Hint: The max function might come in useful. In particular, the max
+#       function can also return the index of the max element, for more
+#       information see &#39;help max&#39;. If your examples are in rows, then, you
+#       can use max(A, [], 2) to obtain the max for each row.
+#
+
+a_1 = np.c_[np.ones((m, 1), float), X]
+# [5000,401]*[401,25]=[5000,25]
+z_2 = a_1@ Theta1.T
+a_2 = np.c_[np.ones((m, 1), float), expit(z_2)]
+# [5000,26]*[26,10]=[5000,10]
+z_3 = a_2@Theta2.T
+a_3 = expit(z_3)
+
+p = np.argmax(a_3, axis=1).reshape(-1, 1)+1
+# =========================================================================
+
+return p</code></pre>
+<p>``</p>
+<p>`</p>
+</div><div class="tags"><ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E5%90%B4%E6%81%A9%E8%BE%BE%E8%AF%BE%E7%A8%8B/" rel="tag">吴恩达课程</a></li></ul></div><div class="post-nav"><a class="pre" href="/2018/12/08/wenda-week4/">机器学习作业第四周</a><a class="next" href="/2018/12/02/numpyslice/">numpy切片中的坑</a></div><script src="https://utteranc.es/client.js" repo="zhen8838/zhen8838.github.io" issue-term="url" theme="github-light" crossorigin="anonymous" async></script></div></div></div><div class="pure-u-1-4 hidden_mid_and_down"><div id="sidebar"><div class="widget"><form class="search-form" action="//www.google.com/search" method="get" accept-charset="utf-8" target="_blank"><input type="text" name="q" maxlength="20" placeholder="Search"/><input type="hidden" name="sitesearch" value="https://zhen8838.github.io"/></form></div><div class="widget"><div class="author-info"><a class="info-avatar" href="/about/" title="关于"><img class="nofancybox" src="/img/avatar.png"/></a><p>A Believing Heart Is Your Magic</p><a class="info-icon" href="mailto:597323109@qq.com" title="Email" target="_blank" style="margin-inline:5px"> <i class="fa fa-envelope-square" style="margin-inline:5px"></i></a><a class="info-icon" href="https://github.com/zhen8838" title="Github" target="_blank" style="margin-inline:5px"> <i class="fa fa-github-square" style="margin-inline:5px"></i></a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-folder-o"> 分类</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/%E4%BD%93%E7%B3%BB%E7%BB%93%E6%9E%84/">体系结构</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E5%B7%A5%E5%85%B7%E4%BD%BF%E7%94%A8/">工具使用</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">操作系统</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/">数据结构</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/">机器学习</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0/">深度学习</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E7%94%9F%E6%B4%BB/">生活</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80/">编程语言</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E7%BC%96%E8%AF%91%E5%99%A8/">编译器</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E8%BE%B9%E7%BC%98%E8%AE%A1%E7%AE%97/">边缘计算</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E8%BF%90%E7%AD%B9%E5%AD%A6/">运筹学</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-star-o"> 标签</i></div><div class="tagcloud"><a href="/tags/Linux/" style="font-size: 15px;">Linux</a> <a href="/tags/%E6%A0%91/" style="font-size: 15px;">树</a> <a href="/tags/C/" style="font-size: 15px;">C</a> <a href="/tags/Tensorflow/" style="font-size: 15px;">Tensorflow</a> <a href="/tags/%E6%A0%91%E8%8E%93%E6%B4%BE/" style="font-size: 15px;">树莓派</a> <a href="/tags/%E8%93%9D%E7%89%99/" style="font-size: 15px;">蓝牙</a> <a href="/tags/Matlab/" style="font-size: 15px;">Matlab</a> <a href="/tags/%E9%81%97%E4%BC%A0%E7%AE%97%E6%B3%95/" style="font-size: 15px;">遗传算法</a> <a href="/tags/SVM/" style="font-size: 15px;">SVM</a> <a href="/tags/%E9%93%BE%E8%A1%A8/" style="font-size: 15px;">链表</a> <a href="/tags/%E5%8D%8A%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0/" style="font-size: 15px;">半监督学习</a> <a href="/tags/GAN/" style="font-size: 15px;">GAN</a> <a href="/tags/%E6%A6%82%E7%8E%87%E8%AE%BA/" style="font-size: 15px;">概率论</a> <a href="/tags/Python/" style="font-size: 15px;">Python</a> <a href="/tags/%E9%A6%99%E6%A9%99%E6%B4%BE/" style="font-size: 15px;">香橙派</a> <a href="/tags/%E8%B8%A9%E5%9D%91%E7%BB%8F%E9%AA%8C/" style="font-size: 15px;">踩坑经验</a> <a href="/tags/LeetCode/" style="font-size: 15px;">LeetCode</a> <a href="/tags/Qt/" style="font-size: 15px;">Qt</a> <a href="/tags/%E5%A4%9A%E9%9D%A2%E4%BD%93%E6%A8%A1%E5%9E%8B/" style="font-size: 15px;">多面体模型</a> <a href="/tags/%E5%90%8E%E7%AB%AF%E4%BC%98%E5%8C%96/" style="font-size: 15px;">后端优化</a> <a href="/tags/Ampl/" style="font-size: 15px;">Ampl</a> <a href="/tags/%E5%9B%BE%E5%83%8F%E5%A4%84%E7%90%86/" style="font-size: 15px;">图像处理</a> <a href="/tags/K210/" style="font-size: 15px;">K210</a> <a href="/tags/%E4%BA%8C%E5%88%86%E6%B3%95/" style="font-size: 15px;">二分法</a> <a href="/tags/%E7%A7%91%E5%AD%A6%E4%B8%8A%E7%BD%91/" style="font-size: 15px;">科学上网</a> <a href="/tags/%E6%8D%9F%E5%A4%B1%E5%87%BD%E6%95%B0/" style="font-size: 15px;">损失函数</a> <a href="/tags/cmake/" style="font-size: 15px;">cmake</a> <a href="/tags/CPP/" style="font-size: 15px;">CPP</a> <a href="/tags/Conan/" style="font-size: 15px;">Conan</a> <a href="/tags/OrTools/" style="font-size: 15px;">OrTools</a> <a href="/tags/CSharp/" style="font-size: 15px;">CSharp</a> <a href="/tags/%E6%95%B0%E6%8D%AE%E5%A2%9E%E5%BC%BA/" style="font-size: 15px;">数据增强</a> <a href="/tags/VAE/" style="font-size: 15px;">VAE</a> <a href="/tags/%E8%81%9A%E7%B1%BB%E6%96%B9%E6%B3%95/" style="font-size: 15px;">聚类方法</a> <a href="/tags/CostModel/" style="font-size: 15px;">CostModel</a> <a href="/tags/Vscode/" style="font-size: 15px;">Vscode</a> <a href="/tags/%E5%A3%B0%E9%9F%B3%E4%BF%A1%E5%8F%B7%E5%A4%84%E7%90%86/" style="font-size: 15px;">声音信号处理</a> <a href="/tags/TVM/" style="font-size: 15px;">TVM</a> <a href="/tags/%E5%8A%A8%E6%80%81shape/" style="font-size: 15px;">动态shape</a> <a href="/tags/%E4%B8%AD%E7%AB%AF%E4%BC%98%E5%8C%96/" style="font-size: 15px;">中端优化</a> <a href="/tags/Equality-Saturation/" style="font-size: 15px;">Equality Saturation</a> <a href="/tags/stm32/" style="font-size: 15px;">stm32</a> <a href="/tags/Keras/" style="font-size: 15px;">Keras</a> <a href="/tags/Halide/" style="font-size: 15px;">Halide</a> <a href="/tags/DSL/" style="font-size: 15px;">DSL</a> <a href="/tags/%E5%A0%86%E6%A0%88/" style="font-size: 15px;">堆栈</a> <a href="/tags/%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B/" style="font-size: 15px;">大语言模型</a> <a href="/tags/llama/" style="font-size: 15px;">llama</a> <a href="/tags/%E5%BD%92%E4%B8%80%E5%8C%96/" style="font-size: 15px;">归一化</a> <a href="/tags/Makefile/" style="font-size: 15px;">Makefile</a> <a href="/tags/%E5%85%83%E5%AD%A6%E4%B9%A0/" style="font-size: 15px;">元学习</a> <a href="/tags/%E6%A8%A1%E6%9D%BF%E5%85%83%E7%BC%96%E7%A8%8B/" style="font-size: 15px;">模板元编程</a> <a href="/tags/mindspore/" style="font-size: 15px;">mindspore</a> <a href="/tags/LLM/" style="font-size: 15px;">LLM</a> <a href="/tags/tvm/" style="font-size: 15px;">tvm</a> <a href="/tags/mlir/" style="font-size: 15px;">mlir</a> <a href="/tags/%E6%80%A7%E8%83%BD%E5%BB%BA%E6%A8%A1/" style="font-size: 15px;">性能建模</a> <a href="/tags/mxnet/" style="font-size: 15px;">mxnet</a> <a href="/tags/Nand2Tetris/" style="font-size: 15px;">Nand2Tetris</a> <a href="/tags/ncnn/" style="font-size: 15px;">ncnn</a> <a href="/tags/Numpy/" style="font-size: 15px;">Numpy</a> <a href="/tags/PCB/" style="font-size: 15px;">PCB</a> <a href="/tags/%E5%A7%BF%E6%80%81%E4%BC%B0%E8%AE%A1/" style="font-size: 15px;">姿态估计</a> <a href="/tags/%E4%BA%BA%E8%84%B8%E6%A3%80%E6%B5%8B/" style="font-size: 15px;">人脸检测</a> <a href="/tags/%E7%A5%9E%E7%BB%8F%E7%BD%91%E7%BB%9C%E9%87%8F%E5%8C%96/" style="font-size: 15px;">神经网络量化</a> <a href="/tags/Yolo/" style="font-size: 15px;">Yolo</a> <a href="/tags/Pytorch/" style="font-size: 15px;">Pytorch</a> <a href="/tags/NB-IOT/" style="font-size: 15px;">NB-IOT</a> <a href="/tags/Retinaface/" style="font-size: 15px;">Retinaface</a> <a href="/tags/%E7%9B%AE%E6%A0%87%E6%A3%80%E6%B5%8B/" style="font-size: 15px;">目标检测</a> <a href="/tags/%E6%8C%87%E4%BB%A4%E9%9B%86/" style="font-size: 15px;">指令集</a> <a href="/tags/%E6%8E%92%E5%BA%8F/" style="font-size: 15px;">排序</a> <a href="/tags/%E7%BB%9F%E8%AE%A1%E5%AD%A6%E4%B9%A0%E6%96%B9%E6%B3%95/" style="font-size: 15px;">统计学习方法</a> <a href="/tags/%E4%BA%BA%E8%84%B8%E8%AF%86%E5%88%AB/" style="font-size: 15px;">人脸识别</a> <a href="/tags/%E4%BC%98%E5%8C%96%E5%99%A8/" style="font-size: 15px;">优化器</a> <a href="/tags/%E5%90%B4%E6%81%A9%E8%BE%BE%E8%AF%BE%E7%A8%8B/" style="font-size: 15px;">吴恩达课程</a> <a href="/tags/WordCloud/" style="font-size: 15px;">WordCloud</a> <a href="/tags/Zhihu/" style="font-size: 15px;">Zhihu</a> <a href="/tags/git/" style="font-size: 15px;">git</a> <a href="/tags/%E5%9B%9B%E8%BD%B4%E9%A3%9E%E8%A1%8C%E5%99%A8/" style="font-size: 15px;">四轴飞行器</a> <a href="/tags/%E8%B5%84%E6%BA%90%E6%B1%87%E6%80%BB/" style="font-size: 15px;">资源汇总</a> <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F/" style="font-size: 15px;">分布式</a> <a href="/tags/%E6%97%A0%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0/" style="font-size: 15px;">无监督学习</a> <a href="/tags/Apple/" style="font-size: 15px;">Apple</a> <a href="/tags/Jittor/" style="font-size: 15px;">Jittor</a> <a href="/tags/Tiramisu/" style="font-size: 15px;">Tiramisu</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-file-o"> 最近文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2024/11/07/mesh-matmul/">分布式存储架构下的矩阵乘与编译器</a></li><li class="post-list-item"><a class="post-list-link" href="/2024/08/08/mlc-tutorial/">机器学习编译概念科普</a></li><li class="post-list-item"><a class="post-list-link" href="/2024/08/08/benchmark-notes/">benchmark的经验与技巧</a></li><li class="post-list-item"><a class="post-list-link" href="/2024/06/14/ampl-learn/">Ampl学习</a></li><li class="post-list-item"><a class="post-list-link" href="/2024/05/08/constraints-solver-internals/">Constraints Solver Internals</a></li><li class="post-list-item"><a class="post-list-link" href="/2024/04/30/model-driven-optimization/">Model Driven Optimization</a></li><li class="post-list-item"><a class="post-list-link" href="/2024/04/23/mac-amx/">探索AMX: 解锁Apple Silicon隐藏性能</a></li><li class="post-list-item"><a class="post-list-link" href="/2024/04/23/mac-amx_en/">Explore AMX instructions: Unlock the performance of Apple Silicon</a></li><li class="post-list-item"><a class="post-list-link" href="/2024/03/13/macos-bundle/">macos中bundle的使用</a></li><li class="post-list-item"><a class="post-list-link" href="/2024/01/11/affine-fusion/">Affine Fusion Pass浅析</a></li></ul></div></div></div><div class="pure-u-1 pure-u-md-3-4"><div id="footer">Copyright © 2024 <a href="/." rel="nofollow">Zheng's Notes.</a> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a><a rel="nofollow" target="_blank" href="https://github.com/tufu9441/maupassant-hexo"> Theme</a> by<a rel="nofollow" target="_blank" href="https://github.com/pagecho"> Cho.</a></div></div></div><a class="show" id="rocket" href="#top"></a><script type="text/javascript" src="/js/totop.js?v=1.0.0" async></script><script type="text/javascript" src="//lib.baomitu.com/fancybox/latest/jquery.fancybox.min.js"></script><script type="text/javascript" src="/js/fancybox.js?v=1.0.0"></script><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/fancybox/latest/jquery.fancybox.min.css"><script type="text/javascript" src="/js/copycode.js?v=1.0.0" successtext="复制成功！"></script><link rel="stylesheet" type="text/css" href="/css/copycode.css?v=1.0.0"><script type="text/x-mathjax-config">MathJax.Hub.Config({
+  tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+  });
+</script><script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-MML-AM_CHTML" async></script><script type="text/javascript" src="/js/codeblock-resizer.js?v=1.0.0"></script><script type="text/javascript" src="/js/smartresize.js?v=1.0.0"></script></div></body></html>

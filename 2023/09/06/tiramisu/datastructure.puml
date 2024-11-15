@@ -1,0 +1,144 @@
+```puml
+@startuml
+
+enum EType {
+  val
+  var
+  sync
+  op
+  none
+}
+
+class Expr {
+  EType etype
+  Operator op
+  DType dtype
+}
+
+enum Operator {
+  buffer
+  math_op_t
+  allocate
+  free
+  call
+  ...
+}
+
+enum DType {
+  uint8_t
+  ...
+  float32_t
+}
+
+Expr::etype *-- EType  
+Expr::op *-- Operator 
+Expr::dtype *-- DType 
+
+class var {
+
+}
+
+var -|> Expr
+
+note left of var
+  为了定义一些便利的构造函数, 因此派生出var.
+end note
+
+class buffer {
+
+}
+
+
+class computation {
+  isl_map* access
+  buffer* automatically_allocated_buffer
+  expr expression
+  std::vector<isl_ast_expr *> index_expr
+  std::map<std::string, isl_ast_expr *> iterators_map
+  isl_set* iteration_domain
+  isl_map* schedule
+  isl_set *time_processor_domain
+  std::vector<tiramisu::var> iteration_variables;
+  - std::vector<tiramisu::computation *> updates
+}
+
+note left of computation::access
+  computation是论文中所说明的四层IR的主要载体
+end note
+
+note left of computation::automatically_allocated_buffer
+  当不指定buffer时自动分配的buffer
+end note
+
+note left of computation::access
+  映射关系来决定当前计算是如何存储在内存上
+end note
+
+note left of computation::expression
+  表达式, 用于定义计算逻辑
+end note
+
+note left of computation::index_expr
+  利用isl ast expr来计算数组元素索引, 
+  当schedule结束后会被计算
+end note
+
+note left of computation::iterators_map
+  原始迭代变量与新的index表达式的映射
+  类似`{<i0, c0*10+c2>, <i1, c1*10+c3>}`
+end note
+
+note left of computation::iteration_domain
+  当前计算的迭代域, 表示执行顺序.
+end note
+
+note left of computation::schedule
+  当前计算的schedule
+end note
+
+note left of computation::time_processor_domain
+  指定执行的逻辑时间和执行计算的处理器
+end note
+
+note left of computation::iteration_variables
+  迭代变量
+end note
+
+note left of computation::updates
+  包含了当前computation中所有的更新
+end note
+
+
+computation::automatically_allocated_buffer *-- buffer 
+
+class block {
+  
+}
+
+class input {
+  
+}
+
+class constant {
+  
+}
+
+class communicator {
+  
+}
+
+note bottom of block
+共享同一调度的computation group
+end note
+note bottom of constant
+表示循环不变量, 可以为表达式/符号常量/所有循环中都不变的变量
+end note
+
+
+block -down-|> computation
+input -down-|> computation
+constant -down-|> computation
+communicator -down-|> computation
+
+@enduml
+```

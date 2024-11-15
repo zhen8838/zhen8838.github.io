@@ -1,0 +1,98 @@
+```puml
+@startuml
+
+class PyMlirContext {
+ - Map<ptr,PyModule> liveModules
+ - Map<ptr,PyOperation> liveOperations
+ - MlirContext context
+}
+
+note right of PyMlirContext::context
+原始指针
+end note
+
+abstract class BaseContextObject {
+  - PyMlirContextRef contextRef;
+}
+
+BaseContextObject *- PyMlirContext
+
+note left of BaseContextObject::contextRef
+所有引用context的基类
+end note
+
+class PyLocation {
+  - MlirLocation loc;
+}
+
+PyLocation --|> BaseContextObject 
+
+
+class PyOperation {
+  - MlirOperation operation
+} 
+
+PyOperation --|> BaseContextObject
+
+class PyBlock {
+  - PyOperationRef parentOperation
+  - MlirBlock block
+}
+
+PyBlock *- PyOperation
+
+class  PyRegion {
+  - PyOperationRef parentOperation
+  - MlirRegion region
+}
+
+PyRegion *-- PyOperation
+
+class PyType {
+  - MlirType type
+}
+
+PyType --|> BaseContextObject
+
+class MlirAttribute {
+  - MlirType type
+}
+
+MlirAttribute --|> BaseContextObject
+
+class PyValue
+{
+  - PyOperationRef parentOperation
+  - MlirValue value
+}
+
+PyValue *-- PyOperation
+
+class PyAffineExpr {
+  - MlirAffineExpr affineExpr
+}
+
+PyAffineExpr --|> BaseContextObject
+
+class PyAffineMap {
+  - MlirAffineMap affineMap
+}
+
+PyAffineMap --|> BaseContextObject
+
+class PyIntegerSet {
+  - MlirIntegerSet integerSet
+}
+
+PyIntegerSet --|> BaseContextObject
+
+class PySymbolTable { 
+  - PyOperationRef operation;
+  - MlirSymbolTable symbolTable;
+}
+
+PySymbolTable *-- PyOperation 
+
+
+@enduml
+```

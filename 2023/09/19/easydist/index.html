@@ -1,0 +1,269 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description"><title>Alibaba EasyDist 浅析 | Zheng's Notes</title><link rel="stylesheet" type="text/css" href="/css/style.css?v=1.0.0"><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/normalize/latest/normalize.min.css"><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/pure/latest/pure-min.min.css"><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/pure/latest/grids-responsive-min.min.css"><link rel="stylesheet" href="//lib.baomitu.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//lib.baomitu.com/jquery/latest/jquery.min.js"></script><link rel="icon" mask="" sizes="any" href="/favicon.ico"><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"><script type="text/javascript" src="//lib.baomitu.com/clipboard.js/latest/clipboard.min.js"></script><script type="text/javascript" src="//lib.baomitu.com/toastr.js/latest/toastr.min.js"></script><link rel="stylesheet" href="//lib.baomitu.com/toastr.js/latest/toastr.min.css"><meta name="generator" content="Hexo 7.0.0"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">Alibaba EasyDist 浅析</h1><a id="logo" href="/.">Zheng's Notes</a><p class="description"></p></div><div id="nav-menu"><a class="current" href="/."><i class="fa fa-home"> 首页</i></a><a href="/archives/"><i class="fa fa-archive"> 归档</i></a><a href="/about/"><i class="fa fa-user"> 关于</i></a></div></div><div class="pure-g" id="layout"><div class="pure-u-1 pure-u-md-3-4"><div class="content_container"><div class="post"><h1 class="post-title">Alibaba EasyDist 浅析</h1><div class="post-meta">2023-09-19<span> | </span><span class="category"><a href="/categories/%E7%BC%96%E8%AF%91%E5%99%A8/">编译器</a></span><span class="post-time"><span class="post-meta-item-text"> | </span><span class="post-meta-item-icon"><i class="fa fa-keyboard-o"></i><span class="post-count"> 4.2k</span><span class="post-meta-item-text"> 字</span></span></span><span class="post-time"> | <span class="post-meta-item-icon"><i class="fa fa-clock-o"></i><span class="post-count"> 18</span><span class="post-meta-item-text"> 分钟</span></span></span></div><div class="post-content"><p>对于阿里巴巴开源的<a
+target="_blank" rel="noopener" href="https://github.com/alibaba/easydist">EasyDist: Automated
+Parallelization System and Infrastructure for Multiple
+Ecosystems</a>代码解读, 主要关注IR设计与搜索域构造.</p>
+<span id="more"></span>
+<h1 id="整体流程">整体流程</h1>
+<p>主要核心为4步, 预处理, 切分标注, 图转换, 构造约束模型并求解.</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">easydist_shard</span>(<span class="params">fx_module: torch.fx.GraphModule, state_tensor_num, *args, **kwargs</span>):</span><br><span class="line"></span><br><span class="line">    <span class="comment"># (1) preprocess pass</span></span><br><span class="line">    fx_module = preprocess_traced_graph(fx_module)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> mdconfig.log_level &lt;= logging.DEBUG:</span><br><span class="line">        fx_module.print_readable()</span><br><span class="line"></span><br><span class="line">    <span class="comment"># (2) sharding annotation</span></span><br><span class="line">    <span class="keyword">with</span> _sharding_ann_env():</span><br><span class="line">        start_t = time.perf_counter()</span><br><span class="line">        sharding_interpreter = EDTorchShardingAnn(fx_module)</span><br><span class="line">        flatten_args = tree_flatten_spec(<span class="built_in">list</span>(args) + <span class="built_in">list</span>(kwargs.values()), fx_module._in_spec)</span><br><span class="line">        sharding_info, shape_info = sharding_interpreter.run(*flatten_args)</span><br><span class="line">        logger.info(<span class="string">f&quot;[EDTorchShardingAnn.time]:\t <span class="subst">&#123;time.perf_counter() - start_t&#125;</span> s.&quot;</span>)</span><br><span class="line">        <span class="keyword">if</span> mdconfig.log_level &lt;= logging.DEBUG:</span><br><span class="line">            rich.<span class="built_in">print</span>(<span class="string">&quot;sharding_info:\n&quot;</span>, sharding_info)</span><br><span class="line">            rich.<span class="built_in">print</span>(<span class="string">&quot;shape_info:\n&quot;</span>, shape_info)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># sync sharding info for all process</span></span><br><span class="line">    torch.distributed.broadcast_object_list(sharding_info, src=<span class="number">0</span>, device=<span class="string">&quot;cuda&quot;</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># (3) translate fx.GraphModule into MetaGraph</span></span><br><span class="line">    meta_graph = torch2meta_graph(fx_module, state_tensor_num, sharding_info, shape_info)</span><br><span class="line">    meta_graph.dump()</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> mdconfig.log_level &lt;= logging.DEBUG:</span><br><span class="line">        rich.<span class="built_in">print</span>(meta_graph)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># (4) construct AutoFlowSolver and run ILP</span></span><br><span class="line">    device_mesh = get_device_mesh()</span><br><span class="line">    device_mesh_shape = (device_mesh.size(<span class="number">0</span>), device_mesh.size(<span class="number">1</span>))</span><br><span class="line"></span><br><span class="line">    total_memery = torch.cuda.get_device_properties(torch.cuda.current_device()).total_memory</span><br><span class="line">    solver = AutoFlowSolver(device_mesh_shape, total_memery=total_memery)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> mdconfig.enable_graph_coarsen:</span><br><span class="line">        logger.info(<span class="string">f&quot;enable graph coarsen with level <span class="subst">&#123;mdconfig.coarsen_level&#125;</span>.&quot;</span>)</span><br><span class="line">        solver.add_coarsen_graph(meta_graph)</span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        solver.add_graph(meta_graph)</span><br><span class="line"></span><br><span class="line">    start_t = time.perf_counter()</span><br><span class="line">    <span class="keyword">if</span> mdconfig.enable_graph_coarsen:</span><br><span class="line">        opt_strategy = solver.ilp_solve()</span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        opt_strategy = solver.ilp_optimize()</span><br><span class="line">    logger.info(<span class="string">f&quot;[AutoFlowSolver.time]:\t <span class="subst">&#123;time.perf_counter() - start_t&#125;</span> s.&quot;</span>)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> mdconfig.log_level &lt;= logging.DEBUG:</span><br><span class="line">        rich.<span class="built_in">print</span>(opt_strategy)</span><br><span class="line"></span><br><span class="line">    sharding_strategies = get_torch_sharding_strategy(fx_module, opt_strategy)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> mdconfig.log_level &lt;= logging.DEBUG:</span><br><span class="line">        rich.<span class="built_in">print</span>(sharding_strategies)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> shape_info, meta_graph, opt_strategy, sharding_strategies</span><br></pre></td></tr></table></figure>
+<h2 id="切分标注">切分标注</h2>
+<p>首先引入切分的数据结构:</p>
+<p><img src="/2023/09/19/easydist/shardann.png" /></p>
+<p>这里<code>ShardDim</code>表示的是先<code>chunk</code>划分再切分的逻辑,比如<code>[1, 1, 2, 2]</code>可以先划分两块<code>(chunk)-&gt; [1, 1] and [2, 2]</code>,再切分<code>(shard)-&gt; [1, 2] | [1, 2]</code>.
+使用一维数组<code>[ShardDim]</code>表示一个输入参数所对应的切分,
+多个输入时得到类似<code>[[ShardDim], ...]</code>的二维数组,
+因此<code>ShardAnnotation</code>就是使用二维数组来存储切分信息,
+来表示一个操作的切分输入切分信息.</p>
+<p>假设一个在两个gpu上运行的简单的小网络: <figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Net</span>(nn.Module):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, *args, **kwargs</span>) -&gt; <span class="literal">None</span>:</span><br><span class="line">        <span class="built_in">super</span>().__init__(*args, **kwargs)</span><br><span class="line">        self.fc = torch.nn.Linear(<span class="number">32</span>*<span class="number">32</span>*<span class="number">3</span>, <span class="number">64</span>, <span class="literal">False</span>)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params">self, x: torch.Tensor</span>):<span class="number">0</span></span><br><span class="line">        v0 = torch.flatten(x, <span class="number">1</span>) <span class="comment"># 128,32*32*3</span></span><br><span class="line">        v1 = self.fc(v0)</span><br><span class="line">        <span class="keyword">return</span> v1</span><br></pre></td></tr></table></figure></p>
+<p>以上计算的计算图如下: <figure class="highlight cpp"><table><tr><td class="code"><pre><span class="line"><span class="keyword">class</span> &lt;lambda&gt;(torch.nn.Module):</span><br><span class="line">    <span class="function">def <span class="title">forward</span><span class="params">(self, arg0, arg1, arg2, arg3, arg4)</span>:</span></span><br><span class="line"><span class="function">        arg0_1: f32[<span class="number">64</span>, <span class="number">3072</span>], arg3_1, arg3_2: f32[<span class="number">128</span>, <span class="number">3</span>, <span class="number">32</span>, <span class="number">32</span>], =</span> fx_pytree.<span class="built_in">tree_flatten_spec</span>([arg0, arg1, arg2, arg3, arg4], self._in_spec)</span><br><span class="line">        # No stacktrace found <span class="keyword">for</span> following nodes</span><br><span class="line">        view: f32[<span class="number">128</span>, <span class="number">3072</span>] = torch.ops.aten.view.<span class="built_in">default</span>(arg3_2, [<span class="number">128</span>, <span class="number">3072</span>]);  arg3_2 = None</span><br><span class="line">        t: f32[<span class="number">3072</span>, <span class="number">64</span>] = torch.ops.aten.t.<span class="built_in">default</span>(arg0_1)</span><br><span class="line">        mm: f32[<span class="number">128</span>, <span class="number">64</span>] = torch.ops.aten.mm.<span class="built_in">default</span>(view, t);  view = t = None</span><br><span class="line">        <span class="keyword">return</span> pytree.<span class="built_in">tree_unflatten</span>([arg0_1, None, mm], self._out_spec)</span><br></pre></td></tr></table></figure></p>
+<p>通过一个继承了torch
+fx的<code>Interpreter</code>的类<code>EDTorchShardingAnn</code>来解释执行整个图,
+一边执行一遍获取修改. 对于不同的节点类型, 执行不同的visitleaf函数:</p>
+<ol type="1">
+<li>placeholder</li>
+</ol>
+<p>placeholder对应的应该输入节点, 如果检查到当前节点没有sharding
+annotation以及combination annotation,
+那么会进入<code>preset_meta_spmd</code>函数进行统一处理.</p>
+<p><code>preset_meta_spmd</code>函数通过不同的op类型分发到不同的rule中进行获取.
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">preset_meta_spmd</span>(<span class="params">meta_op, input_args=<span class="literal">None</span></span>):</span><br><span class="line">    <span class="keyword">if</span> <span class="built_in">isinstance</span>(meta_op, <span class="built_in">str</span>):</span><br><span class="line">        args, kwargs = input_args</span><br><span class="line">        <span class="keyword">return</span> PresetMetaSPMD.op_rules[meta_op](args, kwargs)</span><br><span class="line">    <span class="keyword">elif</span> meta_op.name <span class="keyword">in</span> PresetMetaSPMD.op_rules:</span><br><span class="line">        <span class="keyword">if</span> input_args <span class="keyword">is</span> <span class="literal">None</span>:</span><br><span class="line">            args, kwargs = meta_op.input_args</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            args, kwargs = input_args</span><br><span class="line">        <span class="keyword">return</span> PresetMetaSPMD.op_rules[meta_op.name](args, kwargs)</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">None</span>, <span class="literal">None</span></span><br></pre></td></tr></table></figure></p>
+<p>对于placeholder则进入<code>meta_spmd_placeholder</code>函数进行处理,
+这里也是使用了统一的<code>view_propagation</code>函数构造sharding
+annotation以及combination annotation. <figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">meta_spmd_placeholder</span>(<span class="params">args, kwargs</span>):</span><br><span class="line">    input_shape = args.shape</span><br><span class="line">    output_shape = args.shape</span><br><span class="line"></span><br><span class="line">    view_ann = view_propagation(input_shape, output_shape, world_size=device_mesh_world_size())</span><br><span class="line">    <span class="keyword">return</span> view_ann[<span class="string">&#x27;sharding_ann&#x27;</span>], view_ann[<span class="string">&#x27;combination_ann&#x27;</span>]</span><br></pre></td></tr></table></figure></p>
+<p><code>view_propagation</code>的过程比较复杂,
+但是对于输入shape和输出shape相同的节点来说还是比较简单的.
+他这里会首先构造<code>[[NoShardDim]* ShapeRank]</code>作为sharding
+annotation, 比如输入shape为<code>[128, 3, 32, 32]</code>,
+那么构造出<code>[[NoShardDim, NoShardDim, NoShardDim, NoShardDim]]</code>表示全部不切分.
+然后遍历每个维度, 如果当前维度大于<code>world size</code>(所有并行度),
+则表示可以切分, 那么就构造一个<code>ShardDim(id++)</code>,
+对于这个例子将会构造出<code>[[ShardDim(1), NoShardDim, NoShardDim, NoShardDim]]</code>.</p>
+<ol start="2" type="1">
+<li>call_function</li>
+</ol>
+<p>在visit call_function时,
+构造出<code>MetaOp</code>后再使用<code>meta_exec</code>去执行.
+然后检查是否有sharding_ann,
+combination_ann的cache,如果没有那么使用<code>preset_meta_spmd</code>来构造.
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">args, kwargs = materialize_args_kwargs(args_meta, kwargs_meta)</span><br><span class="line">meta_op = MetaOp(func=target,</span><br><span class="line">                  input_args=(args, kwargs),</span><br><span class="line">                  shard_size=device_mesh_world_size(),</span><br><span class="line">                  name=ops_name)</span><br><span class="line"><span class="comment"># user fake tensor here, maybe use shape/dtype info from `make_fx`</span></span><br><span class="line">meta_out = meta_op.meta_exec(flat_meta_input=pytree.tree_flatten((args_meta,</span><br><span class="line">                                                                  kwargs_meta))[<span class="number">0</span>])</span><br><span class="line">.</span><br><span class="line">.</span><br><span class="line">.</span><br><span class="line">sharding_ann, combination_ann = preset_meta_spmd(meta_op, (args_meta, kwargs_meta))</span><br></pre></td></tr></table></figure></p>
+<p>对于<code>expand</code>来说, 并没有对应的切分信息构造,
+所以他的sharding_ann为<code>[[NoShardDim, NoShardDim, NoShardDim]]</code>.
+对于<code>view</code>,
+sharding_ann也是通过<code>view_propagation</code>来构造的. 对于矩阵乘,
+通过<code>meta_bmm</code>来构造标注,
+此时构造标注时除了需要检查是否可以切分, 同时还需要匹配切分的维度,
+比如这里两个输入的batch维度使用相同的id, 矩阵的k维度用相同的id:
+<code>ShardAnnotation([[ShardDim(1), ShardDim(2)], [ShardDim(2), ShardDim(3)]])</code></p>
+<p>在<code>preset_meta_spmd</code>中, 也有一些算子没有添加对应的rule,
+所以此时就进入<code>meta_op.sharding_discovery</code>构造对应的shard
+annotation. 比如对于<code>torch.ops.aten.t.default</code>算子,
+会在<code>sharding_discovery</code>中调用<code>_try_sharding(self, fixed_annotation, subsequence_annotation, global_output, start_dim=0)</code>函数获得对应的shard
+annotation. <code>_try_sharding</code>是一个递归的函数,
+第一次进入时<code>fixed_annotation=ShardAnnotation([]), subsequence_annotation=ShardAnnotation([[NoShardDim, NoShardDim]])</code>.
+然后在其中遍历所有的输入shape
+dim,逐一修改原始的<code>subsequence_annotation[0]</code>,
+获得<code>try_annotation</code>, 然后再进入<code>_try_sharding</code>.
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">for</span> dim <span class="keyword">in</span> <span class="built_in">range</span>(start_dim, <span class="built_in">len</span>(subsequence_annotation[<span class="number">0</span>])):</span><br><span class="line">    <span class="keyword">if</span> subsequence_annotation[<span class="number">0</span>][dim].shard_dim_id != <span class="number">0</span>:</span><br><span class="line">        <span class="keyword">continue</span></span><br><span class="line">    try_annotation = copy.deepcopy(subsequence_annotation[<span class="number">0</span>])</span><br><span class="line">    try_annotation[dim] = ShardDim.get_shard_dim(shard_dim_id_flag)</span><br><span class="line">    self._try_sharding(fixed_annotation + ShardAnnotation([try_annotation]),</span><br><span class="line">                        subsequence_annotation[<span class="number">1</span>:], global_output)</span><br></pre></td></tr></table></figure></p>
+<p>再次进入时此时shard annotation的subsequence为空,
+首先使用当前的<code>fixed_annotation</code>执行<code>self.exec</code>,
+获得切分过的<code>sharded_output</code>. 对于这个转置操作,
+原本的输出为<code>torch.Size([3072, 64])</code>,
+而在<code>fixed_annotation=ShardAnnotation([[ShardDim(1), NoShardDim]])</code>的条件下则获得到<code>[torch.Size([3072, 32]),torch.Size([3072, 32])]</code>(转置操作的输入切分在dim
+0上,则输出切分在dim 1上).</p>
+<p>进入<code>try_combination(sharded_output, global_output)</code>函数,
+这里输入只有一个tensor, 所以进入<code>try_combination_single</code>,
+他这里的逻辑就是遍历三种组合函数<code>['try_combination_identity','try_combination_reduce', 'try_combination_gather']</code>,
+找到当前所需要的,
+显然这个例子中尝试成功后得到的<code>combination_func</code>为<code>functools.partial(&lt;function CombinationFunc.gather at 0x7f5bd501f0d0&gt;, dim=1)</code>.
+因为将sharded_output gather就可以还原到global_output.</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">try_combination_single</span>(<span class="params">sharded_output_, global_output_</span>):</span><br><span class="line">    <span class="comment"># check all sharded tensor have equal dimension of global_output</span></span><br><span class="line">    <span class="keyword">for</span> sharded_tensor <span class="keyword">in</span> sharded_output_:</span><br><span class="line">        <span class="keyword">if</span> <span class="built_in">len</span>(sharded_tensor.shape) != <span class="built_in">len</span>(global_output_.shape):</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">None</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> func_name <span class="keyword">in</span> TRY_COMBINATION_FUNC:</span><br><span class="line">        combination_func = TRY_COMBINATION_FUNC[func_name](sharded_output_, global_output_)</span><br><span class="line">        <span class="keyword">if</span> combination_func:</span><br><span class="line">            <span class="keyword">return</span> combination_func</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="literal">None</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">if</span> <span class="built_in">len</span>(subsequence_annotation) == <span class="number">0</span>:</span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        sharded_output = self.<span class="built_in">exec</span>(shard_annotation=fixed_annotation,</span><br><span class="line">                                    priority_shard_dim_id=shard_dim_id_flag)</span><br><span class="line">    <span class="keyword">except</span> RuntimeError <span class="keyword">as</span> e:</span><br><span class="line">        logger.debug(<span class="string">f&quot;[<span class="subst">&#123;fixed_annotation&#125;</span>] <span class="subst">&#123;e&#125;</span>&quot;</span>)</span><br><span class="line">        <span class="keyword">return</span></span><br><span class="line">    <span class="keyword">except</span>:</span><br><span class="line">        logger.debug(<span class="string">f&quot;[<span class="subst">&#123;fixed_annotation&#125;</span>] run op.exec failed&quot;</span>)</span><br><span class="line">        <span class="keyword">return</span></span><br><span class="line"></span><br><span class="line">    haloinfo = <span class="literal">None</span></span><br><span class="line">    combination_func = try_combination(sharded_output, global_output)</span><br><span class="line">    .</span><br><span class="line">    .</span><br><span class="line">    .</span><br><span class="line">    <span class="keyword">if</span> combination_func <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span> <span class="keyword">and</span> <span class="keyword">not</span> <span class="built_in">isinstance</span>(combination_func, HaloHint):</span><br><span class="line">        self.__combination_ann[shard_dim_id_flag] = combination_func</span><br><span class="line">        <span class="comment"># inject haloinfo</span></span><br><span class="line">        fixed_annotation.inject_haloinfo(haloinfo, shard_dim_id_flag)</span><br><span class="line"></span><br><span class="line">        self.__sharding_annotion = copy.deepcopy(fixed_annotation)</span><br><span class="line">        self.__find_new_strategy = <span class="literal">True</span></span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        logger.debug(<span class="string">f&quot;[<span class="subst">&#123;fixed_annotation&#125;</span>] combination failed&quot;</span>)</span><br><span class="line">    <span class="keyword">return</span></span><br></pre></td></tr></table></figure>
+<h2 id="图转换">图转换</h2>
+<p>这里需要先描述一下meta ir的数据结构: <img
+src="/2023/09/19/easydist/metair.png" /></p>
+<p>在<code>torch2meta_graph(fx_module: torch.fx.GraphModule, state_tensor_num, sharding_info, meta_info)</code>函数中将原本的带有sharding
+annotation的fx graph转换为meta的graph, 同时将sharding
+info也转换为torch的SPMD表示. 具体流程如下:</p>
+<ol type="1">
+<li>构造meta_graph</li>
+<li>遍历fx_module中所有的节点, 根据节点类型进行处理(每个fx
+graph的输出节点除了list/tuple都构造MetaVar,
+除了getitem都构造MetaNode)</li>
+</ol>
+<ul>
+<li>call_function
+<ol type="1">
+<li>构造MetaVar, 此时metavar表示为当前call的输出,
+<code>MetaVar(name=node.name, shape=meta_info[node.name]["shape"], dtype=ABSTRACT_DTYPE[meta_info[node.name]["dtype"]])</code></li>
+<li>构造MetaNode, 此时outvars为当前的MetaVar, invars为空.</li>
+<li>记录Node到MetaGraph的Nodes中</li>
+</ol></li>
+<li>placeholder或者get_attr
+<ol type="1">
+<li>构造MetaVar, 同上.</li>
+<li>构造MetaNode,
+<code>MetaNode(name=node.name,op_name=node.op,invars=[],outvars=[meta_var],sharding_info=node_sharding_info,is_placeholder=True)</code></li>
+<li>记录Node到MetaGraph的Nodes和Inputs中</li>
+</ol></li>
+<li>output
+<ol type="1">
+<li>获取output_names</li>
+</ol></li>
+</ul>
+<ol start="3" type="1">
+<li>重新遍历fx module中的所有节点, 更新MetaNode和MetaVar的连接关系</li>
+</ol>
+<ul>
+<li>call_function
+<ol type="1">
+<li>遍历当前call function对应的MetaNode的输入参数</li>
+<li>对于如果输入参数存在对应的MetaVar,
+那么对调用<code>meta_node.set_in_var(in_var, idx)</code>来更新当前meta_node中的invars</li>
+</ol></li>
+</ul>
+<ol start="4" type="1">
+<li>根据output_names把对应的meta var添加到meta graph中</li>
+<li>构造state_io_map, 遍历state_tensor_num,
+将输入的node映射到输出的var上</li>
+<li>调用<code>graph.coarsen</code>函数来构造clusters,
+这里根据不同的级别选择不同的构造方式,
+默认使用<code>build_cone_clusters</code>函数来构造:
+<ol type="1">
+<li>遍历所有节点, 收集所有的cone root
+<ul>
+<li>如果节点有多个下游节点或者没有下游节点,那么作为cone root.</li>
+<li>如果只有一个下游节点时, 有多个上游节点也是cone root,
+有一个上游节点时则需要判断数据量,
+如果输出数据量小于输入数据量那么也是cone root</li>
+</ul></li>
+<li>获取所有cone roots的id, 得到root_ids.</li>
+<li>遍历所有的cone roots构造Cluster
+<ul>
+<li>构造<code>MetaNodeCluster(unique_id=cluster_id)</code>,
+其中cluster_id自动递增</li>
+<li>调用<code>build_cone_cluster(cone_root, root_ids, cluster)</code>填充cluster.
+<ol type="1">
+<li>将当前root添加到当前cluster中<code>cluster.add_node(cone_root)</code>,
+此时设定root node的cluster id</li>
+<li>遍历当前cone root的输入节点, 如果当前节点不在之前收集的cone
+roots中,那么递归的调用<code>build_cone_cluster(up_node, root_ids, cluster)</code>填充cluster</li>
+</ol></li>
+<li>调用<code>finalize</code>函数
+<ol type="1">
+<li>确定当前cluster的args和output node</li>
+<li>为当前cluster构造<code>ClusterStrategyPool(self)</code></li>
+<li>获取输出节点的out_strtg_pool <code>NodeSPMDStrategyPool</code>,
+<ul>
+<li>如果当前节点存在<code>strtg_pool</code>的属性那么直接返回</li>
+<li>否则通过<code>sharding_info</code>进行构造</li>
+<li>首先遍历shard ann,
+将每一个可切分的维度都构造出一个NodeSPMDStrategy(这里构造则是将<code>ShardDim</code>的表示转换为<code>SPMD</code>的表示)</li>
+<li>比如对于一个<code>[[ShardDim(1), ShardDim(2)]]</code>的shard ann
+将构造出三组切分策略<code>NodeSPMDStrategy(in_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([SHARD(&#123;'dim': 0&#125;)])]), out_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([SHARD(&#123;'dim': 0&#125;)])])),  NodeSPMDStrategy(in_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([SHARD(&#123;'dim': 1&#125;)])]), out_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([SHARD(&#123;'dim': 1&#125;)])])),  NodeSPMDStrategy(in_strtg_group: VarSPMDStrategyGroup([]), out_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE])]))</code></li>
+<li>然后再因为当前的DEVICE_MESH_1D==0,
+再将每个NodeSPMDStrategy都进行扩展REPLICATE得到类似<code>NodeSPMDStrategy(in_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD(&#123;'dim': 0&#125;)])]), out_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD(&#123;'dim': 0&#125;)])]))</code></li>
+<li>这里我设置的gpu个数为两个, 但是实际上获取到的device
+mesh为<code>(1,2)</code>,
+所以应该是为了保证sbp的个数应该和拓扑结构的维度相同,
+所以需要扩展VarSPMDStrategy的维度.</li>
+</ul></li>
+<li>遍历out_strtg_pool
+<ol type="1">
+<li>构造<code>ClusterStrategy</code> cluster_strtg</li>
+<li>给cluster_strtg设置当前的node_strategy</li>
+<li>使用<code>back_build_strategy</code>将当前的策略反向更新到cluster的其他节点</li>
+<li>将当前cluster_strtg添加到strategy_pool中</li>
+</ol></li>
+</ol></li>
+</ul></li>
+</ol></li>
+</ol>
+<p>最终得到的meta graph的一部分如下,
+总的来说就是将原图中的节点转换为MetaNode以及MetaVar,
+然后根据一定的策略划分出MetaNodeCluster的子图,
+接下来对每个Cluster中的所有Node添加一系列的切分候选集:</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">=====================</span><br><span class="line">[MetaIR]</span><br><span class="line"></span><br><span class="line">input_list: [arg0_1, arg2_1, arg3_3, arg3_4]</span><br><span class="line"></span><br><span class="line">[arg0_1] &lt;--- [placeholder] --- []</span><br><span class="line">[arg2_1] &lt;--- [placeholder] --- []</span><br><span class="line">[arg3_3] &lt;--- [placeholder] --- []</span><br><span class="line">[arg3_4] &lt;--- [placeholder] --- []</span><br><span class="line">[view] &lt;--- [torch.ops.aten.view.default] --- [arg3_3]</span><br><span class="line">[t] &lt;--- [torch.ops.aten.t.default] --- [arg0_1]</span><br><span class="line">[mm] &lt;--- [torch.ops.aten.mm.default] --- [view, t]</span><br><span class="line">[_log_softmax] &lt;--- [torch.ops.aten._log_softmax.default] --- [mm]</span><br><span class="line">[getitem, getitem_1] &lt;--- [torch.ops.aten.nll_loss_forward.default] --- [_log_softmax, arg3_4]</span><br><span class="line">[ones_like] &lt;--- [torch.ops.aten.ones_like.default] --- [getitem]</span><br><span class="line">[nll_loss_backward] &lt;--- [torch.ops.aten.nll_loss_backward.default] --- [ones_like, _log_softmax, arg3_4, getitem_1]</span><br><span class="line">[_log_softmax_backward_data] &lt;--- [torch.ops.aten._log_softmax_backward_data.default] --- [nll_loss_backward, _log_softmax]</span><br><span class="line">[t_1] &lt;--- [torch.ops.aten.t.default] --- [_log_softmax_backward_data]</span><br><span class="line">[mm_1] &lt;--- [torch.ops.aten.mm.default] --- [t_1, view]</span><br><span class="line">[t_2] &lt;--- [torch.ops.aten.t.default] --- [mm_1]</span><br><span class="line">[t_3] &lt;--- [torch.ops.aten.t.default] --- [t_2]</span><br><span class="line">[mul_] &lt;--- [torch.ops.aten.mul_.Tensor] --- [arg2_1]</span><br><span class="line">[add_] &lt;--- [torch.ops.aten.add_.Tensor] --- [mul_, t_3]</span><br><span class="line">[add__1] &lt;--- [torch.ops.aten.add_.Tensor] --- [arg0_1, add_]</span><br><span class="line"></span><br><span class="line">output_list: [add__1, add_, getitem]</span><br><span class="line">=====================</span><br><span class="line"></span><br><span class="line">node clusters:</span><br><span class="line">cluster <span class="built_in">id</span>: <span class="number">0</span></span><br><span class="line">  nodes: arg0_1, </span><br><span class="line">  inputs: [[arg0_1, <span class="number">0</span>]]</span><br><span class="line">  output: arg0_1</span><br><span class="line">strategies:</span><br><span class="line">node strategies: </span><br><span class="line">&#123;</span><br><span class="line"><span class="number">1</span>: [NodeSPMDStrategy(in_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD(&#123;<span class="string">&#x27;dim&#x27;</span>: <span class="number">0</span>&#125;)])]), out_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD(&#123;<span class="string">&#x27;dim&#x27;</span>: <span class="number">0</span>&#125;)])])),</span><br><span class="line">    NodeSPMDStrategy(in_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD(&#123;<span class="string">&#x27;dim&#x27;</span>: <span class="number">1</span>&#125;)])]), out_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD(&#123;<span class="string">&#x27;dim&#x27;</span>: <span class="number">1</span>&#125;)])])),</span><br><span class="line">    NodeSPMDStrategy(in_strtg_group: VarSPMDStrategyGroup([]), out_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, REPLICATE])]))],</span><br><span class="line">&#125;</span><br><span class="line">node io strategies: </span><br><span class="line">&#123;</span><br><span class="line"><span class="number">1</span>: arg0_1</span><br><span class="line"><span class="keyword">in</span> strategies: [[VarSPMDStrategy([REPLICATE, SHARD(&#123;<span class="string">&#x27;dim&#x27;</span>: <span class="number">0</span>&#125;)]), VarSPMDStrategy([REPLICATE, SHARD(&#123;<span class="string">&#x27;dim&#x27;</span>: <span class="number">1</span>&#125;)]), VarSPMDStrategy([REPLICATE, REPLICATE])]]</span><br><span class="line">output strategies: [[VarSPMDStrategy([REPLICATE, SHARD(&#123;<span class="string">&#x27;dim&#x27;</span>: <span class="number">0</span>&#125;)]), VarSPMDStrategy([REPLICATE, SHARD(&#123;<span class="string">&#x27;dim&#x27;</span>: <span class="number">1</span>&#125;)]), VarSPMDStrategy([REPLICATE, REPLICATE])]],</span><br><span class="line">&#125;</span><br><span class="line">cluster <span class="built_in">id</span>: <span class="number">1</span></span><br><span class="line">  nodes: arg3_4, </span><br><span class="line">  inputs: [[arg3_4, <span class="number">0</span>]]</span><br><span class="line">  output: arg3_4</span><br><span class="line">strategies:</span><br><span class="line">node strategies: </span><br><span class="line">&#123;</span><br><span class="line"><span class="number">7</span>: [NodeSPMDStrategy(in_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD(&#123;<span class="string">&#x27;dim&#x27;</span>: <span class="number">0</span>&#125;)])]), out_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD(&#123;<span class="string">&#x27;dim&#x27;</span>: <span class="number">0</span>&#125;)])])),</span><br><span class="line">    NodeSPMDStrategy(in_strtg_group: VarSPMDStrategyGroup([]), out_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, REPLICATE])]))],</span><br><span class="line">&#125;</span><br><span class="line">node io strategies: </span><br><span class="line">&#123;</span><br><span class="line"><span class="number">7</span>: arg3_4</span><br><span class="line"><span class="keyword">in</span> strategies: [[VarSPMDStrategy([REPLICATE, SHARD(&#123;<span class="string">&#x27;dim&#x27;</span>: <span class="number">0</span>&#125;)]), VarSPMDStrategy([REPLICATE, REPLICATE])]]</span><br><span class="line">output strategies: [[VarSPMDStrategy([REPLICATE, SHARD(&#123;<span class="string">&#x27;dim&#x27;</span>: <span class="number">0</span>&#125;)]), VarSPMDStrategy([REPLICATE, REPLICATE])]],</span><br><span class="line">&#125;</span><br><span class="line">cluster <span class="built_in">id</span>: <span class="number">2</span></span><br><span class="line">  nodes: view, arg3_3, </span><br><span class="line">  inputs: [[arg3_3, <span class="number">0</span>]]</span><br><span class="line">  output: view</span><br><span class="line">strategies:</span><br><span class="line">node strategies: </span><br><span class="line">&#123;</span><br><span class="line"><span class="number">9</span>: [NodeSPMDStrategy(in_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD(&#123;<span class="string">&#x27;dim&#x27;</span>: <span class="number">0</span>&#125;)])]), out_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD(&#123;<span class="string">&#x27;dim&#x27;</span>: <span class="number">0</span>&#125;)])])),</span><br><span class="line">    NodeSPMDStrategy(in_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD(&#123;<span class="string">&#x27;dim&#x27;</span>: <span class="number">1</span>&#125;)])]), out_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD(&#123;<span class="string">&#x27;dim&#x27;</span>: <span class="number">1</span>&#125;)])])),</span><br><span class="line">    NodeSPMDStrategy(in_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, REPLICATE])]), out_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, REPLICATE])]))],</span><br><span class="line"><span class="number">5</span>: [NodeSPMDStrategy(in_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD(&#123;<span class="string">&#x27;dim&#x27;</span>: <span class="number">0</span>&#125;)])]), out_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD(&#123;<span class="string">&#x27;dim&#x27;</span>: <span class="number">0</span>&#125;)])])),</span><br><span class="line">    NodeSPMDStrategy(in_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD(&#123;<span class="string">&#x27;dim&#x27;</span>: <span class="number">1</span>&#125;)])]), out_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD(&#123;<span class="string">&#x27;dim&#x27;</span>: <span class="number">1</span>&#125;)])])),</span><br><span class="line">    NodeSPMDStrategy(in_strtg_group: VarSPMDStrategyGroup([]), out_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, REPLICATE])]))],</span><br><span class="line">&#125;</span><br><span class="line">.</span><br><span class="line">.</span><br><span class="line">.</span><br></pre></td></tr></table></figure>
+<h2 id="约束模型与求解">约束模型与求解</h2>
+<p>这里使用mip构造了一个约束模型,
+对于<code>enable_graph_coarsen</code>的配置下,
+会进入<code>add_coarsen_graph</code>来将meta graph转换为约束模型.
+在这个函数中遍历所有meta
+graph中的cluster执行<code>add_cluster</code>.</p>
+<p>具体看一下<code>add_cluster</code>: 1. 获取cluster的strtg_pool 2.
+遍历pool中的切分策略, 为每个切分策略构造出一个对应的binary var,
+来表示是否选择这个切分. 3. 使用对应的pool与pick
+vars构造出<code>mip_info = ClusterMipInfo(cluster, cluster_strtg_pool, mip_vars)</code>
+4.
+遍历当前cluster的args进行加边<code>self.add_cluster_edge(var, input_idx, down_node=input_node)</code>
+1. 对于一个有上下连接关系的cluster,需要进行加边 2.
+获取他的输入node的outvar的切分策略up_out_strategy_list,获取他输出node的invar切分策略候选down_in_strategy_list
+3.
+构造出<code>[up_out_strategy_list,down_in_strategy_list]</code>大小的mip
+binary var矩阵, 用于标记每个连接是否选择 4.
+再计算<code>[up_out_strategy_list,down_in_strategy_list]</code>大小的通信开销矩阵,
+也就是对于每个切分的组合计算额外的通信开销 5.
+再计算<code>[up_out_strategy_list,down_in_strategy_list]</code>大小的内存开销矩阵
+5. 开始ilp_solve 1. 添加约束目标, 初始化comm_cost, mem_cost,
+再遍历所有的cluster edge进行update 2.
+<code>comm_cost += mip.xsum(mip_var[i][j] * comm_matrix[i][j] for i in range(shape_1) for j in range(shape_2))</code>
+3.
+<code>mem_cost += mip.xsum(mip_var[i][j] * mem_matrix[i][j] for i in range(shape_1) for j in range(shape_2))</code>
+4.
+遍历<code>[up_out_strategy_list,down_in_strategy_list]</code>大小的矩阵添加总cost中.
+5. 再次遍历所有的cluster edge 6.
+添加<code>[up_out_strategy_list,down_in_strategy_list]</code>的binary
+var矩阵和为1的约束, 这样确保只选择一种切分 7. 添加上下连接关系的约束,
+也就是输入/输出选择某种切分, 那么矩阵中对应的节点也必须选择某种切分. 8.
+遍历所有的cluster, 添加每个cluster只选择一个切分的约束 9.
+添加目标为<code>mip.minimize(comm_cost + 0.00000001 * mem_cost)</code>
+6. 求解并提取出新的graph</p>
+<h1 id="总结">总结</h1>
+<p>以上内容都是在浏览的时候记录的,
+如果有部分内容理解错误可以在评论区指出. 总的来说easydist的shard
+annotation部分以及combination annotation的设计的很优雅,
+通过shard_id的方式把一些计算上有依赖的维度的依赖关系表示出来了,
+如果是SPMD的表示方式, 需要编写代码时自己维护这种相关性.
+后者可以在没有添加推导函数的情况下自动做一些切分推导,
+并且可以通过偏函数的方式进行组合, 代码复用程度高.</p>
+<p>后续的meta graph转换部分我看的比较困难,
+主要是各种数据结构的交互比较多,
+还有就是因为代码中有一些入侵的修改类实例的地方比较难读.
+不过总体来讲就是切子图,然后添加候选集.最后就是用一个约束模型来求解.</p>
+<p>相比起easydist, 我自己实现的自动分布式切分方法就比较暴力,
+直接列出所有的可切分方式以及必要情况下的重新切分方式作为候选集,
+然后结合通信/计算/内存移动开销进行求解.</p>
+<p>全部的候选集: <img src="/2023/09/19/easydist/pick.png" />
+求解出来的图: <img src="/2023/09/19/easydist/autodist.png" /></p>
+<h1 id="待解决的问题">待解决的问题</h1>
+<p>虽然自动分布式切分搜索可以解决选择切分方式的问题,
+但是预计还会有许多别的问题, 这里抛砖引玉提出一些,
+希望可以和大家多多讨论:</p>
+<ol type="1">
+<li>子图合并的问题</li>
+</ol>
+<p>自动并行切分通常只考虑了通信上的开销,
+没有考虑带宽瓶颈导致的性能损失以及静态内存分配的优化带来的性能提升.
+比如一些带宽瓶颈的操作或者一些concat/view的操作原本可以通过编写高性能fused
+kernel来进行优化, 有可能自动切分会在这些算子中间添加了reshard,
+那么硬件利用率就不高了.
+所以可能还是需要先匹配到可以做合并的算子再做自动并行切分,
+但是这个事情需要手动来做, 手动来实现还需要考虑合并那些部分,
+都是比较复杂的问题.</p>
+<ol start="2" type="1">
+<li>流水并行问题</li>
+</ol>
+<p>流水并行没有办法在自动切分搜索的时候体现,
+如果在切分搜索的时候贪心的找到前面n层可在gpu上放下的层,
+但是不同的分布式切分也会影响内存使用大小,
+此时只能贪心的去添加层没法做到整体最优.
+或者通过手动的方式去划分出一个子图进行自动切分搜索.</p>
+<ol start="3" type="1">
+<li>重计算问题</li>
+</ol>
+<p>如果对resize/conv来说如果切分了h/w,
+那么就需要考虑上面的层需要多计算一部分数据, 那就需要引入bounds infer了.
+当然如果不考虑这样切分就不会有这个问题.</p>
+</div><div class="tags"><ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Pytorch/" rel="tag">Pytorch</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E4%B8%AD%E7%AB%AF%E4%BC%98%E5%8C%96/" rel="tag">中端优化</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F/" rel="tag">分布式</a></li></ul></div><div class="post-nav"><a class="pre" href="/2023/11/01/mlc-llm/">mlc-llm 浅析</a><a class="next" href="/2023/09/06/tiramisu/">Tiramisu Compiler Internals</a></div><script src="https://utteranc.es/client.js" repo="zhen8838/zhen8838.github.io" issue-term="url" theme="github-light" crossorigin="anonymous" async></script></div></div></div><div class="pure-u-1-4 hidden_mid_and_down"><div id="sidebar"><div class="widget"><form class="search-form" action="//www.google.com/search" method="get" accept-charset="utf-8" target="_blank"><input type="text" name="q" maxlength="20" placeholder="Search"/><input type="hidden" name="sitesearch" value="https://zhen8838.github.io"/></form></div><div class="widget"><div class="author-info"><a class="info-avatar" href="/about/" title="关于"><img class="nofancybox" src="/img/avatar.png"/></a><p>A Believing Heart Is Your Magic</p><a class="info-icon" href="mailto:597323109@qq.com" title="Email" target="_blank" style="margin-inline:5px"> <i class="fa fa-envelope-square" style="margin-inline:5px"></i></a><a class="info-icon" href="https://github.com/zhen8838" title="Github" target="_blank" style="margin-inline:5px"> <i class="fa fa-github-square" style="margin-inline:5px"></i></a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-folder-o"> 分类</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/%E4%BD%93%E7%B3%BB%E7%BB%93%E6%9E%84/">体系结构</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E5%B7%A5%E5%85%B7%E4%BD%BF%E7%94%A8/">工具使用</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">操作系统</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/">数据结构</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/">机器学习</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0/">深度学习</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E7%94%9F%E6%B4%BB/">生活</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80/">编程语言</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E7%BC%96%E8%AF%91%E5%99%A8/">编译器</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E8%BE%B9%E7%BC%98%E8%AE%A1%E7%AE%97/">边缘计算</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E8%BF%90%E7%AD%B9%E5%AD%A6/">运筹学</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-star-o"> 标签</i></div><div class="tagcloud"><a href="/tags/Linux/" style="font-size: 15px;">Linux</a> <a href="/tags/%E6%A0%91/" style="font-size: 15px;">树</a> <a href="/tags/C/" style="font-size: 15px;">C</a> <a href="/tags/Tensorflow/" style="font-size: 15px;">Tensorflow</a> <a href="/tags/%E6%A0%91%E8%8E%93%E6%B4%BE/" style="font-size: 15px;">树莓派</a> <a href="/tags/%E8%93%9D%E7%89%99/" style="font-size: 15px;">蓝牙</a> <a href="/tags/Matlab/" style="font-size: 15px;">Matlab</a> <a href="/tags/%E9%81%97%E4%BC%A0%E7%AE%97%E6%B3%95/" style="font-size: 15px;">遗传算法</a> <a href="/tags/SVM/" style="font-size: 15px;">SVM</a> <a href="/tags/%E9%93%BE%E8%A1%A8/" style="font-size: 15px;">链表</a> <a href="/tags/%E5%8D%8A%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0/" style="font-size: 15px;">半监督学习</a> <a href="/tags/GAN/" style="font-size: 15px;">GAN</a> <a href="/tags/%E6%A6%82%E7%8E%87%E8%AE%BA/" style="font-size: 15px;">概率论</a> <a href="/tags/Python/" style="font-size: 15px;">Python</a> <a href="/tags/%E9%A6%99%E6%A9%99%E6%B4%BE/" style="font-size: 15px;">香橙派</a> <a href="/tags/%E8%B8%A9%E5%9D%91%E7%BB%8F%E9%AA%8C/" style="font-size: 15px;">踩坑经验</a> <a href="/tags/LeetCode/" style="font-size: 15px;">LeetCode</a> <a href="/tags/Qt/" style="font-size: 15px;">Qt</a> <a href="/tags/%E5%A4%9A%E9%9D%A2%E4%BD%93%E6%A8%A1%E5%9E%8B/" style="font-size: 15px;">多面体模型</a> <a href="/tags/%E5%90%8E%E7%AB%AF%E4%BC%98%E5%8C%96/" style="font-size: 15px;">后端优化</a> <a href="/tags/Ampl/" style="font-size: 15px;">Ampl</a> <a href="/tags/%E5%9B%BE%E5%83%8F%E5%A4%84%E7%90%86/" style="font-size: 15px;">图像处理</a> <a href="/tags/K210/" style="font-size: 15px;">K210</a> <a href="/tags/%E4%BA%8C%E5%88%86%E6%B3%95/" style="font-size: 15px;">二分法</a> <a href="/tags/%E7%A7%91%E5%AD%A6%E4%B8%8A%E7%BD%91/" style="font-size: 15px;">科学上网</a> <a href="/tags/%E6%8D%9F%E5%A4%B1%E5%87%BD%E6%95%B0/" style="font-size: 15px;">损失函数</a> <a href="/tags/cmake/" style="font-size: 15px;">cmake</a> <a href="/tags/CPP/" style="font-size: 15px;">CPP</a> <a href="/tags/Conan/" style="font-size: 15px;">Conan</a> <a href="/tags/OrTools/" style="font-size: 15px;">OrTools</a> <a href="/tags/CSharp/" style="font-size: 15px;">CSharp</a> <a href="/tags/%E6%95%B0%E6%8D%AE%E5%A2%9E%E5%BC%BA/" style="font-size: 15px;">数据增强</a> <a href="/tags/VAE/" style="font-size: 15px;">VAE</a> <a href="/tags/%E8%81%9A%E7%B1%BB%E6%96%B9%E6%B3%95/" style="font-size: 15px;">聚类方法</a> <a href="/tags/CostModel/" style="font-size: 15px;">CostModel</a> <a href="/tags/Vscode/" style="font-size: 15px;">Vscode</a> <a href="/tags/%E5%A3%B0%E9%9F%B3%E4%BF%A1%E5%8F%B7%E5%A4%84%E7%90%86/" style="font-size: 15px;">声音信号处理</a> <a href="/tags/TVM/" style="font-size: 15px;">TVM</a> <a href="/tags/%E5%8A%A8%E6%80%81shape/" style="font-size: 15px;">动态shape</a> <a href="/tags/%E4%B8%AD%E7%AB%AF%E4%BC%98%E5%8C%96/" style="font-size: 15px;">中端优化</a> <a href="/tags/Equality-Saturation/" style="font-size: 15px;">Equality Saturation</a> <a href="/tags/stm32/" style="font-size: 15px;">stm32</a> <a href="/tags/Keras/" style="font-size: 15px;">Keras</a> <a href="/tags/Halide/" style="font-size: 15px;">Halide</a> <a href="/tags/DSL/" style="font-size: 15px;">DSL</a> <a href="/tags/%E5%A0%86%E6%A0%88/" style="font-size: 15px;">堆栈</a> <a href="/tags/%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B/" style="font-size: 15px;">大语言模型</a> <a href="/tags/llama/" style="font-size: 15px;">llama</a> <a href="/tags/%E5%BD%92%E4%B8%80%E5%8C%96/" style="font-size: 15px;">归一化</a> <a href="/tags/Makefile/" style="font-size: 15px;">Makefile</a> <a href="/tags/%E5%85%83%E5%AD%A6%E4%B9%A0/" style="font-size: 15px;">元学习</a> <a href="/tags/%E6%A8%A1%E6%9D%BF%E5%85%83%E7%BC%96%E7%A8%8B/" style="font-size: 15px;">模板元编程</a> <a href="/tags/mindspore/" style="font-size: 15px;">mindspore</a> <a href="/tags/LLM/" style="font-size: 15px;">LLM</a> <a href="/tags/tvm/" style="font-size: 15px;">tvm</a> <a href="/tags/mlir/" style="font-size: 15px;">mlir</a> <a href="/tags/%E6%80%A7%E8%83%BD%E5%BB%BA%E6%A8%A1/" style="font-size: 15px;">性能建模</a> <a href="/tags/mxnet/" style="font-size: 15px;">mxnet</a> <a href="/tags/Nand2Tetris/" style="font-size: 15px;">Nand2Tetris</a> <a href="/tags/ncnn/" style="font-size: 15px;">ncnn</a> <a href="/tags/Numpy/" style="font-size: 15px;">Numpy</a> <a href="/tags/PCB/" style="font-size: 15px;">PCB</a> <a href="/tags/%E5%A7%BF%E6%80%81%E4%BC%B0%E8%AE%A1/" style="font-size: 15px;">姿态估计</a> <a href="/tags/%E4%BA%BA%E8%84%B8%E6%A3%80%E6%B5%8B/" style="font-size: 15px;">人脸检测</a> <a href="/tags/%E7%A5%9E%E7%BB%8F%E7%BD%91%E7%BB%9C%E9%87%8F%E5%8C%96/" style="font-size: 15px;">神经网络量化</a> <a href="/tags/Yolo/" style="font-size: 15px;">Yolo</a> <a href="/tags/Pytorch/" style="font-size: 15px;">Pytorch</a> <a href="/tags/NB-IOT/" style="font-size: 15px;">NB-IOT</a> <a href="/tags/Retinaface/" style="font-size: 15px;">Retinaface</a> <a href="/tags/%E7%9B%AE%E6%A0%87%E6%A3%80%E6%B5%8B/" style="font-size: 15px;">目标检测</a> <a href="/tags/%E6%8C%87%E4%BB%A4%E9%9B%86/" style="font-size: 15px;">指令集</a> <a href="/tags/%E6%8E%92%E5%BA%8F/" style="font-size: 15px;">排序</a> <a href="/tags/%E7%BB%9F%E8%AE%A1%E5%AD%A6%E4%B9%A0%E6%96%B9%E6%B3%95/" style="font-size: 15px;">统计学习方法</a> <a href="/tags/%E4%BA%BA%E8%84%B8%E8%AF%86%E5%88%AB/" style="font-size: 15px;">人脸识别</a> <a href="/tags/%E4%BC%98%E5%8C%96%E5%99%A8/" style="font-size: 15px;">优化器</a> <a href="/tags/%E5%90%B4%E6%81%A9%E8%BE%BE%E8%AF%BE%E7%A8%8B/" style="font-size: 15px;">吴恩达课程</a> <a href="/tags/WordCloud/" style="font-size: 15px;">WordCloud</a> <a href="/tags/Zhihu/" style="font-size: 15px;">Zhihu</a> <a href="/tags/git/" style="font-size: 15px;">git</a> <a href="/tags/%E5%9B%9B%E8%BD%B4%E9%A3%9E%E8%A1%8C%E5%99%A8/" style="font-size: 15px;">四轴飞行器</a> <a href="/tags/%E8%B5%84%E6%BA%90%E6%B1%87%E6%80%BB/" style="font-size: 15px;">资源汇总</a> <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F/" style="font-size: 15px;">分布式</a> <a href="/tags/%E6%97%A0%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0/" style="font-size: 15px;">无监督学习</a> <a href="/tags/Apple/" style="font-size: 15px;">Apple</a> <a href="/tags/Jittor/" style="font-size: 15px;">Jittor</a> <a href="/tags/Tiramisu/" style="font-size: 15px;">Tiramisu</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-file-o"> 最近文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2024/11/07/mesh-matmul/">分布式存储架构下的矩阵乘与编译器</a></li><li class="post-list-item"><a class="post-list-link" href="/2024/08/08/mlc-tutorial/">机器学习编译概念科普</a></li><li class="post-list-item"><a class="post-list-link" href="/2024/08/08/benchmark-notes/">benchmark的经验与技巧</a></li><li class="post-list-item"><a class="post-list-link" href="/2024/06/14/ampl-learn/">Ampl学习</a></li><li class="post-list-item"><a class="post-list-link" href="/2024/05/08/constraints-solver-internals/">Constraints Solver Internals</a></li><li class="post-list-item"><a class="post-list-link" href="/2024/04/30/model-driven-optimization/">Model Driven Optimization</a></li><li class="post-list-item"><a class="post-list-link" href="/2024/04/23/mac-amx/">探索AMX: 解锁Apple Silicon隐藏性能</a></li><li class="post-list-item"><a class="post-list-link" href="/2024/04/23/mac-amx_en/">Explore AMX instructions: Unlock the performance of Apple Silicon</a></li><li class="post-list-item"><a class="post-list-link" href="/2024/03/13/macos-bundle/">macos中bundle的使用</a></li><li class="post-list-item"><a class="post-list-link" href="/2024/01/11/affine-fusion/">Affine Fusion Pass浅析</a></li></ul></div></div></div><div class="pure-u-1 pure-u-md-3-4"><div id="footer">Copyright © 2024 <a href="/." rel="nofollow">Zheng's Notes.</a> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a><a rel="nofollow" target="_blank" href="https://github.com/tufu9441/maupassant-hexo"> Theme</a> by<a rel="nofollow" target="_blank" href="https://github.com/pagecho"> Cho.</a></div></div></div><a class="show" id="rocket" href="#top"></a><script type="text/javascript" src="/js/totop.js?v=1.0.0" async></script><script type="text/javascript" src="//lib.baomitu.com/fancybox/latest/jquery.fancybox.min.js"></script><script type="text/javascript" src="/js/fancybox.js?v=1.0.0"></script><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/fancybox/latest/jquery.fancybox.min.css"><script type="text/javascript" src="/js/copycode.js?v=1.0.0" successtext="复制成功！"></script><link rel="stylesheet" type="text/css" href="/css/copycode.css?v=1.0.0"><script type="text/x-mathjax-config">MathJax.Hub.Config({
+  tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+  });
+</script><script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-MML-AM_CHTML" async></script><script type="text/javascript" src="/js/codeblock-resizer.js?v=1.0.0"></script><script type="text/javascript" src="/js/smartresize.js?v=1.0.0"></script></div></body></html>
