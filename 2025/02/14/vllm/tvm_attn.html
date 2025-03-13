@@ -1,0 +1,123 @@
+<pre class="plantuml"><code>@startuml
+package cpp {
+
+package impl {
+class AttentionKVCacheObj {
+    + Empty(): bool
+    + GetNumAvailablePages(): int32_t
+    + GetTotalSequenceLength(): int32_t
+    + EnableSlidingWindowForSeq(seq_id: int64_t, sliding_window_size: int32_t, attn_sink_size: int32_t): void
+    + CommitAcceptedTokenTreeNodes(seq_ids: IntTuple, leaf_indices: IntTuple): void
+    + AttentionWithFusedQKV(layer_id: int64_t, qkv_data: NDArray, mask: Optional&lt;NDArray&gt;, o_data: NDArray, attn_score_scaling_factor: double): void #pink;
+    + GetQueryPositions(): NDArray
+    + DebugGetKV(seq_id: int64_t, start_pos: int64_t, end_pos: int64_t, k_data: NDArray, v_data: NDArray): void
+    + DebugSetKV(seq_id: int64_t, start_pos: int64_t, k_data: NDArray, v_data: NDArray): void
+    + static constexpr _type_index: uint32_t
+    + static constexpr _type_key: const char*
+}
+
+class KVStateObj {
+    + Clear(): void
+    + AddSequence(seq_id: int64_t): void
+    + RemoveSequence(seq_id: int64_t): void
+    + ForkSequence(parent_seq_id: int64_t, child_seq_id: int64_t, fork_pos: int64_t = -1): void
+    + PopN(seq_id: int64_t, n: int32_t): void
+    + BeginForward(seq_ids: IntTuple, append_lengths: IntTuple, token_tree_parent_ptr: Optional&lt;IntTuple&gt; = NullOpt): void
+    + EndForward(): void
+    + static constexpr _type_index: uint32_t
+    + static constexpr _type_key: const char*
+}
+
+class PagedAttentionKVCacheObj {
+    - f_transpose_append_: PackedFunc
+    - f_compact_copy_: PackedFunc
+    - f_attention_prefill_: PackedFunc
+    - f_attention_decode_: PackedFunc
+    - f_attention_prefill_sliding_window_: PackedFunc
+    - f_attention_decode_sliding_window_: PackedFunc
+    - f_attention_prefill_ragged_: PackedFunc
+    - f_attention_prefill_with_tree_mask_: PackedFunc
+    - f_attention_prefill_ragged_begin_forward_: Optional&lt;PackedFunc&gt;
+    - f_attention_prefill_ragged_end_forward_: Optional&lt;PackedFunc&gt;
+    - f_attention_prefill_begin_forward_: Optional&lt;PackedFunc&gt;
+    - f_attention_prefill_end_forward_: Optional&lt;PackedFunc&gt;
+    - f_attention_decode_begin_forward_: Optional&lt;PackedFunc&gt;
+    - f_attention_decode_end_forward_: Optional&lt;PackedFunc&gt;
+    - f_merge_inplace_: PackedFunc
+    - f_split_rotary_: PackedFunc
+    - f_copy_single_page_: PackedFunc
+    - f_debug_get_kv_: Optional&lt;PackedFunc&gt;
+}
+
+PagedAttentionKVCacheObj --|&gt; AttentionKVCacheObj : extends
+AttentionKVCacheObj --|&gt; KVStateObj : extends
+}
+
+package vm {
+
+interface builtin {
+    + kv_state_clear()
+    + kv_state_add_sequence()
+    + kv_state_remove_sequence()
+    + kv_state_fork_sequence()
+    + kv_state_popn()
+    + kv_state_begin_forward()
+    + kv_state_end_forward()
+    + attention_kv_cache_enable_sliding_window_for_seq()
+    + attention_kv_cache_commit_accepted_token_tree_nodes()
+    + attention_kv_cache_empty()
+    + attention_kv_cache_get_num_available_pages()
+    + attention_kv_cache_get_total_sequence_length()
+    + attention_kv_cache_get_query_positions()
+    + attention_kv_cache_debug_get_kv()
+    + attention_kv_cache_attention_with_fused_qkv()
+    + rnn_state_get()
+    + rnn_state_set()
+    + rnn_state_debug_get()
+}
+}
+builtin::kv_state_clear -- KVStateObj::Clear
+builtin::kv_state_add_sequence -- KVStateObj::AddSequence
+builtin::kv_state_remove_sequence -- KVStateObj::RemoveSequence
+builtin::kv_state_fork_sequence -- KVStateObj::ForkSequence
+builtin::kv_state_popn -- KVStateObj::PopN
+builtin::kv_state_begin_forward -- KVStateObj::BeginForward
+builtin::kv_state_end_forward -- KVStateObj::EndForward
+builtin::attention_kv_cache_enable_sliding_window_for_seq -- AttentionKVCacheObj::EnableSlidingWindowForSeq
+builtin::attention_kv_cache_commit_accepted_token_tree_nodes -- AttentionKVCacheObj::CommitAcceptedTokenTreeNodes
+builtin::attention_kv_cache_empty -- AttentionKVCacheObj::Empty
+builtin::attention_kv_cache_get_num_available_pages -- AttentionKVCacheObj::GetNumAvailablePages
+builtin::attention_kv_cache_get_total_sequence_length -- AttentionKVCacheObj::GetTotalSequenceLength
+builtin::attention_kv_cache_get_query_positions -- AttentionKVCacheObj::GetQueryPositions
+builtin::attention_kv_cache_debug_get_kv -- AttentionKVCacheObj::DebugGetKV
+builtin::attention_kv_cache_attention_with_fused_qkv -- AttentionKVCacheObj::AttentionWithFusedQKV
+}
+
+package python {
+class TIRPagedKVCache {
+  + tir_attention_prefill_ragged_cpu
+  + tir_attention_prefill_cpu
+  + tir_attention_decode_cpu
+  + tir_attention_prefill_cpu_sliding_window
+  + tir_attention_decode_cpu_sliding_window
+  + tir_attention_prefill_with_tree_mask_cpu
+  + tir_attention_prefill_with_tree_mask_with_paged_kv_cache_cpu
+  + tir_attention_merge_state_cpu
+  + tir_split_rotary
+  + kv_cache_copy_single_page_cpu
+  + kv_cache_debug_get_kv
+  + kv_cache_compact_kv_copy_cpu
+}
+
+class FlashInferPagedKVCache {
+  + kv_cache_transpose_append
+  + kv_cache_transpose_append_mla
+  + num_key_value_heads
+  + kv_cache_debug_get_kv
+  + kv_cache_compact_kv_copy
+}
+
+TIRPagedKVCache --|&gt; PagedAttentionKVCacheObj : extends
+FlashInferPagedKVCache --|&gt; PagedAttentionKVCacheObj : extends
+}
+@enduml</code></pre>

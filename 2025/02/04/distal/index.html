@@ -1,0 +1,270 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description"><title>DISTAL: The Distributed Tensor Algebra Compiler | Zheng's Notes</title><link rel="stylesheet" type="text/css" href="/css/style.css?v=1.0.0"><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/normalize/latest/normalize.min.css"><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/pure/latest/pure-min.min.css"><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/pure/latest/grids-responsive-min.min.css"><link rel="stylesheet" href="//lib.baomitu.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//lib.baomitu.com/jquery/latest/jquery.min.js"></script><link rel="icon" mask="" sizes="any" href="/favicon.ico"><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"><script type="text/javascript" src="//lib.baomitu.com/clipboard.js/latest/clipboard.min.js"></script><script type="text/javascript" src="//lib.baomitu.com/toastr.js/latest/toastr.min.js"></script><link rel="stylesheet" href="//lib.baomitu.com/toastr.js/latest/toastr.min.css"><meta name="generator" content="Hexo 7.0.0"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">DISTAL: The Distributed Tensor Algebra Compiler</h1><a id="logo" href="/.">Zheng's Notes</a><p class="description"></p></div><div id="nav-menu"><a class="current" href="/."><i class="fa fa-home"> 首页</i></a><a href="/archives/"><i class="fa fa-archive"> 归档</i></a><a href="/about/"><i class="fa fa-user"> 关于</i></a></div></div><div class="pure-g" id="layout"><div class="pure-u-1 pure-u-md-3-4"><div class="content_container"><div class="post"><h1 class="post-title">DISTAL: The Distributed Tensor Algebra Compiler</h1><div class="post-meta">2025-02-04<span> | </span><span class="category"><a href="/categories/%E7%BC%96%E8%AF%91%E5%99%A8/">编译器</a></span><span class="post-time"><span class="post-meta-item-text"> | </span><span class="post-meta-item-icon"><i class="fa fa-keyboard-o"></i><span class="post-count"> 3.1k</span><span class="post-meta-item-text"> 字</span></span></span><span class="post-time"> | <span class="post-meta-item-icon"><i class="fa fa-clock-o"></i><span class="post-count"> 14</span><span class="post-meta-item-text"> 分钟</span></span></span></div><div class="post-content"><p>这篇论文主要是介绍了一个分布式张量代数编译器，
+它通过自定义的DSL可以帮助我们快速生成分布式计算代码。</p>
+<span id="more"></span>
+<h1 id="index-notation">1. Index Notation</h1>
+<p>首先这篇论文是在<a
+target="_blank" rel="noopener" href="http://tensor-compiler.org">taco</a>之上实现的，计算的描述依旧是index
+notation, 例如： <span class="math display">\[
+A(i, j) = B(i, k) * C(k, j)
+\]</span></p>
+<p>和其他的<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/674882975">tensor
+expression dsl</a>类似,
+也同样是用相对简单的代码构建出对应的循环/计算的ir。对于这个例子，它的ir是：
+<figure class="highlight cpp"><table><tr><td class="code"><pre><span class="line">forall(i, forall(j, forall(k, <span class="built_in">A</span>(i,j) += <span class="built_in">B</span>(i,k) * <span class="built_in">C</span>(k,j))))</span><br></pre></td></tr></table></figure></p>
+<h1 id="tensor-distribution-notation">2. Tensor Distribution
+Notation</h1>
+<p>distal很好的发扬了多面体模型的思想，数据分布到不同的机器上的本质就是数据点的集合被放置到了不同的机器上，因此他采用了多面体中映射的概念，通过tensor
+distribution notation来描述数据点集合和设备的映射关系来表达数据分布：
+<span class="math display">\[
+\begin{aligned}
+&amp;\text{Machine}: \mathcal{M}\ \ \  \text{Tensors}: \mathcal{T}  \\
+&amp;\text{Dimension Variables}: d \\
+&amp;\text{Dimension Name}\ \  n ::= d | \mathbin{N} | * \\
+&amp;\text{Tensor Distribution}\ \ \mathcal{D} ::=
+\mathcal{T}_{d^+}\mapsto_{n^+} \mathcal{M}
+\end{aligned}
+\]</span></p>
+<p>其中<span
+class="math inline">\(\mathcal{T}_{d^+}\)</span>描述的tensor本身，由于tensor的维度个数可能是动态的，因此用多个维度变量<span
+class="math inline">\(d^+\)</span>来表示，
+维度变量的个数等于tensor的维度。而机器<span
+class="math inline">\(\mathcal{M}\)</span>的描述则是多个维度名<span
+class="math inline">\(n^+\)</span>，维度名的个数等于拓扑的维度，注意维度名可以由维度变量/正整数/通配符<code>*</code>表示，这为描述数据分布提供了较大的灵活性。
+同时这里隐含了一个约束就是</p>
+<p>下面来看几个具体的例子， 首先假设<span
+class="math inline">\(\mathcal{T}\)</span>的shape为<code>[100]</code>,
+<span
+class="math inline">\(\mathcal{D}\)</span>的个数是<code>[10]</code></p>
+<table>
+<colgroup>
+<col style="width: 39%" />
+<col style="width: 32%" />
+<col style="width: 28%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>预设</th>
+<th>描述</th>
+<th>解释</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(\mathcal{T}\)</span>:<code>[100]</code>,
+<span class="math inline">\(\mathcal{M}\)</span>: <code>[10]</code></td>
+<td><span class="math inline">\(\mathcal{T} _{x} \mapsto_{x}
+\mathcal{M}\)</span></td>
+<td>每个设备拥有<code>[10]</code>的数据</td>
+</tr>
+<tr class="even">
+<td><span
+class="math inline">\(\mathcal{T}\)</span>:<code>[100,100]</code>, <span
+class="math inline">\(\mathcal{M}\)</span>: <code>[10]</code></td>
+<td><span class="math inline">\(\mathcal{T} _{xy} \mapsto_{x}
+\mathcal{M}\)</span></td>
+<td>每个设备拥有<code>[10,y]</code>的数据</td>
+</tr>
+<tr class="odd">
+<td><span
+class="math inline">\(\mathcal{T}\)</span>:<code>[100,100]</code>, <span
+class="math inline">\(\mathcal{M}\)</span>: <code>[10,10]</code></td>
+<td><span class="math inline">\(\mathcal{T} _{xy} \mapsto_{xy}
+\mathcal{M}\)</span></td>
+<td>每个设备拥有<code>[10,10]</code>的数据</td>
+</tr>
+<tr class="even">
+<td><span
+class="math inline">\(\mathcal{T}\)</span>:<code>[100,100]</code>, <span
+class="math inline">\(\mathcal{M}\)</span>: <code>[10,10,10]</code></td>
+<td><span class="math inline">\(\mathcal{T} _{xy} \mapsto_{xy0}
+\mathcal{M}\)</span></td>
+<td>某一个平面的每个设备拥有<code>[10,10]</code>的数据</td>
+</tr>
+<tr class="odd">
+<td><span
+class="math inline">\(\mathcal{T}\)</span>:<code>[100,100]</code>, <span
+class="math inline">\(\mathcal{M}\)</span>: <code>[10,10,10]</code></td>
+<td><span class="math inline">\(\mathcal{T} _{xy} \mapsto_{xy*}
+\mathcal{M}\)</span></td>
+<td>每个平面的每个设备拥有<code>[10,10]</code>的数据</td>
+</tr>
+<tr class="even">
+<td><span
+class="math inline">\(\mathcal{T}\)</span>:<code>[100,100,100]</code>,
+<span class="math inline">\(\mathcal{M}\)</span>:
+<code>[10,10]</code></td>
+<td><span class="math inline">\(\mathcal{T} _{xyz} \mapsto_{xy}
+\mathcal{M}\)</span></td>
+<td>每个设备拥有<code>[10,10,100]</code>的数据</td>
+</tr>
+</tbody>
+</table>
+<p>对应上述表格中每一个例子的具体示意图如下： <img
+src="/2025/02/04/distal/distribution-samples.png" /></p>
+<p>可以把tensor看作为一系列坐标-值的集合，machine可以看作是坐标的集合，而tensor
+distribution notation <span
+class="math inline">\(\mathcal{T}_{X}\mapsto_{Y}\mathcal{M}\)</span>
+就是一个映射函数，将tensor的坐标映射到machine的坐标。由于映射的时候存在broadcast或单独指定的情况，因此这种映射并不一定是一对多或多对一映射，为了实现复杂的映射，实际上映射函数由两部分组合而成，第一部分是<span
+class="math inline">\(\mathcal{P}: \mathcal{T} \mapsto
+\text{color}\)</span>，第二部分<span class="math inline">\(\mathcal{F}:
+\text{color} \mapsto \mathcal{M}\)</span>,
+相当于先进行多对一映射再进行一对多映射，其中<span
+class="math inline">\(\text{color}\)</span>作为独一无二的标记存在，并且<span
+class="math inline">\(\text{color}\)</span>由<span
+class="math inline">\(Y\)</span>中有效的维度变量组合而成：<span
+class="math inline">\((X \bigcap Y) \subseteq Y\)</span>。
+举个例子，假设<span class="math inline">\(\mathcal{T}:
+[4,4]\)</span>,<span class="math inline">\(\mathcal{M}:
+[2,2,2]\)</span>, distribution notation为<span
+class="math inline">\(\mathcal{T}_{xy} \mapsto_{xy*}
+\mathcal{M}\)</span>, 那么映射<span
+class="math inline">\(\mathcal{P}\)</span>如下： <span
+class="math display">\[
+\begin{aligned}
+\mathcal{P} = \{
+&amp;\{ (0,0),(1,0),(0,1),(1,1) \} \mapsto  (0,0),
+\{ (2,0),(3,0),(2,1),(3,1) \} \mapsto  (0,1), \\
+&amp;\{ (0,2),(1,2),(0,3),(1,3) \} \mapsto  (1,0),
+\{ (2,2),(3,2),(2,3),(3,3) \} \mapsto  (0,0) \}
+\end{aligned}
+\]</span></p>
+<p>而映射<span class="math inline">\(\mathcal{F}\)</span>如下： <span
+class="math display">\[
+\begin{aligned}
+\mathcal{F} =\{
+  &amp;(0,0) \mapsto \{(0,0,0),(0,0,1)\},
+  (0,1) \mapsto \{(0,1,0),(0,1,1)\},\\
+  &amp;(1,0) \mapsto \{(1,0,0),(1,0,1)\},
+  (0,0) \mapsto \{(0,0,0),(0,0,1)\}
+\}
+\end{aligned}
+\]</span></p>
+<p>通过上述这种分阶段的简单映射从而实现了复杂的映射。</p>
+<h1 id="computation-schedule">3. Computation Schedule</h1>
+<p>考虑这样一段计算： <figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">3</span>):</span><br><span class="line">  <span class="keyword">for</span> j <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">3</span>):</span><br><span class="line">    A[i] += B[j]</span><br></pre></td></tr></table></figure></p>
+<p>使用多面体模型表示他所对应的迭代域为： <figure class="highlight python"><table><tr><td class="code"><pre><span class="line">domain = isl.<span class="built_in">set</span>(<span class="string">&quot;&#123; S[i, j] : 0 &lt;= i &lt; 3 and 0 &lt;= j &lt; 3&#125;&quot;</span>)</span><br></pre></td></tr></table></figure> 如图所示：</p>
+<p><img src="/2025/02/04/distal/domain.png" /></p>
+<h2 id="distribute">3.1 Distribute</h2>
+<p>distal在taco的基础上使用distribute的调度来修改迭代域，从而表示分布式计算。内部的实现如下：
+<figure class="highlight cpp"><table><tr><td class="code"><pre><span class="line"><span class="built_in">distribute</span>(vector&lt;IndexVar&gt; targets, vector&lt;IndexVar&gt; dist, vector&lt;IndexVar&gt; local, Machine m):</span><br><span class="line">  <span class="comment">// Divide each dimension by the corresponding machine dimension.</span></span><br><span class="line">  <span class="function"><span class="keyword">for</span> i in <span class="title">range</span><span class="params">(<span class="number">0</span>, m.dim)</span>:</span></span><br><span class="line"><span class="function">    // Reorder loops so each outer divided variable is on the outside.</span></span><br><span class="line"><span class="function">    divide(targets[i], dist[i], local[i], m.dims[i]) </span></span><br><span class="line"><span class="function">  // Distribute all of the outer divided variables.</span></span><br><span class="line"><span class="function">  reorder(dist + local) </span></span><br><span class="line"><span class="function">  distribute(dist)</span></span><br></pre></td></tr></table></figure>
+实际上就是将循环进行split后再进行reorder，再标记外层循环与machine进行对应。</p>
+<p>当distribution notation为<span class="math inline">\(\mathcal{a}_{x}
+\mapsto_{x} \mathcal{M}\)</span>,<span
+class="math inline">\(\mathcal{b}_{x} \mapsto_{x} \mathcal{M}\)</span>,
+那么对应的分布式调度为<code>distribute(i,io,ii,M)</code>,
+经过调度后的迭代域如下：</p>
+<p><img src="/2025/02/04/distal/domain_distribute.png" /></p>
+<p>灰色区域所表示的是单独的分布式节点，在循环i上进行分布式后，所有的循环j都被划分到了不同的处理器节点上。</p>
+<h2 id="communicate">3.2 Communicate</h2>
+<p>当数据分布在不同的处理器上时，在发生计算时就需要将所依赖的数据从别的处理器节点上获取，因此需要进行数据的通信。基于distribution
+notation以及多面体分析，我们可以计算得到每一次迭代所需要传输的数据。将这种数据依赖以及循环j的前三次迭代绘制出来，如下所示：</p>
+<p><img src="/2025/02/04/distal/communicate_naive.png" /></p>
+<p>可以看到，<code>a,b</code>在循环i上进行分布，那么每个i的迭代对应他们的一部分数据区域，在每次j的迭代中，每个节点会需要从其他节点获取到b的部分数据。当然这是基于数据的分布式情况以及依赖分析所得到的naive
+通信方式。</p>
+<p>在上面这种情况下，如果采用一个更大块的通信操作，直接从节点获取多次计算所需要的数据，而不是每次迭代都获取数据，那么性能可能会更好，这就引出了通信频率和内存使用的trade-off。为了在这种trade-off的场景下可以进行调节，distal提供了<span
+class="math inline">\(\text{communicate}(\mathcal{T},
+i)\)</span>的调度。他通过指定迭代循环的方式，配合数据分布以及数据依赖分析，把迭代循环内部所有嵌套循环所依赖的数据放到所指定循环的开始来获取。比如执行<code>distribute(b,i)</code>后，计算如图所示：</p>
+<p><img src="/2025/02/04/distal/communicate_opt.png" /></p>
+<p>distal的communicate调度是故意进行了简化设计，因为如果要指定send/receive或者设备编号等，整个事情就会变的非常复杂。</p>
+<h2 id="rotate">3.3 Rotate</h2>
+<p>许多分布式算法采用脉动的方式实现，处理器反复将数据shift到相邻节点。脉动算法可以有效互连的机器架构，并通过避免对相同数据的竞争来提高性能。</p>
+<p>首先继续从<code>distribute(i)</code>的调度开始，默认可以认为他执行的是broadcast的通信操作，在每个时间片上，都会向所有处理器发送对相同数据的通信请求，如下图所示：
+<img src="/2025/02/04/distal/rotate_naive.png" /></p>
+<p>为了表达脉动计算，distal引入rotate调度,
+他是通过引入时间维度的映射，让j的迭代空间在时间上旋转，从而实现脉动式通信模式。如下图所示，实际上现在的横轴已经不是j的迭代空间了，而是时间维度，真正的j的迭代空间在每个时间片上发生了旋转。
+如果对于每个i的迭代，j的迭代空间被旋转且j的第i次迭代先发生，那么称整个execution
+space具备脉动模式： <img src="/2025/02/04/distal/rotate_opt.png" /></p>
+<p>给定一组索引变量<span
+class="math inline">\(I\)</span>，目标索引变量<span
+class="math inline">\(t\)</span>, 以及结果索引变量<span
+class="math inline">\(r\)</span>,
+<code>rotate(t,I,r)</code>的调度会另迭代空间<span
+class="math inline">\(t\)</span>根据<span
+class="math inline">\(\sum_{i\in I} i \mod
+\text{extent(t)}\)</span>发生旋转。 旋转后，对于所有的<span
+class="math inline">\(i\in I\)</span>，给定其一个固定的剩余迭代<span
+class="math inline">\(i&#39;\in (I-i)\)</span>, <span
+class="math inline">\(r\)</span>的相同迭代会在<span
+class="math inline">\(i\)</span>的不同迭代上发生。假设<span
+class="math inline">\(t\)</span>在<span
+class="math inline">\(i,j\)</span>两个维度上进行了rotate, 那么每次<span
+class="math inline">\(i\)</span>或<span
+class="math inline">\(j\)</span>的迭代开始时,<span
+class="math inline">\(r\)</span>的值都是不同的。</p>
+<h1 id="case-studies">4. Case Studies</h1>
+<p>distal中采用Tensor Distribution Notation和Computation
+Schedule可以组合起来表达各种各样的分布式算法。当然大量分布式算法都集中在分布式矩阵乘法算法上。因此distal展示了实现各种分布式矩阵乘算法的例子：</p>
+<p><img src="/2025/02/04/distal/examples.png" /></p>
+<h2 id="summa">4.1 Summa</h2>
+<p>首先定义各种分布式tensor以及循环域。 <figure class="highlight cpp"><table><tr><td class="code"><pre><span class="line"><span class="type">int</span> dim = <span class="number">1024</span>;</span><br><span class="line"><span class="comment">// Place each tensor onto a processor grid.</span></span><br><span class="line"><span class="keyword">auto</span> gx = ir::Var::<span class="built_in">make</span>(<span class="string">&quot;gridX&quot;</span>, Int32, <span class="literal">false</span>, <span class="literal">false</span>, <span class="literal">true</span>);</span><br><span class="line"><span class="keyword">auto</span> gy = ir::Var::<span class="built_in">make</span>(<span class="string">&quot;gridY&quot;</span>, Int32, <span class="literal">false</span>, <span class="literal">false</span>, <span class="literal">true</span>);</span><br><span class="line"><span class="keyword">auto</span> grid = <span class="built_in">Grid</span>(gx, gy);</span><br><span class="line"><span class="keyword">auto</span> dist = <span class="built_in">TensorDistribution</span>(grid);</span><br><span class="line"></span><br><span class="line"><span class="function">Tensor&lt;<span class="type">double</span>&gt; <span class="title">a</span><span class="params">(<span class="string">&quot;a&quot;</span>, &#123;dim, dim&#125;, Format&#123;Dense, Dense&#125;, dist)</span></span>;</span><br><span class="line"><span class="function">Tensor&lt;<span class="type">double</span>&gt; <span class="title">b</span><span class="params">(<span class="string">&quot;b&quot;</span>, &#123;dim, dim&#125;, Format&#123;Dense, Dense&#125;, dist)</span></span>;</span><br><span class="line"><span class="function">Tensor&lt;<span class="type">double</span>&gt; <span class="title">c</span><span class="params">(<span class="string">&quot;c&quot;</span>, &#123;dim, dim&#125;, Format&#123;Dense, Dense&#125;, dist)</span></span>;</span><br><span class="line"></span><br><span class="line"><span class="function">IndexVar <span class="title">i</span><span class="params">(<span class="string">&quot;i&quot;</span>)</span>, <span class="title">j</span><span class="params">(<span class="string">&quot;j&quot;</span>)</span>, <span class="title">io</span><span class="params">(<span class="string">&quot;in&quot;</span>)</span>, <span class="title">jo</span><span class="params">(<span class="string">&quot;jn&quot;</span>)</span>, <span class="title">ii</span><span class="params">(<span class="string">&quot;il&quot;</span>)</span>, <span class="title">ji</span><span class="params">(<span class="string">&quot;jl&quot;</span>)</span>, <span class="title">k</span><span class="params">(<span class="string">&quot;k&quot;</span>)</span>, <span class="title">ki</span><span class="params">(<span class="string">&quot;ki&quot;</span>)</span>, <span class="title">ko</span><span class="params">(<span class="string">&quot;ko&quot;</span>)</span></span>;</span><br><span class="line"><span class="function">IndexVar <span class="title">iln</span><span class="params">(<span class="string">&quot;iln&quot;</span>)</span>, <span class="title">ill</span><span class="params">(<span class="string">&quot;ill&quot;</span>)</span></span>;</span><br><span class="line"><span class="built_in">a</span>(i, j) = <span class="built_in">b</span>(i, k) * <span class="built_in">c</span>(k, j);</span><br><span class="line"></span><br><span class="line"><span class="keyword">auto</span> placeALowered = <span class="built_in">lowerLegionSeparatePartitionCompute</span>(a.<span class="built_in">getPlacementStatement</span>(), <span class="string">&quot;placeLegionA&quot;</span>);</span><br><span class="line"><span class="keyword">auto</span> placeBLowered = <span class="built_in">lowerLegionSeparatePartitionCompute</span>(b.<span class="built_in">getPlacementStatement</span>(), <span class="string">&quot;placeLegionB&quot;</span>);</span><br><span class="line"><span class="keyword">auto</span> placeCLowered = <span class="built_in">lowerLegionSeparatePartitionCompute</span>(c.<span class="built_in">getPlacementStatement</span>(), <span class="string">&quot;placeLegionC&quot;</span>);</span><br></pre></td></tr></table></figure>
+采用distal提供的调度接口： <figure class="highlight cpp"><table><tr><td class="code"><pre><span class="line"><span class="keyword">auto</span> stmt = a.<span class="built_in">getAssignment</span>().<span class="built_in">concretize</span>() </span><br><span class="line">  .<span class="built_in">distribute</span>(&#123;i, j&#125;, &#123;io, jo&#125;, &#123;ii, ji&#125;, grid);</span><br><span class="line">  .<span class="built_in">divide</span>(k, ko, ki, gx);</span><br><span class="line">  .<span class="built_in">reorder</span>(&#123;ko, ii, ji, ki&#125;);</span><br><span class="line">  .<span class="built_in">communicate</span>(<span class="built_in">a</span>(i, j), jo);</span><br><span class="line">  .<span class="built_in">communicate</span>(<span class="built_in">b</span>(i, k), ko);</span><br><span class="line">  .<span class="built_in">communicate</span>(<span class="built_in">c</span>(i, j), ko);</span><br></pre></td></tr></table></figure></p>
+<p>这里每一步的调度返回值都可以打印为文本形式：</p>
+<table>
+<colgroup>
+<col style="width: 32%" />
+<col style="width: 67%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>schedule</th>
+<th>stmt</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>a(i, j) = b(i, k) * c(k, j);</td>
+<td>forall(i, forall(j, forall(k, a(i,j) += b(i,k) * c(k,j))))</td>
+</tr>
+<tr class="even">
+<td>distribute({i, j}, {io, jo}, {ii, ji}, grid)</td>
+<td>suchthat(forall(distFused, forall(il, forall(jl, forall(k, a(i,j) +=
+b(i,k) * c(k,j)))), Distributed, NoRaces), divide(i, in, il, gridX) and
+divide(j, jn, jl, gridY) and multiFuse({in, jn}, reorder(in, jn)))</td>
+</tr>
+<tr class="odd">
+<td>divide(k, ko, ki, gx)</td>
+<td>suchthat(forall(distFused, forall(il, forall(jl, forall(ko,
+forall(ki, a(i,j) += b(i,k) * c(k,j))))), Distributed, NoRaces),
+divide(i, in, il, gridX) and divide(j, jn, jl, gridY) and multiFuse({in,
+jn}, reorder(in, jn)) and divide(k, ko, ki, gridX))</td>
+</tr>
+<tr class="even">
+<td>reorder({ko, ii, ji, ki})</td>
+<td>suchthat(forall(distFused, forall(ko, forall(il, forall(jl,
+forall(ki, a(i,j) += b(i,k) * c(k,j))))), Distributed, NoRaces),
+divide(i, in, il, gridX) and divide(j, jn, jl, gridY) and multiFuse({in,
+jn}, reorder(in, jn)) and divide(k, ko, ki, gridX))</td>
+</tr>
+<tr class="odd">
+<td>communicate(a(i, j), jo)</td>
+<td>suchthat(forall(distFused, forall(ko, forall(il, forall(jl,
+forall(ki, a(i,j) += b(i,k) * c(k,j))))), Distributed, NoRaces,
+transfers: transfer(a(i,j))), divide(i, in, il, gridX) and divide(j, jn,
+jl, gridY) and multiFuse({in, jn}, reorder(in, jn)) and divide(k, ko,
+ki, gridX))</td>
+</tr>
+<tr class="even">
+<td>communicate(b(i, k), ko)</td>
+<td>suchthat(forall(distFused, forall(ko, forall(il, forall(jl,
+forall(ki, a(i,j) += b(i,k) * c(k,j)))), transfers: transfer(b(i,k))),
+Distributed, NoRaces, transfers: transfer(a(i,j)), transfer(b(i,k))),
+divide(i, in, il, gridX) and divide(j, jn, jl, gridY) and multiFuse({in,
+jn}, reorder(in, jn)) and divide(k, ko, ki, gridX))</td>
+</tr>
+<tr class="odd">
+<td>communicate(c(i, j), ko)</td>
+<td>suchthat(forall(distFused, forall(ko, forall(il, forall(jl,
+forall(ki, a(i,j) += b(i,k) * c(k,j)))), transfers: transfer(b(i,k)),
+transfer(c(i,j))), Distributed, NoRaces, transfers: transfer(a(i,j)),
+transfer(b(i,k)), transfer(c(i,j))), divide(i, in, il, gridX) and
+divide(j, jn, jl, gridY) and multiFuse({in, jn}, reorder(in, jn)) and
+divide(k, ko, ki, gridX))</td>
+</tr>
+</tbody>
+</table>
+<p>如果采用伪代码的形式可以更好理解：</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="comment"># naive</span></span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">0</span>, M):</span><br><span class="line">  <span class="keyword">for</span> j <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">0</span>, N):</span><br><span class="line">    <span class="keyword">for</span> k <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">0</span>, K):</span><br><span class="line">      a[i,j] += b[i,k] * c[k,j]</span><br><span class="line"><span class="comment"># distribute</span></span><br><span class="line"><span class="keyword">for</span> io <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">0</span>, X): @ parallel</span><br><span class="line">  <span class="keyword">for</span> jo <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">0</span>, Y): @ parallel</span><br><span class="line">    <span class="keyword">for</span> ii <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">0</span>, M / X):</span><br><span class="line">      <span class="keyword">for</span> jj <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">0</span>, N / Y):</span><br><span class="line">        <span class="keyword">for</span> k <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">0</span>, K):</span><br><span class="line">          a[io*(M/X)+ii,jo*(N/Y)+ji] += b[io*(M/X)+ii,k] * c[k,jo*(N/Y)+ji]</span><br><span class="line"><span class="comment"># divide</span></span><br><span class="line"><span class="keyword">for</span> io <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">0</span>, X): @ parallel</span><br><span class="line">  <span class="keyword">for</span> jo <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">0</span>, Y): @ parallel</span><br><span class="line">    <span class="keyword">for</span> ii <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">0</span>, M / X):</span><br><span class="line">      <span class="keyword">for</span> jj <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">0</span>, N / Y):</span><br><span class="line">        <span class="keyword">for</span> ko <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">0</span>, X):</span><br><span class="line">          <span class="keyword">for</span> ki <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">0</span>, K / X):</span><br><span class="line">            a[io*(M/X)+ii,jo*(N/Y)+ji] += b[io*(M/X)+ii,ko*(K/X)+ki] * c[ko*(K/X)+ki,jo*(N/Y)+ji]</span><br><span class="line"><span class="comment"># reorder</span></span><br><span class="line"><span class="keyword">for</span> io <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">0</span>, X): @ parallel</span><br><span class="line">  <span class="keyword">for</span> jo <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">0</span>, Y): @ parallel</span><br><span class="line">    <span class="keyword">for</span> ko <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">0</span>, X):</span><br><span class="line">      <span class="keyword">for</span> ii <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">0</span>, M / X):</span><br><span class="line">        <span class="keyword">for</span> jj <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">0</span>, N / Y):</span><br><span class="line">          <span class="keyword">for</span> ki <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">0</span>, K / X):</span><br><span class="line">            a[io*(M/X)+ii,jo*(N/Y)+ji] += b[io*(M/X)+ii,ko*(K/X)+ki] * c[ko*(K/X)+ki,jo*(N/Y)+ji]</span><br><span class="line"><span class="comment"># communicate</span></span><br><span class="line"><span class="keyword">for</span> io <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">0</span>, X): @ parallel</span><br><span class="line">  <span class="keyword">for</span> jo <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">0</span>, Y): @ parallel</span><br><span class="line">    sub_a = load(a[M/X,N/Y])</span><br><span class="line">    <span class="keyword">for</span> ko <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">0</span>, X):</span><br><span class="line">      sub_b = load(b[M/X,K/X])</span><br><span class="line">      sub_c = load(c[K/X,N/Y])</span><br><span class="line">      <span class="keyword">for</span> ii <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">0</span>, M / X):</span><br><span class="line">        <span class="keyword">for</span> jj <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">0</span>, N / Y):</span><br><span class="line">          <span class="keyword">for</span> ki <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">0</span>, K / X):</span><br><span class="line">            sub_a[ii,ji] += sub_b[ii,ki] * sub_c[ki,ji]</span><br></pre></td></tr></table></figure>
+</div><div class="tags"><ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/DSL/" rel="tag">DSL</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E5%A4%9A%E9%9D%A2%E4%BD%93%E6%A8%A1%E5%9E%8B/" rel="tag">多面体模型</a></li></ul></div><div class="post-nav"><a class="pre" href="/2025/02/14/vllm/">推理框架调研</a><a class="next" href="/2024/12/04/triton-cpu-lesson-1/">triton-cpu初体验</a></div><script src="https://utteranc.es/client.js" repo="zhen8838/zhen8838.github.io" issue-term="url" theme="github-light" crossorigin="anonymous" async></script></div></div></div><div class="pure-u-1-4 hidden_mid_and_down"><div id="sidebar"><div class="widget"><form class="search-form" action="//www.google.com/search" method="get" accept-charset="utf-8" target="_blank"><input type="text" name="q" maxlength="20" placeholder="Search"/><input type="hidden" name="sitesearch" value="https://zhen8838.github.io"/></form></div><div class="widget"><div class="author-info"><a class="info-avatar" href="/about/" title="关于"><img class="nofancybox" src="/img/avatar.png"/></a><p>A Believing Heart Is Your Magic</p><a class="info-icon" href="mailto:597323109@qq.com" title="Email" target="_blank" style="margin-inline:5px"> <i class="fa fa-envelope-square" style="margin-inline:5px"></i></a><a class="info-icon" href="https://github.com/zhen8838" title="Github" target="_blank" style="margin-inline:5px"> <i class="fa fa-github-square" style="margin-inline:5px"></i></a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-folder-o"> 分类</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/%E4%BD%93%E7%B3%BB%E7%BB%93%E6%9E%84/">体系结构</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E5%B7%A5%E5%85%B7%E4%BD%BF%E7%94%A8/">工具使用</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E6%8E%A8%E7%90%86%E6%A1%86%E6%9E%B6/">推理框架</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">操作系统</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/">数据结构</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/">机器学习</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0/">深度学习</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E7%94%9F%E6%B4%BB/">生活</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80/">编程语言</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E7%BC%96%E8%AF%91%E5%99%A8/">编译器</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E8%BE%B9%E7%BC%98%E8%AE%A1%E7%AE%97/">边缘计算</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E8%BF%90%E7%AD%B9%E5%AD%A6/">运筹学</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-star-o"> 标签</i></div><div class="tagcloud"><a href="/tags/Linux/" style="font-size: 15px;">Linux</a> <a href="/tags/%E6%A0%91/" style="font-size: 15px;">树</a> <a href="/tags/C/" style="font-size: 15px;">C</a> <a href="/tags/Tensorflow/" style="font-size: 15px;">Tensorflow</a> <a href="/tags/%E6%A0%91%E8%8E%93%E6%B4%BE/" style="font-size: 15px;">树莓派</a> <a href="/tags/%E8%93%9D%E7%89%99/" style="font-size: 15px;">蓝牙</a> <a href="/tags/Matlab/" style="font-size: 15px;">Matlab</a> <a href="/tags/%E9%81%97%E4%BC%A0%E7%AE%97%E6%B3%95/" style="font-size: 15px;">遗传算法</a> <a href="/tags/SVM/" style="font-size: 15px;">SVM</a> <a href="/tags/%E9%93%BE%E8%A1%A8/" style="font-size: 15px;">链表</a> <a href="/tags/%E5%8D%8A%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0/" style="font-size: 15px;">半监督学习</a> <a href="/tags/GAN/" style="font-size: 15px;">GAN</a> <a href="/tags/%E6%A6%82%E7%8E%87%E8%AE%BA/" style="font-size: 15px;">概率论</a> <a href="/tags/Python/" style="font-size: 15px;">Python</a> <a href="/tags/%E9%A6%99%E6%A9%99%E6%B4%BE/" style="font-size: 15px;">香橙派</a> <a href="/tags/%E8%B8%A9%E5%9D%91%E7%BB%8F%E9%AA%8C/" style="font-size: 15px;">踩坑经验</a> <a href="/tags/LeetCode/" style="font-size: 15px;">LeetCode</a> <a href="/tags/Qt/" style="font-size: 15px;">Qt</a> <a href="/tags/%E5%A4%9A%E9%9D%A2%E4%BD%93%E6%A8%A1%E5%9E%8B/" style="font-size: 15px;">多面体模型</a> <a href="/tags/%E5%90%8E%E7%AB%AF%E4%BC%98%E5%8C%96/" style="font-size: 15px;">后端优化</a> <a href="/tags/Ampl/" style="font-size: 15px;">Ampl</a> <a href="/tags/%E5%9B%BE%E5%83%8F%E5%A4%84%E7%90%86/" style="font-size: 15px;">图像处理</a> <a href="/tags/K210/" style="font-size: 15px;">K210</a> <a href="/tags/%E4%BA%8C%E5%88%86%E6%B3%95/" style="font-size: 15px;">二分法</a> <a href="/tags/%E7%A7%91%E5%AD%A6%E4%B8%8A%E7%BD%91/" style="font-size: 15px;">科学上网</a> <a href="/tags/%E6%8D%9F%E5%A4%B1%E5%87%BD%E6%95%B0/" style="font-size: 15px;">损失函数</a> <a href="/tags/cmake/" style="font-size: 15px;">cmake</a> <a href="/tags/CPP/" style="font-size: 15px;">CPP</a> <a href="/tags/Conan/" style="font-size: 15px;">Conan</a> <a href="/tags/OrTools/" style="font-size: 15px;">OrTools</a> <a href="/tags/CSharp/" style="font-size: 15px;">CSharp</a> <a href="/tags/%E6%95%B0%E6%8D%AE%E5%A2%9E%E5%BC%BA/" style="font-size: 15px;">数据增强</a> <a href="/tags/VAE/" style="font-size: 15px;">VAE</a> <a href="/tags/%E8%81%9A%E7%B1%BB%E6%96%B9%E6%B3%95/" style="font-size: 15px;">聚类方法</a> <a href="/tags/CostModel/" style="font-size: 15px;">CostModel</a> <a href="/tags/Vscode/" style="font-size: 15px;">Vscode</a> <a href="/tags/%E5%A3%B0%E9%9F%B3%E4%BF%A1%E5%8F%B7%E5%A4%84%E7%90%86/" style="font-size: 15px;">声音信号处理</a> <a href="/tags/TVM/" style="font-size: 15px;">TVM</a> <a href="/tags/%E5%8A%A8%E6%80%81shape/" style="font-size: 15px;">动态shape</a> <a href="/tags/%E4%B8%AD%E7%AB%AF%E4%BC%98%E5%8C%96/" style="font-size: 15px;">中端优化</a> <a href="/tags/Equality-Saturation/" style="font-size: 15px;">Equality Saturation</a> <a href="/tags/stm32/" style="font-size: 15px;">stm32</a> <a href="/tags/Keras/" style="font-size: 15px;">Keras</a> <a href="/tags/Halide/" style="font-size: 15px;">Halide</a> <a href="/tags/DSL/" style="font-size: 15px;">DSL</a> <a href="/tags/%E5%A0%86%E6%A0%88/" style="font-size: 15px;">堆栈</a> <a href="/tags/%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B/" style="font-size: 15px;">大语言模型</a> <a href="/tags/llama/" style="font-size: 15px;">llama</a> <a href="/tags/%E5%BD%92%E4%B8%80%E5%8C%96/" style="font-size: 15px;">归一化</a> <a href="/tags/Makefile/" style="font-size: 15px;">Makefile</a> <a href="/tags/%E5%85%83%E5%AD%A6%E4%B9%A0/" style="font-size: 15px;">元学习</a> <a href="/tags/%E6%A8%A1%E6%9D%BF%E5%85%83%E7%BC%96%E7%A8%8B/" style="font-size: 15px;">模板元编程</a> <a href="/tags/mindspore/" style="font-size: 15px;">mindspore</a> <a href="/tags/LLM/" style="font-size: 15px;">LLM</a> <a href="/tags/tvm/" style="font-size: 15px;">tvm</a> <a href="/tags/mlir/" style="font-size: 15px;">mlir</a> <a href="/tags/%E6%80%A7%E8%83%BD%E5%BB%BA%E6%A8%A1/" style="font-size: 15px;">性能建模</a> <a href="/tags/mxnet/" style="font-size: 15px;">mxnet</a> <a href="/tags/Nand2Tetris/" style="font-size: 15px;">Nand2Tetris</a> <a href="/tags/ncnn/" style="font-size: 15px;">ncnn</a> <a href="/tags/Numpy/" style="font-size: 15px;">Numpy</a> <a href="/tags/PCB/" style="font-size: 15px;">PCB</a> <a href="/tags/%E5%A7%BF%E6%80%81%E4%BC%B0%E8%AE%A1/" style="font-size: 15px;">姿态估计</a> <a href="/tags/%E4%BA%BA%E8%84%B8%E6%A3%80%E6%B5%8B/" style="font-size: 15px;">人脸检测</a> <a href="/tags/%E7%A5%9E%E7%BB%8F%E7%BD%91%E7%BB%9C%E9%87%8F%E5%8C%96/" style="font-size: 15px;">神经网络量化</a> <a href="/tags/Yolo/" style="font-size: 15px;">Yolo</a> <a href="/tags/Pytorch/" style="font-size: 15px;">Pytorch</a> <a href="/tags/NB-IOT/" style="font-size: 15px;">NB-IOT</a> <a href="/tags/Retinaface/" style="font-size: 15px;">Retinaface</a> <a href="/tags/%E7%9B%AE%E6%A0%87%E6%A3%80%E6%B5%8B/" style="font-size: 15px;">目标检测</a> <a href="/tags/%E6%8C%87%E4%BB%A4%E9%9B%86/" style="font-size: 15px;">指令集</a> <a href="/tags/%E6%8E%92%E5%BA%8F/" style="font-size: 15px;">排序</a> <a href="/tags/%E7%BB%9F%E8%AE%A1%E5%AD%A6%E4%B9%A0%E6%96%B9%E6%B3%95/" style="font-size: 15px;">统计学习方法</a> <a href="/tags/%E4%BA%BA%E8%84%B8%E8%AF%86%E5%88%AB/" style="font-size: 15px;">人脸识别</a> <a href="/tags/%E4%BC%98%E5%8C%96%E5%99%A8/" style="font-size: 15px;">优化器</a> <a href="/tags/%E5%90%B4%E6%81%A9%E8%BE%BE%E8%AF%BE%E7%A8%8B/" style="font-size: 15px;">吴恩达课程</a> <a href="/tags/WordCloud/" style="font-size: 15px;">WordCloud</a> <a href="/tags/Zhihu/" style="font-size: 15px;">Zhihu</a> <a href="/tags/git/" style="font-size: 15px;">git</a> <a href="/tags/%E5%9B%9B%E8%BD%B4%E9%A3%9E%E8%A1%8C%E5%99%A8/" style="font-size: 15px;">四轴飞行器</a> <a href="/tags/%E8%B5%84%E6%BA%90%E6%B1%87%E6%80%BB/" style="font-size: 15px;">资源汇总</a> <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F/" style="font-size: 15px;">分布式</a> <a href="/tags/%E6%97%A0%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0/" style="font-size: 15px;">无监督学习</a> <a href="/tags/Apple/" style="font-size: 15px;">Apple</a> <a href="/tags/Jittor/" style="font-size: 15px;">Jittor</a> <a href="/tags/Tiramisu/" style="font-size: 15px;">Tiramisu</a> <a href="/tags/Triton/" style="font-size: 15px;">Triton</a> <a href="/tags/vllm/" style="font-size: 15px;">vllm</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-file-o"> 最近文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2025/03/13/vllm/sglang_attn/">vllm/sglang_attn</a></li><li class="post-list-item"><a class="post-list-link" href="/2025/03/12/vllm/trt_attn/">vllm/trt_attn</a></li><li class="post-list-item"><a class="post-list-link" href="/2025/03/12/vllm/vllm_attn/">vllm/vllm_attn</a></li><li class="post-list-item"><a class="post-list-link" href="/2025/03/12/vllm/tvm_attn/">vllm/tvm_attn</a></li><li class="post-list-item"><a class="post-list-link" href="/2025/02/23/torch-trick/">Pytorch中遇到的一些问题</a></li><li class="post-list-item"><a class="post-list-link" href="/2025/02/14/vllm/">推理框架调研</a></li><li class="post-list-item"><a class="post-list-link" href="/2025/02/04/distal/">DISTAL: The Distributed Tensor Algebra Compiler</a></li><li class="post-list-item"><a class="post-list-link" href="/2024/12/04/triton-cpu-lesson-1/">triton-cpu初体验</a></li><li class="post-list-item"><a class="post-list-link" href="/2024/11/07/mesh-matmul/">分布式存储架构下的矩阵乘与编译器</a></li><li class="post-list-item"><a class="post-list-link" href="/2024/08/08/mlc-tutorial/">机器学习编译概念科普</a></li></ul></div></div></div><div class="pure-u-1 pure-u-md-3-4"><div id="footer">Copyright © 2025 <a href="/." rel="nofollow">Zheng's Notes.</a> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a><a rel="nofollow" target="_blank" href="https://github.com/tufu9441/maupassant-hexo"> Theme</a> by<a rel="nofollow" target="_blank" href="https://github.com/pagecho"> Cho.</a></div></div></div><a class="show" id="rocket" href="#top"></a><script type="text/javascript" src="/js/totop.js?v=1.0.0" async></script><script type="text/javascript" src="//lib.baomitu.com/fancybox/latest/jquery.fancybox.min.js"></script><script type="text/javascript" src="/js/fancybox.js?v=1.0.0"></script><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/fancybox/latest/jquery.fancybox.min.css"><script type="text/javascript" src="/js/copycode.js?v=1.0.0" successtext="复制成功！"></script><link rel="stylesheet" type="text/css" href="/css/copycode.css?v=1.0.0"><script type="text/x-mathjax-config">MathJax.Hub.Config({
+  tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+  });
+</script><script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-MML-AM_CHTML" async></script><script type="text/javascript" src="/js/codeblock-resizer.js?v=1.0.0"></script><script type="text/javascript" src="/js/smartresize.js?v=1.0.0"></script></div></body></html>

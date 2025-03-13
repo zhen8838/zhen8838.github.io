@@ -1,0 +1,73 @@
+<pre class="plantuml"><code>@startuml
+&#39; 定义类
+abstract AttentionBackend {
+    +init_forward_metadata(forward_batch: ForwardBatch)
+    +init_cuda_graph_state(max_bs: int)
+    +init_forward_metadata_capture_cuda_graph(...)
+    +init_forward_metadata_replay_cuda_graph(...)
+    +get_cuda_graph_seq_len_fill_value()
+    +forward(...)
+    +forward_decode(...)
+    +forward_extend(...)
+}
+
+class ForwardBatch {
+    -forward_mode: ForwardMode
+    -batch_size: int
+    -input_ids: torch.Tensor
+    -req_pool_indices: torch.Tensor
+    -seq_lens: torch.Tensor
+    -out_cache_loc: torch.Tensor
+    -seq_lens_sum: int
+    -return_logprob: bool
+    -top_logprobs_nums: Optional[List[int]]
+    -token_ids_logprobs: Optional[List[List[int]]]
+    -positions: torch.Tensor
+    -decode_seq_lens_cpu: Optional[torch.Tensor]
+    # 其他属性...
+}
+
+together {
+class TritonAttnBackend {
+    +init_forward_metadata(forward_batch: ForwardBatch)
+    +init_cuda_graph_state(max_bs: int)
+    +init_forward_metadata_capture_cuda_graph(...)
+    +init_forward_metadata_replay_cuda_graph(...)
+    +get_cuda_graph_seq_len_fill_value()
+    +forward_extend(...)
+    +forward_decode(...)
+}
+
+class FlashInferAttnBackend {
+    +init_forward_metadata(forward_batch: ForwardBatch)
+    +init_cuda_graph_state(max_bs: int)
+    +init_forward_metadata_capture_cuda_graph(...)
+    +forward_extend(...)
+    +forward_decode(...)
+}
+
+class FlashInferAttnBackend {
+    +init_forward_metadata(forward_batch: ForwardBatch)
+    +init_cuda_graph_state(max_bs: int)
+    +init_forward_metadata_capture_cuda_graph(...)
+    +forward_extend(...)
+    +forward_decode(...)
+}
+
+class TorchNativeAttnBackend {
+    +init_forward_metadata(forward_batch: ForwardBatch)
+    +init_cuda_graph_state(max_bs: int)
+    +init_forward_metadata_capture_cuda_graph(...)
+    +forward_extend(...)
+    +forward_decode(...)
+}
+TritonAttnBackend -[hidden]- FlashInferAttnBackend
+FlashInferAttnBackend -[hidden]- TorchNativeAttnBackend
+}
+
+ForwardBatch .r.&gt; AttentionBackend:forward(...)
+AttentionBackend -r-|&gt; TritonAttnBackend
+AttentionBackend -r-|&gt; FlashInferAttnBackend
+AttentionBackend -r-|&gt; TorchNativeAttnBackend
+
+@enduml</code></pre>
