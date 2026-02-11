@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2023-09-06">
+
+<title>Tiramisu Compiler Internals – Zheng’s Notes</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../assets/favicon.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-7072389654d23eff08f359f9aa0d1ee7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">Zheng’s Notes</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#概览" id="toc-概览" class="nav-link active" data-scroll-target="#概览">概览</a>
+  <ul class="collapse">
+  <li><a href="#tiramisu-schedule-commands" id="toc-tiramisu-schedule-commands" class="nav-link" data-scroll-target="#tiramisu-schedule-commands">Tiramisu Schedule Commands</a></li>
+  <li><a href="#tiramisu-multi-layer-ir" id="toc-tiramisu-multi-layer-ir" class="nav-link" data-scroll-target="#tiramisu-multi-layer-ir">Tiramisu Multi-Layer IR</a></li>
+  </ul></li>
+  <li><a href="#实现细节" id="toc-实现细节" class="nav-link" data-scroll-target="#实现细节">实现细节</a>
+  <ul class="collapse">
+  <li><a href="#数据结构" id="toc-数据结构" class="nav-link" data-scroll-target="#数据结构">数据结构</a></li>
+  <li><a href="#内部执行流程" id="toc-内部执行流程" class="nav-link" data-scroll-target="#内部执行流程">内部执行流程</a>
+  <ul class="collapse">
+  <li><a href="#定义输入" id="toc-定义输入" class="nav-link" data-scroll-target="#定义输入">1. 定义输入</a></li>
+  <li><a href="#定义计算" id="toc-定义计算" class="nav-link" data-scroll-target="#定义计算">2. 定义计算</a></li>
+  <li><a href="#调度计算" id="toc-调度计算" class="nav-link" data-scroll-target="#调度计算">3. 调度计算</a></li>
+  <li><a href="#代码生成" id="toc-代码生成" class="nav-link" data-scroll-target="#代码生成">4. 代码生成</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#总结" id="toc-总结" class="nav-link" data-scroll-target="#总结">总结</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Tiramisu Compiler Internals</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">编译器</div>
+  </div>
+  </div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">September 6, 2023</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p><a href="http://tiramisu-compiler.org">Tiramisu</a> 是一个基于polyhedral的DL compiler, 通过探索他的实现细节来学习如何利用polyhedral compilation并整合到他的dsl中的.</p>
+<!--more-->
+<section id="概览" class="level1">
+<h1>概览</h1>
+<p>Tiramisu compiler的创新点如下： 1. 引入polyhedral compiler,可以控制数据通信,同步,内存级别映射. 2. 将IR分离为四个层级,简化调度语言,增加了对于不同架构的调用可移植性 3. 支持rnn等算子优化,支持多核系统优化,同时优化后性能基本不弱于纯手写</p>
+<p>以下是他和其他几个编译器的对比,其中halide是基于表达式进行推导的,好处是支持参数化的tiling,缺点是分析难写,无法支持非常灵活的调度.而Tiramisu则是基于polyhedral,除了不支持参数化tiling其他功能都可以利用polyhedral提供的强大分析来完成.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 54%">
+<col style="width: 11%">
+<col style="width: 8%">
+<col style="width: 8%">
+<col style="width: 7%">
+<col style="width: 9%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Feature</th>
+<th>Tiramisu</th>
+<th>AlphaZ</th>
+<th>PENCIL</th>
+<th>Pluto</th>
+<th>Halide</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>CPU code generation</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr class="even">
+<td>GPU code generation</td>
+<td>Yes</td>
+<td>No</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr class="odd">
+<td>Distributed CPU code generation</td>
+<td>Yes</td>
+<td>No</td>
+<td>No</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr class="even">
+<td>Distributed GPU code generation</td>
+<td>Yes</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr class="odd">
+<td>Support all affine loop transformations</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>No</td>
+</tr>
+<tr class="even">
+<td>Commands for loop transformations</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>No</td>
+<td>No</td>
+<td>Yes</td>
+</tr>
+<tr class="odd">
+<td>Commands for optimizing data accesses</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>No</td>
+<td>No</td>
+<td>Yes</td>
+</tr>
+<tr class="even">
+<td>Commands for communication</td>
+<td>Yes</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr class="odd">
+<td>Commands for memory hierarchies</td>
+<td>Yes</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+<td>Limited</td>
+</tr>
+<tr class="even">
+<td>Expressing cyclic data-flow graphs</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>No</td>
+</tr>
+<tr class="odd">
+<td>Non-rectangular iteration spaces</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Limited</td>
+</tr>
+<tr class="even">
+<td>Exact dependence analysis</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>No</td>
+</tr>
+<tr class="odd">
+<td>Compile-time set emptiness check</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>No</td>
+</tr>
+<tr class="even">
+<td>Implement parametric tiling</td>
+<td>No</td>
+<td>Yes</td>
+<td>No</td>
+<td>No</td>
+<td>Yes</td>
+</tr>
+</tbody>
+</table>
+<p>我在<a href="https://zhuanlan.zhihu.com/p/585176512">带宽受限下的DSA后端优化</a>中就是实现了一套参数化tiling的机制来进行自动fusion和tiling.</p>
+<section id="tiramisu-schedule-commands" class="level2">
+<h2 class="anchored" data-anchor-id="tiramisu-schedule-commands">Tiramisu Schedule Commands</h2>
+<p>假设C和P为computation,b为buffer,i/j为迭代变量.来说明一些调度命令：</p>
+<ol type="1">
+<li>循环变化</li>
+</ol>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 30%">
+<col style="width: 69%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Command</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>C.tile(i,j,t1,t2, i0,j0,i1,j1)</td>
+<td>使用t1 × t2来tile C的循环 (i, j) ,其中i0为最外层循环,j1为最内侧循环</td>
+</tr>
+<tr class="even">
+<td>C.interchange(i, j)</td>
+<td>交换C的循环 i ,j</td>
+</tr>
+<tr class="odd">
+<td>C.shift(i, s)</td>
+<td>偏移循环i ｜</td>
+</tr>
+<tr class="even">
+<td>C.split(i, s, i0, i1)</td>
+<td>循环分块</td>
+</tr>
+<tr class="odd">
+<td>P.compute_at(C, j)</td>
+<td>定义计算发生的位置,不合理的调度可能会引起冗余计算.</td>
+</tr>
+<tr class="even">
+<td>C.unroll(i, v)</td>
+<td>根据参数v展开循环i</td>
+</tr>
+<tr class="odd">
+<td>C.after(B, i)</td>
+<td>指定循环i中C发生在B之后</td>
+</tr>
+<tr class="even">
+<td>C.inline()</td>
+<td>inline C到他所有的消费者处</td>
+</tr>
+<tr class="odd">
+<td>C.set_schedule()</td>
+<td>直接通过isl语法指定C的 affine 关系（可以表示layer I和II）</td>
+</tr>
+</tbody>
+</table>
+<ol start="2" type="1">
+<li>硬件映射</li>
+</ol>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Command</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>C.parallelize(i)</td>
+<td>在共享内存的系统中并行化执行循环i</td>
+</tr>
+<tr class="even">
+<td>C.vectorize(i, v)</td>
+<td>通过vector size v向量化循环i</td>
+</tr>
+<tr class="odd">
+<td>C.gpu(i0, i1, i2, i3)</td>
+<td>标记循环i0, i1, i2, i3 在GPU上执行</td>
+</tr>
+<tr class="even">
+<td>C.tile_gpu(i0,i1,t1,t2)</td>
+<td>Tile 循环 i0 and i1 并映射到 GPU.</td>
+</tr>
+<tr class="odd">
+<td>C.distribute(i)</td>
+<td>在分布式内存系统上并行话循环i.</td>
+</tr>
+</tbody>
+</table>
+<ol start="3" type="1">
+<li>高层数据操作</li>
+</ol>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 14%">
+<col style="width: 85%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Command</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>C.store_in(b,{i, j})</td>
+<td>将computation C(i,j) 输出存在buffer b[i,j].</td>
+</tr>
+<tr class="even">
+<td>C.cache_shared_at(P,i)</td>
+<td>Cache (copy) C 的buffer 到 shared memory. 从 global 到 shared GPU memory会发生在循环i的P操作中, 这个过程中的数据访问和同步会自动完成.</td>
+</tr>
+<tr class="odd">
+<td>C.cache_local_at(P, i)</td>
+<td>类似上一个但是存储在 local GPU memory.</td>
+</tr>
+<tr class="even">
+<td>send(d, src, s, q, p)</td>
+<td>构造send操作. d: 迭代位置向量; src: 源buffer; s: size; q: 目标节点; p: 属性 (synchronous, asynchronous, blocking, …).</td>
+</tr>
+<tr class="odd">
+<td>receive(d,dst,s,q,p)</td>
+<td>构造receive操作.</td>
+</tr>
+</tbody>
+</table>
+<ol start="4" type="1">
+<li>底层数据操作</li>
+</ol>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 23%">
+<col style="width: 76%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Command</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Buffer b(sizes, type)</td>
+<td>声明 buffer (sizes: buffer维度).</td>
+</tr>
+<tr class="even">
+<td>b.allocate_at(p, i)</td>
+<td>在循环i的计算P处添加allocate操作</td>
+</tr>
+<tr class="odd">
+<td>C.buffer()</td>
+<td>返回 C所关联的buffer.</td>
+</tr>
+<tr class="even">
+<td>b.set_size(sizes)</td>
+<td>设定buffer的维度</td>
+</tr>
+<tr class="odd">
+<td>b.tag_gpu_global()</td>
+<td>设定buffer位于global GPU memory.</td>
+</tr>
+<tr class="even">
+<td>b.tag_gpu_shared()</td>
+<td>设定buffer位于shared GPU memory.</td>
+</tr>
+<tr class="odd">
+<td>b.tag_gpu_local()</td>
+<td>设定buffer位于local GPU memory.</td>
+</tr>
+<tr class="even">
+<td>b.tag_gpu_constant()</td>
+<td>设定buffer位于constant GPU memory.</td>
+</tr>
+<tr class="odd">
+<td>C.host_to_device()</td>
+<td>copy C.buffer() 从 host 到 device.</td>
+</tr>
+<tr class="even">
+<td>C.device_to_host()</td>
+<td>copy C.buffer() 从 device 到 host.</td>
+</tr>
+<tr class="odd">
+<td>copy_at(p, i, bs, bd)</td>
+<td>在循环i的操作P中copy bs 到 bd .可以在 global, shared and local中进行.</td>
+</tr>
+</tbody>
+</table>
+<ol start="5" type="1">
+<li>同步操作</li>
+</ol>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Command</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>barrier_at(p,i)</td>
+<td>在循环i的操作p处构造屏障</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="tiramisu-multi-layer-ir" class="level2">
+<h2 class="anchored" data-anchor-id="tiramisu-multi-layer-ir">Tiramisu Multi-Layer IR</h2>
+<p>当前大多数IR都使用内存在程序语句之间进行通信. 这会在程序中创建基于内存的依赖关系,并迫使编译器在决定优化并映射到硬件之前选择数据布局. 为不同的硬件体系结构优化程序通常需要修改数据布局并消除基于内存的依赖关系,因为它们限制了优化. 因此,必须撤消在调度之前指定的任何数据布局,以允许更多的调度自由度,并且必须调整代码以使用最适合目标硬件的数据列表. 应用这些数据变换并消除基于内存的依赖性很具有挑战性.</p>
+<p>举个例子, 将buffer传输到GPU上的shared和local memory. 需要复制到shared memory以及何时执行同步的数据量都取决于代码的优化方式(例如, 代码是否具有两级tile). 同样的适用于决定生成分布式代码时要发送或接收的数据量. 因此, buffer传输到内存层次结构以及通信管理和同步不应在调度之前决定.</p>
+<p>Tiramisu通过使用架构无关算法、循环变换、数据布局、通信等完全分开的多层IR来解决代码生成中的这些复杂问题. 1. 第一层表示使用无存储位置的生产者-消费者关系描述了纯算法. 2. 第二层指定计算顺序, 以及处理器计算每个值的计算顺序, 该层适合执行大量优化, 而无需处理具体的内存布局. 3. 第三层指定在消耗中间数据之前存储中间数据的位置. 4. 第四层添加了所有必要的通信和同步操作.</p>
+<p>分层的设计决定了应用优化的特定顺序, 并确保编译器在给定层中通过不必担心修改或撤消早期层中做出的决策. 例如, 指定计算顺序及其发生的阶段可以安全地假设不需要数据划分转换. 这个简单的假设使Tiramisu无需考虑调度是否会影响数据布局.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="tiramisu/overview.png" class="img-fluid figure-img"></p>
+<figcaption>Overview</figcaption>
+</figure>
+</div>
+<p>通过下面一段简单的例子来说明每层IR内部的表示形式:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> tiramisu <span class="im">as</span> tm</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>tm.init(<span class="st">"test"</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">100</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>M <span class="op">=</span> <span class="dv">200</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>C <span class="op">=</span> <span class="dv">3</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="bu">input</span> <span class="op">=</span> tm.<span class="bu">input</span>(<span class="st">"input"</span>, [<span class="st">"i"</span>, <span class="st">"j"</span>, <span class="st">"c"</span>], [N, M, C], tm.primitive_t.p_float32)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>i, j, c <span class="op">=</span> tm.var(<span class="st">"i"</span>, <span class="dv">0</span>, N <span class="op">-</span> <span class="dv">2</span>), tm.var(<span class="st">'j'</span>, <span class="dv">0</span>, M <span class="op">-</span> <span class="dv">2</span>), tm.var(<span class="st">'c'</span>, <span class="dv">0</span>, <span class="dv">3</span>)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>d <span class="op">=</span> tm.expr(<span class="dv">3</span>).cast(tm.primitive_t.p_float32)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>bx <span class="op">=</span> tm.computation(<span class="st">'bx'</span>, [i, j, c], (<span class="bu">input</span>[i, j, c] <span class="op">+</span> <span class="bu">input</span>[i, j <span class="op">+</span> <span class="dv">1</span>, c] <span class="op">+</span> <span class="bu">input</span>[i, j <span class="op">+</span> <span class="dv">2</span>, c]) <span class="op">/</span> d)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>by <span class="op">=</span> tm.computation(<span class="st">'by'</span>, [i, j, c], (bx[i, j, c] <span class="op">+</span> bx[i <span class="op">+</span> <span class="dv">1</span>, j, c] <span class="op">+</span> bx[i <span class="op">+</span> <span class="dv">2</span>, j, c]) <span class="op">/</span> d)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>tiramisu内部使用presubger set来表示.</p>
+<ol type="1">
+<li>第一层: 算法抽象</li>
+</ol>
+<p>直接通过简单的表达式之间的生产消费关系来定义,比如by的表示为:</p>
+<p><span class="math display">\[
+\begin{align}
+{by(i, j, c) : 0 ≤ i &lt; N − 2 ∧ 0 ≤ j &lt; M − 2 ∧ 0 ≤ c &lt; 3} : \\
+(bx(i, j, c) + bx(i + 1, j, c) + bx(i + 2, j, c))/3
+\end{align}
+\]</span></p>
+<p>其中第一部分指定计算的迭代域,第二部分为计算的表达式. 第一部分声明了i,j,c的循环顺序,但是循环的执行顺序却并没有指定.</p>
+<ol start="2" type="1">
+<li>第二层: 计算管理</li>
+</ol>
+<p>定义计算的顺序以及处理器编号等. 这里不指定中间变量如何存储在内存中, 这样执行优化操作的就不需要考虑如何去修改内存布局. 从第一层转到第二层只需要使用调度指令即可:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>by.gpu_tile(i, j, <span class="dv">32</span>, <span class="dv">32</span>, i0, j0, i1, j1)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>bx.compute_at(by, j0)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>bx.cache_shared(by, j0)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>调度后内部的IR表示如下: <span class="math display">\[
+\begin{align}
+{ by(1, i0(gpuB), j0(gpuB), i1(gpuT ), j1(gpuT), c) : \\
+i0 = floor(i/32)∧j0 = floor(j/32)∧i1 = i\%32∧j1 = j\%32∧0 ≤ i &lt; N −2∧0 ≤ j &lt; M −2∧0 ≤ c &lt; 3} : \\
+(bx(i0*32+i1,j0*32+j1,c)+ bx(i0*32+i1+1, j0*32+j1, c)+bx(i0*32+i1+2, j0*32+j1, c))/3
+\end{align}
+\]</span></p>
+<p>此时这一层中的Computations被排序以及分配到特定的处理器. 排序可以被分为时间维度和空间维度, 其中时间维度指的是当前计算相对于其他计算的执行顺序,是通过一个词典序的set来表示的; 空间维度指的是计算发生在哪一个处理器, 同时处理器位置则是通过tag表示(目前支持cpu,node,gpuB,gpuT).</p>
+<ol start="3" type="1">
+<li>第三层: 数据管理</li>
+</ol>
+<p>这一层通过指定中间变量如何存储来确定数据布局. 任何必要的buffer分配和释放都在这个级别构造, 转换到本层也是通过使用数据调度命令自动转换, 本层还可以指定数据存储的内存层级位置.</p>
+<p>本层表示由第二层的IR组成, 添加buffer申请/释放语句, 以及对数组读写的access relation(其中标量也被看作单元素数组). 对于每个buffer,需要指定他们申请的大小和类型.</p>
+<p>有时候数据映射可以很复杂,比如存储的时候减少循环的维度,或者可以展平, 这个时候我们也只需要提供复杂的映射函数即可, 比如将计算c(i, j)映射到c(i%2, j%2)或者c(j, i)上.</p>
+<p>比如指定bx,by的数据布局:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>bx.store_in({c, i, j})</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>by.store_in({c, i, j})</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>可以得到如下的affine relation表示:</p>
+<p><span class="math display">\[
+\begin{align}
+  {by(1, i0(gpuB), j0(gpuB), i1(gpuT ), j1(gpuT ), c) \rightarrow by[c, i0 * 32 + i1,j0*32+j1] :\\
+   i0 = floor(i/32)∧j0 = floor(j/32)∧i1 = i\%32∧j1 = j\%32 ∧ 0 ≤ i &lt; N − 2 ∧ 0 ≤ j &lt; M − 2 ∧ 0 ≤ c &lt; 3}
+\end{align}
+\]</span></p>
+<ol start="4" type="1">
+<li>第四层: 通信管理</li>
+</ol>
+<p>这一层添加同步/通信操作到IR中, 并将这些操作映射到时间顺序维度, 并且在buffer分配和释放的时候实例化. 这一层也是通过调度命令来进行转换的.</p>
+</section>
+</section>
+<section id="实现细节" class="level1">
+<h1>实现细节</h1>
+<p>tiramisu的具体实现大体是依照上述框架, 但是还是有需要细节值得好好学习.</p>
+<section id="数据结构" class="level2">
+<h2 class="anchored" data-anchor-id="数据结构">数据结构</h2>
+<p>expr的数据结构和halide类似, 主要用于表示每个statement中的运算表达式. 可以用于表示常量, 变量, 通信/运算/调用操作.</p>
+<p><img src="tiramisu/datastructure.png" class="img-fluid"></p>
+</section>
+<section id="内部执行流程" class="level2">
+<h2 class="anchored" data-anchor-id="内部执行流程">内部执行流程</h2>
+<section id="定义输入" class="level3">
+<h3 class="anchored" data-anchor-id="定义输入">1. 定义输入</h3>
+<p>下面就通过python执行和内部的log进行分析. 首先我们定义一个input:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">100</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>M <span class="op">=</span> <span class="dv">200</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>C <span class="op">=</span> <span class="dv">3</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="bu">input</span> <span class="op">=</span> tm.<span class="bu">input</span>(<span class="st">"input"</span>, [<span class="st">"i"</span>, <span class="st">"j"</span>, <span class="st">"c"</span>], [N, M, C], tm.primitive_t.p_float32)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>在上面一节的数据结构定义input是继承自computation, 因此所调用的构造函数还是computation. 给到computation的迭代变量即为自动构造的<code>i,j,c</code>, 将三个迭代变量构造出对应的迭代域<code>{input[i, j, c] : 0&lt;=i&lt;100 and 0&lt;=j&lt;200 and 0&lt;=c&lt;3}</code>.</p>
+<p>然后有一个<code>gen_identity_schedule_for_iteration_domain</code>将原始的迭代域进行扩展为<code>{ input[i, j, c] -&gt; input[0, 0, i' = i, 0, j' = j, 0, c' = c, 0] : 0 &lt;= i &lt;= 99 and 0 &lt;= j &lt;= 199 and 0 &lt;= c &lt;= 2 }</code>的形式, 并赋值到computation的schedule.</p>
+<p>其实就是<code>2d+1</code>的执行顺序表示, 其中对应关系如下:</p>
+<pre><code>* Loop level               :    -1         0      1      2
+* Schedule dimension number:        0, 1   2  3   4  5   6  7
+* Schedule:                        [0, 0, i1, 0, i2, 0, i3, 0]</code></pre>
+<p>而后设定当前computation的表达式, 因为是输入, 因此表达式为空.</p>
+<p>接下来再构造出unique的名字代替原来的变量名, 以避免用户起的变量名出现冲突的情况, 然后修改schedule的维度名字为:<code>{ input[t1, t2, t3] -&gt; input[0, 0, i = t1, 0, j = t2, 0, c = t3, 0] : 0 &lt;= t1 &lt;= 99 and 0 &lt;= t2 &lt;= 199 and 0 &lt;= t3 &lt;= 2 }</code></p>
+<p>最后是检测到当前 computation具备有效的边界值, 自动构造了buffer,并将当前computation<code>store_in</code>到这个buffer中.</p>
+<p><a href="https://gist.github.com/zhen8838/8ea9ef7c04430af70ff56633ebd94f93#file-input-cpp">input log</a></p>
+</section>
+<section id="定义计算" class="level3">
+<h3 class="anchored" data-anchor-id="定义计算">2. 定义计算</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>i, j, c <span class="op">=</span> tm.var(<span class="st">"i"</span>, <span class="dv">0</span>, N <span class="op">-</span> <span class="dv">2</span>), tm.var(<span class="st">'j'</span>, <span class="dv">0</span>, M <span class="op">-</span> <span class="dv">2</span>), tm.var(<span class="st">'c'</span>, <span class="dv">0</span>, <span class="dv">3</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>d <span class="op">=</span> tm.expr(<span class="dv">3</span>).cast(tm.primitive_t.p_float32)</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>bx <span class="op">=</span> tm.computation(<span class="st">'bx'</span>, [i, j, c], (<span class="bu">input</span>[i, j, c] <span class="op">+</span> <span class="bu">input</span>[i, j <span class="op">+</span> <span class="dv">1</span>, c] <span class="op">+</span> <span class="bu">input</span>[i, j <span class="op">+</span> <span class="dv">2</span>, c]) <span class="op">/</span> d)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>by <span class="op">=</span> tm.computation(<span class="st">'by'</span>, [i, j, c], (bx[i, j, c] <span class="op">+</span> bx[i <span class="op">+</span> <span class="dv">1</span>, j, c] <span class="op">+</span> bx[i <span class="op">+</span> <span class="dv">2</span>, j, c]) <span class="op">/</span> d)]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>定义bx和by也是类似同上的逻辑, 不过这里因为存在了表达式, 所以多了一步递归的将表达式转换为非仿射的访问关系.</p>
+<p><a href="https://gist.github.com/zhen8838/8ea9ef7c04430af70ff56633ebd94f93#file-computation-cpp">computation log</a></p>
+</section>
+<section id="调度计算" class="level3">
+<h3 class="anchored" data-anchor-id="调度计算">3. 调度计算</h3>
+<p>tiramisu的调度都被记录在function中, function更像是所有computation的聚合. 与halide不同, 这里一份代码中只有一个全局function, 许多调度默认操作这个全局变量.</p>
+<p><img src="tiramisu/schstructure.png" class="img-fluid"></p>
+<p>接下来我们看一下function是如何记录调度操作:</p>
+<ol type="1">
+<li>after</li>
+</ol>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>bx.after(by, j)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>首先是找到迭代变量<code>j</code>所对应的循环层级为1, 然后在sched_graph添加by指向bx的连接, 同时将循环层级设置为1.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="op">[</span>src<span class="op">/</span>tiramisu_core<span class="op">.</span>cpp<span class="op">:</span><span class="dv">2354</span> after<span class="op">]</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="op">|</span>   <span class="op">[</span>src<span class="op">/</span>tiramisu_core<span class="op">.</span>cpp<span class="op">:</span><span class="dv">2728</span> get_loop_level_numbers_from_dimension_names<span class="op">]</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="op">|</span>   <span class="op">|</span>   Searching <span class="cf">for</span> the dimension j</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="op">|</span>   <span class="op">|</span>   Searching in the range of  <span class="op">{</span> bx<span class="op">[</span>t5<span class="op">,</span> t6<span class="op">,</span> t7<span class="op">]</span> <span class="op">-&gt;</span> bx<span class="op">[</span><span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> i <span class="op">=</span> t5<span class="op">,</span> <span class="dv">0</span><span class="op">,</span> j <span class="op">=</span> t6<span class="op">,</span> <span class="dv">0</span><span class="op">,</span> c <span class="op">=</span> t7<span class="op">,</span> <span class="dv">0</span><span class="op">]</span> <span class="op">:</span> <span class="dv">0</span> <span class="op">&lt;=</span> t5 <span class="op">&lt;=</span> <span class="dv">97</span> <span class="kw">and</span> <span class="dv">0</span> <span class="op">&lt;=</span> t6 <span class="op">&lt;=</span> <span class="dv">197</span> <span class="kw">and</span> <span class="dv">0</span> <span class="op">&lt;=</span> t7 <span class="op">&lt;=</span> <span class="dv">2</span> <span class="op">}</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="op">|</span>   <span class="op">|</span>   Corresponding loop level is <span class="dv">1</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="op">|</span>   <span class="op">|</span>   Checking the validity of loop level <span class="dv">1</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="op">|</span>   The loop level that corresponds to j is <span class="dv">1</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="op">|</span>   <span class="op">[</span>src<span class="op">/</span>tiramisu_core<span class="op">.</span>cpp<span class="op">:</span><span class="dv">2374</span> after<span class="op">]</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="op">|</span>   <span class="op">|</span>   Scheduling bx to be executed after by at level <span class="dv">1</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a><span class="op">|</span>   <span class="op">|</span>   sched_graph<span class="op">[</span>by<span class="op">,</span> bx<span class="op">]</span> <span class="op">=</span> <span class="dv">1</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<ol start="2" type="1">
+<li>interchange</li>
+</ol>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>bx.interchange(i, j)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>交互循环, 对于基于isl的ir来说非常简单. 首先获取两个迭代变量所对应的循环层级,然后构造一个<code>transformation map</code>, 然后对computation的schedule进行apply range即可完成变换. 具体的细节如下:</p>
+<p><a href="https://gist.github.com/zhen8838/8ea9ef7c04430af70ff56633ebd94f93#file-interchange-cpp">interchange log</a></p>
+<ol start="3" type="1">
+<li>shift</li>
+</ol>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>bx.shift(i, <span class="dv">10</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>同样也是找到对应的循环维度然后对实施变换即可.</p>
+<p><a href="https://gist.github.com/zhen8838/8ea9ef7c04430af70ff56633ebd94f93#file-shift-cpp">shift log</a></p>
+<ol start="4" type="1">
+<li>split</li>
+</ol>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>i0,  i1 <span class="op">=</span> tm.var(tm.primitive_t.p_int32, <span class="st">"i0"</span>), tm.var(tm.primitive_t.p_int32, <span class="st">"i1"</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>bx.split(i, <span class="dv">16</span>, i0, i1)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>获取循环维度后同样构造Transformation map, 首先是通过当前参数构造Origin Transformation map的字符串<code>{bx[t15,t16,t17,t18,t19,t20,t21,t22] -&gt; bx[t15,t16,t12, t13, t14,t18,t19,t20,t21,t22] : t15 = 0 and t12 = floor(t17/16) and t14 = (t17%16) and t13 = 0}</code>, 然后使用isl自动构造出优化后的Transformation map :<code>{ bx[t15 = 0, t16, t17, t18, t19, t20, t21, t22] -&gt; bx[t15' = 0, t16' = t16, t12, t13 = 0, t14, t18' = t18, t19' = t19, t20' = t20, t21' = t21, t22' = t22] : (-t17 + t14) mod 16 = 0 and -15 + t17 &lt;= 16t12 &lt;= t17 and 0 &lt;= t14 &lt;= 15 }</code>, 再应用变换到schedule, 最后再把变换后的schedule中维度的名字进行修改.</p>
+<p><a href="https://gist.github.com/zhen8838/8ea9ef7c04430af70ff56633ebd94f93#file-split-cpp">split log</a></p>
+<ol start="5" type="1">
+<li>unroll/vectorize/parallelize/distribute</li>
+</ol>
+<p>作者为了通用化起见,其实这这些调度都走了同一的逻辑, 都是按一定约束系数分离出原始的计算,然后把循环变量保存到对应的列表中. 这里就以<code>unroll</code>为例子(按作者的代码实现看,他在论文中应该把unroll的调度放到IR的第二层才对):</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>bx.unroll(c, <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>首先拿到循环维度, 然后通过<code>separateAndSplit</code>函数检查当前unroll的大小是否可以保证被split. 如果可以被split, 循环维度将扩展两个, 否则只扩展一个. 在<code>separateAndSplit</code>函数中, 生成time_space_domain, 也就是获得实际执行的order, 然后获取maximal_AST_depth为后续使用. 再收集当前循环维度的上下界, 这里收集到的上下界分别是2和0, 总次数即(2-0+1). 接下来就可以调用<code>separate</code>函数, 将原始的computation分离两部分, 一部分是<code>i &lt; v * floor(loop_bound/v)</code>另一部分为<code>i &gt;= v * floor(loop_bound/v)</code>, 称前面部分为<code>full computation</code>后面为<code>separated computation</code>. 在这个例子中,<code>separated computation</code>为空, 因此并不会添加新的computation, 但是之前所构造的约束还是要通过<code>add_schedule_constraint</code>函数添加到原始的computation中. 后续的的<code>split_with_lower_bound</code>也因为没有分离所以并没有实际的操作.</p>
+<p>中间有一步<code>tag_unroll_level</code>就是将当前循环变量保存到对应的列表中, 同样<code>vectorize/parallelize/distribute</code>则是保存到不同的列表中.</p>
+<p><a href="https://gist.github.com/zhen8838/8ea9ef7c04430af70ff56633ebd94f93#file-unroll-cpp">unroll log</a></p>
+<ol start="6" type="1">
+<li>gpu_tile</li>
+</ol>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>i0, j0, i1, j1 <span class="op">=</span> tm.var(tm.primitive_t.p_int32, <span class="st">"i0"</span>), tm.var(tm.primitive_t.p_int32, <span class="st">"j0"</span>), tm.var(</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    tm.primitive_t.p_int32, <span class="st">"i1"</span>), tm.var(tm.primitive_t.p_int32, <span class="st">"j1"</span>)</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>by.gpu_tile(i, j, <span class="dv">32</span>, <span class="dv">32</span>, i0, j0, i1, j1)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>看代码实现上, 其实gpu tile就是调用两次split并交换循环维度, 然后将循环维度分别映射到block/thread上, 我理解这个scheudle应该也是可以放到IR的第一层中.</p>
+<p><a href="https://gist.github.com/zhen8838/8ea9ef7c04430af70ff56633ebd94f93#file-gpu_tile-cpp">gpu_tile log</a></p>
+<ol start="7" type="1">
+<li>compute_at</li>
+</ol>
+<p>这个调度我是在gpu tile之后继续进行的, 因为在不同的循环层级去计算, 需要考虑数据依赖等问题, 所以这个调度实现就比较复杂.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>bx.compute_at(by, j0)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>compute_at函数假设by作为消费者消费由bx(生产者)产生的值. 根据消费者的每个唯一值按需计算此computation, 此时by消费的值在bx中的循环维度计算, 并与消费者处于同一循环嵌套中. 如果消费者by需要冗余计算, 则调度会创建必要的冗余计算并在消费者之前对其进行调度.</p>
+<p>此函数会执行: - 按需在消费者之前调度此计算的执行 - 如果需要冗余计算此计算,则创建冗余计算</p>
+<p>此函数不执行: - 不为此计算创建任何数据映射. 用户需要为此计算提供访问关系, 就像对任何其他正常计算所做的那样. - 不为此计算分配任何缓冲区. 用户需要声明一个缓冲区以存储此计算的结果.</p>
+<p>如果此函数创建了计算的副本,则用户不需要设置其访问关系, 复制的计算将自动具有与原始计算相同的访问关系.此函数不返回用于操作副本计算的句柄, 它不允许用户自由操作副本. 副本将自动安排在消费者之前执行.</p>
+<p>下面开始正式的调度流程:</p>
+<ol type="1">
+<li>通过compute_needed_and_produced计算producer(即this)和consumer之间的needed关系,也就是consumer需要读取producer的哪些数据
+<ol type="1">
+<li>获取producer_domain, producer_sched以及consumer_domain,consumer_sched</li>
+<li>根据consumer的expression得到对于producer的访问关系consumer_accesses, 并过滤其中无效的部分得到 <code>{ by[i, j, c] -&gt; bx[i', j' = j, c' = c] : i &gt;= 0 and 0 &lt;= j &lt;= 197 and 0 &lt;= c &lt;= 2 and i &lt;= i' &lt;= 97 and i' &lt;= 2 + i }</code></li>
+<li>获取producer_domain,consumer_domain到time-processor上, 也就是apply对应的sched.</li>
+<li>将consumer_accesses也转换到time-processor上, 也就是对consumer_accesses的domain应用producer_sched, 他的range应用consumer_sched</li>
+<li>对齐上述集合和关系的维度</li>
+<li>在consumer_domain上应用consumer_accesses, 得到needed, 即为consumer需要读取的producer的数据集合: <code>[t40, t41] -&gt; { bx[0, 0, i, 0, j, 0, c, 0, t38 = 0, 0, t39 = 0, 0] : t40 &gt;= 0 and 32t40 &lt;= i &lt;= 97 and i &lt;= 33 + 32t40 and j &gt;= 32t41 and 0 &lt;= j &lt;= 197 and j &lt;= 31 + 32t41 and 0 &lt;= c &lt;= 2 and -32 - 32t41 - j &lt;= 32*floor((-1 - j)/32) &lt;= 165 - 32t41 - j }</code></li>
+<li>返回needed和producer_domain(此时的producer_domain表示是produced数据集合) :<code>[t40, t41] -&gt; { bx[0, 0, i = t40, 0, j = t41, 0, c, 0, t38 = 0, 0, t39 = 0, 0] : 0 &lt;= t40 &lt;= 97 and 0 &lt;= t41 &lt;= 197 and 0 &lt;= c &lt;= 2 }</code></li>
+</ol></li>
+<li>计算producer本身的迭代域produced</li>
+<li>计算missing = needed - produced(减号表示difference), 即consumer需要但producer没有produce的部分(这个例子中,missing的区域被分为了两块):<code>[t40, t41] -&gt; { bx[0, 0, i, 0, j, 0, c, 0, t38 = 0, 0, t39 = 0, 0] : t40 &gt;= 0 and 32t40 &lt;= i &lt;= 97 and i &lt;= 33 + 32t40 and j &gt;= 32t41 and t41 &lt; j &lt;= 197 and j &lt;= 31 + 32t41 and 0 &lt;= c &lt;= 2 and -32 - 32t41 - j &lt;= 32*floor((-1 - j)/32) &lt;= 165 - 32t41 - j; bx[0, 0, i, 0, j = 0, 0, c, 0, t38 = 0, 0, t39 = 0, 0] : t41 = 0 and t40 &gt;= 0 and i &gt;= 32t40 and t40 &lt; i &lt;= 97 and i &lt;= 33 + 32t40 and 0 &lt;= c &lt;= 2 and 32*floor((-1)/1) &lt; 0 }</code></li>
+<li>如果missing不为空, 那么开始对missing进行操作</li>
+<li>首先使用<code>get_shift_degrees</code>对missing计算位移度
+<ol type="1">
+<li>首先遍历missing集合的每个循环层级, 这里是循环1, 对应维度则是2和4.</li>
+<li>然后将missing集合投影到除当前维度之外的所有维度, 这里的实现是通过<code>isl_set_project_out</code>删除从<code>[0,dim)</code>和<code>[1,max_dim-1)</code>两个部分,从而获得只有当前维度的投影, 比如投影维度为2则得到:<code>[t40, t41] -&gt; { [i] : t40 &gt;= 0 and 32t40 &lt;= i &lt;= 97 and i &lt;= 33 + 32t40 and ((0 &lt;= t41 &lt;= 6) or (t41 = 0 and i &gt; t40)) }</code></li>
+<li>对投影后的集合,假设其只剩下当前维度,并且形式为:<code>[T0]-&gt;{[i0]: i0 = T0 + c}</code>且<code>c</code>是常量, 那么<code>-c</code>就是当前维度的移位度(可以理解成shift的offset)</li>
+<li>将当前循环层级的位移度push到列表中</li>
+</ol></li>
+<li>循环的将参数替换为<a href="https://coq.inria.fr/refman/language/extensions/evars.html#:~:text=An%20existential%20variable%20is%20defined,expected%20type%20of%20the%20placeholder.">existential variables</a>并消除他们.
+<ol type="1">
+<li>存在变量是代码在程序分析和优化中, 引入新的变量来表示computation中的某个未知变量, 从而可以在不改变原始computation语义的前提下, 进行变换和优化</li>
+<li>遍历missing的参数遍历, 都加上前缀<code>p</code>.</li>
+<li>遍历获取missing的每个basic set, 比如当前的basic set: <code>[t40, t41] -&gt; { bx[0, 0, i, 0, j, 0, c, 0, t38 = 0, 0, t39 = 0, 0, pt40, pt41] : t40 &gt;= 0 and 32t40 &lt;= i &lt;= 97 and i &lt;= 33 + 32t40 and j &gt;= 32t41 and t41 &lt; j &lt;= 197 and j &lt;= 31 + 32t41 and 0 &lt;= c &lt;= 2 and -32 - 32t41 - j &lt;= 32*floor((-1 - j)/32) &lt;= 165 - 32t41 - j }</code>, 其中最后两个维度<code>pt40, pt41</code>就是被新加入前缀的变量.</li>
+<li>遍历basic set每个constraint</li>
+<li>检查每个constraint是不是有原始参数<code>[t40,t41]</code>参与.</li>
+<li>如果有参与,比如constraint为<code>([t40, t41] -&gt; { bx[i0, i1, i, i3, j, i5, c, i7, t38, i9, t39, i11, pt40, pt41] : t40 &gt;= 0 })</code>, 那么修改constraint为中用到的变量为加过前缀的变量:<code>([t40, t41] -&gt; { bx[i0, i1, i, i3, j, i5, c, i7, t38, i9, t39, i11, pt40, pt41] : pt40 &gt;= 0 })</code></li>
+<li>将所有constraint合并起来后, project out掉之前修改过的变量维度, 也就是<code>[pt40, pt41]</code></li>
+</ol></li>
+<li>最终原始missing从<code>[t40, t41] -&gt; { bx[0, 0, i, 0, j, 0, c, 0, t38 = 0, 0, t39 = 0, 0] : t40 &gt;= 0 and 32t40 &lt;= i &lt;= 97 and i &lt;= 33 + 32t40 and j &gt;= 32t41 and t41 &lt; j &lt;= 197 and j &lt;= 31 + 32t41 and 0 &lt;= c &lt;= 2 and -32 - 32t41 - j &lt;= 32*floor((-1 - j)/32) &lt;= 165 - 32t41 - j; bx[0, 0, i, 0, j = 0, 0, c, 0, t38 = 0, 0, t39 = 0, 0] : t41 = 0 and t40 &gt;= 0 and i &gt;= 32t40 and t40 &lt; i &lt;= 97 and i &lt;= 33 + 32t40 and 0 &lt;= c &lt;= 2 and 32*floor((-1)/1) &lt; 0 }</code>变为了<code>{ bx[0, 0, i, 0, j, 0, c, 0, t38 = 0, 0, t39 = 0, 0] : 0 &lt;= i &lt;= 97 and 0 &lt; j &lt;= 197 and 0 &lt;= c &lt;= 2 and -32 - j - 32*floor((-1 - j)/32) &lt;= 32*floor((j)/32) &lt;= 165 - j - 32*floor((-1 - j)/32); bx[0, 0, i, 0, j = 0, 0, c, 0, t38 = 0, 0, t39 = 0, 0] : 0 &lt; i &lt;= 97 and 0 &lt;= c &lt;= 2 }</code></li>
+<li>因为现在missing不为空, 那么by作为consumer就需要bx重新计算出missing的值, 所以接下来需要创建duplicated producer
+<ol type="1">
+<li>将此时的missing作为<code>range_constraints_set</code>开始duplicate</li>
+<li>duplicate就是将复制原始的schedule中的并增加第一个维度, 从<code>{ bx[t5, t6, t7] -&gt; bx[0, 0, i = t5, 0, j = t6, 0, c = t7, 0, t38 = 0, 0, t39 = 0, 0] : 0 &lt;= t5 &lt;= 97 and 0 &lt;= t6 &lt;= 197 and 0 &lt;= t7 &lt;= 2 }</code>变为了<code>{ bx[t5, t6, t7] -&gt; bx[1, 0, i = t5, 0, j = t6, 0, c = t7, 0, t38 = 0, 0, t39 = 0, 0] : 0 &lt;= t5 &lt;= 97 and t6 &gt;= 0 and -t5 &lt; t6 &lt;= 197 and 0 &lt;= t7 &lt;= 2 }</code></li>
+<li>然后copy出原始的computation后将新的schedule赋值到新的computation上</li>
+</ol></li>
+<li>指定duplicated computation -&gt; producer computation -&gt; comsumer computation的执行顺序</li>
+<li>因为此时duplicated computation中的一些计算是发生在指定循环内部的, 但之前copy过来的计算映射是带有指定循环外部的偏移, 也就是之前计算的<code>get_shift_degrees</code>, 此时再将偏移补回去</li>
+</ol>
+<p><a href="https://gist.github.com/zhen8838/8ea9ef7c04430af70ff56633ebd94f93#file-compute_at-cpp">compute_at log</a></p>
+</section>
+<section id="代码生成" class="level3">
+<h3 class="anchored" data-anchor-id="代码生成">4. 代码生成</h3>
+<p>这里简单的再添加一下host/device数据复制的操作, 然后进行代码生成. 本来我想使用他论文中提到的gpu的方式进行调度, 但可能由于python包装的一些问题, 导致生成有问题, 因此我就使用cpu的数据搬运操作进行模拟.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">100</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>M <span class="op">=</span> <span class="dv">200</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>C <span class="op">=</span> <span class="dv">3</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="bu">input</span> <span class="op">=</span> tm.<span class="bu">input</span>(<span class="st">"input"</span>, [<span class="st">"i"</span>, <span class="st">"j"</span>, <span class="st">"c"</span>], [N, M, C], tm.primitive_t.p_float32)</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>i, j, c <span class="op">=</span> tm.var(<span class="st">"i"</span>, <span class="dv">0</span>, N <span class="op">-</span> <span class="dv">2</span>), tm.var(<span class="st">'j'</span>, <span class="dv">0</span>, M <span class="op">-</span> <span class="dv">2</span>), tm.var(<span class="st">'c'</span>, <span class="dv">0</span>, <span class="dv">3</span>)</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>cp1 <span class="op">=</span> tm.computation(<span class="st">'cp1'</span>, [i, j, c], <span class="bu">input</span>[i, j, c])</span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>d <span class="op">=</span> tm.expr(<span class="dv">3</span>).cast(tm.primitive_t.p_float32)</span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>bx <span class="op">=</span> tm.computation(<span class="st">'bx'</span>, [i, j, c], (cp1[i, j, c] <span class="op">+</span> cp1[i, j <span class="op">+</span> <span class="dv">1</span>, c] <span class="op">+</span> cp1[i, j <span class="op">+</span> <span class="dv">2</span>, c]) <span class="op">/</span> d)</span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>by <span class="op">=</span> tm.computation(<span class="st">'by'</span>, [i, j, c], (bx[i, j, c] <span class="op">+</span> bx[i <span class="op">+</span> <span class="dv">1</span>, j, c] <span class="op">+</span> bx[i <span class="op">+</span> <span class="dv">2</span>, j, c]) <span class="op">/</span> d)</span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>cp2 <span class="op">=</span> tm.computation(<span class="st">'cp2'</span>, [i, j, c], by[i, j, c])</span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>by.after(bx, j)</span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>cp1.before(bx, tm.computation.root)</span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a>cp2.after(by, tm.computation.root)</span>
+<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a>inbuf <span class="op">=</span>  <span class="bu">input</span>.get_buffer() <span class="co"># note lifetime problem</span></span>
+<span id="cb15-19"><a href="#cb15-19" aria-hidden="true" tabindex="-1"></a>outbuf <span class="op">=</span> cp2.get_buffer()</span>
+<span id="cb15-20"><a href="#cb15-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-21"><a href="#cb15-21" aria-hidden="true" tabindex="-1"></a>tm.codegen([inbuf, outbuf], <span class="st">"func.o"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>这里调度和构造computation的过程就先不看了, 直接开始看codegen部分:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb16"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> tiramisu<span class="op">::</span>function<span class="op">::</span>codegen<span class="op">(</span><span class="at">const</span> <span class="bu">std::</span>vector<span class="op">&lt;</span>tiramisu<span class="op">::</span>buffer <span class="op">*&gt;</span> <span class="op">&amp;</span>arguments<span class="op">,</span> <span class="at">const</span> <span class="bu">std::</span>string obj_filename<span class="op">,</span> <span class="at">const</span> <span class="dt">bool</span> gen_cuda_stmt<span class="op">,</span> <span class="dt">bool</span> gen_python<span class="op">)</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    DEBUG_FCT_NAME<span class="op">(</span><span class="dv">3</span><span class="op">);</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">this</span><span class="op">-&gt;</span>set_arguments<span class="op">(</span>arguments<span class="op">);</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">this</span><span class="op">-&gt;</span>lift_dist_comps<span class="op">();</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">this</span><span class="op">-&gt;</span>gen_time_space_domain<span class="op">();</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">this</span><span class="op">-&gt;</span>gen_isl_ast<span class="op">();</span></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">this</span><span class="op">-&gt;</span>gen_halide_stmt<span class="op">();</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">this</span><span class="op">-&gt;</span>gen_halide_obj<span class="op">(</span>obj_filename<span class="op">,</span> gen_python<span class="op">);</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>这里作者所分割的流程还是比较清楚的, 我们一个个来看.</p>
+<ol type="1">
+<li><code>set_arguments</code>
+<ol type="1">
+<li>将传入的buffers作为function的参数</li>
+</ol></li>
+<li><code>lift_dist_comps</code>
+<ol type="1">
+<li>列出分布式的相关内容, 这里暂时没使用到</li>
+</ol></li>
+<li><code>gen_time_space_domain</code> (构建时序空间)
+<ol type="1">
+<li><code>gen_ordering_schedules</code> (获取schedule的顺序)
+<ol type="1">
+<li><code>dump_sched_graph</code>, 根据此前before/after的调度时添加的连接关系dump出依赖图 <code>cp1=[root]=&gt;bx ,bx=[1]=&gt;by, by=[root]=&gt;cp2</code> 可以看到是一个比较依赖图, 其中方括号中记录是依赖的循环层级.</li>
+<li>遍历sched graph, 通过调用<code>after_low_level</code>函数来调整computation的执行顺序.
+<ol type="1">
+<li>首先将所有的computation的schedule进行对齐, 也就是把schedule中的维度个数进行扩展到相同. 比如<code>{ cp1[t14 = 0] -&gt; cp1[0, 0, t13 = 0, 0] }</code>就被扩展到了<code>{ cp1[t14 = 0] -&gt; cp1[0, 0, t13 = 0, 0, 0, 0, 0, 0] }</code>, 从而匹配bx/by的两级循环.</li>
+<li>接下来修改schedule来实现先后顺序
+<ol type="1">
+<li>此时bx需要排在cp1之后, 原本的bx为<code>{ bx[t5, t6, t7] -&gt; bx[0, 0, i = t5, 0, j = t6, 0, c = t7, 0] : 0 &lt;= t5 &lt;= 97 and 0 &lt;= t6 &lt;= 197 and 0 &lt;= t7 &lt;= 2 }</code>, 这里通过增大相同维度词典序(+10)来修改执行顺序,修改后bx为<code>{ bx[t5, t6, t7] -&gt; bx[0, 10, i = t5, 0, j = t6, 0, c = t7, 0] : 0 &lt;= t5 &lt;= 97 and 0 &lt;= t6 &lt;= 197 and 0 &lt;= t7 &lt;= 2 }</code></li>
+<li>bx修改后,修改by, 原本by为<code>{ by[t9, t10, t11] -&gt; by[0, 0, i = t9, 0, j = t10, 0, c = t11, 0] : 0 &lt;= t9 &lt;= 97 and 0 &lt;= t10 &lt;= 197 and 0 &lt;= t11 &lt;= 2 }</code>, 此时他需要排在bx后面, 那么首先dim 1需要匹配, 同时dim 5需要大于bx因此得到<code>{ by[t9, t10, t11] -&gt; by[0, 10, i = t9, 0, j = t10, 10, c = t11, 0] : 0 &lt;= t9 &lt;= 97 and 0 &lt;= t10 &lt;= 197 and 0 &lt;= t11 &lt;= 2 }</code></li>
+<li>后续按相同逻辑修改好每个computation的schedule.</li>
+</ol></li>
+</ol></li>
+<li>遍历所有的computation, 调用<code>computation.gen_time_space_domain</code>构建时序空间
+<ol type="1">
+<li>直接对当前computation的iter domain应用它的schedule即可得到time_space_domain并返回</li>
+<li>比如<code>{ by[i, j, c] : 0 &lt;= i &lt;= 97 and 0 &lt;= j &lt;= 197 and 0 &lt;= c &lt;= 2 }</code> apply schedule: <code>{ by[t9, t10, t11] -&gt; by[0, 10, i = t9, 0, j = t10, 10, c = t11, 0] : 0 &lt;= t9 &lt;= 97 and 0 &lt;= t10 &lt;= 197 and 0 &lt;= t11 &lt;= 2 }</code> 得到: <code>{ by[0, 10, i, 0, j, 10, c, 0] : 0 &lt;= i &lt;= 97 and 0 &lt;= j &lt;= 197 and 0 &lt;= c &lt;= 2 }</code></li>
+</ol></li>
+</ol></li>
+</ol></li>
+<li><code>gen_isl_ast</code> 构造整个function的isl ast
+<ol type="1">
+<li><p><code>get_trimmed_time_processor_domain</code>将每个之前schedule中多余的第0维消除掉.</p></li>
+<li><p><code>get_aligned_identity_schedules</code> 获取function内部所有computation的aligned的identity schedule</p>
+<ol type="1">
+<li>也就是将他的schedule的domain取出后进行identity映射, 然后再和<code>trimmed_time_processor_domain</code>进行求交集, 比如by的schedule为 <code>{ by[0, 10, i, 0, j, 10, c, 0] : 0 &lt;= i &lt;= 97 and 0 &lt;= j &lt;= 197 and 0 &lt;= c &lt;= 2 }</code>, 它的identity_schedule为<code>{ by[10, i, 0, j, 10, c, 0] -&gt; [10, i' = i, 0, j' = j, 10, c' = c, 0] : 0 &lt;= i &lt;= 97 and 0 &lt;= j &lt;= 197 and 0 &lt;= c &lt;= 2 }</code> (这里by的第0维在是与<code>trimmed_time_processor_domain</code>求交集消除的)</li>
+</ol></li>
+<li><p><code>rename_computations</code>, 避免名字冲突, 需要给computation添加unique name</p></li>
+<li><p>构造<code>isl_ast_build</code>并设定codegen选项</p>
+<ol type="1">
+<li><code>atomic_upper_bound=true</code>(表示生成的循环变量在判断上界时只使用一次)</li>
+<li><code>group_coscheduled=true</code>(处理相同位置的两个实例)</li>
+</ol></li>
+<li><p>为ast build 设定<code>after_each_for</code>以及<code>at_each_domain</code>的callback.</p></li>
+<li><p>设定迭代器, 这里他并没有从computation中获取循环名, 而是默认为<code>c0..cn</code></p></li>
+<li><p>将<code>aligned_identity_schedules</code>与<code>trimmed_time_processor_domain</code>进行取domain的交集, 得到Identity schedule intersect trimmed Time-Processor domain : <code>{ cp2[20, t16 = 0, 0, t20 = 0, 0, t21 = 0, 0] -&gt; [20, t16' = 0, 0, t20' = 0, 0, t21' = 0, 0]; bx[10, i, 0, j, 0, c, 0] -&gt; [10, i' = i, 0, j' = j, 0, c' = c, 0] : 0 &lt;= i &lt;= 97 and 0 &lt;= j &lt;= 197 and 0 &lt;= c &lt;= 2; cp1[0, t13 = 0, 0, t18 = 0, 0, t19 = 0, 0] -&gt; [0, t13' = 0, 0, t18' = 0, 0, t19' = 0, 0]; by[10, i, 0, j, 10, c, 0] -&gt; [10, i' = i, 0, j' = j, 10, c' = c, 0] : 0 &lt;= i &lt;= 97 and 0 &lt;= j &lt;= 197 and 0 &lt;= c &lt;= 2 }</code></p></li>
+<li><p>接下来对这个map进行执行<code>isl_ast_build_node_from_schedule_map</code>, 此时会执行到各个callback</p>
+<ol type="1">
+<li><code>after_each_for</code>的callback为空</li>
+<li><code>at_each_domain</code>的callback为<code>stmt_code_generator</code>
+<ol type="1">
+<li>当前传入的ast node调用<code>get_computation_by_node</code>, 通过ast node的expr, 获得第一个参数的名字得到computation name, 然后再从function获得对应的computation 的vector</li>
+<li><code>filter_computations_by_domain</code>, 获得当前build的schedule map domain, 对上一步获得的computation vector进行过滤
+<ol type="1">
+<li>假设当前build的ast node的domain为:<code>{ bx[10, i, 0, j, 0, c, 0] : 0 &lt;= i &lt;= 97 and 0 &lt;= j &lt;= 197 and 0 &lt;= c &lt;= 2 }</code>, 当前的computation vector中存在bx.</li>
+<li>遍历computation vector
+<ol type="1">
+<li>获得当前computation的原始domain为:<code>{ bx[i, j, c] : 0 &lt;= i &lt;= 97 and 0 &lt;= j &lt;= 197 and 0 &lt;= c &lt;= 2 }</code></li>
+<li>domain apply 之前<code>trimmed_union_of_schedules</code>得到computation在time space上的domain:<code>{ bx[10, i, 0, j, 0, c, 0] : 0 &lt;= i &lt;= 97 and 0 &lt;= j &lt;= 197 and 0 &lt;= c &lt;= 2 }</code></li>
+<li>将当前的build node dmoian与time space上的domain取交集, 如果交集不为空, 那么将当前computation选中放到filtered_comp_vec中.</li>
+</ol></li>
+</ol></li>
+<li>遍历filtered_comp_vec
+<ol type="1">
+<li>以当前computation构造出isl id, 并通过<code>isl_ast_node_set_annotation</code>将这个id作为node的标记</li>
+<li>通过<code>get_access_relation_adapted_to_time_processor_domain</code>来获取access(此时的access是lhs, 也就是写入的buffer的访问)
+<ol type="1">
+<li>获取原始读写buffer的access为:<code>{ bx[i, j, c] -&gt; _bx_b1[i' = i, j' = j, c' = c] }</code></li>
+<li>原始的schedule为:<code>{ bx[t5, t6, t7] -&gt; bx[0, 10, i = t5, 0, j = t6, 0, c = t7, 0] : 0 &lt;= t5 &lt;= 97 and 0 &lt;= t6 &lt;= 197 and 0 &lt;= t7 &lt;= 2 }</code></li>
+<li>trimmed schedule为: <code>{ bx[t5, t6, t7] -&gt; bx[10, i = t5, 0, j = t6, 0, c = t7, 0] : 0 &lt;= t5 &lt;= 97 and 0 &lt;= t6 &lt;= 197 and 0 &lt;= t7 &lt;= 2 }</code></li>
+<li>将trimmed schedule对access relation进行apply domain得到access function:<code>{ bx[10, i, 0, j, 0, c, 0] -&gt; _bx_b1[i' = i, j' = j, c' = c] : 0 &lt;= i &lt;= 97 and 0 &lt;= j &lt;= 197 and 0 &lt;= c &lt;= 2 }</code></li>
+</ol></li>
+<li>通过<code>get_rhs_accesses</code>解析得到的access function (这里是读数据的访问)
+<ol type="1">
+<li>获取当前computation的expr, 比如bx原本的表达式为<code>(input[i, j, c] + input[i, j + 1, c] + input[i, j + 2, c]) / d</code></li>
+<li>递归执行<code>traverse_expr_and_extract_accesses</code>将expr中的accesses提取出来
+<ol type="1">
+<li>首先提取到第一个访问的表达式为:<code>input[i, j, c]</code></li>
+<li>以当前computation的domain<code>bx[i, j, c]</code>构建出Transformation map:<code>{ bx[i, j, c] -&gt; input[i', j', c'] }</code></li>
+<li>遍历domain的dim和range的dim,如果他们的id相同,那么添加等价约束, 得到:<code>{ bx[i, j, c] -&gt; input[i' = i, j' = j, c' = c] }</code></li>
+<li>然后依次遍历得到其他两个access relation<code>{ bx[i, j, c] -&gt; input[i' = i, j' = 1 + j, c' = c] }</code>和<code>{ bx[i, j, c] -&gt; input[i' = i, j' = 2 + j, c' = c] }</code></li>
+</ol></li>
+</ol></li>
+<li>计算iterators map, 假设原来的循环为<code>c[i0, i1]</code>, 由于之前重新生成了迭代变量, 所以需要将他们联系起来, 得到类似<code>{ i0 : c0*10+c2, i1: c1*10+c3&gt;}</code>的字典.
+<ol type="1">
+<li>获取当前computation的iter domian/schedule</li>
+<li>domian进行identity之后再使用schedule apply domain得到新的identity: <code>{ cp1[0, t13 = 0, 0, t18 = 0, 0, t19 = 0, 0] -&gt; cp1[t13' = 0]</code> (此时map的domain的经过对齐的, 而range则是原始的)</li>
+<li>通过<code>create_isl_ast_index_expression</code>构造取index的<code>isl_ast_expr</code>, 将上一步获取的identity作为access relation传入
+<ol type="1">
+<li>拿到原始schedule:<code>{ bx[10, i, 0, j, 0, c, 0] -&gt; [t13 = i, t18 = j, t19 = c] : 0 &lt;= i &lt;= 97 and 0 &lt;= j &lt;= 197 and 0 &lt;= c &lt;= 2 }</code>进行reverse得到: <code>{ [t13, t18, t19] -&gt; bx[10, i = t13, 0, j = t18, 0, c = t19, 0] : 0 &lt;= t13 &lt;= 97 and 0 &lt;= t18 &lt;= 197 and 0 &lt;= t19 &lt;= 2 }</code></li>
+<li>将reversed map转换为pw aff为iterator_map:<code>{ [t13, t18, t19] -&gt; bx[(10), (t13), (0), (t18), (0), (t19), (0)] : 0 &lt;= t13 &lt;= 97 and 0 &lt;= t18 &lt;= 197 and 0 &lt;= t19 &lt;= 2 }</code></li>
+<li>将access转换为pw aff为index_aff:<code>{ bx[i0, i, i2, j, i4, c, i6] -&gt; bx[(i), (j), (c)] : i0 = 10 and i2 = 0 and i4 = 0 and i6 = 0 and 0 &lt;= i &lt;= 97 and 0 &lt;= j &lt;= 197 and 0 &lt;= c &lt;= 2 }</code></li>
+<li>将两个pw aff的参数进行对齐得到:<code>{ bx[i0, i, i2, j, i4, c, i6] -&gt; bx[i', j', c'] }</code>和<code>{ [t13, t18, t19] -&gt; bx[o0, i, o2, j, o4, c, o6] }</code></li>
+<li>然后将两个pw aff进行复合<code>isl_pw_multi_aff_pullback_pw_multi_aff(index_aff,iterator_map)</code>得到<code>{ [t13, t18, t19] -&gt; bx[(t13), (t18), (t19)] : 0 &lt;= t13 &lt;= 97 and 0 &lt;= t18 &lt;= 197 and 0 &lt;= t19 &lt;= 2 }</code></li>
+<li>通过<code>isl_ast_build_access_from_pw_multi_aff</code>取复合后的pw aff的access表达式得到<code>{ op: access, args: [ { id: bx }, { id: c1 }, { id: c3 }, { id: c5 } ] }</code>就是当前computation的index表达式.<br>
+</li>
+</ol></li>
+<li>得到iterators map 为<code>{ i :  { id: c1 }, j :  { id: c3 }, c :  { id: c5 } }</code></li>
+</ol></li>
+<li>接下来遍历所有的rhs的access, 为每个rhs 的access<code>create_isl_ast_index_expression</code>:
+<ol type="1">
+<li><code>{ op: access, args: [ { id: _input_b0 }, { id: c1 }, { id: c3 }, { id: c5 } ] }</code></li>
+<li><code>{ op: access, args: [ { id: _input_b0 }, { id: c1 }, { op: add, args: [ { id: c3 }, { val: 1 } ] }, { id: c5 } ] }</code></li>
+<li><code>{ op: access, args: [ { id: _input_b0 }, { id: c1 }, { op: add, args: [ { id: c3 }, { val: 2 } ] }, { id: c5 } ] }</code></li>
+</ol></li>
+<li>最终所有的access的index expression为: <code>_bx_b1[c1][c3][c5],  _input_b0[c1][c3][c5],  _input_b0[c1][c3 + 1][c5],  _input_b0[c1][c3 + 2][c5]</code></li>
+</ol></li>
+<li>然后将当前computation的iterators map以及index expression都保存起来.</li>
+</ol></li>
+</ol></li>
+<li><p>此时所有的ast node都构造完毕了, 通过isl printer打印最终的ast node为:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb17"><pre class="sourceCode c code-with-copy"><code class="sourceCode c"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> <span class="op">(</span><span class="dt">int</span> c1 <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> c1 <span class="op">&lt;=</span> <span class="dv">97</span><span class="op">;</span> c1 <span class="op">+=</span> <span class="dv">1</span><span class="op">)</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span><span class="dt">int</span> c3 <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> c3 <span class="op">&lt;=</span> <span class="dv">197</span><span class="op">;</span> c3 <span class="op">+=</span> <span class="dv">1</span><span class="op">)</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> <span class="op">(</span><span class="dt">int</span> c5 <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> c5 <span class="op">&lt;=</span> <span class="dv">2</span><span class="op">;</span> c5 <span class="op">+=</span> <span class="dv">1</span><span class="op">)</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>        cp1<span class="op">(</span><span class="dv">0</span><span class="op">,</span> c1<span class="op">,</span> <span class="dv">0</span><span class="op">,</span> c3<span class="op">,</span> <span class="dv">0</span><span class="op">,</span> c5<span class="op">,</span> <span class="dv">0</span><span class="op">);</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> <span class="op">(</span><span class="dt">int</span> c1 <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> c1 <span class="op">&lt;=</span> <span class="dv">97</span><span class="op">;</span> c1 <span class="op">+=</span> <span class="dv">1</span><span class="op">)</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span><span class="dt">int</span> c3 <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> c3 <span class="op">&lt;=</span> <span class="dv">197</span><span class="op">;</span> c3 <span class="op">+=</span> <span class="dv">1</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> <span class="op">(</span><span class="dt">int</span> c5 <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> c5 <span class="op">&lt;=</span> <span class="dv">2</span><span class="op">;</span> c5 <span class="op">+=</span> <span class="dv">1</span><span class="op">)</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>        bx<span class="op">(</span><span class="dv">10</span><span class="op">,</span> c1<span class="op">,</span> <span class="dv">0</span><span class="op">,</span> c3<span class="op">,</span> <span class="dv">0</span><span class="op">,</span> c5<span class="op">,</span> <span class="dv">0</span><span class="op">);</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> <span class="op">(</span><span class="dt">int</span> c5 <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> c5 <span class="op">&lt;=</span> <span class="dv">2</span><span class="op">;</span> c5 <span class="op">+=</span> <span class="dv">1</span><span class="op">)</span></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>        by<span class="op">(</span><span class="dv">10</span><span class="op">,</span> c1<span class="op">,</span> <span class="dv">0</span><span class="op">,</span> c3<span class="op">,</span> <span class="dv">10</span><span class="op">,</span> c5<span class="op">,</span> <span class="dv">0</span><span class="op">);</span></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> <span class="op">(</span><span class="dt">int</span> c1 <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> c1 <span class="op">&lt;=</span> <span class="dv">97</span><span class="op">;</span> c1 <span class="op">+=</span> <span class="dv">1</span><span class="op">)</span></span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span><span class="dt">int</span> c3 <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> c3 <span class="op">&lt;=</span> <span class="dv">197</span><span class="op">;</span> c3 <span class="op">+=</span> <span class="dv">1</span><span class="op">)</span></span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> <span class="op">(</span><span class="dt">int</span> c5 <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> c5 <span class="op">&lt;=</span> <span class="dv">2</span><span class="op">;</span> c5 <span class="op">+=</span> <span class="dv">1</span><span class="op">)</span></span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>        cp2<span class="op">(</span><span class="dv">20</span><span class="op">,</span> c1<span class="op">,</span> <span class="dv">0</span><span class="op">,</span> c3<span class="op">,</span> <span class="dv">0</span><span class="op">,</span> c5<span class="op">,</span> <span class="dv">0</span><span class="op">);</span></span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div></li>
+</ol></li>
+<li><code>gen_halide_stmt</code>, 将isl ast lower到halide的stmt上从而利用halide所提供的codegen功能
+<ol type="1">
+<li>调用<code>halide_stmt_from_isl_node</code>函数递归的将isl ast转换为halide stmt, 对于stmt来说主要有以下一些ast类型<code>for,if,block</code></li>
+<li>对于表达式则是通过之前所构造的isl ast node中所添加的annotation找到对应的computation, 然后通过computation构造出具体的halide expression.</li>
+</ol></li>
+</ol>
+<p><a href="https://gist.github.com/zhen8838/c579bbf43d4bfe3c3e53c828ce9ce507">codegen log</a></p>
+</section>
+</section>
+</section>
+<section id="总结" class="level1">
+<h1>总结</h1>
+<p>其实对于isl来说, 只需要有<code>access relation</code>, <code>iteration domain</code>以及<code>schedule</code>就可以构造出对应的<code>ast</code>, 但是还缺少每个<code>statement</code>中具体的表达式才能得到完整的程序. tiramisu是在<code>computation</code>的抽象中存放了isl所需要内容以及表达式, 也将两者进行了联系, 对<code>computation</code>的调度即是修改isl的<code>schedule</code>和<code>iteration domain</code>, 最终利用调度和关系生产ast, 通过表达式与ast的联系生成halide IR.</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/zhen8838\.github\.io");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script src="https://utteranc.es/client.js" repo="zhen8838/zhen8838.github.io" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

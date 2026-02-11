@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2018-05-29">
+
+<title>OrangePI蓝牙：开启蓝牙 – Zheng’s Notes</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../assets/favicon.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-7072389654d23eff08f359f9aa0d1ee7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">Zheng’s Notes</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#安装bluez" id="toc-安装bluez" class="nav-link active" data-scroll-target="#安装bluez">安装Bluez</a></li>
+  <li><a href="#开启蓝牙设备" id="toc-开启蓝牙设备" class="nav-link" data-scroll-target="#开启蓝牙设备">开启蓝牙设备</a></li>
+  <li><a href="#尝试别的解决方法" id="toc-尝试别的解决方法" class="nav-link" data-scroll-target="#尝试别的解决方法">尝试别的解决方法</a></li>
+  <li><a href="#总结" id="toc-总结" class="nav-link" data-scroll-target="#总结">总结</a></li>
+  <li><a href="#后记" id="toc-后记" class="nav-link" data-scroll-target="#后记">后记</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">OrangePI蓝牙：开启蓝牙</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">边缘计算</div>
+  </div>
+  </div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">May 29, 2018</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>我使用的板子是OrangePI zero Plus2，基于全志H5。我在上面安装好了armbian系统。我现在要使用蓝牙功能，对接我的蓝牙耳机。</p>
+<!--more-->
+<section id="安装bluez" class="level2">
+<h2 class="anchored" data-anchor-id="安装bluez">安装Bluez</h2>
+<p>linux上的蓝牙官方协议即为Bluez。所以需要先安装Bluez：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">root@H5:~#</span> apt-get install bluez bluez-tools</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>安装完成后可以观察到系统上多出了几个工具：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">root@H5:~#</span> hci</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">hciattach</span>  hciconfig  hcitool </span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>使用工具：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">root@H5:~#</span> hciconfig </span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">root@H5:~#</span> </span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>发现并没有蓝牙设备。</p>
+</section>
+<section id="开启蓝牙设备" class="level2">
+<h2 class="anchored" data-anchor-id="开启蓝牙设备">开启蓝牙设备</h2>
+<p>接下来我在网络上寻找解决方法。找到armbian论坛中的这个<a href="https://forum.armbian.com/topic/5700-opz2-h5-onboard-bluetooth-support/?tab=comments#comment-53891">帖子</a>，其中thc013网友描述到：</p>
+<p>enable overlay uart 1 and add param_uart1_rtscts=1 to armbianenv.txt and adjust /etc/init.d/ap6212-bluetooth so it looks like this</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Start patching</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>        <span class="ex">rfkill</span> unblock all  </span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>        <span class="bu">echo</span> <span class="st">"0"</span> <span class="op">&gt;</span> /sys/class/rfkill/rfkill0/state</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>        <span class="bu">echo</span> <span class="st">"1"</span> <span class="op">&gt;</span> /sys/class/rfkill/rfkill0/state</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>        <span class="bu">echo</span> <span class="st">" "</span> <span class="op">&gt;</span> /dev/<span class="va">$PORT</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>        <span class="ex">devmem2</span> 0x1f00060 b 1</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>        <span class="bu">echo</span> 10 <span class="op">&gt;</span> /sys/class/gpio/export</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>        <span class="bu">echo</span> out <span class="op">&gt;</span> /sys/class/gpio/gpio10/direction</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>        <span class="bu">echo</span> 0 <span class="op">&gt;</span> /sys/class/gpio/gpio10/value</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>        <span class="bu">echo</span> 1 <span class="op">&gt;</span> /sys/class/gpio/gpio10/value</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>        <span class="fu">sleep</span> 0.1</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>        <span class="ex">hciattach</span> /dev/<span class="va">$PORT</span> bcm43xx 115200 flow bdaddr </span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">$MAC_OPTIONS</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>        <span class="ex">hciconfig</span> hci0 up</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>and reboot oh you might need to install devmem2</p>
+<p>当然我要尝试使用这个方法了。</p>
+<ol type="1">
+<li><p><strong>首先使能覆盖串口1</strong> 根据描述这个应该是在<em>armbianEnv.txt</em>中，我当即去寻找这个文件,这文件应该是在启动分区中的，所以我想将启动分区mount后去修改。</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">root@H5:~#</span> mount /dev/mmcblk2boot1 /mnt</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">mount:</span> /dev/mmcblk2boot1 is write-protected, mounting read-only</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="ex">mount:</span> wrong fs type, bad option, bad superblock on /dev/mmcblk2boot1,</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>   <span class="ex">missing</span> codepage or helper program, or other error</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>   <span class="ex">In</span> some cases useful info is found in syslog <span class="at">-</span> try</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>   <span class="fu">dmesg</span> <span class="kw">|</span> <span class="fu">tail</span> or so.</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>然后我发现这个armbian系统和一般的系统不太一样。boot相关文件不需要挂载直接可以查看：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">root@H5:~#</span> cd /boot/</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">root@H5:/boot#</span> ls</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="ex">armbianEnv.txt</span>                  dtb-4.16.0-sunxi64</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="ex">armbian_first_run.txt.template</span>  Image</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="ex">boot.bmp</span>                        initrd.img-4.16.0-sunxi64</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="ex">boot.cmd</span>                        System.map-4.16.0-sunxi64</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="ex">boot-desktop.png</span>                uInitrd</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="ex">boot.scr</span>                        uInitrd-4.16.0-sunxi64</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="ex">config-4.16.0-sunxi64</span>           vmlinuz-4.16.0-sunxi64</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="ex">dtb</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="ex">root@H5:/boot#</span> vi armbianEnv.txt</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>在overlays后添加上了uart1，以及又添加了一行param_uart1_rtscts=1</p></li>
+<li><p><strong>调整/etc/init.d/ap6212-bluetooth</strong> 编辑这个文件 <code>sh     root@H5:~# vi /etc/init.d/ap6212-bluetooth</code> 根据上面的帖子去修改这个文件。</p></li>
+<li><p><strong>安装devmem2</strong> 这是一个内核调试实用的工具，需要安装的话使用这个<a href="http://launchpadlibrarian.net/153545374/devmem2_0.0-0ubuntu1_arm64.deb">链接</a> 将软件包传入板子内安装： <code>sh     root@H5:~# dpkg -i devmem2_0.0-0ubuntu1_arm64.deb     Selecting previously unselected package devmem2.     (Reading database ... 31834 files and directories currently installed.)     Preparing to unpack devmem2_0.0-0ubuntu1_arm64.deb ...     Unpacking devmem2 (0.0-0ubuntu1) ...     Setting up devmem2 (0.0-0ubuntu1) ...     Processing triggers for man-db (2.7.6.1-2) ...</code> 安装完成重启测试蓝牙功能。</p></li>
+<li><p><strong>失败</strong> 我发现这个方法并不可行，我现在对这个方法有所了解了。他其实是使用这个方式开启蓝牙：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">root@H5:~#</span> /etc/init.d/ap6212-bluetooth start</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ex">[....]</span> Starting ap6212-bluetooth <span class="er">(</span><span class="ex">via</span> systemctl<span class="kw">)</span><span class="bu">:</span> ap6212-bluetooth.serviceWarning: ap6212-bluetooth.service changed on disk. Run <span class="st">'systemctl daemon-reload'</span> to reload units.</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="ex">Job</span> for ap6212-bluetooth.service failed because the control process exited with error code.</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="ex">See</span> <span class="st">"systemctl status ap6212-bluetooth.service"</span> and <span class="st">"journalctl -xe"</span> for details.</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="ex">failed!</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="ex">root@H5:~#</span> systemctl status ap6212-bluetooth.service</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="ex">●</span> ap6212-bluetooth.service <span class="at">-</span> LSB: Patch firmware for ap6212 adapter</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="ex">Loaded:</span> loaded <span class="er">(</span><span class="ex">/etc/init.d/ap6212-bluetooth</span><span class="kw">;</span> <span class="ex">generated</span><span class="kw">;</span> <span class="ex">vendor</span> preset: enabled<span class="kw">)</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="ex">Active:</span> failed <span class="er">(</span><span class="ex">Result:</span> exit-code<span class="kw">)</span> <span class="ex">since</span> Sun 2018-05-27 06:20:39 UTC<span class="kw">;</span> <span class="ex">2min</span> 16s ago</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>    <span class="ex">Docs:</span> man:systemd-sysv-generator<span class="er">(</span><span class="ex">8</span><span class="kw">)</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="ex">Process:</span> 2164 ExecStart=/etc/init.d/ap6212-bluetooth start <span class="er">(</span><span class="va">code</span><span class="op">=</span>exited, <span class="va">status</span><span class="op">=</span>1/FAILURE<span class="kw">)</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a><span class="ex">May</span> 27 06:20:29 H5 ap6212-bluetooth<span class="pp">[</span><span class="ss">2164</span><span class="pp">]</span>: Value at address 0x1F00060 <span class="er">(</span><span class="ex">0xffff97239060</span><span class="kw">)</span><span class="bu">:</span> 0x1</span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="ex">May</span> 27 06:20:29 H5 ap6212-bluetooth<span class="pp">[</span><span class="ss">2164</span><span class="pp">]</span>: Written 0x1<span class="kw">;</span> <span class="ex">readback</span> 0x1</span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a><span class="ex">May</span> 27 06:20:29 H5 ap6212-bluetooth<span class="pp">[</span><span class="ss">2164</span><span class="pp">]</span>: sh: echo: I/O error</span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a><span class="ex">May</span> 27 06:20:39 H5 ap6212-bluetooth<span class="pp">[</span><span class="ss">2164</span><span class="pp">]</span>: Initialization timed out.</span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a><span class="ex">May</span> 27 06:20:39 H5 ap6212-bluetooth<span class="pp">[</span><span class="ss">2164</span><span class="pp">]</span>: bcm43xx_init</span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a><span class="ex">May</span> 27 06:20:39 H5 ap6212-bluetooth<span class="pp">[</span><span class="ss">2164</span><span class="pp">]</span>: Can<span class="st">'t get device info: No such device</span></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a><span class="st">May 27 06:20:39 H5 systemd[1]: ap6212-bluetooth.service: Control process exited, code=exited status=1</span></span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a><span class="st">May 27 06:20:39 H5 systemd[1]: Failed to start LSB: Patch firmware for ap6212 adapter.</span></span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a><span class="st">May 27 06:20:39 H5 systemd[1]: ap6212-bluetooth.service: Unit entered failed state.</span></span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a><span class="st">May 27 06:20:39 H5 systemd[1]: ap6212-bluetooth.service: Failed with result '</span>exit-code<span class="st">'.</span></span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a><span class="st">Warning: ap6212-bluetooth.service changed on disk. Run '</span>systemctl daemon-reload<span class="st">' to reload units.</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div></li>
+</ol>
+</section>
+<section id="尝试别的解决方法" class="level1">
+<h1>尝试别的解决方法</h1>
+<p>我找了一天，刷了十几个镜像，这次使用Orange PI官方的镜像：ubuntu_xenial_zeroplus2_H5_V0_3.img。 我首先安装上了这个镜像，进入了root账户。</p>
+<ol type="1">
+<li><p><strong>升级软件包</strong> 这里升级软件包时出现了一些错误，使用我这个命令将其修复。 <code>sh     root@Orangepi:~# apt-get update     Hit:1 http://ports.ubuntu.com xenial InRelease     Hit:2 http://ports.ubuntu.com xenial-updates InRelease     Hit:3 http://ports.ubuntu.com xenial-security InRelease     Hit:4 http://ports.ubuntu.com xenial-backports InRelease     Hit:5 http://ports.ubuntu.com/ubuntu-ports xenial-proposed InRelease     Reading package lists... Error!     E: Unable to parse package file /var/lib/dpkg/status (1)     W: You may want to run apt-get update to correct these problems     E: The package cache file is corrupted     root@Orangepi:~# cp /var/lib/dpkg/status-old /var/lib/dpkg/status     root@Orangepi:~# aptitude update     Hit http://ports.ubuntu.com xenial InRelease     Hit http://ports.ubuntu.com xenial-updates InRelease     Hit http://ports.ubuntu.com xenial-security InRelease     Hit http://ports.ubuntu.com xenial-backports InRelease     Hit http://ports.ubuntu.com/ubuntu-ports xenial-proposed InRelease</code></p></li>
+<li><p><strong>安装bulez</strong> <code>sh     root@Orangepi:~# apt-get install bluez     Reading package lists... Done     Building dependency tree     Reading state information... Done     The following NEW packages will be installed:     bluez     0 upgraded, 1 newly installed, 0 to remove and 393 not upgraded.     Need to get 713 kB of archives.     After this operation, 3902 kB of additional disk space will be used.     Get:1 http://ports.ubuntu.com/ubuntu-ports xenial-proposed/main arm64 bluez arm64 5.37-0ubuntu5.2 [713 kB]     Fetched 713 kB in 5s (121 kB/s)     Selecting previously unselected package bluez.     (Reading database ... 125410 files and directories currently installed.)     Preparing to unpack .../bluez_5.37-0ubuntu5.2_arm64.deb ...     Unpacking bluez (5.37-0ubuntu5.2) ...     Processing triggers for dbus (1.10.6-1ubuntu3.1) ...     Processing triggers for man-db (2.7.5-1) ...     Processing triggers for systemd (229-4ubuntu12) ...     Setting up bluez (5.37-0ubuntu5.2) ...     Processing triggers for dbus (1.10.6-1ubuntu3.1) ...     Processing triggers for systemd (229-4ubuntu12) ...</code> 安装好之后查看蓝牙设备，当然不出我所料是没有蓝牙设备的，因为我在这个文件系统的<code>/etc/init.d/</code>下没有看到和蓝牙启动相关的脚本。 <code>sh     root@Orangepi:~# hciconfig hci0     Can't get device info: No such device</code></p></li>
+<li><p><strong>启动蓝牙</strong> 我根据之前的启动蓝牙方法，尝试了如下命令： <code>sh     rfkill unblock all     echo "0" &gt; /sys/class/rfkill/rfkill0/state     echo "1" &gt; /sys/class/rfkill/rfkill0/state     echo " " &gt; /dev/ttyS1     sleep 0.1     hciattach /dev/ttyS1 bcm43xx 115200 flow bdaddr 43:29:B1:55:01:01</code> 执行结果(这里是前面的命令都执行了一遍)： <code>sh     root@Orangepi:~# hciattach /dev/ttyS1 bcm43xx 115200 flow bdaddr 43:29:B1:55:01:01     bcm43xx_init     Patch not found, continue anyway     Set BDADDR UART: 43:29:B1:55:01:01     Set Controller UART speed to 115200 bit/s     Device setup complete     root@Orangepi:~# hciconfig     hci0:   Type: BR/EDR  Bus: UART         BD Address: 43:29:B1:55:01:01  ACL MTU: 1021:8  SCO MTU: 64:1         UP RUNNING PSCAN         RX bytes:689 acl:0 sco:0 events:42 errors:0         TX bytes:2730 acl:0 sco:0 commands:42 errors:0     root@Orangepi:~# hcitool scan     Scanning ...         22:22:B8:95:DE:DC       X800+</code></p></li>
+</ol>
+</section>
+<section id="总结" class="level1">
+<h1>总结</h1>
+<p>经过以上尝试，我觉得他们官方的镜像应该都可以。</p>
+<ol type="1">
+<li><p>我觉得这个ubuntu xenial太过臃肿，我想用ubuntu server版，但是没有尝试，因为刷镜像太过烦恼。。。</p></li>
+<li><p>我之前的那个方法不行，应该是因为我使用的armbian基于4.16内核的镜像。但是我这个板子他不支持armbian 4.14内核的镜像，会无限重启。后来我下载了Armbian源代码，自行编译出Armbian_5.45_Orangepizeroplus2-h5_Debian_stretch_next_4.14.44.img这个镜像。这个也值得一试，毕竟armbian是定制的镜像，效率会高很多，发热量也很小。</p></li>
+<li><p>当然我觉得也可以在armbian上直接使用Orange Pi官方的wifi驱动，因为蓝牙不能用大概率是因为内核驱动的问题。</p></li>
+</ol>
+</section>
+<section id="后记" class="level1">
+<h1>后记</h1>
+<p>我试了Armbian_5.45_Orangepizeroplus2-h5_Debian_stretch_next_4.14.44.img的镜像，然后进行了以下两步：</p>
+<ol type="1">
+<li><p><strong>使能uart1</strong> <code>sh     root@H5:/# vi /boot/armbianEnv.txt</code> 修改如下： <code>git     verbosity=1     console=both     overlay_prefix=sun50i-h5     + overlays=usbhost2 usbhost3 uart1     rootdev=UUID=73662019-22c8-4039-a605-680b57d0fb1c     rootfstype=ext4     + param_uart1_rtscts=1     usbstoragequirks=0x2537:0x1066:u,0x2537:0x1068:u</code></p></li>
+<li><p><strong>修改蓝牙服务</strong> <code>sh     root@H5:/# vi /etc/init.d/ap6212-bluetooth</code> 修改如下 <code>git     # Start patching     rfkill unblock all     echo "0" &gt; /sys/class/rfkill/rfkill0/state     echo "1" &gt; /sys/class/rfkill/rfkill0/state     echo " " &gt; /dev/$PORT     +devmem2 0x1f00060 b 1     #on orangepi win following command never ends on first try... force to run with a timeout...     -timeout 5s echo " " &gt; /dev/$PORT     -if [ $? != 0 ]; then     -        #timed out... retry     -        echo " " &gt; /dev/$PORT     -fi     hciattach /dev/$PORT bcm43xx 115200 flow bdaddr $MAC_OPTIONS     hciconfig hci0 up</code></p></li>
+<li><p><strong>启动蓝牙</strong> <code>sh     root@H5:/# /etc/init.d/ap6212-bluetooth start     [....] Starting ap6212-bluetooth (via systemctl): ap6212-bluetooth.serviceWarning: ap6212-bluetooth.ser.     . ok     root@H5:/# hciconfig     hci0:   Type: Primary  Bus: UART             BD Address: 43:29:B1:55:01:01  ACL MTU: 1021:8  SCO MTU: 64:1             DOWN             RX bytes:696 acl:0 sco:0 events:42 errors:0             TX bytes:2214 acl:0 sco:0 commands:42 errors:0</code> 启动成功</p></li>
+</ol>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/zhen8838\.github\.io");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script src="https://utteranc.es/client.js" repo="zhen8838/zhen8838.github.io" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

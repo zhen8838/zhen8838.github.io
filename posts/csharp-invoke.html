@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2022-02-09">
+
+<title>C# P/Invoke 总结 – Zheng’s Notes</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../assets/favicon.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-7072389654d23eff08f359f9aa0d1ee7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">Zheng’s Notes</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#c打包" id="toc-c打包" class="nav-link active" data-scroll-target="#c打包">C++打包</a></li>
+  <li><a href="#c调用方式" id="toc-c调用方式" class="nav-link" data-scroll-target="#c调用方式">C#调用方式</a>
+  <ul class="collapse">
+  <li><a href="#dllimport" id="toc-dllimport" class="nav-link" data-scroll-target="#dllimport">DllImport</a></li>
+  <li><a href="#nativelibrary.load" id="toc-nativelibrary.load" class="nav-link" data-scroll-target="#nativelibrary.load">NativeLibrary.Load</a></li>
+  </ul></li>
+  <li><a href="#vscode-debug-environment" id="toc-vscode-debug-environment" class="nav-link" data-scroll-target="#vscode-debug-environment">vscode Debug Environment</a>
+  <ul class="collapse">
+  <li><a href="#debug-csharp-with-cpp" id="toc-debug-csharp-with-cpp" class="nav-link" data-scroll-target="#debug-csharp-with-cpp">debug csharp with cpp</a></li>
+  </ul></li>
+  <li><a href="#pinvoke函数签名转换机制" id="toc-pinvoke函数签名转换机制" class="nav-link" data-scroll-target="#pinvoke函数签名转换机制">P/Invoke函数签名转换机制</a>
+  <ul class="collapse">
+  <li><a href="#inoutref关键字的处理" id="toc-inoutref关键字的处理" class="nav-link" data-scroll-target="#inoutref关键字的处理">in/out/ref关键字的处理</a></li>
+  <li><a href="#safehandle类" id="toc-safehandle类" class="nav-link" data-scroll-target="#safehandle类">SafeHandle类</a>
+  <ul class="collapse">
+  <li><a href="#托管资源-managed-resources" id="toc-托管资源-managed-resources" class="nav-link" data-scroll-target="#托管资源-managed-resources">托管资源 Managed Resources:</a></li>
+  </ul></li>
+  <li><a href="#字符串处理" id="toc-字符串处理" class="nav-link" data-scroll-target="#字符串处理">字符串处理</a></li>
+  </ul></li>
+  <li><a href="#包装类设计思路" id="toc-包装类设计思路" class="nav-link" data-scroll-target="#包装类设计思路">包装类设计思路</a></li>
+  <li><a href="#引用计数问题" id="toc-引用计数问题" class="nav-link" data-scroll-target="#引用计数问题">引用计数问题</a>
+  <ul class="collapse">
+  <li><a href="#csharp-无法观测到c对象之间的依赖" id="toc-csharp-无法观测到c对象之间的依赖" class="nav-link" data-scroll-target="#csharp-无法观测到c对象之间的依赖">CSharp 无法观测到c对象之间的依赖</a>
+  <ul class="collapse">
+  <li><a href="#keep-live-ctx" id="toc-keep-live-ctx" class="nav-link" data-scroll-target="#keep-live-ctx">keep live ctx</a></li>
+  <li><a href="#manual-free-objects" id="toc-manual-free-objects" class="nav-link" data-scroll-target="#manual-free-objects">manual free objects</a></li>
+  </ul></li>
+  </ul></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">C# P/Invoke 总结</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">编程语言</div>
+  </div>
+  </div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">February 9, 2022</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>关于C#调用本机lib时遇到的一些问题汇总.</p>
+<!--more-->
+<section id="c打包" class="level1">
+<h1>C++打包</h1>
+<p>c++需要为导出的函数添加<code>extern 'C'</code>标识符. 然后在<code>cmake</code>中编译出<code>shared</code>的lib.</p>
+</section>
+<section id="c调用方式" class="level1">
+<h1>C#调用方式</h1>
+<section id="dllimport" class="level2">
+<h2 class="anchored" data-anchor-id="dllimport">DllImport</h2>
+<p>可以通过为函数添加<code>dllimport</code>的属性来指明需要使用的动态链接库. 同时我们可以不写明后缀,dotnet会自动根据平台寻找. 比如我打包出来的动态链接库为<code>libnncase_csharp.dylib</code>, 我们只要写:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode csharp code-with-copy"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="op">[</span><span class="fu">DllImport</span><span class="op">(</span><span class="st">"libnncase_csharp"</span><span class="op">)]</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">static</span> <span class="kw">extern</span> <span class="kw">unsafe</span> <span class="dt">void</span> <span class="fu">interpreter_load_model</span><span class="op">(</span><span class="dt">byte</span><span class="op">*</span> buffer_ptr<span class="op">,</span> <span class="dt">int</span> size<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>这个方式适合于固定名字的动态库,并且加载了之后就不能卸载再重载.</p>
+</section>
+<section id="nativelibrary.load" class="level2">
+<h2 class="anchored" data-anchor-id="nativelibrary.load">NativeLibrary.Load</h2>
+<p>目前我的方式就是动态的加载链接库,这种方式就是用起来比较麻烦, 首先我们要定义好对应的delegate签名,然后声明一系列的instance, 后面再加载对应的lib之后进行bind, 同时路径还得是固定的. 好处就是更新动态链接库不会受到影响.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode csharp code-with-copy"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">delegate</span> <span class="dt">bool</span> <span class="fu">delegate_init</span><span class="op">();</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>delegate_init interpreter_init<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>TDelegate GetFFI<span class="op">&lt;</span>TDelegate<span class="op">&gt;()</span> <span class="op">=&gt;</span> Marshal<span class="op">.</span><span class="fu">GetDelegateForFunctionPointer</span><span class="op">&lt;</span>TDelegate<span class="op">&gt;(</span>NativeLibrary<span class="op">.</span><span class="fu">GetExport</span><span class="op">(</span>Handle<span class="op">,</span> <span class="kw">typeof</span><span class="op">(</span>TDelegate<span class="op">).</span><span class="fu">Name</span><span class="op">.</span><span class="fu">Replace</span><span class="op">(</span><span class="st">"delegate"</span><span class="op">,</span> <span class="st">"interpreter"</span><span class="op">)));</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>Handle <span class="op">=</span> NativeLibrary<span class="op">.</span><span class="fu">Load</span><span class="op">(</span><span class="st">"/Users/lisa/Documents/nncase/build/simulator/lib/libnncase_csharp.dylib"</span><span class="op">);</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>interpreter_init <span class="op">=</span> GetFFI<span class="op">&lt;</span>delegate_init<span class="op">&gt;();</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+</section>
+<section id="vscode-debug-environment" class="level1">
+<h1>vscode Debug Environment</h1>
+<p>我现在是先C#中调用我的动态链接库,然后在c++代码中再去加载完毕另外一个动态链接库,我发现如果我在命令行中运行就可以成功,但是如果是用vscode的debug模式就永远加载不了第二个dylib,因为vscode-csharp插件不知道为什么把DYLD_LIBRARY_PATH的环境变量给屏蔽掉了. 然后我尝试在dlopen之前设置DYLD_LIBRARY_PATH,发现还是不行,后面才知道如果当前设置了PATH等的环境变量,需要再开一个子进程才能生效.</p>
+<p>这个暂时估计没办法解决.我提了issue. ****</p>
+<section id="debug-csharp-with-cpp" class="level2">
+<h2 class="anchored" data-anchor-id="debug-csharp-with-cpp">debug csharp with cpp</h2>
+<p>用dllimport的方式我尝试了各种方式去attch cpp的代码发现都不行,最终我还是在cpp中写了一个可执行程序然后用c#去起一个进程,然后再用这个时候直接attach到对应的可执行程序就可以debug了.这里还有个要注意点就是需要在可执行程序中加一个waitkey,不然程序等不到 attach就直接结束了.</p>
+</section>
+</section>
+<section id="pinvoke函数签名转换机制" class="level1">
+<h1>P/Invoke函数签名转换机制</h1>
+<section id="inoutref关键字的处理" class="level2">
+<h2 class="anchored" data-anchor-id="inoutref关键字的处理">in/out/ref关键字的处理</h2>
+<p>在C#中,in, out, 和 ref 关键字用于控制参数如何在方法调用中传递.这些关键字在P/Invoke时也有特殊的意义,因为它们指示如何在托管代码和非托管代码之间传递数据.</p>
+<ol type="1">
+<li>in 关键字</li>
+</ol>
+<p>当用于P/Invoke方法参数时,in 关键字指示参数应该从托管代码传递到非托管代码,但不期望从非托管代码返回数据到托管代码. in 关键字用于优化传递大型结构体或数组时的性能,因为它避免了在非托管代码执行后将数据复制回托管内存的需要. 该关键字对于基本数据类型通常是不必要的,因为它们默认按值传递,但对于结构体或数组,它可以防止不必要的内存复制.</p>
+<ol start="2" type="1">
+<li>out 关键字</li>
+</ol>
+<p>使用out关键字时,参数被假定为未初始化,并且非托管函数负责填充它. 在P/Invoke调用完成后,参数的值会从非托管代码复制回托管代码. 这适用于那些只需要从非托管函数输出数据的情况,不需要传递初始化的数据给非托管代码.</p>
+<ol start="3" type="1">
+<li>ref 关键字</li>
+</ol>
+<p>ref 关键字用于两个方向的数据传递:它既将数据从托管代码传递到非托管代码,也将非托管代码的修改传回托管代码. 这适用于需要在非托管代码中被修改,并且修改后的值需要返回给托管代码的情况. P/Invoke与这些关键字的交互</p>
+<p>当你在P/Invoke声明中使用这些关键字时,你告诉CLR(公共语言运行时)如何在托管和非托管之间封送(marshal)数据.封送是指在不同运行环境(如托管和非托管代码)之间转换数据的过程.</p>
+<p>对于in参数,CLR会创建数据的副本(如果需要)并将其传递到非托管代码,但在调用结束后不会检查非托管代码是否更改了数据. 对于out参数,CLR会跳过传递数据到非托管代码的步骤,但在调用结束后会从非托管代码读取数据并填充托管参数. 对于ref参数,CLR会传递数据到非托管代码,并在调用结束后读取可能的更改并更新托管参数. 这些关键字对于优化性能和确保数据正确传递非常重要.在使用这些关键字时,你应该清楚地了解非托管函数的预期行为,以便正确地选择使用 in, out, 或 ref.</p>
+<p>如果你有一个C函数,它的签名是这样的:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode c code-with-copy"><code class="sourceCode c"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> inc<span class="op">(</span><span class="dt">int</span> <span class="dt">const</span> <span class="op">*</span>a<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>在C#中,你不能直接使用 <code>in int a</code> 来匹配 <code>int const *a</code>.相反,你应该使用 <code>ref</code> 关键字来传递一个 <code>int</code> 的引用,或者使用 <code>IntPtr</code> 来传递一个指针:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode csharp code-with-copy"><code class="sourceCode cs"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// 使用 ref 关键字</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">[</span><span class="fu">DllImport</span><span class="op">(</span><span class="st">"YourLibrary.dll"</span><span class="op">)]</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">static</span> <span class="kw">extern</span> <span class="dt">void</span> <span class="fu">inc</span><span class="op">(</span><span class="kw">ref</span> <span class="dt">int</span> a<span class="op">);</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co">// 使用 IntPtr</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="op">[</span><span class="fu">DllImport</span><span class="op">(</span><span class="st">"YourLibrary.dll"</span><span class="op">)]</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">static</span> <span class="kw">extern</span> <span class="dt">void</span> <span class="fu">inc</span><span class="op">(</span>IntPtr a<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>在调用时:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode csharp code-with-copy"><code class="sourceCode cs"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> value <span class="op">=</span> <span class="dv">5</span><span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">inc</span><span class="op">(</span><span class="kw">ref</span> value<span class="op">);</span> <span class="co">// 使用 ref 关键字</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co">// 或者,如果你使用 IntPtr</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>IntPtr ptr <span class="op">=</span> Marshal<span class="op">.</span><span class="fu">AllocHGlobal</span><span class="op">(</span>Marshal<span class="op">.</span><span class="fu">SizeOf</span><span class="op">(</span><span class="kw">typeof</span><span class="op">(</span><span class="dt">int</span><span class="op">)));</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>Marshal<span class="op">.</span><span class="fu">WriteInt32</span><span class="op">(</span>ptr<span class="op">,</span> value<span class="op">);</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="fu">inc</span><span class="op">(</span>ptr<span class="op">);</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>Marshal<span class="op">.</span><span class="fu">FreeHGlobal</span><span class="op">(</span>ptr<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>使用 <code>ref</code> 关键字是最简单的方法,因为它允许CLR为你处理指针的创建和数据的封送.如果你使用 <code>IntPtr</code>,你需要手动分配和释放非托管内存,并且还需要手动读写该内存.</p>
+</section>
+<section id="safehandle类" class="level2">
+<h2 class="anchored" data-anchor-id="safehandle类">SafeHandle类</h2>
+<p>首先在csharp中有两种资源:</p>
+<section id="托管资源-managed-resources" class="level3">
+<h3 class="anchored" data-anchor-id="托管资源-managed-resources">托管资源 Managed Resources:</h3>
+<p>这些是.NET环境下由公共语言运行时(CLR)管理的资源.托管资源主要指的是内存中的对象,如实例化的类或结构体.CLR负责分配和释放这些对象的内存,通常通过垃圾回收(GC)机制来完成.开发者通常不需要手动释放这些资源,因为GC会在对象不再被引用时自动清理它们.托管资源包括但不限于:</p>
+<ul>
+<li>对象实例(如类的实例)</li>
+<li>数组和集合</li>
+<li>委托</li>
+<li>事件处理器</li>
+<li>以及其他所有由CLR管理的内存分配.</li>
+</ul>
+<section id="非托管资源-unmanaged-resources" class="level4">
+<h4 class="anchored" data-anchor-id="非托管资源-unmanaged-resources">非托管资源 Unmanaged Resources:</h4>
+<p>非托管资源是不由CLR直接管理的资源.它们通常是操作系统资源,如文件句柄,网络连接,数据库连接,图形界面句柄,以及任何其他需要通过平台调用(P/Invoke)或互操作服务(COM Interop)使用的资源.这些资源的分配和释放必须由开发者显式管理,因为垃圾回收器不会自动处理它们.常见的非托管资源包括:</p>
+<ul>
+<li>文件和流(FileStream,StreamReader,StreamWriter)</li>
+<li>网络套接字(Socket)</li>
+<li>数据库连接(SqlConnection)</li>
+<li>位图(Bitmap)等图形资源</li>
+<li>通过P/Invoke调用分配的内存</li>
+<li>COM对象</li>
+<li>其他需要调用操作系统API来管理的资源.</li>
+</ul>
+<p>正确管理非托管资源是非常重要的,因为如果不释放这些资源,可能会导致内存泄漏或资源耗尽. 在.NET中,IDisposable接口和SafeHandle类是用来帮助开发者管理非托管资源的常用工具.当一个类实现了IDisposable接口,它应该提供一个Dispose方法,该方法负责释放类持有的所有非托管资源,以及可以释放的托管资源.而SafeHandle是一个专门设计用来封装非托管资源句柄的类,它提供了一个可靠的方式来确保非托管资源在不再需要时被正确释放.</p>
+</section>
+<section id="safehandle的资源释放逻辑" class="level4">
+<h4 class="anchored" data-anchor-id="safehandle的资源释放逻辑">SafeHandle的资源释放逻辑</h4>
+<p>它提供了两个重要的方法,<code>Dispose</code> 和终结器(由 <code>~SafeHandle()</code> 表示),它们在不同的情况下被调用:</p>
+<ol type="1">
+<li><p><strong>Dispose() 方法:</strong> <code>Dispose</code> 方法是 <code>IDisposable</code> 接口的一部分,需要在你的代码中显式调用.当你确定不再需要 <code>SafeHandle</code> 包装的资源时,你应该调用 <code>Dispose</code> 方法.这是一种确定性的方式来释放非托管资源,因为它允许你精确控制资源的释放时间.调用 <code>Dispose</code> 方法通常会导致 <code>SafeHandle</code> 调用其 <code>ReleaseHandle</code> 方法来释放其封装的非托管资源,并将其标记为无效.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode csharp code-with-copy"><code class="sourceCode cs"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>safeHandle<span class="op">.</span><span class="fu">Dispose</span><span class="op">();</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div></li>
+<li><p><strong>终结器(Finalizer):</strong> 终结器由 <code>~SafeHandle()</code> 表示,并在垃圾回收器准备回收对象时自动调用.终结器的调用是非确定性的,因为你不能预知垃圾回收器何时会运行.当 <code>SafeHandle</code> 的实例不再有任何有效的托管引用时,垃圾回收器会在某个时间点回收它,并在此过程中调用终结器.终结器同样会尝试清理非托管资源,但它的执行时间是不可预测的.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode csharp code-with-copy"><code class="sourceCode cs"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="op">~</span><span class="fu">SafeHandle</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">Dispose</span><span class="op">(</span><span class="kw">false</span><span class="op">);</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div></li>
+</ol>
+<p>在 <code>SafeHandle</code> 的实现中,<code>Dispose</code> 方法通常是安全地处理托管和非托管资源的首选方法,而终结器是一种安全网,确保即使忘记调用 <code>Dispose</code> 方法,非托管资源也最终会被释放. 所以为了区分这两种情况, 基本上需要调用<code>Dispose(bool disposing)</code>方法来正确处理资源释放逻辑, 这个方法接受一个布尔值指示, 通常当 <code>Dispose()</code> 被显式调用时,<code>disposing</code> 是 <code>true</code>. 而终结器调用 <code>Dispose(false)</code> 时, 它只处理非托管资源, 因为托管资源可能已经被垃圾回收器清理了.</p>
+<p>但是其实在<code>Dispose(bool disposing)</code>方法中并没有关心<code>disposing</code>, 其实为了防止在 <code>Dispose</code> 被调用后终结器再次释放资源, 显式使用<code>Dispose</code>方法会调用 <code>GC.SuppressFinalize(this)</code>, 这告诉垃圾回收器此对象的终结器不需要再被调用了,因为资源已经被显式清理了.</p>
+<p>如果没有显式使用<code>Dispose</code>方法, 这里的终结器还是会调用<code>Dispose(false)</code>, 内部通过<code>InternalRelease</code>把资源释放掉. 在资源释放时, 首先通过检查<code>state</code>是否是open且只被引用一次且当前类构造的时候为<code>_ownsHandle</code>的形式, 检查成功后会将<code>state</code>设置为<code>close</code>状态, 这个时候要注意除非是使用<code>DangerousRelease</code>来释放, 否则必须会把<code>state</code>设置为<code>Disposed</code>. 等到<code>state</code>更新完毕, 才调用用户<code>override</code>的<code>ReleaseHandle</code>方法去处理非托管资源的释放.</p>
+<p>还有一点需要注意的是, 如果<code>extern</code>的释放函数是没法接受一个被<code>close</code>的<code>SafeHandle</code> 对象, 所以此时需要取出他的<code>handle</code>来调用资源释放函数. 释放后可以自行把<code>handle</code>设置为无效.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode csharp code-with-copy"><code class="sourceCode cs"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> System<span class="op">.</span><span class="fu">Runtime</span><span class="op">.</span><span class="fu">InteropServices</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// This implementation does not employ critical execution regions and thus cannot</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// reliably guarantee handle release in the face of thread aborts.</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">/// </span><span class="kw">&lt;summary&gt;</span><span class="co">Represents a wrapper class for operating system handles.</span><span class="kw">&lt;/summary&gt;</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">abstract</span> <span class="kw">partial</span> <span class="kw">class</span> SafeHandle <span class="op">:</span> CriticalFinalizerObject<span class="op">,</span> IDisposable</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="kw">#if</span> DEBUG <span class="op">&amp;&amp;</span> CORECLR</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>        <span class="co">/// </span><span class="kw">&lt;summary&gt;</span><span class="co">Indicates whether debug tracking and logging of SafeHandle finalization is enabled.</span><span class="kw">&lt;/summary&gt;</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>        <span class="kw">private</span> <span class="kw">static</span> <span class="kw">readonly</span> <span class="dt">bool</span> s_logFinalization <span class="op">=</span> Environment<span class="op">.</span><span class="fu">GetEnvironmentVariable</span><span class="op">(</span><span class="st">"DEBUG_SafeHandle_FINALIZATION"</span><span class="op">)</span> <span class="op">==</span> <span class="st">"1"</span><span class="op">;</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>        <span class="co">/// </span><span class="kw">&lt;summary&gt;</span><span class="co">Debug counter for the number of SafeHandles that have been finalized.</span><span class="kw">&lt;/summary&gt;</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>        <span class="kw">private</span> <span class="kw">static</span> <span class="dt">long</span> s_SafeHandlesFinalized<span class="op">;</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a><span class="kw">#endif</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>        <span class="co">// IMPORTANT:</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>        <span class="co">// - Do not add or rearrange fields as the EE depends on this layout,</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>        <span class="co">//   as well as on the values of the StateBits flags.</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>        <span class="co">// - The EE may also perform the same operations using equivalent native</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>        <span class="co">//   code, so this managed code must not assume it is the only code</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>        <span class="co">//   manipulating _state.</span></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a><span class="kw">#if</span> DEBUG <span class="op">&amp;&amp;</span> CORECLR</span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>        <span class="kw">private</span> <span class="kw">readonly</span> <span class="dt">string</span><span class="op">?</span> _ctorStackTrace<span class="op">;</span></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a><span class="kw">#endif</span></span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>        <span class="co">/// </span><span class="kw">&lt;summary&gt;</span><span class="co">Specifies the handle to be wrapped.</span><span class="kw">&lt;/summary&gt;</span></span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>        <span class="kw">protected</span> IntPtr handle<span class="op">;</span></span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a>        <span class="co">/// </span><span class="kw">&lt;summary&gt;</span><span class="co">Combined ref count and closed/disposed flags (so we can atomically modify them).</span><span class="kw">&lt;/summary&gt;</span></span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a>        <span class="kw">private</span> volatile <span class="dt">int</span> _state<span class="op">;</span></span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a>        <span class="co">/// </span><span class="kw">&lt;summary&gt;</span><span class="co">Whether we can release this handle.</span><span class="kw">&lt;/summary&gt;</span></span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a>        <span class="kw">private</span> <span class="kw">readonly</span> <span class="dt">bool</span> _ownsHandle<span class="op">;</span></span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a>        <span class="co">/// </span><span class="kw">&lt;summary&gt;</span><span class="co">Whether constructor completed.</span><span class="kw">&lt;/summary&gt;</span></span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a>        <span class="kw">private</span> <span class="kw">readonly</span> <span class="dt">bool</span> _fullyInitialized<span class="op">;</span></span>
+<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a>        <span class="co">/// </span><span class="kw">&lt;summary&gt;</span><span class="co">Bitmasks for the </span><span class="kw">&lt;see</span><span class="ot"> cref=</span><span class="dt">"_state"</span><span class="kw">/&gt;</span><span class="co"> field.</span><span class="kw">&lt;/summary&gt;</span></span>
+<span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a>        <span class="co">/// </span><span class="kw">&lt;remarks&gt;</span></span>
+<span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a>        <span class="co">/// The state field ends up looking like this:</span></span>
+<span id="cb8-38"><a href="#cb8-38" aria-hidden="true" tabindex="-1"></a>        <span class="co">///</span></span>
+<span id="cb8-39"><a href="#cb8-39" aria-hidden="true" tabindex="-1"></a>        <span class="co">///  31                                                        2  1   0</span></span>
+<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a>        <span class="co">/// +-----------------------------------------------------------+---+---+</span></span>
+<span id="cb8-41"><a href="#cb8-41" aria-hidden="true" tabindex="-1"></a>        <span class="co">/// |                           Ref count                       | D | C |</span></span>
+<span id="cb8-42"><a href="#cb8-42" aria-hidden="true" tabindex="-1"></a>        <span class="co">/// +-----------------------------------------------------------+---+---+</span></span>
+<span id="cb8-43"><a href="#cb8-43" aria-hidden="true" tabindex="-1"></a>        <span class="co">///</span></span>
+<span id="cb8-44"><a href="#cb8-44" aria-hidden="true" tabindex="-1"></a>        <span class="co">/// Where D = 1 means a Dispose has been performed and C = 1 means the</span></span>
+<span id="cb8-45"><a href="#cb8-45" aria-hidden="true" tabindex="-1"></a>        <span class="co">/// underlying handle has been (or will be shortly) released.</span></span>
+<span id="cb8-46"><a href="#cb8-46" aria-hidden="true" tabindex="-1"></a>        <span class="co">/// </span><span class="kw">&lt;/remarks&gt;</span></span>
+<span id="cb8-47"><a href="#cb8-47" aria-hidden="true" tabindex="-1"></a>        <span class="kw">private</span> <span class="kw">static</span> <span class="kw">class</span> StateBits</span>
+<span id="cb8-48"><a href="#cb8-48" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb8-49"><a href="#cb8-49" aria-hidden="true" tabindex="-1"></a>            <span class="kw">public</span> <span class="dt">const</span> <span class="dt">int</span> Closed <span class="op">=</span> <span class="dv">0</span>b01<span class="op">;</span></span>
+<span id="cb8-50"><a href="#cb8-50" aria-hidden="true" tabindex="-1"></a>            <span class="kw">public</span> <span class="dt">const</span> <span class="dt">int</span> Disposed <span class="op">=</span> <span class="dv">0</span>b10<span class="op">;</span></span>
+<span id="cb8-51"><a href="#cb8-51" aria-hidden="true" tabindex="-1"></a>            <span class="kw">public</span> <span class="dt">const</span> <span class="dt">int</span> RefCount <span class="op">=</span> <span class="kw">unchecked</span><span class="op">(~</span><span class="dv">0</span>b11<span class="op">);</span> <span class="co">// 2 bits reserved for closed/disposed; ref count gets 30 bits</span></span>
+<span id="cb8-52"><a href="#cb8-52" aria-hidden="true" tabindex="-1"></a>            <span class="kw">public</span> <span class="dt">const</span> <span class="dt">int</span> RefCountOne <span class="op">=</span> <span class="dv">1</span> <span class="op">&lt;&lt;</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb8-53"><a href="#cb8-53" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb8-54"><a href="#cb8-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-55"><a href="#cb8-55" aria-hidden="true" tabindex="-1"></a>        <span class="co">/// </span><span class="kw">&lt;summary&gt;</span><span class="co">Creates a SafeHandle class.</span><span class="kw">&lt;/summary&gt;</span></span>
+<span id="cb8-56"><a href="#cb8-56" aria-hidden="true" tabindex="-1"></a>        <span class="kw">protected</span> <span class="fu">SafeHandle</span><span class="op">(</span>IntPtr invalidHandleValue<span class="op">,</span> <span class="dt">bool</span> ownsHandle<span class="op">)</span></span>
+<span id="cb8-57"><a href="#cb8-57" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb8-58"><a href="#cb8-58" aria-hidden="true" tabindex="-1"></a>            handle <span class="op">=</span> invalidHandleValue<span class="op">;</span></span>
+<span id="cb8-59"><a href="#cb8-59" aria-hidden="true" tabindex="-1"></a>            _state <span class="op">=</span> StateBits<span class="op">.</span><span class="fu">RefCountOne</span><span class="op">;</span> <span class="co">// Ref count 1 and not closed or disposed.</span></span>
+<span id="cb8-60"><a href="#cb8-60" aria-hidden="true" tabindex="-1"></a>            _ownsHandle <span class="op">=</span> ownsHandle<span class="op">;</span></span>
+<span id="cb8-61"><a href="#cb8-61" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-62"><a href="#cb8-62" aria-hidden="true" tabindex="-1"></a>            <span class="kw">if</span> <span class="op">(!</span>ownsHandle<span class="op">)</span></span>
+<span id="cb8-63"><a href="#cb8-63" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb8-64"><a href="#cb8-64" aria-hidden="true" tabindex="-1"></a>                GC<span class="op">.</span><span class="fu">SuppressFinalize</span><span class="op">(</span><span class="kw">this</span><span class="op">);</span></span>
+<span id="cb8-65"><a href="#cb8-65" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb8-66"><a href="#cb8-66" aria-hidden="true" tabindex="-1"></a><span class="kw">#if</span> DEBUG <span class="op">&amp;&amp;</span> CORECLR</span>
+<span id="cb8-67"><a href="#cb8-67" aria-hidden="true" tabindex="-1"></a>            <span class="kw">else</span> <span class="kw">if</span> <span class="op">(</span>s_logFinalization<span class="op">)</span></span>
+<span id="cb8-68"><a href="#cb8-68" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb8-69"><a href="#cb8-69" aria-hidden="true" tabindex="-1"></a>                <span class="dt">int</span> lastError <span class="op">=</span> Marshal<span class="op">.</span><span class="fu">GetLastPInvokeError</span><span class="op">();</span></span>
+<span id="cb8-70"><a href="#cb8-70" aria-hidden="true" tabindex="-1"></a>                _ctorStackTrace <span class="op">=</span> Environment<span class="op">.</span><span class="fu">StackTrace</span><span class="op">;</span></span>
+<span id="cb8-71"><a href="#cb8-71" aria-hidden="true" tabindex="-1"></a>                Marshal<span class="op">.</span><span class="fu">SetLastPInvokeError</span><span class="op">(</span>lastError<span class="op">);</span></span>
+<span id="cb8-72"><a href="#cb8-72" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb8-73"><a href="#cb8-73" aria-hidden="true" tabindex="-1"></a><span class="kw">#endif</span></span>
+<span id="cb8-74"><a href="#cb8-74" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-75"><a href="#cb8-75" aria-hidden="true" tabindex="-1"></a>            Volatile<span class="op">.</span><span class="fu">Write</span><span class="op">(</span><span class="kw">ref</span> _fullyInitialized<span class="op">,</span> <span class="kw">true</span><span class="op">);</span></span>
+<span id="cb8-76"><a href="#cb8-76" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb8-77"><a href="#cb8-77" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-78"><a href="#cb8-78" aria-hidden="true" tabindex="-1"></a>        <span class="op">~</span><span class="fu">SafeHandle</span><span class="op">()</span></span>
+<span id="cb8-79"><a href="#cb8-79" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb8-80"><a href="#cb8-80" aria-hidden="true" tabindex="-1"></a>            <span class="kw">if</span> <span class="op">(</span>_fullyInitialized<span class="op">)</span></span>
+<span id="cb8-81"><a href="#cb8-81" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb8-82"><a href="#cb8-82" aria-hidden="true" tabindex="-1"></a>                <span class="fu">Dispose</span><span class="op">(</span>disposing<span class="op">:</span> <span class="kw">false</span><span class="op">);</span></span>
+<span id="cb8-83"><a href="#cb8-83" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb8-84"><a href="#cb8-84" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb8-85"><a href="#cb8-85" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-86"><a href="#cb8-86" aria-hidden="true" tabindex="-1"></a>        <span class="kw">internal</span> <span class="dt">bool</span> OwnsHandle <span class="op">=&gt;</span> _ownsHandle<span class="op">;</span></span>
+<span id="cb8-87"><a href="#cb8-87" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-88"><a href="#cb8-88" aria-hidden="true" tabindex="-1"></a>        <span class="kw">protected</span> <span class="kw">internal</span> <span class="dt">void</span> <span class="fu">SetHandle</span><span class="op">(</span>IntPtr handle<span class="op">)</span> <span class="op">=&gt;</span> <span class="kw">this</span><span class="op">.</span><span class="fu">handle</span> <span class="op">=</span> handle<span class="op">;</span></span>
+<span id="cb8-89"><a href="#cb8-89" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-90"><a href="#cb8-90" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> IntPtr <span class="fu">DangerousGetHandle</span><span class="op">()</span> <span class="op">=&gt;</span> handle<span class="op">;</span></span>
+<span id="cb8-91"><a href="#cb8-91" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-92"><a href="#cb8-92" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> <span class="dt">bool</span> IsClosed <span class="op">=&gt;</span> <span class="op">(</span>_state <span class="op">&amp;</span> StateBits<span class="op">.</span><span class="fu">Closed</span><span class="op">)</span> <span class="op">==</span> StateBits<span class="op">.</span><span class="fu">Closed</span><span class="op">;</span></span>
+<span id="cb8-93"><a href="#cb8-93" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-94"><a href="#cb8-94" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> <span class="kw">abstract</span> <span class="dt">bool</span> IsInvalid <span class="op">{</span> <span class="kw">get</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb8-95"><a href="#cb8-95" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-96"><a href="#cb8-96" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Close</span><span class="op">()</span> <span class="op">=&gt;</span> <span class="fu">Dispose</span><span class="op">();</span></span>
+<span id="cb8-97"><a href="#cb8-97" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-98"><a href="#cb8-98" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> <span class="dt">void</span> <span class="fu">Dispose</span><span class="op">()</span></span>
+<span id="cb8-99"><a href="#cb8-99" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb8-100"><a href="#cb8-100" aria-hidden="true" tabindex="-1"></a>            <span class="fu">Dispose</span><span class="op">(</span>disposing<span class="op">:</span> <span class="kw">true</span><span class="op">);</span></span>
+<span id="cb8-101"><a href="#cb8-101" aria-hidden="true" tabindex="-1"></a>            GC<span class="op">.</span><span class="fu">SuppressFinalize</span><span class="op">(</span><span class="kw">this</span><span class="op">);</span></span>
+<span id="cb8-102"><a href="#cb8-102" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb8-103"><a href="#cb8-103" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-104"><a href="#cb8-104" aria-hidden="true" tabindex="-1"></a>        <span class="kw">protected</span> <span class="kw">virtual</span> <span class="dt">void</span> <span class="fu">Dispose</span><span class="op">(</span><span class="dt">bool</span> disposing<span class="op">)</span></span>
+<span id="cb8-105"><a href="#cb8-105" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb8-106"><a href="#cb8-106" aria-hidden="true" tabindex="-1"></a><span class="kw">#if</span> DEBUG <span class="op">&amp;&amp;</span> CORECLR</span>
+<span id="cb8-107"><a href="#cb8-107" aria-hidden="true" tabindex="-1"></a>            <span class="kw">if</span> <span class="op">(!</span>disposing <span class="op">&amp;&amp;</span> _ctorStackTrace <span class="kw">is</span> not <span class="kw">null</span><span class="op">)</span></span>
+<span id="cb8-108"><a href="#cb8-108" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb8-109"><a href="#cb8-109" aria-hidden="true" tabindex="-1"></a>                <span class="dt">long</span> count <span class="op">=</span> Interlocked<span class="op">.</span><span class="fu">Increment</span><span class="op">(</span><span class="kw">ref</span> s_SafeHandlesFinalized<span class="op">);</span></span>
+<span id="cb8-110"><a href="#cb8-110" aria-hidden="true" tabindex="-1"></a>                Internal<span class="op">.</span><span class="fu">Console</span><span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>$<span class="st">"{Environment.NewLine}*** #{count} {GetType()} (0x{handle.ToInt64():x}) finalized! Ctor stack:{Environment.NewLine}{_ctorStackTrace}{Environment.NewLine}"</span><span class="op">);</span></span>
+<span id="cb8-111"><a href="#cb8-111" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb8-112"><a href="#cb8-112" aria-hidden="true" tabindex="-1"></a><span class="kw">#endif</span></span>
+<span id="cb8-113"><a href="#cb8-113" aria-hidden="true" tabindex="-1"></a>            Debug<span class="op">.</span><span class="fu">Assert</span><span class="op">(</span>_fullyInitialized<span class="op">);</span></span>
+<span id="cb8-114"><a href="#cb8-114" aria-hidden="true" tabindex="-1"></a>            <span class="fu">InternalRelease</span><span class="op">(</span>disposeOrFinalizeOperation<span class="op">:</span> <span class="kw">true</span><span class="op">);</span></span>
+<span id="cb8-115"><a href="#cb8-115" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb8-116"><a href="#cb8-116" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-117"><a href="#cb8-117" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> <span class="dt">void</span> <span class="fu">SetHandleAsInvalid</span><span class="op">()</span></span>
+<span id="cb8-118"><a href="#cb8-118" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb8-119"><a href="#cb8-119" aria-hidden="true" tabindex="-1"></a>            Debug<span class="op">.</span><span class="fu">Assert</span><span class="op">(</span>_fullyInitialized<span class="op">);</span></span>
+<span id="cb8-120"><a href="#cb8-120" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-121"><a href="#cb8-121" aria-hidden="true" tabindex="-1"></a>            Interlocked<span class="op">.</span><span class="fu">Or</span><span class="op">(</span><span class="kw">ref</span> _state<span class="op">,</span> StateBits<span class="op">.</span><span class="fu">Closed</span><span class="op">);</span></span>
+<span id="cb8-122"><a href="#cb8-122" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-123"><a href="#cb8-123" aria-hidden="true" tabindex="-1"></a>            GC<span class="op">.</span><span class="fu">SuppressFinalize</span><span class="op">(</span><span class="kw">this</span><span class="op">);</span></span>
+<span id="cb8-124"><a href="#cb8-124" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb8-125"><a href="#cb8-125" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-126"><a href="#cb8-126" aria-hidden="true" tabindex="-1"></a>        <span class="kw">protected</span> <span class="kw">abstract</span> <span class="dt">bool</span> <span class="fu">ReleaseHandle</span><span class="op">();</span></span>
+<span id="cb8-127"><a href="#cb8-127" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-128"><a href="#cb8-128" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> <span class="dt">void</span> <span class="fu">DangerousAddRef</span><span class="op">(</span><span class="kw">ref</span> <span class="dt">bool</span> success<span class="op">)</span></span>
+<span id="cb8-129"><a href="#cb8-129" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb8-130"><a href="#cb8-130" aria-hidden="true" tabindex="-1"></a>            Debug<span class="op">.</span><span class="fu">Assert</span><span class="op">(</span>_fullyInitialized<span class="op">);</span></span>
+<span id="cb8-131"><a href="#cb8-131" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-132"><a href="#cb8-132" aria-hidden="true" tabindex="-1"></a>            <span class="dt">int</span> oldState<span class="op">,</span> newState<span class="op">;</span></span>
+<span id="cb8-133"><a href="#cb8-133" aria-hidden="true" tabindex="-1"></a>            <span class="kw">do</span></span>
+<span id="cb8-134"><a href="#cb8-134" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb8-135"><a href="#cb8-135" aria-hidden="true" tabindex="-1"></a>                oldState <span class="op">=</span> _state<span class="op">;</span></span>
+<span id="cb8-136"><a href="#cb8-136" aria-hidden="true" tabindex="-1"></a>                ObjectDisposedException<span class="op">.</span><span class="fu">ThrowIf</span><span class="op">((</span>oldState <span class="op">&amp;</span> StateBits<span class="op">.</span><span class="fu">Closed</span><span class="op">)</span> <span class="op">!=</span> <span class="dv">0</span><span class="op">,</span> <span class="kw">this</span><span class="op">);</span></span>
+<span id="cb8-137"><a href="#cb8-137" aria-hidden="true" tabindex="-1"></a>                newState <span class="op">=</span> oldState <span class="op">+</span> StateBits<span class="op">.</span><span class="fu">RefCountOne</span><span class="op">;</span></span>
+<span id="cb8-138"><a href="#cb8-138" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span> <span class="kw">while</span> <span class="op">(</span>Interlocked<span class="op">.</span><span class="fu">CompareExchange</span><span class="op">(</span><span class="kw">ref</span> _state<span class="op">,</span> newState<span class="op">,</span> oldState<span class="op">)</span> <span class="op">!=</span> oldState<span class="op">);</span></span>
+<span id="cb8-139"><a href="#cb8-139" aria-hidden="true" tabindex="-1"></a>            success <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb8-140"><a href="#cb8-140" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb8-141"><a href="#cb8-141" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-142"><a href="#cb8-142" aria-hidden="true" tabindex="-1"></a>        <span class="kw">internal</span> <span class="dt">void</span> <span class="fu">DangerousAddRef</span><span class="op">()</span></span>
+<span id="cb8-143"><a href="#cb8-143" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb8-144"><a href="#cb8-144" aria-hidden="true" tabindex="-1"></a>            <span class="dt">bool</span> success <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb8-145"><a href="#cb8-145" aria-hidden="true" tabindex="-1"></a>            <span class="fu">DangerousAddRef</span><span class="op">(</span><span class="kw">ref</span> success<span class="op">);</span></span>
+<span id="cb8-146"><a href="#cb8-146" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb8-147"><a href="#cb8-147" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-148"><a href="#cb8-148" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> <span class="dt">void</span> <span class="fu">DangerousRelease</span><span class="op">()</span> <span class="op">=&gt;</span> <span class="fu">InternalRelease</span><span class="op">(</span>disposeOrFinalizeOperation<span class="op">:</span> <span class="kw">false</span><span class="op">);</span></span>
+<span id="cb8-149"><a href="#cb8-149" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-150"><a href="#cb8-150" aria-hidden="true" tabindex="-1"></a>        <span class="kw">private</span> <span class="dt">void</span> <span class="fu">InternalRelease</span><span class="op">(</span><span class="dt">bool</span> disposeOrFinalizeOperation<span class="op">)</span></span>
+<span id="cb8-151"><a href="#cb8-151" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb8-152"><a href="#cb8-152" aria-hidden="true" tabindex="-1"></a>            Debug<span class="op">.</span><span class="fu">Assert</span><span class="op">(</span>_fullyInitialized <span class="op">||</span> disposeOrFinalizeOperation<span class="op">);</span></span>
+<span id="cb8-153"><a href="#cb8-153" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-154"><a href="#cb8-154" aria-hidden="true" tabindex="-1"></a>            <span class="dt">bool</span> performRelease<span class="op">;</span></span>
+<span id="cb8-155"><a href="#cb8-155" aria-hidden="true" tabindex="-1"></a>            <span class="dt">int</span> oldState<span class="op">,</span> newState<span class="op">;</span></span>
+<span id="cb8-156"><a href="#cb8-156" aria-hidden="true" tabindex="-1"></a>            <span class="kw">do</span></span>
+<span id="cb8-157"><a href="#cb8-157" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb8-158"><a href="#cb8-158" aria-hidden="true" tabindex="-1"></a>                oldState <span class="op">=</span> _state<span class="op">;</span></span>
+<span id="cb8-159"><a href="#cb8-159" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-160"><a href="#cb8-160" aria-hidden="true" tabindex="-1"></a>                <span class="kw">if</span> <span class="op">(</span>disposeOrFinalizeOperation <span class="op">&amp;&amp;</span> <span class="op">((</span>oldState <span class="op">&amp;</span> StateBits<span class="op">.</span><span class="fu">Disposed</span><span class="op">)</span> <span class="op">!=</span> <span class="dv">0</span><span class="op">))</span></span>
+<span id="cb8-161"><a href="#cb8-161" aria-hidden="true" tabindex="-1"></a>                <span class="op">{</span></span>
+<span id="cb8-162"><a href="#cb8-162" aria-hidden="true" tabindex="-1"></a>                    <span class="kw">return</span><span class="op">;</span></span>
+<span id="cb8-163"><a href="#cb8-163" aria-hidden="true" tabindex="-1"></a>                <span class="op">}</span></span>
+<span id="cb8-164"><a href="#cb8-164" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-165"><a href="#cb8-165" aria-hidden="true" tabindex="-1"></a>                ObjectDisposedException<span class="op">.</span><span class="fu">ThrowIf</span><span class="op">((</span>oldState <span class="op">&amp;</span> StateBits<span class="op">.</span><span class="fu">RefCount</span><span class="op">)</span> <span class="op">==</span> <span class="dv">0</span><span class="op">,</span> <span class="kw">this</span><span class="op">);</span></span>
+<span id="cb8-166"><a href="#cb8-166" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-167"><a href="#cb8-167" aria-hidden="true" tabindex="-1"></a>                performRelease <span class="op">=</span> <span class="op">((</span>oldState <span class="op">&amp;</span> <span class="op">(</span>StateBits<span class="op">.</span><span class="fu">RefCount</span> <span class="op">|</span> StateBits<span class="op">.</span><span class="fu">Closed</span><span class="op">))</span> <span class="op">==</span> StateBits<span class="op">.</span><span class="fu">RefCountOne</span><span class="op">)</span> <span class="op">&amp;&amp;</span></span>
+<span id="cb8-168"><a href="#cb8-168" aria-hidden="true" tabindex="-1"></a>                                 _ownsHandle <span class="op">&amp;&amp;</span></span>
+<span id="cb8-169"><a href="#cb8-169" aria-hidden="true" tabindex="-1"></a>                                 <span class="op">!</span>IsInvalid<span class="op">;</span></span>
+<span id="cb8-170"><a href="#cb8-170" aria-hidden="true" tabindex="-1"></a>                newState <span class="op">=</span> oldState <span class="op">-</span> StateBits<span class="op">.</span><span class="fu">RefCountOne</span><span class="op">;</span></span>
+<span id="cb8-171"><a href="#cb8-171" aria-hidden="true" tabindex="-1"></a>                <span class="kw">if</span> <span class="op">((</span>oldState <span class="op">&amp;</span> StateBits<span class="op">.</span><span class="fu">RefCount</span><span class="op">)</span> <span class="op">==</span> StateBits<span class="op">.</span><span class="fu">RefCountOne</span><span class="op">)</span></span>
+<span id="cb8-172"><a href="#cb8-172" aria-hidden="true" tabindex="-1"></a>                <span class="op">{</span></span>
+<span id="cb8-173"><a href="#cb8-173" aria-hidden="true" tabindex="-1"></a>                    newState <span class="op">|=</span> StateBits<span class="op">.</span><span class="fu">Closed</span><span class="op">;</span></span>
+<span id="cb8-174"><a href="#cb8-174" aria-hidden="true" tabindex="-1"></a>                <span class="op">}</span></span>
+<span id="cb8-175"><a href="#cb8-175" aria-hidden="true" tabindex="-1"></a>                <span class="kw">if</span> <span class="op">(</span>disposeOrFinalizeOperation<span class="op">)</span></span>
+<span id="cb8-176"><a href="#cb8-176" aria-hidden="true" tabindex="-1"></a>                <span class="op">{</span></span>
+<span id="cb8-177"><a href="#cb8-177" aria-hidden="true" tabindex="-1"></a>                    newState <span class="op">|=</span> StateBits<span class="op">.</span><span class="fu">Disposed</span><span class="op">;</span></span>
+<span id="cb8-178"><a href="#cb8-178" aria-hidden="true" tabindex="-1"></a>                <span class="op">}</span></span>
+<span id="cb8-179"><a href="#cb8-179" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span> <span class="kw">while</span> <span class="op">(</span>Interlocked<span class="op">.</span><span class="fu">CompareExchange</span><span class="op">(</span><span class="kw">ref</span> _state<span class="op">,</span> newState<span class="op">,</span> oldState<span class="op">)</span> <span class="op">!=</span> oldState<span class="op">);</span></span>
+<span id="cb8-180"><a href="#cb8-180" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-181"><a href="#cb8-181" aria-hidden="true" tabindex="-1"></a>            <span class="kw">if</span> <span class="op">(</span>performRelease<span class="op">)</span></span>
+<span id="cb8-182"><a href="#cb8-182" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb8-183"><a href="#cb8-183" aria-hidden="true" tabindex="-1"></a>                <span class="dt">int</span> lastError <span class="op">=</span> Marshal<span class="op">.</span><span class="fu">GetLastPInvokeError</span><span class="op">();</span></span>
+<span id="cb8-184"><a href="#cb8-184" aria-hidden="true" tabindex="-1"></a>                <span class="fu">ReleaseHandle</span><span class="op">();</span></span>
+<span id="cb8-185"><a href="#cb8-185" aria-hidden="true" tabindex="-1"></a>                Marshal<span class="op">.</span><span class="fu">SetLastPInvokeError</span><span class="op">(</span>lastError<span class="op">);</span></span>
+<span id="cb8-186"><a href="#cb8-186" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb8-187"><a href="#cb8-187" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb8-188"><a href="#cb8-188" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb8-189"><a href="#cb8-189" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="safehandle使用例子" class="level4">
+<h4 class="anchored" data-anchor-id="safehandle使用例子">SafeHandle使用例子</h4>
+<p>SafeHandle专门存储了一个指针, 在csharp中被释放的时候提供了各种callback让用户自己处理. 在P/invoke的过程中, 继承自safe handle的类就会被自动转换成一个指针对象. 并且下面这种结构体, 其实也可以被认为是一个指针, 也可以通过继承safe handle来处理.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode c code-with-copy"><code class="sourceCode c"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> MlirContext <span class="op">{</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">void</span> <span class="op">*</span>ptr<span class="op">;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>SafeHandle如果是被extern的函数所构造, 那么必须要实现无参数的构造函数, 在调用extern的函数时, 实际上是先调用无参数构造函数然后再调用<code>SetHandle</code>把底层的指针传进去.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode csharp code-with-copy"><code class="sourceCode cs"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">sealed</span> <span class="kw">class</span> Context <span class="op">:</span> SafeHandle<span class="op">,</span> IEquatable<span class="op">&lt;</span>Context<span class="op">&gt;</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">static</span> HashSet<span class="op">&lt;</span>Context<span class="op">&gt;</span> _liveContextSet <span class="op">=</span> <span class="kw">new</span><span class="op">();</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">Context</span><span class="op">()</span> <span class="op">:</span> <span class="kw">base</span><span class="op">(</span>IntPtr<span class="op">.</span><span class="fu">Zero</span><span class="op">,</span> <span class="kw">true</span><span class="op">)</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>        System<span class="op">.</span><span class="fu">Console</span><span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span><span class="st">"create"</span><span class="op">);</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> Context <span class="fu">Create</span><span class="op">()</span> <span class="op">=&gt;</span> <span class="fu">mlirContextCreate</span><span class="op">();</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>在csharp中, 只要任何被csharp对象引用的对象都不会被gc掉, 但是在mlir的python binding中, 有个很麻烦的事情就是他为了避免重复构造对象,使用<code>Map&lt;ptr,object&gt;</code>来存储context/module/operation. 但是这个是在python binding部分内部实现的, 在python中并不知道字典的value存在引用, 所以当python中释放对象的时候可以在c++中清理这个字典. 但是csharp中字典是知道module这个key value</p>
+</section>
+</section>
+</section>
+<section id="字符串处理" class="level2">
+<h2 class="anchored" data-anchor-id="字符串处理">字符串处理</h2>
+<p>假设c中设计了StringRef进行字符串传递:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode c code-with-copy"><code class="sourceCode c"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">typedef</span> <span class="kw">struct</span> MlirStringRef <span class="op">{</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">char</span> <span class="op">*</span>data<span class="op">;</span>    <span class="co">///&lt; Pointer to the first symbol.</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">size_t</span> length<span class="op">;</span> <span class="co">///&lt; Length of the fragment.</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span> StringRef<span class="op">;</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> libParseMlirStringRef<span class="op">(</span>StringRef ref<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>  printf<span class="op">(</span><span class="st">"ref </span><span class="sc">%s</span><span class="st">, </span><span class="sc">%ld\n</span><span class="st">"</span><span class="op">,</span> ref<span class="op">.</span>data<span class="op">,</span> ref<span class="op">.</span>length<span class="op">);</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>MlirStringRef MlirStringRefCreateFromCString<span class="op">(</span><span class="dt">const</span> <span class="dt">char</span> <span class="op">*</span>str<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>我发现如果直接使用如下方法:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode csharp code-with-copy"><code class="sourceCode cs"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span><span class="fu">DllImport</span><span class="op">(</span>LibraryName<span class="op">)]</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">extern</span> MlirStringRef <span class="fu">mlirStringRefCreateFromCString</span><span class="op">([</span><span class="fu">MarshalAs</span><span class="op">(</span>UnmanagedType<span class="op">.</span><span class="fu">LPStr</span><span class="op">)]</span> <span class="dt">string</span> str<span class="op">);</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">unsafe</span> MlirStringRef <span class="fu">mlirStringRefCreate</span><span class="op">(</span><span class="dt">char</span><span class="op">*</span> str<span class="op">,</span> <span class="dt">ulong</span> length<span class="op">)</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>        <span class="kw">return</span> <span class="kw">new</span> MlirStringRef <span class="op">{</span> data <span class="op">=</span> str<span class="op">,</span> length <span class="op">=</span> length <span class="op">};</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> <span class="fu">main</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>    <span class="dt">const</span> <span class="dt">string</span> s <span class="op">=</span> <span class="st">"hello!"</span><span class="op">;</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ParseMlirStringRef</span><span class="op">(</span><span class="fu">mlirStringRefCreateFromCString</span><span class="op">(</span>s<span class="op">));</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ParseMlirStringRef</span><span class="op">(</span><span class="fu">mlirStringRefCreateFromCString</span><span class="op">(</span><span class="st">"hello!"</span><span class="op">));</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">unsafe</span></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> bytes <span class="op">=</span> System<span class="op">.</span><span class="fu">Text</span><span class="op">.</span><span class="fu">Encoding</span><span class="op">.</span><span class="fu">ASCII</span><span class="op">.</span><span class="fu">GetBytes</span><span class="op">(</span>s<span class="op">);</span></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>        <span class="kw">fixed</span> <span class="op">(</span><span class="dt">byte</span><span class="op">*</span> ptr <span class="op">=</span> bytes<span class="op">)</span></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>            <span class="dt">var</span> sref <span class="op">=</span> <span class="fu">mlirStringRefCreate</span><span class="op">((</span><span class="dt">char</span><span class="op">*)</span>ptr<span class="op">,</span> <span class="op">(</span><span class="dt">ulong</span><span class="op">)</span>bytes<span class="op">.</span><span class="fu">Length</span><span class="op">);</span></span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>            <span class="fu">ParseMlirStringRef</span><span class="op">(</span>sref<span class="op">);</span></span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>由于csharp默认的字符串编码只有Unicode和Ansi, 所以直接在底层使用没法直接使用string来构造, 只能先将string的编码转到ascii才能得到正确的结果:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ref</span> �#m, 6</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="ex">ref</span> �#m, 6</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="ex">ref</span> hello!, 6</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>或者其实还可以用一个更简单的方法, 这样也可以得到正确的调用结果:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode csharp code-with-copy"><code class="sourceCode cs"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>    <span class="op">[</span><span class="fu">DllImport</span><span class="op">(</span>LibraryName<span class="op">)]</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">extern</span> MlirStringRef <span class="fu">mlirStringRefCreateFromCString</span><span class="op">([</span><span class="fu">MarshalAs</span><span class="op">(</span>UnmanagedType<span class="op">.</span><span class="fu">LPArray</span><span class="op">)]</span> <span class="dt">byte</span><span class="op">[]</span> str<span class="op">);</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> <span class="fu">main</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">const</span> <span class="dt">string</span> s <span class="op">=</span> <span class="st">"hello!"</span><span class="op">;</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ParseMlirStringRef</span><span class="op">(</span><span class="fu">mlirStringRefCreateFromCString</span><span class="op">(</span>System<span class="op">.</span><span class="fu">Text</span><span class="op">.</span><span class="fu">Encoding</span><span class="op">.</span><span class="fu">ASCII</span><span class="op">.</span><span class="fu">GetBytes</span><span class="op">(</span>s<span class="op">)));</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ParseMlirStringRef</span><span class="op">(</span><span class="fu">mlirStringRefCreateFromCString</span><span class="op">(</span>System<span class="op">.</span><span class="fu">Text</span><span class="op">.</span><span class="fu">Encoding</span><span class="op">.</span><span class="fu">ASCII</span><span class="op">.</span><span class="fu">GetBytes</span><span class="op">(</span><span class="st">"hello!"</span><span class="op">)));</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>在pybind11中, 如果str转换到std::string那么是utf-8编码的.</p>
+<p>要注意一点, 如果c代码中直接返回一个<code>char *</code>指针, 然后C sharp中使用类似的方式:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb15"><pre class="sourceCode csharp code-with-copy"><code class="sourceCode cs"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="op">[</span><span class="fu">DllImport</span><span class="op">(</span>LibraryName<span class="op">)]</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="op">[</span><span class="kw">return</span><span class="op">:</span> <span class="fu">MarshalAs</span><span class="op">(</span>UnmanagedType<span class="op">.</span><span class="fu">LPStr</span><span class="op">)]</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">static</span> <span class="kw">extern</span>  <span class="dt">string</span> <span class="fu">isl_basic_map_get_tuple_name</span><span class="op">(</span>IntPtr bmap<span class="op">,</span> dim_type type<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>这会引起潜在的问题, 因为csharp会自动管理并释放这个string, 如果这个内存是被c库中反复使用的话,就会出现指针异常.</p>
+</section>
+</section>
+<section id="包装类设计思路" class="level1">
+<h1>包装类设计思路</h1>
+<p>看了mlir的python binding, 基本上也是一个<code>PyOperation</code>类中包含了一个指针, 然后基于这个类扩展出合适python的写法. 对于我来说, 准备是直接用继承自SafeHandle的类来对进行包装, 虽然这样写起来内部实现可能会复杂点, 内部调用cpi的和外部调用的都写在一起, 但是我觉得这些都是要写的, 写一起和分开没有很大区别, 使用csharp提供的internal保护应该就会很清爽.</p>
+</section>
+<section id="引用计数问题" class="level1">
+<h1>引用计数问题</h1>
+<section id="csharp-无法观测到c对象之间的依赖" class="level2">
+<h2 class="anchored" data-anchor-id="csharp-无法观测到c对象之间的依赖">CSharp 无法观测到c对象之间的依赖</h2>
+<p>isl中自己维护了一套引用计数的逻辑，但同时他还有一个context作为对象池，而用csharp调用时是看不到对象池的依赖关系的， 用两个例子可以很好的说明：</p>
+<section id="keep-live-ctx" class="level3">
+<h3 class="anchored" data-anchor-id="keep-live-ctx">keep live ctx</h3>
+<p>这里让ctx不提前释放，但是可以观察到对于c对象的释放还是在ctx之前：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb16"><pre class="sourceCode csharp code-with-copy"><code class="sourceCode cs"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> TestSetMinAff<span class="op">{</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">using</span> <span class="op">(</span><span class="dt">var</span> ctx <span class="op">=</span> Isl<span class="op">.</span><span class="fu">ctx</span><span class="op">.</span><span class="fu">Create</span><span class="op">())</span> <span class="op">{</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">var</span> set <span class="op">=</span> <span class="kw">new</span> Isl<span class="op">.</span><span class="fu">set</span><span class="op">(</span>ctx<span class="op">,</span> <span class="st">"[N] → { [i,j,k]: 05 i &lt; 12 and 0 ≤ j&lt; Nand 0 ≤ k &lt; Nand O N &lt; 123 }"</span><span class="op">);</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">var</span> aff <span class="op">=</span> set<span class="op">.</span><span class="fu">max_multi_pw_aff</span><span class="op">();</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">var</span> min <span class="op">=</span> aff<span class="op">.</span><span class="fu">min_multi_val</span><span class="op">();</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">var</span> max <span class="op">=</span> aff<span class="op">.</span><span class="fu">max_multi_val</span><span class="op">();</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>    System<span class="op">.</span><span class="fu">Console</span><span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>min<span class="op">);</span></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>    System<span class="op">.</span><span class="fu">Console</span> <span class="fu">WriteLine</span><span class="op">(</span>max<span class="op">);</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>    GC<span class="op">.</span><span class="fu">KeepAlive</span><span class="op">(</span>ctx<span class="op">);</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<pre><code>［11,0,0］
+isl_ctx.c:307: isl_ctx not freed as some objects still reference it
+［11,121,121］</code></pre>
+</section>
+<section id="manual-free-objects" class="level3">
+<h3 class="anchored" data-anchor-id="manual-free-objects">manual free objects</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb18"><pre class="sourceCode csharp code-with-copy"><code class="sourceCode cs"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">TestSetMinAffFreeManualy</span><span class="op">()</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">using</span> <span class="op">(</span><span class="dt">var</span> ctx <span class="op">=</span> Isl<span class="op">.</span><span class="fu">ctx</span><span class="op">.</span><span class="fu">Create</span><span class="op">())</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> set <span class="op">=</span> <span class="kw">new</span> Isl<span class="op">.</span><span class="fu">set</span><span class="op">(</span>ctx<span class="op">,</span> <span class="st">"[N] -&gt; { [i,j,k]: 0&lt;= i &lt; 12 and 0 &lt;= j &lt; N and 0 &lt;= k &lt; N and 0 &lt;= N &lt; 123 }"</span><span class="op">);</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> aff <span class="op">=</span> set<span class="op">.</span><span class="fu">max_multi_pw_aff</span><span class="op">();</span></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> min <span class="op">=</span> aff<span class="op">.</span><span class="fu">min_multi_val</span><span class="op">();</span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>        <span class="dt">var</span> max <span class="op">=</span> aff<span class="op">.</span><span class="fu">max_multi_val</span><span class="op">();</span></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>        System<span class="op">.</span><span class="fu">Console</span><span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>min<span class="op">);</span></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>        System<span class="op">.</span><span class="fu">Console</span><span class="op">.</span><span class="fu">WriteLine</span><span class="op">(</span>max<span class="op">);</span></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>        max<span class="op">.</span><span class="fu">Dispose</span><span class="op">();</span></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>        min<span class="op">.</span><span class="fu">Dispose</span><span class="op">();</span></span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>        aff<span class="op">.</span><span class="fu">Dispose</span><span class="op">();</span></span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>        set<span class="op">.</span><span class="fu">Dispose</span><span class="op">();</span></span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>这样才能把ctx的free放到最后处理。</p>
+<pre><code>{[11,0,0]}
+{[11,121,121]}
+free isl_multi_val 4307700432
+free isl_multi_val 5510841360
+free isl_multi_pw_aff 5510378384
+free isl_set 5241109488
+free isl_ctx 4307694592</code></pre>
+
+
+</section>
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/zhen8838\.github\.io");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script src="https://utteranc.es/client.js" repo="zhen8838/zhen8838.github.io" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

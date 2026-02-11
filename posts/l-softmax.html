@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2019-06-03">
+
+<title>L softmx -&gt; A softmx -&gt; AM softmax – Zheng’s Notes</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../assets/favicon.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-7072389654d23eff08f359f9aa0d1ee7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">Zheng’s Notes</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#原始的softmax" id="toc-原始的softmax" class="nav-link active" data-scroll-target="#原始的softmax">原始的softmax</a></li>
+  <li><a href="#large-margin-softmax-loss" id="toc-large-margin-softmax-loss" class="nav-link" data-scroll-target="#large-margin-softmax-loss">Large-Margin Softmax Loss</a></li>
+  <li><a href="#动机" id="toc-动机" class="nav-link" data-scroll-target="#动机">动机</a></li>
+  <li><a href="#定义" id="toc-定义" class="nav-link" data-scroll-target="#定义">定义</a></li>
+  <li><a href="#a-softmax" id="toc-a-softmax" class="nav-link" data-scroll-target="#a-softmax">A softmax</a>
+  <ul class="collapse">
+  <li><a href="#modified-softmax" id="toc-modified-softmax" class="nav-link" data-scroll-target="#modified-softmax">modified softmax</a></li>
+  <li><a href="#angular-margin-to-softmax-loss" id="toc-angular-margin-to-softmax-loss" class="nav-link" data-scroll-target="#angular-margin-to-softmax-loss">Angular Margin to Softmax Loss</a></li>
+  </ul></li>
+  <li><a href="#additive-margin-softmax" id="toc-additive-margin-softmax" class="nav-link" data-scroll-target="#additive-margin-softmax">Additive Margin Softmax</a>
+  <ul class="collapse">
+  <li><a href="#定义-1" id="toc-定义-1" class="nav-link" data-scroll-target="#定义-1">定义</a></li>
+  </ul></li>
+  <li><a href="#编程实现" id="toc-编程实现" class="nav-link" data-scroll-target="#编程实现">编程实现</a>
+  <ul class="collapse">
+  <li><a href="#a-softmax-loss" id="toc-a-softmax-loss" class="nav-link" data-scroll-target="#a-softmax-loss">A softmax loss</a></li>
+  <li><a href="#additive-margin-softmax-1" id="toc-additive-margin-softmax-1" class="nav-link" data-scroll-target="#additive-margin-softmax-1">Additive Margin Softmax</a></li>
+  </ul></li>
+  <li><a href="#总结" id="toc-总结" class="nav-link" data-scroll-target="#总结">总结</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">L softmx -&gt; A softmx -&gt; AM softmax</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">深度学习</div>
+  </div>
+  </div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">June 3, 2019</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>本篇文章是对<code>Large Margin Softmax loss</code>,<code>Angular Margin to Softmax Loss</code>,<code>Additive Margin Softmax Loss</code>的学习记录。公式我尽量按照原文来写，并加入一点注释。</p>
+<!--more-->
+<section id="原始的softmax" class="level1">
+<h1>原始的softmax</h1>
+<p>首先定义第<code>i</code>个输入特征<span class="math inline">\(x_i\)</span>和标签<span class="math inline">\(y_i\)</span>。传统的<code>softmax</code>定义为：</p>
+<p><span class="math display">\[
+\begin{aligned}
+    Loss=\frac{1}{N}\sum_i Loss_i= -\frac{1}{N}log(P_{y_i})= -\frac{1}{N}log(\frac{e^{f_{y_i}}}{\sum_j e^{f_j}})
+\end{aligned}
+\]</span></p>
+<p><strong>注：</strong> <span class="math inline">\(f_{y_i}\)</span>应该是指的是输出中对应label分类的那个位置，<span class="math inline">\(f_j\)</span>对应第<span class="math inline">\(j\)</span>个元素(<span class="math inline">\(j \in [1,K)\)</span>,<span class="math inline">\(K\)</span>对应类别数量)的输出.<span class="math inline">\(N\)</span>为输入样本数量.</p>
+<p>因为在<code>softmax loss</code>中最后都使用全连接层来实现分类,所以<span class="math inline">\(f_{y_i}=\boldsymbol{W}_{y_i}^Tx_i\)</span>,<span class="math inline">\(\boldsymbol{W}_{y_i}\)</span>是<span class="math inline">\(\boldsymbol{W}\)</span>的第<span class="math inline">\(y_i\)</span>列.(一般来说是全连接层还需要加上偏置,但是为了公式推导的方便这里不加,在实际中直接加偏置即可).再因为这里的<span class="math inline">\(f_j\)</span>是<span class="math inline">\(\boldsymbol{W}_j\)</span>和<span class="math inline">\(x_i\)</span>的內积,所以<span class="math inline">\(f_j=\boldsymbol{W}_jx_i=\parallel \boldsymbol{W}_j\parallel \parallel x_i\parallel cos(\theta_j)\)</span>,<span class="math inline">\(\theta_j(0\leq\theta_j\leq\pi)\)</span>是向量<span class="math inline">\(\boldsymbol{W}_i\)</span>和<span class="math inline">\(x_i\)</span>的夹角.最终损失函数定义为:</p>
+<p><span class="math display">\[ \begin{aligned}
+    Loss_i=-log(\frac{e^{\parallel \boldsymbol{W}_{j_i}\parallel \parallel x_i\parallel cos(\theta_{y_i})}}{\sum_j e^{\parallel \boldsymbol{W}_j\parallel \parallel x_i\parallel cos(\theta_j)}})
+\end{aligned} \]</span></p>
+</section>
+<section id="large-margin-softmax-loss" class="level1">
+<h1>Large-Margin Softmax Loss</h1>
+</section>
+<section id="动机" class="level1">
+<h1>动机</h1>
+<p>考虑一个二分类的<code>softmax loss</code>,它的目标是使<span class="math inline">\(\boldsymbol{W}_{1}^Tx&gt;\boldsymbol{W}_{1}^Tx\)</span>或<span class="math inline">\(\parallel \boldsymbol{W}_{1}\parallel \parallel x\parallel cos(\theta_{1})&gt;\parallel \boldsymbol{W}_{2}\parallel \parallel x\parallel cos(\theta_{2})\)</span>来正确分类<span class="math inline">\(x\)</span>. 现在作者想到构建一个决策余量来更加严格地约束决策间距,所以要求<span class="math inline">\(\parallel \boldsymbol{W}_{1}\parallel \parallel x\parallel cos(m\theta_{1})&gt;\parallel \boldsymbol{W}_{2}\parallel \parallel x\parallel cos(\theta_{2}) (0\leq \theta_1 \leq \frac{\pi}{m})\)</span>,<span class="math inline">\(m\)</span>是一个正整数.从而使以下不等式成立: <span class="math display">\[ \begin{aligned}
+    \parallel \boldsymbol{W}_{1}\parallel \parallel x\parallel cos(\theta_{1})\geq\parallel \boldsymbol{W}_{1}\parallel \parallel x\parallel cos(m\theta_{1})&gt;\parallel \boldsymbol{W}_{2}\parallel \parallel x\parallel cos(\theta_{2})
+\end{aligned} \]</span></p>
+<p>这样对学习<span class="math inline">\(\boldsymbol{W}_1\boldsymbol{W}_2\)</span>都提出了更高的要求.</p>
+<p><strong>注:</strong> 实际上这里是对类内的间距有个限制,假设<span class="math inline">\(m=6\)</span>时,<span class="math inline">\(cos(\theta)\geq cos(m\theta)\)</span>的条件下,<span class="math inline">\(\theta\)</span>被压缩到一个特定的范围中,如下图所示,只有蓝线大于红线的时候的<span class="math inline">\(\theta\)</span>取值才是符合条件的,这相当于变相的增加了<span class="math inline">\(\boldsymbol{W}_1\)</span>与<span class="math inline">\(x\)</span>的方向限制,也就是学习难度更大,类内间距更小.不过我感觉还得限制一下<span class="math inline">\(\theta\)</span>的范围,因为符合条件的<span class="math inline">\(\theta\)</span>范围并不止一个:</p>
+<p><img src="l-softmax/1.png" class="img-fluid"></p>
+</section>
+<section id="定义" class="level1">
+<h1>定义</h1>
+<p>下面给出<code>L softmax</code>的定义:</p>
+<p><span class="math display">\[ \begin{align}
+Loss_{i}=-\log \left(\frac{e^{\left\|\boldsymbol{W}_{y_{i}}\right\| \boldsymbol{x}_{i} \| \psi\left(\theta_{y_{i}}\right)}}{e^{\left\|\boldsymbol{W}_{y_{i}}\right\| \boldsymbol{x}_{i} \| \psi\left(\theta_{y_{i}}\right)}+\sum_{j \neq y_{i}} e^{\left\|\boldsymbol{W}_{j}\right\|\left\|\boldsymbol{x}_{i}\right\| \cos \left(\theta_{j}\right)} )}\right)
+\end{align}
+\]</span></p>
+<p>并:</p>
+<p><span class="math display">\[ \begin{align}
+\psi(\theta)=\left\{\begin{array}{l}{\cos (m \theta), \quad 0 \leq \theta \leq \frac{\pi}{m}} \\ {\mathcal{D}(\theta), \quad \frac{\pi}{m}&lt;\theta \leq \pi}\end{array}\right.
+\end{align}
+\]</span></p>
+<p><span class="math inline">\(m\)</span>是与分类边界密切相关的参数,<span class="math inline">\(m\)</span>越大分类学习越难.同时<span class="math inline">\(\mathcal{D}(\theta)\)</span>需要是一个单调递增函数,且<span class="math inline">\(\mathcal{D}(\frac{\pi}{m})==cas(\frac{\pi}{m})\)</span>(保证他是连续函数才可以求导).下图显示了不同<span class="math inline">\(\theta\)</span>值下的两个损失函数的结果,夹角<span class="math inline">\(\theta\)</span>越大<code>L softmax loss</code>越大.</p>
+<p><img src="l-softmax/2.png" class="img-fluid"></p>
+<p>为了简单起见,文章中特化了<span class="math inline">\(\psi(\theta)\)</span>函数为: <span class="math display">\[ \begin{align}
+\psi(\theta)=(-1)^{k} \cos (m \theta)-2 k, \quad \theta \in\left[\frac{k \pi}{m}, \frac{(k+1) \pi}{m}\right]
+\end{align}
+\]</span></p>
+<p>其中<span class="math inline">\(k\in[0,m-1]\)</span>且为正整数.</p>
+<p>在前向传播和反向传播中作者将<span class="math inline">\(cos(\theta_j)\)</span>替换成<span class="math inline">\(\frac{\boldsymbol{W}_{j}^{T} \boldsymbol{x}_{i}}{\left\|\boldsymbol{W}_{j}\right\|\left\|\boldsymbol{x}_{i}\right\|}\)</span>,<span class="math inline">\(cos(m\theta_{y_i})\)</span>替换为: <span class="math display">\[  \begin{align}
+\begin{aligned} \cos \left(m \theta_{y_{i}}\right) &amp;=C_{m}^{0} \cos ^{m}\left(\theta_{y_{i}}\right)-C_{m}^{2} \cos ^{m-2}\left(\theta_{y_{i}}\right)\left(1-\cos ^{2}\left(\theta_{y_{i}}\right)\right) \\ &amp;+C_{m}^{4} \cos ^{m-4}\left(\theta_{y_{i}}\right)\left(1-\cos ^{2}\left(\theta_{y_{i}}\right)\right)^{2}+\cdots \\ &amp;(-1)^{n} C_{m}^{2 n} \cos ^{m-2 n}\left(\theta_{y_{y_{i}}}\right)\left(1-\cos ^{2}\left(\theta_{y_{i}}\right)\right)^{n}+\cdots \end{aligned}
+\end{align}
+\]</span></p>
+<p><span class="math inline">\(n\)</span>是正整数且<span class="math inline">\(2n\leq m\)</span>.然后将这些函数带入<code>L softmax loss</code>公式中计算即可拿来做损失.但是这个公式还是太长了,所以我决定还是不用这个损失函数.</p>
+</section>
+<section id="a-softmax" class="level1">
+<h1>A softmax</h1>
+<p>这里还是介绍传统的<code>softmax</code>,这里就不赘述了.</p>
+<section id="modified-softmax" class="level2">
+<h2 class="anchored" data-anchor-id="modified-softmax">modified softmax</h2>
+<p>这个就是作者让传统的<code>softmax</code>的权重<span class="math inline">\(\boldsymbol{W}\)</span>归一化:<span class="math inline">\(\parallel \boldsymbol{W}_j\parallel =1\)</span>(必须是没有bias的),得到了<code>modified softmax loss</code>: <span class="math display">\[ \begin{align}
+Loss=\frac{1}{N} \sum_{i}-\log \left(\frac{e^{\left\|\boldsymbol{x}_{i}\right\| \cos \left(\theta_{y_{i}, i}\right)}}{\sum_{j} e^{\left\|\boldsymbol{x}_{i}\right\| \cos \left(\theta_{j, i}\right)}}\right)
+\end{align}
+\]</span></p>
+<p>当然我不知道这个归一化有什么好处,从作者给出的结果上来看准确率提高了1%.</p>
+</section>
+<section id="angular-margin-to-softmax-loss" class="level2">
+<h2 class="anchored" data-anchor-id="angular-margin-to-softmax-loss">Angular Margin to Softmax Loss</h2>
+<p>对于上面的<code>modified softmax loss</code>在二分类问题中,当<span class="math inline">\(\cos(\theta_1)&gt;\cos(\theta_2)\)</span>可以确定类别为1,但是两个类别的决策面是<span class="math inline">\(\cos(\theta_1)=\cos(\theta_2)\)</span>,这样的决策面间隔太小,为了让决策面之间的间距更大一些,作者提出做两个决策面:</p>
+<p>类别1的决策面为<span class="math inline">\(\cos(m\theta_1)=\cos(\theta_2)\)</span>; 类别2的决策面为<span class="math inline">\(\cos(\theta_1)=\cos(m\theta_2)\)</span>; 其中<span class="math inline">\(m\geq2,m\in N\)</span>,<span class="math inline">\(m\)</span>取整数可以利用倍角公式;</p>
+<p>这样的话,也就是说预测出来的<span class="math inline">\(\boldsymbol{x}\)</span>与他对应的类的夹角必须要小于他与其他类<strong>最小</strong>的夹角的<span class="math inline">\(m\)</span>倍,比如2分类问题,其实就有三个决策面,中间两个决策面之间的就是决策间距.然后推导出<code>A softmax loss</code>: <span class="math display">\[ \begin{aligned}
+Loss = \frac{1}{N}\sum_i-\log(\frac{\exp(\|x_i\|\cos(m\theta_{yi,i}))}{\exp(\|x_i\|\cos(m\theta_{yi,i}))+\sum_{j\neq y_i}\exp(\|x_i\|\cos(\theta_{j,i}))})
+\end{aligned} \]</span></p>
+<p>其中<span class="math inline">\(\theta_{yi,i}\in[0, \frac{\pi}{m}]\)</span>,这就是因为<span class="math inline">\(cos\)</span>的性质决定,我在上面也提到了,当<span class="math inline">\(m\theta_{yi,i}&gt;\pi\)</span>时,会使得<span class="math inline">\(m\theta_{yi,i}&gt;\theta_{j,i}\ ,j\neq y_i\)</span>,但<span class="math inline">\(cos(m\theta_{1})&gt;cos(\theta_2)\)</span>也会成立,这就与之前的假设相反.</p>
+<p>为了避免<span class="math inline">\(cos\)</span>的问题,就设计 <span class="math display">\[
+\begin{aligned}
+\psi(\theta_{y_i,i})=(-1)^k\cos(m\theta_{y_i,i})-2k\ \ \ \theta_{y_i,i}\in[\frac{k\pi}{m},\frac{(k+1)\pi}{m}],且k\in[0,m-1]    
+\end{aligned}\]</span></p>
+<p>来代替.这样使得<span class="math inline">\(\psi\)</span>随着<span class="math inline">\(\theta_{y_i,i}\)</span>单调递减,如果<span class="math inline">\(m\theta_{y_i,i}&gt;\theta_{j,i},j\neq y_i\)</span>那么必有<span class="math inline">\(\psi(\theta_{y_i,i})&lt;\cos(\theta_{j,i})\)</span>,这里我们看一下<span class="math inline">\(\psi(\theta)\)</span>函数的图像(完全符合单独递减的要求,并且是连续函数可导):</p>
+<p><img src="l-softmax/psi.png" class="img-fluid"></p>
+<p>最终得出损失函数如下: <span class="math display">\[ \begin{aligned}
+L_{ang} = \frac{1}{N}\sum_i-\log(\frac{\exp(\|x_i\|\psi(\theta_{yi,i}))}{\exp(\|x_i\|\psi(\theta_{yi,i}))+\sum_{j\neq y_i}\exp(\|x_i\|\cos(\theta_{j,i}))})
+\end{aligned} \]</span></p>
+<p>这里对比一下三个loss的不同决策界:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 9%">
+<col style="width: 90%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: center;">损失函数</th>
+<th style="text-align: center;">决策面</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">Softmax Loss</td>
+<td style="text-align: center;"><span class="math inline">\(\boldsymbol{W}_1-\boldsymbol{W}_2+b1-b2=0\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">Modified Softmax Loss</td>
+<td style="text-align: center;"><span class="math inline">\(\parallel\boldsymbol{x}(cos(\theta_1)-cos(\theta_2))\parallel\)</span>=0</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">A Softmax Loss</td>
+<td style="text-align: center;"><span class="math display">\[\begin{aligned}   \parallel\boldsymbol{x}\parallel(cos(m\theta_1)-cos(\theta_2)=0\ \text{for class 1}\\ \parallel\boldsymbol{x}\parallel(cos(\theta_1)-cos(m\theta_2)=0\ \text{for class 2} \end{aligned} \]</span></td>
+</tr>
+</tbody>
+</table>
+<p><strong>注:</strong> 写到这里我发现这tm就是一个作者的两篇文章,到这里<code>A softmax</code>还是与<code>L softmax</code>的区别就在于是否对<span class="math inline">\(\parallel\boldsymbol{W}\parallel\)</span>进行归一化.这样的话对于分类来说可以观察到<code>A softmax</code>的分类结果都是长度会趋近相同,<code>L softmax</code>的分类长度会不相同.</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>A softmax</th>
+<th>L softmax</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><img src="l-softmax/a_softmax_res.png" class="img-fluid"></td>
+<td><img src="l-softmax/l_softmax_res.png" class="img-fluid"></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="additive-margin-softmax" class="level1">
+<h1>Additive Margin Softmax</h1>
+<p>这里这个作者在2018年发表的文章,这里也一并学习了.这个是效果好并且实现简单的一种方案.</p>
+<section id="定义-1" class="level2">
+<h2 class="anchored" data-anchor-id="定义-1">定义</h2>
+<p>实际上看了上面的<code>Loss</code>函数,所有的变化点其实就在<span class="math inline">\(e^{?}\)</span>做文章.这里首先替换了<span class="math inline">\(\psi(\theta)\)</span>函数(<span class="math inline">\(m\)</span>是偏移): <span class="math display">\[ \begin{aligned}
+    \psi(\theta)=cos(\theta)-m
+\end{aligned} \]</span></p>
+<p>然后又把<span class="math inline">\(W,x\)</span>都归一化: <span class="math display">\[ \begin{aligned}
+    Loss_i=-log(\frac{e^{\parallel \boldsymbol{W}_{j_i}\parallel \parallel x_i\parallel cos(\theta_{y_i})}}{\sum_j e^{\parallel \boldsymbol{W}_j\parallel \parallel x_i\parallel cos(\theta_j)}})\ \ \ \ \parallel\boldsymbol{W}\parallel=1,\parallel x\parallel=1
+\end{aligned} \]</span></p>
+<p>这样內积结果就是: <span class="math display">\[ \begin{aligned}
+    &lt;\boldsymbol{W_{y_i}},x&gt;=cos(\theta_{y_i})
+\end{aligned} \]</span></p>
+<p>接着再来一个偏移<span class="math inline">\(m,\ m&gt;0\)</span>与缩放因子<span class="math inline">\(s\)</span>,得到最后的损失函数: <span class="math display">\[ \begin{aligned}
+    Loss_i = - \log \frac{e^{s\cdot(\cos\theta_{y_i} -m)}}{e^{s\cdot (\cos\theta_{y_i} -m)}+\sum^c_{j=1,i\neq t}  e^{s\cdot\cos\theta_j }}
+\end{aligned} \]</span></p>
+<p>按照原论文,取<span class="math inline">\(m=0.35\)</span>,<span class="math inline">\(s=30\)</span>.然后就结束了… 😄</p>
+<p>再补张图(<code>AM softmax</code>没有乘<span class="math inline">\(s\)</span>): <img src="l-softmax/psi2.png" class="img-fluid"></p>
+</section>
+</section>
+<section id="编程实现" class="level1">
+<h1>编程实现</h1>
+<p>因为<code>A softmax loss</code>是升级版,所以就实现这个.</p>
+<section id="a-softmax-loss" class="level2">
+<h2 class="anchored" data-anchor-id="a-softmax-loss">A softmax loss</h2>
+<p>首先是几个代码要注意的点,<span class="math inline">\(cos(\theta)\)</span>可以通过向量除计算,<span class="math inline">\(cos(m\theta)\)</span>可以通过倍角公式计算.: <span class="math display">\[
+\begin{split}
+\cos \theta_{i,j} &amp;= \frac{\vec{x_i}\cdot\vec{W_j}}{\|\vec{x_i}\|\cdot\|\vec{W_j}\|} \frac{\vec{x_i}\cdot\vec{W_{norm_j}}}{\|\vec{x_i}\|} \cr
+\cos 2\theta &amp;= 2\cos^2 \theta -1 \cr
+\cos 3\theta &amp;= 4\cos^2 \theta -3 \cos \theta \cr
+\cos 4\theta &amp;= 8\cos^4 \theta -8\cos^2 \theta + 1 \cr
+\end{split}
+\]</span></p>
+<p>然后还有<span class="math inline">\(k\)</span>的取值,先利用<span class="math inline">\(sign\)</span>函数判断<span class="math inline">\(cos(\theta)\)</span>属于哪一个区间,再确定<span class="math inline">\(k\)</span>的值: <span class="math display">\[ \begin{aligned}
+    sign_0&amp;=sign(cos(\theta))\\
+    sign_3&amp;=sign(cos(2\theta))*sign_0\\
+    sign_4&amp;=2*sign_0+sign_3-3 \\
+    \psi(\theta)&amp;=sign_3*cos(4\theta)+sign_4 \\
+    &amp;=sign_3*(8\cos^4 \theta -8\cos^2 \theta + 1)+sign_4
+\end{aligned} \]</span></p>
+<p>下面是<span class="math inline">\(m=4\)</span>时的<span class="math inline">\(Loss\)</span>计算函数.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> tensorflow.python <span class="im">as</span> tf</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tensorflow <span class="im">import</span> contrib</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> Angular_Softmax_Loss(embeddings, labels, margin<span class="op">=</span><span class="dv">4</span>):</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>        <span class="co">"""</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">        Note:(about the value of margin)</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">        as for binary-class case, the minimal value of margin is 2+sqrt(3)</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">        as for multi-class  case, the minimal value of margin is 3</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">        the value of margin proposed by the author of paper is 4.</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co">        here the margin value is 4.</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co">        """</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        l <span class="op">=</span> <span class="fl">0.</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        embeddings <span class="op">=</span> tf.random_normal((<span class="dv">2</span>, <span class="dv">10</span>))</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        labels <span class="op">=</span> tf.convert_to_tensor([[<span class="dv">1</span>], [<span class="dv">2</span>]], dtype<span class="op">=</span>tf.int64)</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>        x_norm <span class="op">=</span> tf.norm(embeddings, axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>        <span class="cf">with</span> tf.variable_scope(<span class="st">"softmax"</span>):</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>            weights <span class="op">=</span> tf.get_variable(name<span class="op">=</span><span class="st">'embedding_weights'</span>,</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>                                      shape<span class="op">=</span>[embeddings.get_shape().as_list()[<span class="op">-</span><span class="dv">1</span>], <span class="dv">10</span>],</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>                                      initializer<span class="op">=</span>contrib.layers.xavier_initializer())</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>            W <span class="op">=</span> tf.nn.l2_normalize(weights, axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>            <span class="co"># cacualting the cos value of angles between embeddings and W</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>            orgina_logits <span class="op">=</span> tf.matmul(embeddings, W)</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>            N <span class="op">=</span> embeddings.get_shape()[<span class="dv">0</span>]  <span class="co"># get batch_size</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>            single_sample_label_index <span class="op">=</span> tf.concat([tf.constant(<span class="bu">list</span>(<span class="bu">range</span>(N)), tf.int64, shape<span class="op">=</span>(N, <span class="dv">1</span>)), labels], axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>            <span class="co"># N = 128, labels = [1,0,...,9]</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>            <span class="co"># single_sample_label_index:</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>            <span class="co"># [ [0,1],</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>            <span class="co">#   [1,0],</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>            <span class="co">#   ....</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>            <span class="co">#   [128,9]]</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>            <span class="co"># 这里就是F_y_i,根据有目标的位置来选取需要计算的loss位置.</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>            f_y_i <span class="op">=</span> tf.gather_nd(orgina_logits, single_sample_label_index)</span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>            <span class="co"># </span><span class="al">NOTE</span><span class="co"> 因为 \parallel W\parallel =1 所以 cos(theta)=f_y_i/x_norm</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>            cos_theta <span class="op">=</span> tf.div(f_y_i, x_norm)</span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>            cos_theta_2 <span class="op">=</span> tf.<span class="bu">pow</span>(cos_theta, <span class="dv">2</span>)</span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>            cos_theta_4 <span class="op">=</span> tf.<span class="bu">pow</span>(cos_theta, <span class="dv">4</span>)</span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>            sign0 <span class="op">=</span> tf.sign(cos_theta)</span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>            sign3 <span class="op">=</span> tf.multiply(tf.sign(<span class="dv">2</span> <span class="op">*</span> cos_theta_2 <span class="op">-</span> <span class="dv">1</span>), sign0)</span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>            sign4 <span class="op">=</span> <span class="dv">2</span> <span class="op">*</span> sign0 <span class="op">+</span> sign3 <span class="op">-</span> <span class="dv">3</span></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>            result <span class="op">=</span> sign3 <span class="op">*</span> (<span class="dv">8</span> <span class="op">*</span> cos_theta_4 <span class="op">-</span> <span class="dv">8</span> <span class="op">*</span> cos_theta_2 <span class="op">+</span> <span class="dv">1</span>) <span class="op">+</span> sign4</span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>            margin_logits <span class="op">=</span> tf.multiply(result, x_norm)</span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a>            f <span class="op">=</span> <span class="fl">1.0</span> <span class="op">/</span> (<span class="fl">1.0</span> <span class="op">+</span> l)</span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a>            ff <span class="op">=</span> <span class="fl">1.0</span> <span class="op">-</span> f</span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a>            combined_logits <span class="op">=</span> tf.add(orgina_logits,</span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>                                     tf.scatter_nd(single_sample_label_index,</span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>                                                   tf.subtract(margin_logits, f_y_i),</span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>                                                   orgina_logits.get_shape()))</span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>            updated_logits <span class="op">=</span> ff <span class="op">*</span> orgina_logits <span class="op">+</span> f <span class="op">*</span> combined_logits</span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a>            loss <span class="op">=</span> tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits_v2(logits<span class="op">=</span>updated_logits, labels<span class="op">=</span>tf.reshape(labels, (<span class="op">-</span><span class="dv">1</span>,))))</span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>            pred_prob <span class="op">=</span> tf.nn.softmax(logits<span class="op">=</span>updated_logits)</span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> pred_prob, loss</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="additive-margin-softmax-1" class="level2">
+<h2 class="anchored" data-anchor-id="additive-margin-softmax-1">Additive Margin Softmax</h2>
+<p>这个比前面那个简单多了:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tensorflow.python <span class="im">import</span> keras</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tensorflow.python.keras.models <span class="im">import</span> Model</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tensorflow.python.keras.layers <span class="im">import</span> <span class="op">*</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> tensorflow.python.keras.backend <span class="im">as</span> K</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tensorflow.python.keras.constraints <span class="im">import</span> unit_norm</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>(train_x, train_y), (test_x, test_y) <span class="op">=</span> keras.datasets.fashion_mnist.load_data()</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>train_x <span class="op">=</span> K.reshape(train_x, (<span class="op">-</span><span class="dv">1</span>, <span class="dv">784</span>))</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>train_y <span class="op">=</span> keras.utils.to_categorical(train_y, <span class="dv">10</span>)</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> keras.Sequential([Input(shape<span class="op">=</span>(<span class="dv">784</span>,)),</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>                          Dense(<span class="dv">512</span>, keras.activations.relu),</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>                          Dense(<span class="dv">256</span>, keras.activations.relu),</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>                          Dense(<span class="dv">128</span>, keras.activations.relu),</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>                          Lambda(<span class="kw">lambda</span> x: K.l2_normalize(x, <span class="dv">1</span>)),</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>                          Dense(<span class="dv">10</span>, use_bias<span class="op">=</span><span class="va">False</span>, kernel_constraint<span class="op">=</span>unit_norm())])</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> am_softmax_loss(y_true, y_pred, scale<span class="op">=</span><span class="dv">30</span>, margin<span class="op">=</span><span class="fl">0.35</span>):</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>    <span class="co"># </span><span class="al">NOTE</span><span class="co"> 预测出来的x就是归一化后的,并且W也是归一化后的,所以y_pred就是cos(𝜃)</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>    y_pred <span class="op">=</span> (y_true <span class="op">*</span> (y_pred <span class="op">-</span> margin) <span class="op">+</span> (<span class="dv">1</span> <span class="op">-</span> y_true) <span class="op">*</span> y_pred) <span class="op">*</span> scale</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> K.categorical_crossentropy(y_true, y_pred, from_logits<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>model.<span class="bu">compile</span>(loss<span class="op">=</span>am_softmax_loss, optimizer<span class="op">=</span>keras.optimizers.Adam(),</span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>              metrics<span class="op">=</span>[keras.metrics.CategoricalAccuracy()])</span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>model.fit(x<span class="op">=</span>train_x, y<span class="op">=</span>train_y, batch_size<span class="op">=</span><span class="dv">128</span>, epochs<span class="op">=</span><span class="dv">5</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>对于人脸识别问题，还是需要稀疏版本的<code>Additive Margin Softmax</code>实现以节省显存，这里提供一个实现：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Sparse_AmsoftmaxLoss(kls.Loss):</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>,</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>               batch_size: <span class="bu">int</span>,</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>               scale: <span class="bu">int</span> <span class="op">=</span> <span class="dv">30</span>,</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>               margin: <span class="bu">int</span> <span class="op">=</span> <span class="fl">0.35</span>,</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>               reduction<span class="op">=</span><span class="st">'auto'</span>,</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>               name<span class="op">=</span><span class="va">None</span>):</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">""" sparse addivate margin softmax</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="co">        Parameters</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="co">        ----------</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="co">        scale : int, optional</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="co">            by default 30</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="co">        margin : int, optional</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a><span class="co">            by default 0.35</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a><span class="co">        """</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>    <span class="bu">super</span>().<span class="fu">__init__</span>(reduction<span class="op">=</span>reduction, name<span class="op">=</span>name)</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.scale <span class="op">=</span> scale</span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.margin <span class="op">=</span> margin</span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.batch_idxs <span class="op">=</span> tf.expand_dims(tf.<span class="bu">range</span>(<span class="dv">0</span>, batch_size, dtype<span class="op">=</span>tf.int32),</span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>                                     <span class="dv">1</span>)  <span class="co"># shape [batch,1]</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>  <span class="kw">def</span> call(<span class="va">self</span>, y_true: tf.Tensor, y_pred: tf.Tensor) <span class="op">-&gt;</span> tf.Tensor:</span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>    <span class="co">""" loss calc</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a><span class="co">        Parameters</span></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a><span class="co">        ----------</span></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a><span class="co">        y_true : tf.Tensor</span></span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a><span class="co">            shape = [batch,1] type = tf.int32</span></span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a><span class="co">        y_pred : tf.Tensor</span></span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a><span class="co">            shape = [batch,class num] type = tf.float32</span></span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a><span class="co">        Returns</span></span>
+<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a><span class="co">        -------</span></span>
+<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a><span class="co">        tf.Tensor</span></span>
+<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-47"><a href="#cb3-47" aria-hidden="true" tabindex="-1"></a><span class="co">            loss</span></span>
+<span id="cb3-48"><a href="#cb3-48" aria-hidden="true" tabindex="-1"></a><span class="co">        """</span></span>
+<span id="cb3-49"><a href="#cb3-49" aria-hidden="true" tabindex="-1"></a>    idxs <span class="op">=</span> tf.concat([<span class="va">self</span>.batch_idxs, tf.cast(y_true, tf.int32)], <span class="dv">1</span>)</span>
+<span id="cb3-50"><a href="#cb3-50" aria-hidden="true" tabindex="-1"></a>    y_true_pred <span class="op">=</span> tf.gather_nd(y_pred, idxs)</span>
+<span id="cb3-51"><a href="#cb3-51" aria-hidden="true" tabindex="-1"></a>    y_true_pred <span class="op">=</span> tf.expand_dims(y_true_pred, <span class="dv">1</span>)</span>
+<span id="cb3-52"><a href="#cb3-52" aria-hidden="true" tabindex="-1"></a>    y_true_pred_margin <span class="op">=</span> y_true_pred <span class="op">-</span> <span class="va">self</span>.margin</span>
+<span id="cb3-53"><a href="#cb3-53" aria-hidden="true" tabindex="-1"></a>    _Z <span class="op">=</span> tf.concat([y_pred, y_true_pred_margin], <span class="dv">1</span>)</span>
+<span id="cb3-54"><a href="#cb3-54" aria-hidden="true" tabindex="-1"></a>    _Z <span class="op">=</span> _Z <span class="op">*</span> <span class="va">self</span>.scale</span>
+<span id="cb3-55"><a href="#cb3-55" aria-hidden="true" tabindex="-1"></a>    logZ <span class="op">=</span> tf.math.reduce_logsumexp(_Z, <span class="dv">1</span>, keepdims<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb3-56"><a href="#cb3-56" aria-hidden="true" tabindex="-1"></a>    logZ <span class="op">=</span> logZ <span class="op">+</span> tf.math.log(<span class="dv">1</span> <span class="op">-</span> tf.math.exp(<span class="va">self</span>.scale <span class="op">*</span> y_true_pred <span class="op">-</span> logZ))</span>
+<span id="cb3-57"><a href="#cb3-57" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="op">-</span>y_true_pred_margin <span class="op">*</span> <span class="va">self</span>.scale <span class="op">+</span> logZ</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>稀疏版本的<code>Additive Margin Softmax</code>代码中最后两步的推导过程如下： <span class="math display">\[
+\begin{aligned}
+    \text{Let}\ \ p&amp;=y_{pred}\\
+    log_Z&amp;=\log\left[e^{s*p_0}+\ldots+e^{s*p_c}+\ldots+e^{s*p_{y_i}}+e^{s*(p_{y_i}-m)}\right]\\
+    log_Z&amp;=log_Z+\log\left[1-e^{s*p_{y_i}-log_Z}  \right]\\
+    &amp;=log_Z+\log\left[1-\frac{e^{s*p_{y_i}}}{e^{log_Z}}  \right]\\
+    &amp;=log_Z+\log\left[1-\frac{e^{s*p_{y_i}}}{e^{\log\left[e^{s*p_0}+\ldots+e^{s*p_c}+\ldots+e^{s*p_{y_i}}+e^{s*(p_{y_i}-m)}\right]}}  \right]\\
+    &amp;=\log\left[e^{s*p_0}+\ldots+e^{s*p_c}+e^{s*(p_{y_i}-m)}\right]\\
+    \mathcal{L}&amp;=-\log\left[\frac{e^{s*(p_{y_i}-m)}}{e^{s*p_0}+\ldots+e^{s*p_c}+e^{s*(p_{y_i}-m)}} \right]\\
+    &amp;=-\log e^{s*(p_{y_i}-m)}+log_Z\\
+    &amp;=-s*(p_{y_i}-m)+log_Z\\
+\end{aligned}
+\]</span></p>
+</section>
+</section>
+<section id="总结" class="level1">
+<h1>总结</h1>
+<p>看了三个文章,都是通过减小内类间距来达到效果.减小内类间距的途径都是构建<span class="math inline">\(\psi(\theta)\)</span>代替<span class="math inline">\(cos(\theta)\)</span>,当然要保证<span class="math inline">\(\psi(\theta)  &lt; \cos\theta\)</span>.</p>
+<p>之前的<code>L softmax</code>和<code>A softmax</code>为了保证<span class="math inline">\(\psi(\theta)=cos(m\theta)  &lt; \cos\theta\)</span>还使用了分段函数,比较麻烦.然后<code>AM softmax</code>就比较简单粗暴了.</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/zhen8838\.github\.io");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script src="https://utteranc.es/client.js" repo="zhen8838/zhen8838.github.io" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

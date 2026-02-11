@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2021-06-01">
+
+<title>Halide 入门 – Zheng’s Notes</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../assets/favicon.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-7072389654d23eff08f359f9aa0d1ee7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">Zheng’s Notes</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#基础概念" id="toc-基础概念" class="nav-link active" data-scroll-target="#基础概念">基础概念</a>
+  <ul class="collapse">
+  <li><a href="#func" id="toc-func" class="nav-link" data-scroll-target="#func">Func</a></li>
+  <li><a href="#var" id="toc-var" class="nav-link" data-scroll-target="#var">Var</a></li>
+  <li><a href="#expr" id="toc-expr" class="nav-link" data-scroll-target="#expr">Expr</a></li>
+  <li><a href="#rdom" id="toc-rdom" class="nav-link" data-scroll-target="#rdom">RDom</a></li>
+  </ul></li>
+  <li><a href="#scheduling方法" id="toc-scheduling方法" class="nav-link" data-scroll-target="#scheduling方法">scheduling方法</a>
+  <ul class="collapse">
+  <li><a href="#example" id="toc-example" class="nav-link" data-scroll-target="#example">example</a></li>
+  <li><a href="#reorder" id="toc-reorder" class="nav-link" data-scroll-target="#reorder">reorder</a></li>
+  <li><a href="#split" id="toc-split" class="nav-link" data-scroll-target="#split">split</a></li>
+  <li><a href="#fuse" id="toc-fuse" class="nav-link" data-scroll-target="#fuse">fuse</a></li>
+  <li><a href="#tiling" id="toc-tiling" class="nav-link" data-scroll-target="#tiling">tiling</a></li>
+  <li><a href="#vectorized" id="toc-vectorized" class="nav-link" data-scroll-target="#vectorized">vectorized</a></li>
+  <li><a href="#unrolling" id="toc-unrolling" class="nav-link" data-scroll-target="#unrolling">unrolling</a></li>
+  <li><a href="#splitting-by-factor" id="toc-splitting-by-factor" class="nav-link" data-scroll-target="#splitting-by-factor">splitting by factor</a></li>
+  <li><a href="#fusing-tiling-parallelizing." id="toc-fusing-tiling-parallelizing." class="nav-link" data-scroll-target="#fusing-tiling-parallelizing.">Fusing + tiling + parallelizing.</a></li>
+  <li><a href="#融合多种trick" id="toc-融合多种trick" class="nav-link" data-scroll-target="#融合多种trick">融合多种trick</a></li>
+  </ul></li>
+  <li><a href="#blur-3x3-example" id="toc-blur-3x3-example" class="nav-link" data-scroll-target="#blur-3x3-example">Blur 3x3 Example</a>
+  <ul class="collapse">
+  <li><a href="#origin" id="toc-origin" class="nav-link" data-scroll-target="#origin">origin</a></li>
+  <li><a href="#tile" id="toc-tile" class="nav-link" data-scroll-target="#tile">tile</a></li>
+  <li><a href="#parallel" id="toc-parallel" class="nav-link" data-scroll-target="#parallel">parallel</a></li>
+  <li><a href="#parallel-2" id="toc-parallel-2" class="nav-link" data-scroll-target="#parallel-2">parallel 2</a>
+  <ul class="collapse">
+  <li><a href="#详解titling" id="toc-详解titling" class="nav-link" data-scroll-target="#详解titling">详解titling</a></li>
+  <li><a href="#parallel的位置" id="toc-parallel的位置" class="nav-link" data-scroll-target="#parallel的位置">parallel的位置</a></li>
+  <li><a href="#最终结果" id="toc-最终结果" class="nav-link" data-scroll-target="#最终结果">最终结果</a></li>
+  </ul></li>
+  <li><a href="#definition-update" id="toc-definition-update" class="nav-link" data-scroll-target="#definition-update">definition update</a>
+  <ul class="collapse">
+  <li><a href="#直接定义" id="toc-直接定义" class="nav-link" data-scroll-target="#直接定义">直接定义</a></li>
+  <li><a href="#reduction" id="toc-reduction" class="nav-link" data-scroll-target="#reduction">reduction</a></li>
+  <li><a href="#scheduling-update-steps" id="toc-scheduling-update-steps" class="nav-link" data-scroll-target="#scheduling-update-steps">Scheduling update steps</a></li>
+  <li><a href="#producer-consumer-case-0" id="toc-producer-consumer-case-0" class="nav-link" data-scroll-target="#producer-consumer-case-0">Producer-Consumer Case 0</a></li>
+  <li><a href="#case-1-消费者只在pure-func阶段消费" id="toc-case-1-消费者只在pure-func阶段消费" class="nav-link" data-scroll-target="#case-1-消费者只在pure-func阶段消费">Case 1 ： 消费者只在pure func阶段消费</a></li>
+  <li><a href="#case-2-消费者update之后使用生产者的结果" id="toc-case-2-消费者update之后使用生产者的结果" class="nav-link" data-scroll-target="#case-2-消费者update之后使用生产者的结果">Case 2 ： 消费者update之后使用生产者的结果</a></li>
+  <li><a href="#csae-3-消费update时多次共享producer" id="toc-csae-3-消费update时多次共享producer" class="nav-link" data-scroll-target="#csae-3-消费update时多次共享producer">Csae 3 : 消费update时多次共享producer</a></li>
+  </ul></li>
+  <li><a href="#compute-at" id="toc-compute-at" class="nav-link" data-scroll-target="#compute-at">compute at</a></li>
+  </ul></li>
+  <li><a href="#generator代码生成" id="toc-generator代码生成" class="nav-link" data-scroll-target="#generator代码生成">generator代码生成</a>
+  <ul class="collapse">
+  <li><a href="#生成不依赖halidelib的代码" id="toc-生成不依赖halidelib的代码" class="nav-link" data-scroll-target="#生成不依赖halidelib的代码">生成不依赖halidelib的代码</a></li>
+  <li><a href="#替换数据类型" id="toc-替换数据类型" class="nav-link" data-scroll-target="#替换数据类型">替换数据类型</a></li>
+  <li><a href="#生成时选择" id="toc-生成时选择" class="nav-link" data-scroll-target="#生成时选择">生成时选择</a></li>
+  <li><a href="#tiling的策略" id="toc-tiling的策略" class="nav-link" data-scroll-target="#tiling的策略">tiling的策略</a></li>
+  </ul></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Halide 入门</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">编译器</div>
+  </div>
+  </div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">June 1, 2021</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>Halide快速入门笔记。</p>
+<!--more-->
+<section id="基础概念" class="level1">
+<h1>基础概念</h1>
+<p>halide是一个抽象语言，他通过运算过程描述以及运算优化描述生成halide的IR，然后使用llvm库生成多个平台的代码。</p>
+<p><img src="halide-note/halide_arch.png" class="img-fluid"></p>
+<section id="func" class="level2">
+<h2 class="anchored" data-anchor-id="func">Func</h2>
+<p>Func可以看作是一个数据流pipeline。</p>
+</section>
+<section id="var" class="level2">
+<h2 class="anchored" data-anchor-id="var">Var</h2>
+<p>Var可以看成一个Func中计算时需要的变量，通常用Var表示计算时变化的坐标索引。</p>
+</section>
+<section id="expr" class="level2">
+<h2 class="anchored" data-anchor-id="expr">Expr</h2>
+<p>Expr是Var间的一系列操作，比如add = a+b，我觉得表达式的概念像是一个和一些Var绑定的Func，而Func呢算是一个更加通用的概念，可以和不同的输入参数Var进行绑定。</p>
+</section>
+<section id="rdom" class="level2">
+<h2 class="anchored" data-anchor-id="rdom">RDom</h2>
+<p>RDom（reduction domain）在官方教程中居然后来才介绍，可能一开始没有设计这个概念，我觉得RDom算是一个临时的Var，他的任务是用于reduce（也就是遍历后求和等），比如对于某一个维度进行reduce sum，此时用RDom可以方便的定义这个操作。</p>
+</section>
+</section>
+<section id="scheduling方法" class="level1">
+<h1>scheduling方法</h1>
+<section id="example" class="level2">
+<h2 class="anchored" data-anchor-id="example">example</h2>
+<p>假设函数如下，默认将第一个元素放置到循环的最内层，也就是说如果是bchw的输入，在构造函数的时候最好应该构造为<code>fuc(w,h,c,b)</code>的形式。</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>gradient<span class="op">(</span>x<span class="op">,</span> y<span class="op">)</span> <span class="op">=</span> x <span class="op">+</span> y<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><img src="halide-note/lesson_05_row_major.gif" class="img-fluid"></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> y<span class="ex">:</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> x<span class="ex">:</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>      <span class="ex">gradient</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="reorder" class="level2">
+<h2 class="anchored" data-anchor-id="reorder">reorder</h2>
+<p>调整循环顺序,先计算行方向</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>gradient<span class="op">.</span>reorder<span class="op">(</span>y<span class="op">,</span> x<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><img src="halide-note/lesson_05_col_major.gif" class="img-fluid"></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> x<span class="ex">:</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> y<span class="ex">:</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>      <span class="ex">gradient_col_major</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="split" class="level2">
+<h2 class="anchored" data-anchor-id="split">split</h2>
+<p>把x分为内外循环，虽然实际上不会有什么改变，但是可以为别的优化方法提供基础。</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>Var x_outer<span class="op">,</span> x_inner<span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>gradient<span class="op">.</span>split<span class="op">(</span>x<span class="op">,</span> x_outer<span class="op">,</span> x_inner<span class="op">,</span> <span class="dv">2</span><span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> y<span class="ex">:</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> x<span class="ex">.v0:</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> x<span class="ex">.v1</span> in [0, 1]:</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>        <span class="ex">gradient_split</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="fuse" class="level2">
+<h2 class="anchored" data-anchor-id="fuse">fuse</h2>
+<p>把两层循环合并，与split正好相反</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>Var fused<span class="op">;</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>gradient<span class="op">.</span>fuse<span class="op">(</span>x<span class="op">,</span> y<span class="op">,</span> fused<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> x<span class="ex">.v2:</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">gradient_fused</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="tiling" class="level2">
+<h2 class="anchored" data-anchor-id="tiling">tiling</h2>
+<p>通过以上介绍的方式对运算顺序进行组合，我们可以得到一个比较典型的优化策略tiling,就是把整块的运算拆分为多个小块，然后可以通过层面的并行去同步完成，整体的计算。</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>Var x_outer<span class="op">,</span> x_inner<span class="op">,</span> y_outer<span class="op">,</span> y_inner<span class="op">;</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>gradient<span class="op">.</span>split<span class="op">(</span>x<span class="op">,</span> x_outer<span class="op">,</span> x_inner<span class="op">,</span> <span class="dv">4</span><span class="op">);</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>gradient<span class="op">.</span>split<span class="op">(</span>y<span class="op">,</span> y_outer<span class="op">,</span> y_inner<span class="op">,</span> <span class="dv">4</span><span class="op">);</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>gradient<span class="op">.</span>reorder<span class="op">(</span>x_inner<span class="op">,</span> y_inner<span class="op">,</span> x_outer<span class="op">,</span> y_outer<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><img src="halide-note/lesson_05_tiled.gif" class="img-fluid"></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> y<span class="ex">.v5:</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> x<span class="ex">.v3:</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> y<span class="ex">.v6</span> in [0, 3]:</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> x<span class="ex">.v4</span> in [0, 3]:</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>        <span class="ex">gradient_tiled</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="vectorized" class="level2">
+<h2 class="anchored" data-anchor-id="vectorized">vectorized</h2>
+<p>我们可以利用一些单指令多数据并行去同步处理多个数据，此时把数据进行向量化后加载就可以得到相当的大的加速。</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>Var x_outer<span class="op">,</span> x_inner<span class="op">;</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>gradient<span class="op">.</span>split<span class="op">(</span>x<span class="op">,</span> x_outer<span class="op">,</span> x_inner<span class="op">,</span> <span class="dv">4</span><span class="op">);</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>gradient<span class="op">.</span>vectorize<span class="op">(</span>x_inner<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><img src="halide-note/lesson_05_vectors.gif" class="img-fluid"></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> y<span class="ex">:</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> x<span class="ex">.v7:</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>      <span class="ex">vectorized</span> x.v8 in [0, 3]:</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>        <span class="ex">gradient_in_vectors</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="unrolling" class="level2">
+<h2 class="anchored" data-anchor-id="unrolling">unrolling</h2>
+<p>循环展开，如果多个像素共享同个数据，这个可以把循环展开避免重复计算。</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>Var x_outer<span class="op">,</span> x_inner<span class="op">;</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>gradient<span class="op">.</span>split<span class="op">(</span>x<span class="op">,</span> x_outer<span class="op">,</span> x_inner<span class="op">,</span> <span class="dv">2</span><span class="op">);</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>gradient<span class="op">.</span>unroll<span class="op">(</span>x_inner<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> y<span class="ex">:</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> x<span class="ex">.v9:</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    <span class="ex">unrolled</span> x.v10 in [0, 1]:</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>      <span class="ex">gradient_unroll</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="splitting-by-factor" class="level2">
+<h2 class="anchored" data-anchor-id="splitting-by-factor">splitting by factor</h2>
+<p>如果按比例进行split，会出现一个问题，就是不满足比例的位置被重新计算了，比如7按3分割，那么后面就有两个元素被重复计算了。 <img src="halide-note/lesson_05_split_7_by_3.gif" class="img-fluid"></p>
+<p>这里是实际执行是会出现问题地方，正确的循环是执行2又1次，但是halide默认执行的是： 外循环 = 0 -&gt; (x_extent + factor - 1)/factor = (1+3-1) / 3 = 0 -&gt; 3 次 内循环 3次</p>
+<p>可以看到第三次外循环时对应的值被重复计算了，这个就非常蛋疼了。</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb15"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="ex">Store</span> gradient_split_7x2.0<span class="er">(</span><span class="ex">0,</span> 0<span class="kw">)</span> <span class="ex">=</span> 0</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="ex">Store</span> gradient_split_7x2.0<span class="er">(</span><span class="ex">1,</span> 0<span class="kw">)</span> <span class="ex">=</span> 1</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="ex">Store</span> gradient_split_7x2.0<span class="er">(</span><span class="ex">2,</span> 0<span class="kw">)</span> <span class="ex">=</span> 2</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="ex">Store</span> gradient_split_7x2.0<span class="er">(</span><span class="ex">3,</span> 0<span class="kw">)</span> <span class="ex">=</span> 3</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="ex">Store</span> gradient_split_7x2.0<span class="er">(</span><span class="ex">4,</span> 0<span class="kw">)</span> <span class="ex">=</span> 4</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="ex">Store</span> gradient_split_7x2.0<span class="er">(</span><span class="ex">5,</span> 0<span class="kw">)</span> <span class="ex">=</span> 5</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a><span class="ex">Store</span> gradient_split_7x2.0<span class="er">(</span><span class="ex">4,</span> 0<span class="kw">)</span> <span class="ex">=</span> 4</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a><span class="ex">Store</span> gradient_split_7x2.0<span class="er">(</span><span class="ex">5,</span> 0<span class="kw">)</span> <span class="ex">=</span> 5</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a><span class="ex">Store</span> gradient_split_7x2.0<span class="er">(</span><span class="ex">6,</span> 0<span class="kw">)</span> <span class="ex">=</span> 6</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="fusing-tiling-parallelizing." class="level2">
+<h2 class="anchored" data-anchor-id="fusing-tiling-parallelizing.">Fusing + tiling + parallelizing.</h2>
+<p>融合多个优化策略，首先把图像8x8的图像tiling到2x2个4x4，然后把2x2融合为4，相当于4个4x4，再并行4个线程计算</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb16"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>Var x_outer<span class="op">,</span> y_outer<span class="op">,</span> x_inner<span class="op">,</span> y_inner<span class="op">,</span> tile_index<span class="op">;</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>gradient<span class="op">.</span>tile<span class="op">(</span>x<span class="op">,</span> y<span class="op">,</span> x_outer<span class="op">,</span> y_outer<span class="op">,</span> x_inner<span class="op">,</span> y_inner<span class="op">,</span> <span class="dv">4</span><span class="op">,</span> <span class="dv">4</span><span class="op">);</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>gradient<span class="op">.</span>fuse<span class="op">(</span>x_outer<span class="op">,</span> y_outer<span class="op">,</span> tile_index<span class="op">);</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>gradient<span class="op">.</span>parallel<span class="op">(</span>tile_index<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><img src="halide-note/lesson_05_parallel_tiles.gif" class="img-fluid"></p>
+</section>
+<section id="融合多种trick" class="level2">
+<h2 class="anchored" data-anchor-id="融合多种trick">融合多种trick</h2>
+<p>首先64x64作为tiling</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb17"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>Var x_outer<span class="op">,</span> y_outer<span class="op">,</span> x_inner<span class="op">,</span> y_inner<span class="op">,</span> tile_index<span class="op">;</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>gradient_fast</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span>tile<span class="op">(</span>x<span class="op">,</span> y<span class="op">,</span> x_outer<span class="op">,</span> y_outer<span class="op">,</span> x_inner<span class="op">,</span> y_inner<span class="op">,</span> <span class="dv">64</span><span class="op">,</span> <span class="dv">64</span><span class="op">)</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span>fuse<span class="op">(</span>x_outer<span class="op">,</span> y_outer<span class="op">,</span> tile_index<span class="op">)</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span>parallel<span class="op">(</span>tile_index<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>然后对每个内部的再tiling到4x2，然后每个x的循环4直接作为向量化计算，y的循环2直接展开。</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb18"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>Var x_inner_outer<span class="op">,</span> y_inner_outer<span class="op">,</span> x_vectors<span class="op">,</span> y_pairs<span class="op">;</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>gradient_fast</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span>tile<span class="op">(</span>x_inner<span class="op">,</span> y_inner<span class="op">,</span> x_inner_outer<span class="op">,</span> y_inner_outer<span class="op">,</span> x_vectors<span class="op">,</span> y_pairs<span class="op">,</span> <span class="dv">4</span><span class="op">,</span> <span class="dv">2</span><span class="op">)</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span>vectorize<span class="op">(</span>x_vectors<span class="op">)</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span>unroll<span class="op">(</span>y_pairs<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>虽然再tiling到64x64的时候会出现一些重复计算的问题，但是总体来说加速还是很明显的。</p>
+</section>
+</section>
+<section id="blur-3x3-example" class="level1">
+<h1>Blur 3x3 Example</h1>
+<p>Blur 3x3是Halide作者给出的经典例子</p>
+<section id="origin" class="level2">
+<h2 class="anchored" data-anchor-id="origin">origin</h2>
+<p>首先用最原始的方法进行计算，即先遍历一次做x方向的平均，然后再遍历一次做y方向的平均。</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb19"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>  <span class="op">{</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    Buffer<span class="op">&lt;</span><span class="dt">uint8_t</span><span class="op">&gt;</span> input <span class="op">=</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>        load_image<span class="op">(</span><span class="st">"/home/workspace/Halide/tutorial/images/rgb.png"</span><span class="op">);</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    Func blur_x<span class="op">(</span><span class="st">"blur_x"</span><span class="op">),</span> blur_y<span class="op">(</span><span class="st">"blur_y"</span><span class="op">);</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    blur_x<span class="op">(</span>x<span class="op">,</span> y<span class="op">,</span> c<span class="op">)</span> <span class="op">=</span> cast<span class="op">&lt;</span><span class="dt">uint16_t</span><span class="op">&gt;(</span>input<span class="op">(</span>x <span class="op">-</span> <span class="dv">1</span><span class="op">,</span> y<span class="op">,</span> c<span class="op">)</span> <span class="op">+</span> input<span class="op">(</span>x<span class="op">,</span> y<span class="op">,</span> c<span class="op">)</span> <span class="op">+</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>                                     input<span class="op">(</span>x <span class="op">+</span> <span class="dv">1</span><span class="op">,</span> y<span class="op">,</span> c<span class="op">))</span> <span class="op">/</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>                      <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>    blur_y<span class="op">(</span>x<span class="op">,</span> y<span class="op">,</span> c<span class="op">)</span> <span class="op">=</span> cast<span class="op">&lt;</span><span class="dt">uint8_t</span><span class="op">&gt;(</span></span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>        <span class="op">(</span>blur_x<span class="op">(</span>x<span class="op">,</span> y <span class="op">-</span> <span class="dv">1</span><span class="op">,</span> c<span class="op">)</span> <span class="op">+</span> blur_x<span class="op">(</span>x<span class="op">,</span> y<span class="op">,</span> c<span class="op">)</span> <span class="op">+</span> blur_x<span class="op">(</span>x<span class="op">,</span> y <span class="op">+</span> <span class="dv">1</span><span class="op">,</span> c<span class="op">))</span> <span class="op">/</span> <span class="dv">3</span><span class="op">);</span></span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>    blur_x<span class="op">.</span>compute_root<span class="op">();</span></span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>    blur_y<span class="op">.</span>compute_root<span class="op">();</span></span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>    blur_x<span class="op">.</span>print_loop_nest<span class="op">();</span></span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>    printf<span class="op">(</span><span class="st">"-------------</span><span class="sc">\n</span><span class="st">"</span><span class="op">);</span></span>
+<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>    blur_y<span class="op">.</span>print_loop_nest<span class="op">();</span></span>
+<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a>    Buffer<span class="op">&lt;</span><span class="dt">uint8_t</span><span class="op">&gt;</span> output<span class="op">(</span>input<span class="op">.</span>width<span class="op">()</span> <span class="op">-</span> <span class="dv">2</span><span class="op">,</span> input<span class="op">.</span>height<span class="op">()</span> <span class="op">-</span> <span class="dv">2</span><span class="op">,</span> <span class="dv">3</span><span class="op">);</span></span>
+<span id="cb19-19"><a href="#cb19-19" aria-hidden="true" tabindex="-1"></a>    output<span class="op">.</span>set_min<span class="op">(</span><span class="dv">1</span><span class="op">,</span> <span class="dv">1</span><span class="op">);</span></span>
+<span id="cb19-20"><a href="#cb19-20" aria-hidden="true" tabindex="-1"></a>    blur_y<span class="op">.</span>realize<span class="op">(</span>output<span class="op">);</span></span>
+<span id="cb19-21"><a href="#cb19-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-22"><a href="#cb19-22" aria-hidden="true" tabindex="-1"></a>    save_image<span class="op">(</span>output<span class="op">,</span> <span class="st">"blur_1.png"</span><span class="op">);</span></span>
+<span id="cb19-23"><a href="#cb19-23" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>通过compute root函数进行AOT编译，对pure func进行实例化，得到输出，可以发现计算对图像遍历了两次。</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb20"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="ex">produce</span> blur_x:</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> c<span class="ex">:</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> y<span class="ex">:</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> x<span class="ex">:</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>        <span class="ex">blur_x</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a><span class="ex">consume</span> blur_x:</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>  <span class="ex">produce</span> blur_y:</span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> c<span class="ex">:</span></span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> y<span class="ex">:</span></span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> x<span class="ex">:</span></span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>          <span class="ex">blur_y</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="tile" class="level2">
+<h2 class="anchored" data-anchor-id="tile">tile</h2>
+<p>这里对blur y的进行tile加速,然后把blur x的计算时机挪到blur y进行第内循环的时候。（这里要注意的就是halide的顺序问题，使用变量时最内侧的循环放在最前面，表达计算流程时最后结果也放在前面，也就是作为root，所以compute_at是在计算blur_x的时候调用的）</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb21"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>    blur_y<span class="op">.</span>compute_root<span class="op">().</span>tile<span class="op">(</span>x<span class="op">,</span> y<span class="op">,</span> xi<span class="op">,</span> yi<span class="op">,</span> <span class="dv">128</span><span class="op">,</span> <span class="dv">24</span><span class="op">);</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>    blur_x<span class="op">.</span>compute_root<span class="op">().</span>compute_at<span class="op">(</span>blur_y<span class="op">,</span> x<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>得到结果</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb22"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="ex">produce</span> blur_y:</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> c<span class="ex">:</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> y<span class="ex">.y:</span></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> x<span class="ex">.x:</span></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>        <span class="ex">produce</span> blur_x:</span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>          <span class="cf">for</span> y<span class="ex">:</span></span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> x<span class="ex">:</span></span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>              <span class="ex">blur_x</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>        <span class="ex">consume</span> blur_x:</span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>          <span class="cf">for</span> y<span class="ex">.yi</span> in [0, 23]:</span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> x<span class="ex">.xi</span> in [0, 127]:</span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>              <span class="ex">blur_y</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="parallel" class="level2">
+<h2 class="anchored" data-anchor-id="parallel">parallel</h2>
+<p>我们还可以继续把tile出来的块并行计算然后内部用向量化来算:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb23"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>    blur_y<span class="op">.</span>compute_root<span class="op">()</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span>tile<span class="op">(</span>x<span class="op">,</span> y<span class="op">,</span> xi<span class="op">,</span> yi<span class="op">,</span> <span class="dv">128</span><span class="op">,</span> <span class="dv">24</span><span class="op">)</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span>parallel<span class="op">(</span>yi<span class="op">)</span></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span>vectorize<span class="op">(</span>xi<span class="op">);</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>    blur_x<span class="op">.</span>compute_root<span class="op">().</span>compute_at<span class="op">(</span>blur_y<span class="op">,</span> x<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>我感觉halide应该是有一些方法直接绑定两个func到同一个level进行计算的，但是目前还不太清楚怎么弄，通过观察他的运算顺序可以发现我们需要对于每个Func都指定好相同的策略（如果我们想放到同一个looplevel进行计算的话)</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb24"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="ex">produce</span> blur_y:</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> c<span class="ex">:</span></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> y<span class="ex">.y:</span></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> x<span class="ex">.x:</span></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>        <span class="ex">produce</span> blur_x:</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>          <span class="cf">for</span> y<span class="ex">:</span></span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> x<span class="ex">:</span></span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>              <span class="ex">blur_x</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>        <span class="ex">consume</span> blur_x:</span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>          <span class="ex">parallel</span> y.yi in [0, 23]:</span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>            <span class="ex">vectorized</span> x.xi in [0, 127]:</span>
+<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a>              <span class="ex">blur_y</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="parallel-2" class="level2">
+<h2 class="anchored" data-anchor-id="parallel-2">parallel 2</h2>
+<section id="详解titling" class="level3">
+<h3 class="anchored" data-anchor-id="详解titling">详解titling</h3>
+<p>对于tiling来说，我们传入的xi和yi分别是内部循环中的变量，可以说halide把中间过程的变量表示作为临时变量了。</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb25"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>    blur_x<span class="op">.</span>compute_root<span class="op">()</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span>tile<span class="op">(</span>x<span class="op">,</span> y<span class="op">,</span> xi<span class="op">,</span> yi<span class="op">,</span> <span class="dv">128</span><span class="op">,</span> <span class="dv">24</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>得到</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb26"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="ex">produce</span> blur_x:</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> c<span class="ex">:</span></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> y<span class="ex">.y:</span></span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> x<span class="ex">.x:</span></span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> y<span class="ex">.yi</span> in [0, 23]:</span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>          <span class="cf">for</span> x<span class="ex">.xi</span> in [0, 127]:</span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>            <span class="ex">blur_x</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="parallel的位置" class="level3">
+<h3 class="anchored" data-anchor-id="parallel的位置">parallel的位置</h3>
+<p>上面的y.y和x.x就是被忽略的变量。对于我们有用的就是xi和yi。假设我们要对多个titling的区域进行并行化，那么应该把参数加在这里：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb27"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>    blur_x<span class="op">.</span>compute_root<span class="op">()</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span>tile<span class="op">(</span>x<span class="op">,</span> y<span class="op">,</span> xi<span class="op">,</span> yi<span class="op">,</span> <span class="dv">128</span><span class="op">,</span> <span class="dv">24</span><span class="op">).</span>parallel<span class="op">(</span>yi<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb28"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="ex">produce</span> blur_x:</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> c<span class="ex">:</span></span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> y<span class="ex">.y:</span></span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> x<span class="ex">.x:</span></span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>        <span class="ex">parallel</span> y.yi in [0, 23]:</span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>          <span class="cf">for</span> x<span class="ex">.xi</span> in [0, 127]:</span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a>            <span class="ex">blur_x</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="最终结果" class="level3">
+<h3 class="anchored" data-anchor-id="最终结果">最终结果</h3>
+<p>这里我们指定blur y计算的loop level为xi，那么可以省去几行代码，但是问题来了，这里的的blur x内部还是在<strong>循环y x</strong>，不知道生成代码的时候是不是还是重复计算的！这个需要继续去实践才知道。</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb29"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>    blur_y<span class="op">.</span>compute_root<span class="op">()</span></span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span>tile<span class="op">(</span>x<span class="op">,</span> y<span class="op">,</span> xi<span class="op">,</span> yi<span class="op">,</span> <span class="dv">128</span><span class="op">,</span> <span class="dv">24</span><span class="op">)</span></span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span>parallel<span class="op">(</span>yi<span class="op">,</span> <span class="dv">8</span><span class="op">)</span></span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span>vectorize<span class="op">(</span>xi<span class="op">,</span> <span class="dv">32</span><span class="op">);</span></span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>    blur_x<span class="op">.</span>compute_root<span class="op">().</span>compute_at<span class="op">(</span>blur_y<span class="op">,</span> xi<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>运算顺序输出</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb30"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="ex">produce</span> blur_y:</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> c<span class="ex">:</span></span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> y<span class="ex">.y:</span></span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> x<span class="ex">.x:</span></span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>        <span class="ex">parallel</span> y.yi in [0, 23]:</span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>          <span class="cf">for</span> x<span class="ex">.xi.xi</span> in [0, 3]:</span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>            <span class="ex">produce</span> blur_x:</span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>              <span class="cf">for</span> y<span class="ex">:</span></span>
+<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a>                <span class="cf">for</span> x<span class="ex">:</span></span>
+<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a>                  <span class="ex">blur_x</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span>
+<span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a>            <span class="ex">consume</span> blur_x:</span>
+<span id="cb30-12"><a href="#cb30-12" aria-hidden="true" tabindex="-1"></a>              <span class="ex">vectorized</span> x.xi.v0 in [0, 31]:</span>
+<span id="cb30-13"><a href="#cb30-13" aria-hidden="true" tabindex="-1"></a>                <span class="ex">blur_y</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+</section>
+<section id="definition-update" class="level2">
+<h2 class="anchored" data-anchor-id="definition-update">definition update</h2>
+<section id="直接定义" class="level3">
+<h3 class="anchored" data-anchor-id="直接定义">直接定义</h3>
+<p>有时候我们需要手动指定一些索引按我们需要的方式来更新，或者说直接指定索引计算结果，但是如果在halide中这样做的问题就是他默认会帮你重新循环：</p>
+<p>假设我们自定义了两次计算如下：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb31"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>        Func g<span class="op">(</span><span class="st">"g"</span><span class="op">);</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>        g<span class="op">(</span>x<span class="op">,</span> y<span class="op">)</span> <span class="op">=</span> x <span class="op">+</span> y<span class="op">;</span>    <span class="co">// Pure definition</span></span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>        g<span class="op">(</span><span class="dv">2</span><span class="op">,</span> <span class="dv">1</span><span class="op">)</span> <span class="op">=</span> <span class="dv">42</span><span class="op">;</span>       <span class="co">// First update definition</span></span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>        g<span class="op">(</span>x<span class="op">,</span> <span class="dv">0</span><span class="op">)</span> <span class="op">=</span> g<span class="op">(</span>x<span class="op">,</span> <span class="dv">1</span><span class="op">);</span>  <span class="co">// Second update definition</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>可以发现每次update的定义会重新生成一次循环，但是明显我们的操作是可以和原来的循环融合的。</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb32"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="ex">produce</span> g:</span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> y<span class="ex">:</span></span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> x<span class="ex">:</span></span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>      <span class="ex">g</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>  <span class="ex">g</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> x<span class="ex">:</span></span>
+<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a>    <span class="ex">g</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="reduction" class="level3">
+<h3 class="anchored" data-anchor-id="reduction">reduction</h3>
+<p>用RDom进行一些规约也会出现同样的情况</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb33"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>    Func f<span class="op">;</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>    f<span class="op">(</span>x<span class="op">,</span> y<span class="op">)</span> <span class="op">=</span> <span class="op">(</span>x <span class="op">+</span> y<span class="op">)</span> <span class="op">/</span> <span class="fl">100.0</span><span class="bu">f</span><span class="op">;</span></span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>    RDom r<span class="op">(</span><span class="dv">0</span><span class="op">,</span> <span class="dv">50</span><span class="op">);</span></span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>    f<span class="op">(</span>x<span class="op">,</span> r<span class="op">)</span> <span class="op">=</span> f<span class="op">(</span>x<span class="op">,</span> r<span class="op">)</span> <span class="op">*</span> f<span class="op">(</span>x<span class="op">,</span> r<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>可以发现还是重新生成了一次循环，本来RDom的操作应该在x的内部的。</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb34"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="ex">produce</span> f5:</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> y<span class="ex">:</span></span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> x<span class="ex">:</span></span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>      <span class="ex">f5</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> x<span class="ex">:</span></span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> r19 <span class="kw">in</span> [0, 49]:</span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a>      <span class="ex">f5</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="scheduling-update-steps" class="level3">
+<h3 class="anchored" data-anchor-id="scheduling-update-steps">Scheduling update steps</h3>
+<p>接下来对udpate step进行一些调度，来一个例子：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb35"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>Func f<span class="op">;</span></span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>f<span class="op">(</span>x<span class="op">,</span> y<span class="op">)</span> <span class="op">=</span> x <span class="op">*</span> y<span class="op">;</span></span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Set row zero to each row 8</span></span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>f<span class="op">(</span>x<span class="op">,</span> <span class="dv">0</span><span class="op">)</span> <span class="op">=</span> f<span class="op">(</span>x<span class="op">,</span> <span class="dv">8</span><span class="op">);</span></span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Set column zero equal to column 8 plus 2</span></span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a>f<span class="op">(</span><span class="dv">0</span><span class="op">,</span> y<span class="op">)</span> <span class="op">=</span> f<span class="op">(</span><span class="dv">8</span><span class="op">,</span> y<span class="op">)</span> <span class="op">+</span> <span class="dv">2</span><span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>计算流程：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb36"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="ex">produce</span> f10:</span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> y<span class="ex">:</span></span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> x<span class="ex">:</span></span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a>      <span class="ex">f10</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span>
+<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> x<span class="ex">:</span></span>
+<span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a>    <span class="ex">f10</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span>
+<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> y<span class="ex">:</span></span>
+<span id="cb36-8"><a href="#cb36-8" aria-hidden="true" tabindex="-1"></a>    <span class="ex">f10</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>如果需要进行schedule，我们可以对每一个stage进行调整：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb37"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>f<span class="op">.</span>vectorize<span class="op">(</span>x<span class="op">,</span> <span class="dv">4</span><span class="op">).</span>parallel<span class="op">(</span>y<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>则第一个阶段f的计算将会被调整：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb38"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="ex">produce</span> f10:</span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">parallel</span> y:</span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> x<span class="ex">.x:</span></span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a>      <span class="ex">vectorized</span> x.v3 in [0, 3]:</span>
+<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a>        <span class="ex">f10</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span>
+<span id="cb38-6"><a href="#cb38-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> x<span class="ex">:</span></span>
+<span id="cb38-7"><a href="#cb38-7" aria-hidden="true" tabindex="-1"></a>    <span class="ex">f10</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span>
+<span id="cb38-8"><a href="#cb38-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> y<span class="ex">:</span></span>
+<span id="cb38-9"><a href="#cb38-9" aria-hidden="true" tabindex="-1"></a>    <span class="ex">f10</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>如果需要调整第二个阶段的stage怎么办？可以调用update函数获取某个阶段的句柄，然后进行schedule：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb39"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>f<span class="op">.</span>update<span class="op">(</span><span class="dv">0</span><span class="op">).</span>vectorize<span class="op">(</span>x<span class="op">,</span> <span class="dv">4</span><span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>可以看到第一次update的循环被schedule了</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb40"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="ex">produce</span> f10:</span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">parallel</span> y:</span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> x<span class="ex">.x:</span></span>
+<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a>      <span class="ex">vectorized</span> x.v3 in [0, 3]:</span>
+<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a>        <span class="ex">f10</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span>
+<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> x<span class="ex">.x:</span></span>
+<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a>    <span class="ex">vectorized</span> x.v4 in [0, 3]:</span>
+<span id="cb40-8"><a href="#cb40-8" aria-hidden="true" tabindex="-1"></a>      <span class="ex">f10</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span>
+<span id="cb40-9"><a href="#cb40-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> y<span class="ex">:</span></span>
+<span id="cb40-10"><a href="#cb40-10" aria-hidden="true" tabindex="-1"></a>    <span class="ex">f10</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="producer-consumer-case-0" class="level3">
+<h3 class="anchored" data-anchor-id="producer-consumer-case-0">Producer-Consumer Case 0</h3>
+<p>上面的例子展示了如何对任意阶段的代码进行schedule，但是如何把两个update放到一个循环中呢,halide把这种情况统一为生产者-消费者模型。 比如一个update的写法，如果把它写成两个func，halide就会自动把他们放在同一个循环内部：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb41"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>Func newf<span class="op">;</span></span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>newf<span class="op">(</span>x<span class="op">)</span> <span class="op">=</span> x <span class="op">*</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>newf<span class="op">(</span>x<span class="op">)</span> <span class="op">+=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a>newf<span class="op">(</span>x<span class="op">)</span> <span class="op">=</span> <span class="dv">2</span> <span class="op">*</span> newf<span class="op">(</span>x<span class="op">);</span></span>
+<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb41-6"><a href="#cb41-6" aria-hidden="true" tabindex="-1"></a>Func producer<span class="op">,</span> consumer<span class="op">;</span></span>
+<span id="cb41-7"><a href="#cb41-7" aria-hidden="true" tabindex="-1"></a>producer<span class="op">(</span>x<span class="op">)</span> <span class="op">=</span> x <span class="op">*</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb41-8"><a href="#cb41-8" aria-hidden="true" tabindex="-1"></a>producer<span class="op">(</span>x<span class="op">)</span> <span class="op">+=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb41-9"><a href="#cb41-9" aria-hidden="true" tabindex="-1"></a>consumer<span class="op">(</span>x<span class="op">)</span> <span class="op">=</span> <span class="dv">2</span> <span class="op">*</span> producer<span class="op">(</span>x<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>对比计算顺序就可以看到明显的区别：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb42"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="ex">produce</span> f15:</span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> x<span class="ex">:</span></span>
+<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a>    <span class="ex">f15</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span>
+<span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> x<span class="ex">:</span></span>
+<span id="cb42-5"><a href="#cb42-5" aria-hidden="true" tabindex="-1"></a>    <span class="ex">f15</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span>
+<span id="cb42-6"><a href="#cb42-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> x<span class="ex">:</span></span>
+<span id="cb42-7"><a href="#cb42-7" aria-hidden="true" tabindex="-1"></a>    <span class="ex">f15</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span>
+<span id="cb42-8"><a href="#cb42-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-9"><a href="#cb42-9" aria-hidden="true" tabindex="-1"></a><span class="ex">produce</span> f14:</span>
+<span id="cb42-10"><a href="#cb42-10" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> x<span class="ex">:</span></span>
+<span id="cb42-11"><a href="#cb42-11" aria-hidden="true" tabindex="-1"></a>    <span class="ex">produce</span> f13:</span>
+<span id="cb42-12"><a href="#cb42-12" aria-hidden="true" tabindex="-1"></a>      <span class="ex">f13</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span>
+<span id="cb42-13"><a href="#cb42-13" aria-hidden="true" tabindex="-1"></a>      <span class="ex">f13</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span>
+<span id="cb42-14"><a href="#cb42-14" aria-hidden="true" tabindex="-1"></a>    <span class="ex">consume</span> f13:</span>
+<span id="cb42-15"><a href="#cb42-15" aria-hidden="true" tabindex="-1"></a>      <span class="ex">f14</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="case-1-消费者只在pure-func阶段消费" class="level3">
+<h3 class="anchored" data-anchor-id="case-1-消费者只在pure-func阶段消费">Case 1 ： 消费者只在pure func阶段消费</h3>
+<p>接下来继续更加复杂的例子，有Producer-Consumer的同时，<code>Consumer</code>只操作pure func，再对Consumer做update。</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb43"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>producer<span class="op">(</span>x<span class="op">)</span> <span class="op">=</span> x <span class="op">*</span> <span class="dv">17</span><span class="op">;</span></span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>consumer<span class="op">(</span>x<span class="op">)</span> <span class="op">=</span> <span class="dv">2</span> <span class="op">*</span> producer<span class="op">(</span>x<span class="op">);</span></span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>consumer<span class="op">(</span>x<span class="op">)</span> <span class="op">+=</span> <span class="dv">50</span><span class="op">;</span></span>
+<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a>producer<span class="op">.</span>compute_at<span class="op">(</span>consumer<span class="op">,</span> x<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>在compute_at之前其实halide已经把Producer-Consumer pair放到了一个循环级别内部。经过一次compute_at，把循环重新声明之后，可以看到更加详细的内容。这里还要注意到<code>consumer(x) += 50;</code>这个update操作都是被放到另一次循环了。</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb44"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="ex">produce</span> f21:</span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> x<span class="ex">:</span></span>
+<span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a>    <span class="ex">f21</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span>
+<span id="cb44-4"><a href="#cb44-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> x<span class="ex">:</span></span>
+<span id="cb44-5"><a href="#cb44-5" aria-hidden="true" tabindex="-1"></a>    <span class="ex">f21</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span>
+<span id="cb44-6"><a href="#cb44-6" aria-hidden="true" tabindex="-1"></a><span class="ex">------------</span></span>
+<span id="cb44-7"><a href="#cb44-7" aria-hidden="true" tabindex="-1"></a><span class="ex">produce</span> f21:</span>
+<span id="cb44-8"><a href="#cb44-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> x<span class="ex">:</span></span>
+<span id="cb44-9"><a href="#cb44-9" aria-hidden="true" tabindex="-1"></a>    <span class="ex">produce</span> f20:</span>
+<span id="cb44-10"><a href="#cb44-10" aria-hidden="true" tabindex="-1"></a>      <span class="ex">f20</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span>
+<span id="cb44-11"><a href="#cb44-11" aria-hidden="true" tabindex="-1"></a>    <span class="ex">consume</span> f20:</span>
+<span id="cb44-12"><a href="#cb44-12" aria-hidden="true" tabindex="-1"></a>      <span class="ex">f21</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span>
+<span id="cb44-13"><a href="#cb44-13" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> x<span class="ex">:</span></span>
+<span id="cb44-14"><a href="#cb44-14" aria-hidden="true" tabindex="-1"></a>    <span class="ex">f21</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="case-2-消费者update之后使用生产者的结果" class="level3">
+<h3 class="anchored" data-anchor-id="case-2-消费者update之后使用生产者的结果">Case 2 ： 消费者update之后使用生产者的结果</h3>
+<p>首先执行producer，但是在消费之前先update一次consumer：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb45"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>producer<span class="op">(</span>x<span class="op">)</span> <span class="op">=</span> x <span class="op">*</span> <span class="dv">17</span><span class="op">;</span></span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>consumer<span class="op">(</span>x<span class="op">)</span> <span class="op">=</span> <span class="dv">100</span> <span class="op">-</span> x <span class="op">*</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a>consumer<span class="op">(</span>x<span class="op">)</span> <span class="op">+=</span> producer<span class="op">(</span>x<span class="op">);</span></span>
+<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a>producer<span class="op">.</span>compute_at<span class="op">(</span>consumer<span class="op">,</span> x<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>然后我们producer的运算放到consumer update之后进行运算（这里不用写<code>producer.compute_at(consumer.update(0), x)</code>,因为schedule是根据变量来调度的，这里的变量级别即可以确定）。</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb46"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="ex">produce</span> f27:</span>
+<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> x<span class="ex">:</span></span>
+<span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a>    <span class="ex">f27</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span>
+<span id="cb46-4"><a href="#cb46-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> x<span class="ex">:</span></span>
+<span id="cb46-5"><a href="#cb46-5" aria-hidden="true" tabindex="-1"></a>    <span class="ex">produce</span> f26:</span>
+<span id="cb46-6"><a href="#cb46-6" aria-hidden="true" tabindex="-1"></a>      <span class="ex">f26</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span>
+<span id="cb46-7"><a href="#cb46-7" aria-hidden="true" tabindex="-1"></a>    <span class="ex">consume</span> f26:</span>
+<span id="cb46-8"><a href="#cb46-8" aria-hidden="true" tabindex="-1"></a>      <span class="ex">f27</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="csae-3-消费update时多次共享producer" class="level3">
+<h3 class="anchored" data-anchor-id="csae-3-消费update时多次共享producer">Csae 3 : 消费update时多次共享producer</h3>
+<p>下面生产一次，然后使用两次producer的值</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb47"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>producer<span class="op">(</span>x<span class="op">)</span> <span class="op">=</span> x <span class="op">*</span> <span class="dv">17</span><span class="op">;</span></span>
+<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a>consumer<span class="op">(</span>x<span class="op">)</span> <span class="op">=</span> <span class="dv">170</span> <span class="op">-</span> producer<span class="op">(</span>x<span class="op">);</span> <span class="co">// update</span></span>
+<span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a>consumer<span class="op">(</span>x<span class="op">)</span> <span class="op">+=</span> producer<span class="op">(</span>x<span class="op">)</span> <span class="op">/</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb47-4"><a href="#cb47-4" aria-hidden="true" tabindex="-1"></a>producer<span class="op">.</span>compute_at<span class="op">(</span>consumer<span class="op">,</span> x<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>这里还是因为update了两次，所以没有把producer给共用。</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb48"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="ex">produce</span> f33:</span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> x<span class="ex">:</span></span>
+<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a>    <span class="ex">produce</span> f32:</span>
+<span id="cb48-4"><a href="#cb48-4" aria-hidden="true" tabindex="-1"></a>      <span class="ex">f32</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span>
+<span id="cb48-5"><a href="#cb48-5" aria-hidden="true" tabindex="-1"></a>    <span class="ex">consume</span> f32:</span>
+<span id="cb48-6"><a href="#cb48-6" aria-hidden="true" tabindex="-1"></a>      <span class="ex">f33</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span>
+<span id="cb48-7"><a href="#cb48-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> x<span class="ex">:</span></span>
+<span id="cb48-8"><a href="#cb48-8" aria-hidden="true" tabindex="-1"></a>    <span class="ex">produce</span> f32:</span>
+<span id="cb48-9"><a href="#cb48-9" aria-hidden="true" tabindex="-1"></a>      <span class="ex">f32</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span>
+<span id="cb48-10"><a href="#cb48-10" aria-hidden="true" tabindex="-1"></a>    <span class="ex">consume</span> f32:</span>
+<span id="cb48-11"><a href="#cb48-11" aria-hidden="true" tabindex="-1"></a>      <span class="ex">f33</span><span class="er">(</span><span class="ex">...</span><span class="kw">)</span> <span class="ex">=</span> ...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+</section>
+<section id="compute-at" class="level2">
+<h2 class="anchored" data-anchor-id="compute-at">compute at</h2>
+<p>compute at是指当前函数依赖于哪一个变量来计算，比如下面这个例子，当函数依赖于x计算，那么会在最内层的x循环计算4个g到f。如果是依赖于循环y来计算的话，对于x就需要两次循环了。</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb49"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> halide <span class="im">as</span> hl</span>
+<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb49-3"><a href="#cb49-3" aria-hidden="true" tabindex="-1"></a>f <span class="op">=</span> hl.Func(<span class="st">'f'</span>)</span>
+<span id="cb49-4"><a href="#cb49-4" aria-hidden="true" tabindex="-1"></a>g <span class="op">=</span> hl.Func(<span class="st">'g'</span>)</span>
+<span id="cb49-5"><a href="#cb49-5" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> hl.Var(<span class="st">'x'</span>)</span>
+<span id="cb49-6"><a href="#cb49-6" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> hl.Var(<span class="st">'y'</span>)</span>
+<span id="cb49-7"><a href="#cb49-7" aria-hidden="true" tabindex="-1"></a>g[x, y] <span class="op">=</span> x <span class="op">*</span> y</span>
+<span id="cb49-8"><a href="#cb49-8" aria-hidden="true" tabindex="-1"></a>f[x, y] <span class="op">=</span> g[x, y] <span class="op">+</span> g[x, y <span class="op">+</span> <span class="dv">1</span>] <span class="op">+</span> g[x <span class="op">+</span> <span class="dv">1</span>, y] <span class="op">+</span> g[x <span class="op">+</span> <span class="dv">1</span>, y <span class="op">+</span> <span class="dv">1</span>]</span>
+<span id="cb49-9"><a href="#cb49-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb49-10"><a href="#cb49-10" aria-hidden="true" tabindex="-1"></a>g.compute_at(f, x)</span>
+<span id="cb49-11"><a href="#cb49-11" aria-hidden="true" tabindex="-1"></a>f.print_loop_nest()</span>
+<span id="cb49-12"><a href="#cb49-12" aria-hidden="true" tabindex="-1"></a><span class="co">""" </span></span>
+<span id="cb49-13"><a href="#cb49-13" aria-hidden="true" tabindex="-1"></a><span class="co">produce f:</span></span>
+<span id="cb49-14"><a href="#cb49-14" aria-hidden="true" tabindex="-1"></a><span class="co">  for y:</span></span>
+<span id="cb49-15"><a href="#cb49-15" aria-hidden="true" tabindex="-1"></a><span class="co">    for x:</span></span>
+<span id="cb49-16"><a href="#cb49-16" aria-hidden="true" tabindex="-1"></a><span class="co">      produce g:</span></span>
+<span id="cb49-17"><a href="#cb49-17" aria-hidden="true" tabindex="-1"></a><span class="co">        for y:</span></span>
+<span id="cb49-18"><a href="#cb49-18" aria-hidden="true" tabindex="-1"></a><span class="co">          for x:</span></span>
+<span id="cb49-19"><a href="#cb49-19" aria-hidden="true" tabindex="-1"></a><span class="co">            g(...) = ...</span></span>
+<span id="cb49-20"><a href="#cb49-20" aria-hidden="true" tabindex="-1"></a><span class="co">      consume g:</span></span>
+<span id="cb49-21"><a href="#cb49-21" aria-hidden="true" tabindex="-1"></a><span class="co">        f(...) = ...</span></span>
+<span id="cb49-22"><a href="#cb49-22" aria-hidden="true" tabindex="-1"></a><span class="co">"""</span></span>
+<span id="cb49-23"><a href="#cb49-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb49-24"><a href="#cb49-24" aria-hidden="true" tabindex="-1"></a>g.compute_at(f, y)</span>
+<span id="cb49-25"><a href="#cb49-25" aria-hidden="true" tabindex="-1"></a>f.print_loop_nest()</span>
+<span id="cb49-26"><a href="#cb49-26" aria-hidden="true" tabindex="-1"></a><span class="co">""" </span></span>
+<span id="cb49-27"><a href="#cb49-27" aria-hidden="true" tabindex="-1"></a><span class="co">produce f:</span></span>
+<span id="cb49-28"><a href="#cb49-28" aria-hidden="true" tabindex="-1"></a><span class="co">  for y:</span></span>
+<span id="cb49-29"><a href="#cb49-29" aria-hidden="true" tabindex="-1"></a><span class="co">    produce g:</span></span>
+<span id="cb49-30"><a href="#cb49-30" aria-hidden="true" tabindex="-1"></a><span class="co">      for y:</span></span>
+<span id="cb49-31"><a href="#cb49-31" aria-hidden="true" tabindex="-1"></a><span class="co">        for x:</span></span>
+<span id="cb49-32"><a href="#cb49-32" aria-hidden="true" tabindex="-1"></a><span class="co">          g(...) = ...</span></span>
+<span id="cb49-33"><a href="#cb49-33" aria-hidden="true" tabindex="-1"></a><span class="co">    consume g:</span></span>
+<span id="cb49-34"><a href="#cb49-34" aria-hidden="true" tabindex="-1"></a><span class="co">      for x:</span></span>
+<span id="cb49-35"><a href="#cb49-35" aria-hidden="true" tabindex="-1"></a><span class="co">        f(...) = ...</span></span>
+<span id="cb49-36"><a href="#cb49-36" aria-hidden="true" tabindex="-1"></a><span class="co">"""</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+</section>
+<section id="generator代码生成" class="level1">
+<h1>generator代码生成</h1>
+<p>切记，halide的维度索引是反的，也就是最内层循环放在最前面，和numpy之类的刚好相反。</p>
+<section id="生成不依赖halidelib的代码" class="level2">
+<h2 class="anchored" data-anchor-id="生成不依赖halidelib的代码">生成不依赖halidelib的代码</h2>
+<p>生成代码部分可以去看他的教程，我们可以在生成代码时加上一些参数:</p>
+<pre><code>no_runtime,  ///&lt; Do not include a copy of the Halide runtime in any generated object file or assembly
+no_asserts,       ///&lt; Disable all runtime checks, for slightly tighter code.</code></pre>
+<p>生成c代码和头文件之后，我们一般添加头文件<code>HalideBuffer.H</code>就够了。如果生成的是no_runtime的话，生成的c代码里面是不带runtime的，所以我们需要手动添加头文件<code>HalideRuntime.h</code>。</p>
+</section>
+<section id="替换数据类型" class="level2">
+<h2 class="anchored" data-anchor-id="替换数据类型">替换数据类型</h2>
+<p>生成代码的时候我们只能选择halide内置类型，但是我们实际调用的时候要用自己的类型时候就比较麻烦了，折腾了半天，我才发现可以自定义内置数据，他是构造buffer的时候去检查类型，如果没有对应的类型就直接报错了，但是我们把自己类型注册进去就好了。 下面这个例子就是halide自带的<code>bfloat16</code>类型的组成过程。</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb51"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;&gt;</span></span>
+<span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a>HALIDE_ALWAYS_INLINE <span class="dt">halide_type_t</span> halide_type_of<span class="op">&lt;</span>Halide<span class="op">::</span><span class="dt">bfloat16_t</span><span class="op">&gt;()</span> <span class="op">{</span></span>
+<span id="cb51-3"><a href="#cb51-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dt">halide_type_t</span><span class="op">(</span>halide_type_bfloat<span class="op">,</span> <span class="dv">16</span><span class="op">);</span></span>
+<span id="cb51-4"><a href="#cb51-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="生成时选择" class="level2">
+<h2 class="anchored" data-anchor-id="生成时选择">生成时选择</h2>
+<p>halide的一个缺点就是tiling的时候不会自动判断是否能整除（当然也可以选择tiling的策略，但是通过自动补齐、if判断并不适用于所有情况），比如现在要在固定的tile上面计算，所以他的方案是对多个不同的size进行specialize tiling，如果全部都不符合，再fallback到一个通用的处理上。</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb52"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="co">// 计算出当前的accumulators，然后按倍数进行fallback，也就是4 -&gt; 2 -&gt; 1</span></span>
+<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> <span class="dt">int</span> accumulators <span class="op">=</span> get_accumulator_count<span class="op">(</span>target<span class="op">);</span></span>
+<span id="cb52-3"><a href="#cb52-3" aria-hidden="true" tabindex="-1"></a><span class="bu">std::</span>vector<span class="op">&lt;</span><span class="bu">std::</span>pair<span class="op">&lt;</span><span class="dt">int</span><span class="op">,</span> <span class="dt">int</span><span class="op">&gt;&gt;</span> tile_sizes<span class="op">;</span></span>
+<span id="cb52-4"><a href="#cb52-4" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> <span class="dt">int</span> min_tile_c <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb52-5"><a href="#cb52-5" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> <span class="dt">int</span> max_tile_c <span class="op">=</span> <span class="dv">4</span><span class="op">;</span></span>
+<span id="cb52-6"><a href="#cb52-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="op">(</span><span class="dt">int</span> tile_c <span class="op">=</span> max_tile_c<span class="op">;</span> tile_c <span class="op">&gt;=</span> min_tile_c<span class="op">;</span> tile_c <span class="op">/=</span> <span class="dv">2</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb52-7"><a href="#cb52-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> tile_x <span class="op">=</span> <span class="bu">std::</span>min<span class="op">(</span><span class="dv">8</span><span class="op">,</span> accumulators <span class="op">/</span> tile_c<span class="op">);</span></span>
+<span id="cb52-8"><a href="#cb52-8" aria-hidden="true" tabindex="-1"></a>    tile_sizes<span class="op">.</span>emplace_back<span class="op">(</span>tile_c<span class="op">,</span> tile_x<span class="op">);</span></span>
+<span id="cb52-9"><a href="#cb52-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb52-10"><a href="#cb52-10" aria-hidden="true" tabindex="-1"></a>tile_sizes<span class="op">.</span>emplace_back<span class="op">(</span>max_tile_c<span class="op">,</span> <span class="dv">1</span><span class="op">);</span></span>
+<span id="cb52-11"><a href="#cb52-11" aria-hidden="true" tabindex="-1"></a>Var xo<span class="op">(</span><span class="st">"xo"</span><span class="op">);</span></span>
+<span id="cb52-12"><a href="#cb52-12" aria-hidden="true" tabindex="-1"></a>Expr output_channels <span class="op">=</span> <span class="va">output_</span><span class="op">.</span>dim<span class="op">(</span><span class="dv">0</span><span class="op">).</span>extent<span class="op">();</span></span>
+<span id="cb52-13"><a href="#cb52-13" aria-hidden="true" tabindex="-1"></a>Expr output_width <span class="op">=</span> <span class="va">output_</span><span class="op">.</span>dim<span class="op">(</span><span class="dv">1</span><span class="op">).</span>extent<span class="op">();</span></span>
+<span id="cb52-14"><a href="#cb52-14" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="op">(</span><span class="kw">auto</span> i <span class="op">:</span> tile_sizes<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb52-15"><a href="#cb52-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">const</span> <span class="dt">int</span> tile_c <span class="op">=</span> i<span class="op">.</span>first<span class="op">;</span></span>
+<span id="cb52-16"><a href="#cb52-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">const</span> <span class="dt">int</span> tile_x <span class="op">=</span> i<span class="op">.</span>second<span class="op">;</span></span>
+<span id="cb52-17"><a href="#cb52-17" aria-hidden="true" tabindex="-1"></a>    <span class="va">output_</span></span>
+<span id="cb52-18"><a href="#cb52-18" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span>specialize<span class="op">(</span>output_channels <span class="op">%</span> <span class="op">(</span>tile_c <span class="op">*</span> accum_vector_size<span class="op">)</span> <span class="op">==</span> <span class="dv">0</span> <span class="op">&amp;&amp;</span> output_width <span class="op">&gt;=</span> tile_x<span class="op">)</span></span>
+<span id="cb52-19"><a href="#cb52-19" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span>split<span class="op">(</span>c<span class="op">,</span> co<span class="op">,</span> c<span class="op">,</span> tile_c <span class="op">*</span> accum_vector_size<span class="op">,</span> TailStrategy<span class="op">::</span>RoundUp<span class="op">)</span></span>
+<span id="cb52-20"><a href="#cb52-20" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span>split<span class="op">(</span>x<span class="op">,</span> xo<span class="op">,</span> x<span class="op">,</span> tile_x<span class="op">,</span> TailStrategy<span class="op">::</span>ShiftInwards<span class="op">)</span></span>
+<span id="cb52-21"><a href="#cb52-21" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span>reorder<span class="op">(</span>x<span class="op">,</span> c<span class="op">,</span> co<span class="op">,</span> xo<span class="op">,</span> y<span class="op">,</span> b<span class="op">)</span></span>
+<span id="cb52-22"><a href="#cb52-22" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span>vectorize<span class="op">(</span>c<span class="op">)</span></span>
+<span id="cb52-23"><a href="#cb52-23" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span>unroll<span class="op">(</span>x<span class="op">);</span></span>
+<span id="cb52-24"><a href="#cb52-24" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="tiling的策略" class="level2">
+<h2 class="anchored" data-anchor-id="tiling的策略">tiling的策略</h2>
+<p>当输入为20，tiling 8的时候，不同的tiling策略的底层做法</p>
+<ol type="1">
+<li>RoundUp</li>
+</ol>
+<p>RoundUp就是直接取最小满足的整数倍，直接取到8的整数倍，这也是最直接的方法，当然报错也来的很直接，因为<code>8 * 3 = 24 &gt; 20</code> <code>sh   terminate called after throwing an instance of 'Halide::RuntimeError'   what():  Error: Input buffer b0 is accessed at 23, which is beyond the max (19) in dimension 1</code></p>
+<ol start="2" type="1">
+<li>GuardWithIf</li>
+</ol>
+<p>自动生成一个special的版本进行fallback <code>sh   if ((gemm.extent.1 % 8) != 0) {    let t114 = (gemm.extent.0 + 15)/16    let t115 = gemm.extent.1 % 8    let t116 = 0 - (gemm.min.1*gemm.stride.1)    let t117 = ((gemm.extent.1/8)*8) + gemm.min.1    .    .    .   }</code></p>
+<ol start="3" type="1">
+<li>ShiftInwards</li>
+</ol>
+<p>重新补齐然后按tiling的size进行eval，但是这只能对prue func有效果</p>
+<ol start="4" type="1">
+<li>Predicate</li>
+</ol>
+<p>这是在内循环中做fallback，和GuardWithIf类似。并且他没有重复eval以及不限制输入尺寸，但也是由于分离增加了代码大小尾tile的处理。</p>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/zhen8838\.github\.io");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script src="https://utteranc.es/client.js" repo="zhen8838/zhen8838.github.io" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

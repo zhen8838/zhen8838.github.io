@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2022-01-10">
+
+<title>Pure Tensor Program Rewriting via Access Patterns – Zheng’s Notes</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../assets/favicon.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-7072389654d23eff08f359f9aa0d1ee7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">Zheng’s Notes</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#abstract" id="toc-abstract" class="nav-link active" data-scroll-target="#abstract">Abstract</a></li>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link" data-scroll-target="#introduction">Introduction</a></li>
+  <li><a href="#background-and-related-work" id="toc-background-and-related-work" class="nav-link" data-scroll-target="#background-and-related-work">Background and Related Work</a>
+  <ul class="collapse">
+  <li><a href="#machine-learning-accelerators" id="toc-machine-learning-accelerators" class="nav-link" data-scroll-target="#machine-learning-accelerators">Machine Learning Accelerators</a></li>
+  <li><a href="#tensor-irs-and-compilers" id="toc-tensor-irs-and-compilers" class="nav-link" data-scroll-target="#tensor-irs-and-compilers">Tensor IRs and Compilers</a></li>
+  <li><a href="#term-rewriting-and-equality-saturation" id="toc-term-rewriting-and-equality-saturation" class="nav-link" data-scroll-target="#term-rewriting-and-equality-saturation">term rewriting and Equality Saturation</a></li>
+  </ul></li>
+  <li><a href="#from-pure-matmul-to-ir-design-goals" id="toc-from-pure-matmul-to-ir-design-goals" class="nav-link" data-scroll-target="#from-pure-matmul-to-ir-design-goals">From Pure matMul to IR Design Goals</a>
+  <ul class="collapse">
+  <li><a href="#pure-matrix-multiplication" id="toc-pure-matrix-multiplication" class="nav-link" data-scroll-target="#pure-matrix-multiplication">Pure Matrix Multiplication</a></li>
+  <li><a href="#glenside-design-constraints-and-goals" id="toc-glenside-design-constraints-and-goals" class="nav-link" data-scroll-target="#glenside-design-constraints-and-goals">Glenside Design Constraints and Goals</a></li>
+  </ul></li>
+  <li><a href="#glenside" id="toc-glenside" class="nav-link" data-scroll-target="#glenside">Glenside</a>
+  <ul class="collapse">
+  <li><a href="#access-patterns" id="toc-access-patterns" class="nav-link" data-scroll-target="#access-patterns">Access Patterns</a></li>
+  <li><a href="#access-pattern-transformers" id="toc-access-pattern-transformers" class="nav-link" data-scroll-target="#access-pattern-transformers">Access Pattern Transformers</a></li>
+  <li><a href="#access-pattern-operators" id="toc-access-pattern-operators" class="nav-link" data-scroll-target="#access-pattern-operators">Access Pattern Operators</a></li>
+  </ul></li>
+  <li><a href="#case-studies" id="toc-case-studies" class="nav-link" data-scroll-target="#case-studies">5. Case Studies</a>
+  <ul class="collapse">
+  <li><a href="#representation-of-common-ml-kernels" id="toc-representation-of-common-ml-kernels" class="nav-link" data-scroll-target="#representation-of-common-ml-kernels">5.1 Representation of Common ML Kernels</a>
+  <ul class="collapse">
+  <li><a href="#d-convolution" id="toc-d-convolution" class="nav-link" data-scroll-target="#d-convolution">2D Convolution</a></li>
+  <li><a href="#max-pooling" id="toc-max-pooling" class="nav-link" data-scroll-target="#max-pooling">Max Pooling</a></li>
+  </ul></li>
+  <li><a href="#mapping-matmul-to-accelerators" id="toc-mapping-matmul-to-accelerators" class="nav-link" data-scroll-target="#mapping-matmul-to-accelerators">Mapping matMul to Accelerators</a></li>
+  <li><a href="#flexible-mapping-discovering-im2col" id="toc-flexible-mapping-discovering-im2col" class="nav-link" data-scroll-target="#flexible-mapping-discovering-im2col">Flexible Mapping: Discovering im2col</a></li>
+  <li><a href="#flexible-mapping-matmul-blocking" id="toc-flexible-mapping-matmul-blocking" class="nav-link" data-scroll-target="#flexible-mapping-matmul-blocking">Flexible Mapping: matMul Blocking</a></li>
+  </ul></li>
+  <li><a href="#总结" id="toc-总结" class="nav-link" data-scroll-target="#总结">总结</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Pure Tensor Program Rewriting via Access Patterns</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">编译器</div>
+  </div>
+  </div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">January 10, 2022</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>这是一篇基于<code>EGraph</code>对<code>Tensor</code>级别的<code>IR</code>进行<code>Term Rewrite</code>的文章. <!--more--></p>
+<section id="abstract" class="level1">
+<h1>Abstract</h1>
+<p>对于现存的<code>Pure IR</code> 比如<code>relay</code>, 并不会关注底层的<code>data layout</code> 对于现存的<code>Pure IR</code> 比如<code>relay</code>, 并不会关注底层的<code>data layout</code> 相关信息.另一边用于底层优化的<code>IR</code>却并不是<code>Pure IR</code>,难以进行<code>term rewriting</code>.为了解决这个问题,提出了<code>Glenside</code>（<code>Access Pattern</code>）,一种<code>Pure IR</code>可以抽象出<code>low level</code>的硬件表示,同时经过<code>term rewriting</code>后甚至能自动发现<code>im2col</code>这种等效计算方法.</p>
+</section>
+<section id="introduction" class="level1">
+<h1>Introduction</h1>
+<p><code>TVM</code> 和 <code>Halide</code>已经通过简单的<code>rewrite system</code>做到了<code>simplify</code>和边界分析,但是现存的<code>IR</code>对于<code>Tensor IR</code>抽象和粒度不匹配还是影响了<code>term rewriting</code>,以上两个项目中都需要写出非常详细的<code>pattern</code>来进行 <code>simplify</code>的.</p>
+<p><code>term rewriting</code>面对的主要问题就是有副作用的<code>IR</code>, 因此需要提出一种没有副作用的<code>IR</code>, 同样也能表示这种操作.</p>
+<p>传统的<code>tensor</code>通常用一个正整数<code>tuple</code>作为<code>shape</code>来表示的. 而<code>Access Pattern</code>替换了传统的表示方法, 使用两个<code>shape</code>来表示, 例如<span class="math inline">\(((x),\ (y,\ z))\)</span> ,通过这种方式把<code>tensor</code>的迭代维度从计算的维度分离开来.</p>
+<p>比如一个三维的<code>Tensor</code>运算,典型如带有<code>Batch</code>的矩阵乘,在<code>Batch</code>维度进行迭代,在后面两个维度进行计算,其示意图如下： <img src="glenside/accpat.png" class="img-fluid" alt="access pattern"></p>
+</section>
+<section id="background-and-related-work" class="level1">
+<h1>Background and Related Work</h1>
+<section id="machine-learning-accelerators" class="level2">
+<h2 class="anchored" data-anchor-id="machine-learning-accelerators">Machine Learning Accelerators</h2>
+<p>对于深度学习加速器来说最麻烦的就是如何自动化的把神经网络操作转化为这种加速器所支持的操作.</p>
+</section>
+<section id="tensor-irs-and-compilers" class="level2">
+<h2 class="anchored" data-anchor-id="tensor-irs-and-compilers">Tensor IRs and Compilers</h2>
+<p><code>Rewriting</code> 和 <code>Polyhedral</code> 虽然做法不一样,但是他们对于编译器来说是互补的.</p>
+</section>
+<section id="term-rewriting-and-equality-saturation" class="level2">
+<h2 class="anchored" data-anchor-id="term-rewriting-and-equality-saturation">term rewriting and Equality Saturation</h2>
+<p><code>Egg</code> 已经被应用在<code>DSP Compiler</code>的自动向量化上了.</p>
+</section>
+</section>
+<section id="from-pure-matmul-to-ir-design-goals" class="level1">
+<h1>From Pure matMul to IR Design Goals</h1>
+<p>要把函数式编程和<code>Term Rewriteing</code>应用到<code>Tensor IR</code>上需要仔细的设计.举个例子, 我们必须要保证每个<code>op</code>由固定的<code>Tensor Shape</code>组合而成,</p>
+<section id="pure-matrix-multiplication" class="level2">
+<h2 class="anchored" data-anchor-id="pure-matrix-multiplication">Pure Matrix Multiplication</h2>
+<p>我们用[A]表示一个由A类型组成的向量. 那么可以表示出内积为 <span class="math inline">\([f64] \cdot [f64] \rightarrow f64\)</span></p>
+<p>然后<code>2D Tanspose</code>表示为 <span class="math inline">\([[f64]] \rightarrow [[f64]]\)</span> 这里的意思就是一个向量内部由向量组成,那么就是<code>2D</code>矩阵了, 同时输出也是同样的<code>2D</code>矩阵,(可能维度发生了变化)</p>
+<p><code>2D</code>的矩阵乘的公式如下: <span class="math inline">\(R_{ij} = \sum_k P_{ik}Q_{kj} = P_{i} \cdot Q_{j}^T\)</span></p>
+<p>也就是计算输出<span class="math inline">\(ij\)</span>上每对<span class="math inline">\(P\)</span>的行和<span class="math inline">\(Q\)</span>的列长度为<span class="math inline">\(k\)</span>的向量内积.</p>
+<p>因此我们引入map 操作: <span class="math inline">\(map : (A \rightarrow B) * [A] \rightarrow [B]\)</span> <span class="math inline">\((A -&gt; B)\)</span> 表示的就是一个函数,他的计算就是把类型A转换为B.</p>
+<p>笛卡尔积: <span class="math inline">\(cardProd : [A] \times [B] \rightarrow [A \times B]\)</span></p>
+<p>假设这里的<span class="math inline">\(A\)</span>和<span class="math inline">\(B\)</span>都是一维向量[f64],这里<span class="math inline">\(A \times B\)</span>就是表示的是[[f64]],其中里面的维度是2, 外面维度和<span class="math inline">\(A\)</span>相同, 最后外面再加一个维度得到<span class="math inline">\([A \times B]\)</span>.</p>
+<p><span class="math inline">\(matmul(P,Q) = map(dotProd, cartProd(P, trans2(Q)))\)</span></p>
+<p>这里的思路就是<span class="math inline">\(P\)</span>和<span class="math inline">\(Q\)</span>的转置 每个元素组合, 也就是<span class="math inline">\(P\)</span>的行和<span class="math inline">\(Q\)</span>的列组合, 组合好后每个数据对都应用内积求结果.</p>
+<p>这个<code>matMul</code>公式实例化就如下所示, 注意到输出的数据就变成了[f64]. 各位也可以自己将P = [[f64]]带入公式中推导一下<code>shape</code>.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> dotProd(AB):</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  (A, B) <span class="op">=</span> AB</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="cf">assert</span> A.ndim <span class="op">==</span> <span class="dv">1</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> np.dot(A, B)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> cartProd(A: np.ndarray, B: np.ndarray):</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  AB <span class="op">=</span> []</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> a <span class="kw">in</span> A.reshape((<span class="op">-</span><span class="dv">1</span>, A.shape[<span class="op">-</span><span class="dv">1</span>])):</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> b <span class="kw">in</span> B.reshape((<span class="op">-</span><span class="dv">1</span>, A.shape[<span class="op">-</span><span class="dv">1</span>])):      </span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>      AB.append((a, b)) </span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> AB</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> trans2(A: np.ndarray):</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  <span class="cf">assert</span> A.ndim <span class="op">==</span> <span class="dv">2</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> A.transpose()</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> test_cardproduct():</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>  P <span class="op">=</span> np.random.rand(<span class="dv">3</span>, <span class="dv">4</span>)</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>  Q <span class="op">=</span> np.random.rand(<span class="dv">4</span>, <span class="dv">5</span>)</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(<span class="bu">list</span>(<span class="bu">map</span>(dotProd, cartProd(P, trans2(Q)))))</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>[<span class="fl">0.10732114230108192</span>,</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a> <span class="fl">0.21243371438870884</span>,</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a> <span class="fl">0.34685428666259904</span>,</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a> <span class="fl">0.14556577914149274</span>,</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a> <span class="fl">0.23254688326914144</span>,</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a> <span class="fl">0.5821735344411842</span>,</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a> <span class="fl">0.9735256103240557</span>,</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a> <span class="fl">1.9118977760582447</span>,</span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a> <span class="fl">0.5735451588389484</span>,</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a> <span class="fl">0.5549736743719554</span>,</span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a> <span class="fl">0.31553182873079905</span>,</span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a> <span class="fl">0.582579830538644</span>,</span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a> <span class="fl">1.1357542180343412</span>,</span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a> <span class="fl">0.20513303615713718</span>,</span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a> <span class="fl">0.3916623321089719</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>上面那个公式的得到的结果是<code>[f64]</code>,但是实际上我们的<code>2D</code>矩阵乘就是要得到<code>2D</code>的结果. 经过观察,很明显就是<code>cartProd</code>会将<code>shape</code>给展开, 因此简单的修改方法则是添加一个新的函数.</p>
+<p><span class="math inline">\(cartProd2D : [A] * [B] -&gt; [[A*B]]\)</span></p>
+<p>但是如果用这个函数代替上面的<code>cartProd</code>, <code>map</code>时就会出错,他不能把一个<code>[[f64]]</code>的输入传递给<code>dotProd</code>.</p>
+<p>因此添加一个新的<code>mapAt2</code>, 将<code>map</code>作用在指定维度</p>
+<p><span class="math inline">\(mapAt2 : (A \rightarrow B) * [[A]] \rightarrow [[B]]\)</span></p>
+<p>那么要得到<code>[[f4]]</code>的矩阵乘结果,公式如下:</p>
+<p><span class="math inline">\(matMul(P,Q) = mapAt2(dotProd), cartProd2D(P, trans2(Q))\)</span></p>
+<p>对应的代码实现如下:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> cartProd2(A: np.ndarray, B: np.ndarray):</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  n, m <span class="op">=</span> <span class="bu">len</span>(A), <span class="bu">len</span>(B)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  AB <span class="op">=</span> [[<span class="dv">1</span> <span class="cf">for</span> j <span class="kw">in</span> <span class="bu">range</span>(m)] <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n)]</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n):</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> j <span class="kw">in</span> <span class="bu">range</span>(m):</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>      AB[i][j] <span class="op">=</span> (A[i], B[j])</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> AB</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> mapAt2(func, A: <span class="bu">list</span>[<span class="bu">list</span>[<span class="bu">any</span>]]):</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  n, m <span class="op">=</span> <span class="bu">len</span>(A), <span class="bu">len</span>(A[<span class="dv">0</span>])</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  B <span class="op">=</span> [[<span class="dv">1</span> <span class="cf">for</span> j <span class="kw">in</span> <span class="bu">range</span>(m)] <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n)]</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n):</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> j <span class="kw">in</span> <span class="bu">range</span>(m):</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>      B[i][j] <span class="op">=</span> func(A[i][j])        </span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> B</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>P <span class="op">=</span> np.random.rand(<span class="dv">3</span>, <span class="dv">4</span>)</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>Q <span class="op">=</span> np.random.rand(<span class="dv">4</span>, <span class="dv">5</span>)</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(np.array(mapAt2(dotProd, cartProd2(P, trans2(Q)))))  </span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>[[<span class="fl">1.90265933</span> <span class="fl">1.37014723</span> <span class="fl">1.90525837</span> <span class="fl">2.16506508</span> <span class="fl">0.8182536</span> ]</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a> [<span class="fl">1.74624439</span> <span class="fl">1.06923152</span> <span class="fl">1.74345372</span> <span class="fl">1.85747233</span> <span class="fl">0.82131666</span>]</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a> [<span class="fl">1.88350644</span> <span class="fl">1.49704492</span> <span class="fl">1.93444511</span> <span class="fl">2.1764349</span>  <span class="fl">0.8319122</span> ]]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="glenside-design-constraints-and-goals" class="level2">
+<h2 class="anchored" data-anchor-id="glenside-design-constraints-and-goals">Glenside Design Constraints and Goals</h2>
+<p>我们根据上面提出的函数就能写出一系列的<code>rewrite</code>规则了.但是有个规则时依赖于特定维度的<code>shape</code>, 如果我们有了更高阶的维度, 我们首先得实现对应的算子(就像刚才需要添加一个<code>cart Product2D</code>),还得在所有的规则上添加新的规则转换,比如<code>1D</code>转换<code>2D</code>,<code>2D</code>转<code>1D</code>. 非常容易就出现组合爆炸的问题.</p>
+<p>一种解决方法是添加<code>lambda</code>函数,通过偏函数的方式解决<code>shape align</code>的问题</p>
+<p><span class="math display">\[
+\text{matMul}'\ P\ Q\ :=\ \text{map}'(\lambda\ \text{r} \Rightarrow \text{map}' (\text{dotProd}'\ \lambda)\ (\text{trans2}\ Q))\ P
+\]</span> 或者使用<code>index</code>标记的方式 <span class="math display">\[
+\text{matMul}(P,Q)[i,j]\ :=\  \text{dotProd}(P[i],\text{trans2}(Q)[j])
+\]</span></p>
+<p>但是上面两种方法实际上都是要添加<code>name binding</code>的,这对<code>term rewriting</code>来说是很困难的,因为你做<code>rewrite</code>的时候需要分析每个表达式上下文,当前的<code>var bind</code>到的是什么.作者利用<code>egg</code>尝试了实现,但是发现潜在的搜索空间膨胀问题还是难以解决.</p>
+<p>以上所有的约束就是<code>Glenside</code>需要解决的问题: 提供一个灵活的<code>IR</code>支持高阶的<code>tensor</code>的操作的同时支持高性能的<code>term rewriting</code>.</p>
+</section>
+</section>
+<section id="glenside" class="level1">
+<h1>Glenside</h1>
+<section id="access-patterns" class="level2">
+<h2 class="anchored" data-anchor-id="access-patterns">Access Patterns</h2>
+<p><code>access pattern</code>将通用的<code>tensor IR</code>的<code>dimension</code>分成了<code>iterated over</code> 和 <code>computed on</code>两部分. 其中<code>iterated over</code>表示的就是<code>accessed</code>. (这种思路和<code>numpy</code>的<code>universal functions</code>比较类似).比如之前的<code>matMul</code>的例子,就是在<code>dim 0</code>进行迭代,在<code>dim 1</code> 进行计算.</p>
+<p><code>access pattern</code> 是被<code>tensor shape</code>所定义为两个<code>tuple</code>组成 <code>paIR</code> <span class="math inline">\((S_a,\ S_c)\)</span>,<code>tensor</code> 的<code>shape</code> 等于两个<code>tuple</code>的<code>concat</code>结果.</p>
+<p>对于一个tensor T, 我们用<span class="math inline">\(n_A\)</span>表示<span class="math inline">\(S_A\)</span>的长度, 此时我们利用语法 <span class="math inline">\(\text{access}\ T\ n_A\)</span>来表示这个tensor的access pattern.</p>
+<p>比如<span class="math inline">\(\text{T.shape} = (m,n)\)</span>那么<span class="math inline">\(\text{access}\ T\ 1\)</span>就表示<span class="math inline">\(((m),(n))\)</span></p>
+</section>
+<section id="access-pattern-transformers" class="level2">
+<h2 class="anchored" data-anchor-id="access-pattern-transformers">Access Pattern Transformers</h2>
+<p><code>access pattern transformer</code>修改一个或多个<code>access pattern</code>生成一个新的<code>access pattern</code>, <code>glenside</code>通过这个可以支持复杂的<code>pattern</code>如<code>slice transpose</code>.</p>
+<p>其实就是把一些<code>tensor</code>的<code>operator</code>仅仅用修改<code>access pattern</code>的进行实现了,比如<code>transpose</code>,其本质就是改变了数据的访问顺序,对于<code>pad</code>就是多访问了一些元素.<code>access pattern</code>的妙处就是把很多复杂的操作都看成了对于<code>tensor</code>的访问这种简单的抽象,同时我们还不需要像<code>TVM</code>/<code>MLIR</code>一样定义一套<code>shape infer</code>的图,因为<code>access pattern</code>原生就能表示<code>tensor</code>的<code>shape</code>.</p>
+<p>下面举个🌰： 比如我们要取<code>tensor</code> <span class="math inline">\(Q\)</span>的每一列进行矩阵乘, 此时使用<code>transpose transformer</code>,把<code>access pattern</code>修改成当前需要的结果.</p>
+<p>比如<span class="math inline">\(Q\)</span>的<code>shape</code>为<span class="math inline">\((N,O)\)</span>,<span class="math inline">\((\text{access}\ Q\ 1)\)</span>表示读取每一行进行计算 <span class="math inline">\(((N),(O))\)</span>, <span class="math inline">\((\text{transpose}\ (\text{access}\ Q\ 1)\ (\text{list}\ 1\ 0))\)</span>就表示把读取每一行的访问模式变成了读取每一列进行计算即</p>
+<p><span class="math display">\[
+\begin{aligned}
+(\text{access}\ Q\ 1) &amp;= ((N),(O)) \\
+(\text{transpose}\ (\text{access}\ Q\ 1)\ (\text{list}\ 1\ 0)) &amp;= ((O),(N))
+\end{aligned}
+\]</span></p>
+<p>接下来对于<code>cartProd</code>的<code>access transformer</code>如下:</p>
+<p><span class="math display">\[
+\begin{aligned}
+  ((a_0,\ldots,a_n),\ (c_0,\ldots,c_p)),\ ((b_0,\ldots,b_n),\ (c_0, \ldots,c_p)) \Rightarrow ((a_0,\ldots,a_n,\ b_0,\ldots,b_n),\ (2,\ c_0,\ldots,c_p))
+\end{aligned}
+\]</span></p>
+<p>其中<span class="math inline">\((2,\ c_0,\ldots,c_p)\)</span>表示的就是<code>concat</code>起来的两个子<code>tensor</code>.</p>
+<p>在矩阵乘中, <span class="math inline">\(Q = (M,N),\ P = (N,O)\)</span>, 读取<span class="math inline">\(Q\)</span>的行与<span class="math inline">\(P\)</span>的列<span class="math inline">\((((M),\ (N)),\ ((O),\ (N)) )\)</span>,然后带入<code>cartProd</code>的<code>access transformer</code>得到<span class="math inline">\(((M,\ O),\ (2,\ N))\)</span>. 那么就表示在<span class="math inline">\(Q\)</span>的行与<span class="math inline">\(P\)</span>的列上每次取两个长度为<span class="math inline">\(N\)</span>的向量进行计算.</p>
+</section>
+<section id="access-pattern-operators" class="level2">
+<h2 class="anchored" data-anchor-id="access-pattern-operators">Access Pattern Operators</h2>
+<p><code>operator</code>是<code>Glenside</code>中唯一表示计算的<code>IR</code>. 他们只在添加<code>compute</code>前缀时才被<code>invoke</code>（区别于<code>access pattern transformer</code>）, 即把操作映射到<code>access pattern</code>的<code>compute</code>维度上, 最终返回的<code>access pattern</code>中<code>compute</code>维度会被修改为<code>operator</code>所指示的,简单的说就是计算所调用的函数.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 13%">
+<col style="width: 51%">
+<col style="width: 35%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Operator</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>reduceSum</td>
+<td><span class="math inline">\((\ldots) \rightarrow ()\)</span></td>
+<td>sum values</td>
+</tr>
+<tr class="even">
+<td>reduceMax</td>
+<td><span class="math inline">\((\ldots) \rightarrow ()\)</span></td>
+<td>max of all values</td>
+</tr>
+<tr class="odd">
+<td>dotProd</td>
+<td><span class="math inline">\((t,s_0,\ldots,s_n) \rightarrow ()\)</span></td>
+<td>eltwise mul ; sum</td>
+</tr>
+</tbody>
+</table>
+<p>通过<code>cartProd</code>之后得到了<span class="math inline">\(((M,O),(2,N))\)</span>的<code>access pattern</code>, 然后应用dotProd之后的得到了<span class="math inline">\(((M,O),())\)</span>, 最后一个矩阵乘的<code>Glenside</code>表示·就如下所示：</p>
+<p><span class="math display">\[
+\begin{aligned}
+&amp; (\text{compute}\ \text{dotProd}          &amp;;\ \ \ &amp;((M,O), ()) \\
+&amp; \ (\text{cartProd}                 &amp;;\ \ \ &amp;((M,O), (2, N)) \\
+&amp; \ \ (\text{access}\ \text{activations}\ 1)  &amp;;\ \ \ &amp;((M), (N)) \\
+&amp; \ \ \ (\text{transpose}              &amp;;\ \ \ &amp;((O), (N)) \\
+&amp; \ \ \ \ (\text{access}\  \text{weights}\ 1)    &amp;;\ \ \ &amp;((N), (O)) \\
+&amp; \ \ \ \ \ (\text{list}\ 1\ 0))))
+\end{aligned}
+\]</span></p>
+</section>
+</section>
+<section id="case-studies" class="level1">
+<h1>5. Case Studies</h1>
+<p>这里主要是展示<code>Glenside</code>将典型的一些深度学习<code>kernel</code>转换到了加速器上.</p>
+<section id="representation-of-common-ml-kernels" class="level2">
+<h2 class="anchored" data-anchor-id="representation-of-common-ml-kernels">5.1 Representation of Common ML Kernels</h2>
+<section id="d-convolution" class="level3">
+<h3 class="anchored" data-anchor-id="d-convolution">2D Convolution</h3>
+<p>卷积的计算公式如下：</p>
+<p><span class="math display">\[
+\begin{aligned}
+&amp;\operatorname{out}[n, o, x, y]= \\
+&amp;\sum_{d x, d y, c}(A[n, c, S[0] \cdot x+d x, S[1] \cdot y+d y] \cdot W[o, c, d x, d y])
+\end{aligned}
+\]</span></p>
+<p>转换为<code>Glenside</code>表示： <span class="math display">\[
+\begin{array}{lll}
+\text { (transpose } &amp; ; &amp; \left(\left(N, O, H^{\prime}, W^{\prime}\right),()\right) \\
+\ \text { (squeeze } &amp; ; &amp; \left(\left(N, H^{\prime}, W^{\prime}, O\right),()\right) \\
+\ \ \text { (compute dotProd } &amp; ; &amp; \left(\left(N, 1, H^{\prime}, W^{\prime}, O\right),()\right) \\
+\ \ \ \text { (cartProd } &amp; ; &amp; \left(\left(N, 1, H^{\prime}, W^{\prime}, O\right),\left(2, C, K_{h}, K_{w}\right)\right) \\
+\ \ \ \ \text { (windows } &amp; ; &amp; \left(\left(N, 1, H^{\prime}, W^{\prime}\right),\left(C, K_{h}, K_{w}\right)\right) \\
+\ \ \ \ \ \text { (access activations 1) } &amp; ; &amp; ((N),(C, H, W)) \\
+\ \ \ \ \ \ \text { (shape C Kh Kw) } &amp; &amp; \\
+\ \ \ \ \ \ \text { (stride 1 Sh Sw)) } &amp; &amp; \\
+\ \ \ \ \ \text { (access weights 1))) } &amp; &amp; ((O),  \left.\left(C, K_{h}, K_{w}\right)\right) \\
+\ \ \ \ \text { 1) } &amp; &amp; &amp; \\
+\ \ \ \text { (list } 0 \text { 3 1 2) ) } &amp; &amp;
+\end{array}
+\]</span></p>
+<p>首先取出<code>weights</code>的<span class="math inline">\((C,K_h,K_w)\)</span>,然后使用<code>windows</code>的操作生成新的<code>access pattern</code> <span class="math inline">\(((N,1,H’,W’),(C,K_h,K_w))\)</span>. 即对于输出的每一个的像素位置,取一个原始的输入窗口. 最后每个窗口和卷积的 <code>filter</code> 进行外积后计算内积. 再用<code>squeeze</code>和<code>transpose</code>得到输出的结果.</p>
+</section>
+<section id="max-pooling" class="level3">
+<h3 class="anchored" data-anchor-id="max-pooling">Max Pooling</h3>
+<p>其数学公式如下：</p>
+<p><span class="math display">\[
+\begin{aligned}
+&amp;\operatorname{out}[n, c, x, y]= \\
+&amp;\max _{d x, d y}(\text { activations }[n, c, \text { strides }[0] \cdot x+d x, \text { strides }[1] \cdot y+d y])
+\end{aligned}
+\]</span></p>
+<p>他的<code>Glenside</code>表示与卷积类似,<code>windows</code>之后<code>reduce</code>即可：</p>
+<p><span class="math display">\[
+\begin{array}{ll}
+\text { (compute reduceMax } &amp; ;\left(\left(N, C, H^{\prime}, W^{\prime}\right),()\right) \\
+\ \text { (windows } &amp; ;\left(\left(N, C, H^{\prime}, W^{\prime}\right),\left(K_{h}, K_{w}\right)\right) \\
+\ \ \text { (access activations 2) } &amp; ;((N, C),(H, W)) \\
+\ \ \ \text { (shape Kh Kw) } &amp; \\
+\ \ \ \ \text { (stride Sh Sw))) } &amp;
+\end{array}
+\]</span></p>
+<p>我觉得<code>glenside</code>把访问和计算分离的方式就极大的简化了计算的算子, 因为访问变换的时候其实包含了传统表述中计算的一部分.比如上面的两个例子中, <code>conv2d</code>和<code>maxpool</code>的核心都是取<code>window</code>然后计算,一个是取<code>3d</code>一个取<code>2d</code>, 但是此时取<code>window</code>的并不是在<code>window</code>函数上配参数,而是直接把这个信息附加到<code>tensor</code>自身上了.</p>
+<p>这种表示方法虽然无法和通常的数学计算流程表示一一对应,但是他作为<code>IR</code>就起到了很好的桥梁作用,并且他这个内积外积设计就和很多加速器的核心逻辑一致.</p>
+</section>
+</section>
+<section id="mapping-matmul-to-accelerators" class="level2">
+<h2 class="anchored" data-anchor-id="mapping-matmul-to-accelerators">Mapping matMul to Accelerators</h2>
+<p><code>Glenside</code>所提出的<code>demo</code>是一个<code>weight-stationary</code>的脉动阵列,然后<code>Glenside</code>基于<code>egg</code>的库添加了一系列的规则,下面是将矩阵乘转换为脉动整列计算的规则：</p>
+<p><span class="math display">\[
+\begin{aligned}
+&amp;\text { (compute dotProd (cartProd ?a0 ?a1)) } \Longrightarrow \\
+&amp;\quad \text { (systolicArray ?rows ?cols } \\
+&amp;\quad ? a 0 \text { (access (transpose ?a1 (list } 1\ 0))\ 0) \text { ) } \\
+&amp;\text { where ?a0 is of shape ((?batch), (?rows)) } \\
+&amp;\text { and ?a1 is of shape ((?cols), (?rows)) }
+\end{aligned}
+\]</span></p>
+<p>脉动阵列的形状参数由<span class="math inline">\(\text{rows}\)</span>和<span class="math inline">\(\text{cols}\)</span>所决定,同时在接下来的<code>access pattern</code>中更加细致的表示硬件如何访问<code>tensor</code>,首先是读取所有的数据<span class="math inline">\((\text{hence},(\text{access}\ \ldots\ 0))\)</span>,然后在内存中进行<code>transpose</code>.这种更加细致的表示方法可以提供更加丰富的数据<code>layout</code>信息,对于后续的优化/<code>codegen</code>有潜在的好处.</p>
+</section>
+<section id="flexible-mapping-discovering-im2col" class="level2">
+<h2 class="anchored" data-anchor-id="flexible-mapping-discovering-im2col">Flexible Mapping: Discovering im2col</h2>
+<p><code>im2col</code>的布局转换可以提升计算速度,虽然会导致一部分的内存开销. 这种<code>transform</code>涉及直接在内存中对<code>windows</code>操作实例化,虽然会导致额外的数据复制,但是只要这个开销小雨取偏移的开销就是有好处的. 接下来<code>Glenside</code>将展示如何自动发现<code>im2col</code>的<code>transform</code>.</p>
+<p>首先上面提出的脉动整列转换都是只针对单纯两个向量计算的映射,而卷积/矩阵乘最大的问题就是最后的内积/外积操作输入的<code>tensor</code>维度并不确定,所以需要先自动的把<code>access pattern</code>的维度降下来转换到脉动阵列上,不然我们又回到了为每个场景写<code>pass</code>的情况了.</p>
+<p><code>Glenside</code>提出一个<code>exploratory rewrite</code>,即添加一系列看似无效的操作从而引入潜在的<code>rewrite</code>机会.比如把一个<code>access pattern</code>展平之后并<code>reshape</code>为原样,这样就能解决之前规则中维度不匹配的问题. <span class="math display">\[
+\begin{aligned}
+?a \Rightarrow (\text{reshape}\ \ (\text{flatten}\ ?a)\ \text{?shape})
+\end{aligned}
+\]</span></p>
+<p>不过这样也带来了一个问题,添加了<code>reshape</code>之后还需要消除它才能真正的进行脉动阵列的转换,因此又添加了关于<code>reshape</code>与<code>cartProd</code>/<code>dotProd</code>计算的<code>composition commutativity</code>规则,将<code>reshape</code>操作从表达式中移除（意思就是这里没什么好办法,直接手动加两个规则规避一下比较简单）. <span class="math display">\[
+\begin{array}{r}
+\text { (cartProd (reshape ?a0 ?shape0) (reshape ?a1 ?shape } 1) \text { ) } \Longrightarrow \text { (reshape (cartProd ?a0 ?a1) ?newShape) } \\
+\text { (compute dotProd (reshape ?a ?shape)) } \Longrightarrow \text { (reshape (compute dotProd ?a) ?newShape) }
+\end{array}
+\]</span> 不过最终的结果证明了只需要寥寥几个规则就可以达到传统手写<code>pass</code>的程度,编写的复杂度更低,同时无需考虑<code>pass ordering</code>的问题.</p>
+</section>
+<section id="flexible-mapping-matmul-blocking" class="level2">
+<h2 class="anchored" data-anchor-id="flexible-mapping-matmul-blocking">Flexible Mapping: matMul Blocking</h2>
+<p>接下来作者探索了用<code>Glenside</code>做<code>tiling</code>,比如把<span class="math inline">\(256 \times 256\)</span>转换为多个<span class="math inline">\(16 \times 16\)</span>小矩阵乘. 和脉动阵列一样,作者也是需要一个探索性的rewrite以及一些消除多余operate的<code>rewrite</code>,这里的探索性<code>rewrite</code>那肯定就是<code>slice</code>/<code>concat</code>了: <span class="math display">\[
+\begin{aligned}
+  ?a \Rightarrow (\text{concat}\ \ (\text{slice}\ ?a\ ?dim\ ?b0\ ?b1) (\text{slice}\ ?a\ ?dim\ ?b1\ ?b2)\ ?dim)
+\end{aligned}
+\]</span> 不过这个探索性太强了,如果全部都组合肯定直接爆炸,因此作者设置的每次切一半,保证是2的倍数.然后再添加一些规则消除计算前的<code>concat/slice</code>.</p>
+</section>
+</section>
+<section id="总结" class="level1">
+<h1>总结</h1>
+<ol type="1">
+<li><code>Glenside</code>有效的解决了底层IR与DSA的映射问题.</li>
+<li>可以利用<code>egraph</code>的特点去做到一些自动发现乘加矩阵融合等优化.</li>
+<li>作者提到<code>rewrite</code>和<code>polyhedral</code>是可以结合起来的,但我发现作者代码中求解<code>tiling</code>的时候用了一个<code>ILP</code>的库去加速搜索,不知道单纯用<code>rewrite</code>能达到两者一起的多少效果.</li>
+</ol>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/zhen8838\.github\.io");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script src="https://utteranc.es/client.js" repo="zhen8838/zhen8838.github.io" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

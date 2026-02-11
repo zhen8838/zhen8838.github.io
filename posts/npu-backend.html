@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2022-11-15">
+
+<title>带宽受限下的DSA后端优化 – Zheng’s Notes</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../assets/favicon.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-7072389654d23eff08f359f9aa0d1ee7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">Zheng’s Notes</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#前言" id="toc-前言" class="nav-link active" data-scroll-target="#前言">0. 前言</a></li>
+  <li><a href="#layer-fusion实现方案" id="toc-layer-fusion实现方案" class="nav-link" data-scroll-target="#layer-fusion实现方案">1. Layer Fusion实现方案</a></li>
+  <li><a href="#fused-layer内部调度方案" id="toc-fused-layer内部调度方案" class="nav-link" data-scroll-target="#fused-layer内部调度方案">2. Fused Layer内部调度方案</a>
+  <ul class="collapse">
+  <li><a href="#无流水时情况" id="toc-无流水时情况" class="nav-link" data-scroll-target="#无流水时情况">2.1 无流水时情况</a></li>
+  <li><a href="#soft-pipeline" id="toc-soft-pipeline" class="nav-link" data-scroll-target="#soft-pipeline">2.2 Soft PipeLine</a></li>
+  <li><a href="#instruction-schedule" id="toc-instruction-schedule" class="nav-link" data-scroll-target="#instruction-schedule">2.3 Instruction Schedule</a></li>
+  </ul></li>
+  <li><a href="#其他问题" id="toc-其他问题" class="nav-link" data-scroll-target="#其他问题">3. 其他问题</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">带宽受限下的DSA后端优化</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">编译器</div>
+  </div>
+  </div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">November 15, 2022</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="前言" class="level1">
+<h1>0. 前言</h1>
+<p>目前对于许多端侧<code>NPU</code>来说，是由一个可编程操作但容量较小的<code>SRAM</code>进行数据调度，需要尽可能的减少数据搬运, 从而避免<code>DSA</code>中的计算单元处于空闲状态[^1]。</p>
+<p>因此我们要解决的问题是: 1. 如何充分利用<code>Local Memory</code>并在其中计算尽可能多的<code>kernel</code>? 2. 如何调度<code>Local Memory</code>中的内存/指令从而充分利用计算单元?</p>
+<p>本文主要分享关于<code>Fused Layer</code>内部的<code>Buffer Schedule</code>与<code>Instruction Schedule</code>的一些经验体会.</p>
+<!--more-->
+</section>
+<section id="layer-fusion实现方案" class="level1">
+<h1>1. Layer Fusion实现方案</h1>
+<p>首先需要保证多个层之间的计算不回到<code>DDR</code>, 才能减少外部带宽, 充分利用<code>Local Memory</code>, 因此需要进行<code>Layer Fusion</code>:</p>
+<ol type="1">
+<li>需要实现高层IR的<code>Index Mapping</code>进行<code>Infer Bounds</code>.[^3]</li>
+<li>利用<code>DSL</code>编写一系列的<code>Tiled Tensor Operation</code>实现.[^2]</li>
+<li>将多层Kernel的DSL实现通过表达式的形式组织成<code>PrimFunction</code>.[^1]</li>
+<li>分析此<code>PrimFunction</code>, 并进行<code>Buffer Schedule</code>与<code>Instruction Schedule</code>.</li>
+</ol>
+</section>
+<section id="fused-layer内部调度方案" class="level1">
+<h1>2. Fused Layer内部调度方案</h1>
+<p>因为在编译的过程中需要尝试大量的<code>Fusion Group</code>以及各种<code>Tile Size</code>的组合, 因此没有将<code>PrimFunction</code>内部进行<code>Unroll</code>, 仅通过遍历<code>PrimFunction</code>内部<code>Block</code>对<code>Buffer Usage/Lifeness</code>进行分析, 添加<code>Tiled Tensor Operation</code>中所需要的各种约束信息, 然后求解<code>2D Bin Packing</code>问题.</p>
+<section id="无流水时情况" class="level2">
+<h2 class="anchored" data-anchor-id="无流水时情况">2.1 无流水时情况</h2>
+<p>最简单的执行策略是将每个<code>Tile</code>中的<code>Tensor Operation</code>串行执行, 假设三个卷积的情况如下:</p>
+<p><img src="npu-backend/no_pp_no_promote.png" class="img-fluid"></p>
+<p>此时我们可以在计算上一个结果时加载下一个操作所需要的数据,但是通常对于神经网络来说,越后面的层<code>Weights</code>越大,在带宽与算力无法平衡的时候就会等待<code>Load</code>从而产生<code>IDLE</code>. 因此可以选择将<code>Weights</code>等参数长驻在<code>Local Memory</code>中,通过空间换时间(<code>Trade-off</code>项加一).</p>
+<!-- todo 添加一个weights常驻的图片, 但是不是全部提前load完的, 后面可以放到指令调度里面讲  -->
+<p><img src="npu-backend/no_pp_promote.png" class="img-fluid"></p>
+<p>这里我选择将<code>Weights</code>等参数常驻后, 为6层卷积的<code>Fusion</code>进行无<code>Bank Conflict</code>的<code>Buffer Schedule</code>, 结果如下:</p>
+<p><img src="npu-backend/conv6_no_pp.png" class="img-fluid"></p>
+<p>对于带宽受限的<code>DSA</code>来说, 虽然优化内部<code>Buffer</code>的布局可以更好的避免<code>Bank Conflict</code>从而提升计算效率,但是也会因为数据不连续导致<code>Load/Store</code>效率降低, <code>Trade-off</code>项加一.</p>
+</section>
+<section id="soft-pipeline" class="level2">
+<h2 class="anchored" data-anchor-id="soft-pipeline">2.2 Soft PipeLine</h2>
+<p>为了充分利用器件, 每个<code>Tile</code>之间的<code>IDLE</code>也需要进行消除. 通常的做法是开辟并行器件数个Buffer来进行计算, 最理想的状态是每个器件的工作时间等长:</p>
+<p><img src="npu-backend/pipeline_1.png" class="img-fluid"></p>
+<p>虽然<code>Load</code>/<code>Store</code>是可以并行工作的, 但是他们会抢占带宽资源, 此时还无法准确估计时间, 因此在带宽受限的场景下可以默认将他们视为同一个器件. 由于带宽受限的问题, 在三器件并行双<code>Buffer</code>的情况下很容易出现每一对<code>Ping Pong</code>之间出现冲突与空闲:</p>
+<p><img src="npu-backend/pipeline_2.png" class="img-fluid"></p>
+<p>因此需要通过量化估计的硬件执行时间来选择<code>Fuse</code>足够多的层或切分足够的大小来保证<code>Compute Time &gt;= (Load Time + Store Time)</code>, 从而让计算器件连续工作.</p>
+<p><img src="npu-backend/pipeline_3.png" class="img-fluid"></p>
+<p>当硬件中还有其他计算设备存在的情况下, 情况会更加多样, 假设再增加一个计算器件时(这里假设计算设备时间为3:7,同时总时间大于<code>Load + Store</code>):</p>
+<p><img src="npu-backend/pipeline_4.png" class="img-fluid"></p>
+<p>如果只有两个<code>Buffer</code>的情况下是会导致计算器件产生空闲, 他们空闲时间的比例与计算时间比例相同. 那么为了充分利用两个计算器件, 就需要再开辟新的<code>Buffer</code>, 此时只会因为计算时间不同导致其中一个计算设备出现空闲. 总之, 在有多个计算设备的情况下, 要量化增加<code>Buffer</code>数量带来的并行时间收益与随之增加的<code>ReCompute</code>进行<code>Trade-off</code>.</p>
+<p><img src="npu-backend/pipeline_5.png" class="img-fluid"></p>
+<p>下面就是三块<code>Buffer</code>的实际分配情况, 可以发现为了减少<code>Bank Conflict</code>所造成的内存浪费是比想象中大的.</p>
+<p><img src="npu-backend/pipeline_6.png" class="img-fluid"></p>
+</section>
+<section id="instruction-schedule" class="level2">
+<h2 class="anchored" data-anchor-id="instruction-schedule">2.3 Instruction Schedule</h2>
+<p>当多层<code>Fuse</code>之后, 生成的指令也会随之增多, 因此会遇到指令阻塞的情况, 比如当<code>Compute</code>的指令过多导致一下个循环中<code>Load</code>指令下发不及时的问题:</p>
+<p><img src="npu-backend/inst_schedule.png" class="img-fluid"></p>
+<p>需要通过模拟指令队列来调整指令顺序, 实际上就是需要找到合适的<code>Prefetch</code>时机, 从而做到真正的流水.</p>
+<p><img src="npu-backend/inst_schedule2.png" class="img-fluid"></p>
+</section>
+</section>
+<section id="其他问题" class="level1">
+<h1>3. 其他问题</h1>
+<ol type="1">
+<li><code>Tile Size</code>搜索策略问题
+<ul>
+<li>如果完全尝试所有的可能情况时间成本将会太高, 而按照程序既定的策略搜索又难以达到最优, 我个人认为是需要建立一种<code>Tile Size</code>在各个维度上的变化对于执行时间(重计算/Load Store速率/器件流水)变化的联系来指导搜索, 可能需要借助一些机器学习方法.</li>
+</ul></li>
+<li>多分枝结构<code>Layer Fusion</code>内部调度问题
+<ul>
+<li>当多分枝的结构在<code>Local Memory</code>中执行时, 两个分枝没有依赖关系就需要再按拓扑排序进行调度, 找到峰值内存最小的执行顺序后再开始进行<code>Tiling</code>.</li>
+</ul></li>
+<li>全局最优
+<ul>
+<li>需要如类似[^4]的做法来尝试尽可能多的情况,来获得最优的<code>Fusion Group</code>解.</li>
+<li>在尝试每个情况就需要在以下<code>Trade-off</code>找到局部最优:
+<ul>
+<li>是否选择重复<code>Load</code>部分数据, 以时间换空间?</li>
+<li>是否优化数据布局, 牺牲<code>Load/Store</code>效率提升计算效率?</li>
+<li>是否使用更多的<code>Buffer</code>, 增加<code>ReCompute</code>换取更多并行?</li>
+</ul></li>
+<li>类似地平线编译器使用强化学习来进行优化可能是一个不错的选择.</li>
+</ul></li>
+</ol>
+<p>以上内容仅代表个人观点,欢迎各位大佬指点交流.</p>
+<!-- [^1]: [TVM for DSA的一些总结](https://zhuanlan.zhihu.com/p/571045566)
+[^2]: [AMD Composable Kernel](https://github.com/ROCmSoftwarePlatform/composable_kernel)
+[^3]: [算能科技layer group](https://github.com/sophgo/tpu-mlir/blob/master/docs/developer_manual/source_zh/10_layergroup.rst)
+[^4]: [MegEngine 全局图优化](https://zhuanlan.zhihu.com/p/491037155) -->
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/zhen8838\.github\.io");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script src="https://utteranc.es/client.js" repo="zhen8838/zhen8838.github.io" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

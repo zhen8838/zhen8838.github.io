@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2024-05-08">
+
+<title>Constraints Solver Internals – Zheng’s Notes</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../assets/favicon.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-7072389654d23eff08f359f9aa0d1ee7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">Zheng’s Notes</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Constraints Solver Internals</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">运筹学</div>
+  </div>
+  </div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">May 8, 2024</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<!-- 添加介绍 -->
+<p>关于ortools中<code>Constraints Solver</code>的内部逻辑.</p>
+<!--more-->
+<p>首先是数据结构:</p>
+<pre class="plantuml"><code>@startuml
+
+class Decision {
+  &lt;color:green&gt; 表示在搜索树中的一个选择点, Apply向右, Refute向左. &lt;/color&gt;
+  + void {abstract} Apply(Solver* s)&lt;color:green&gt; // 决策执行时调用 &lt;/color&gt;
+  + void {abstract} Refute(Solver* s) &lt;color:green&gt; // 回溯后调用 &lt;/color&gt;
+  + void {abstract} Accept(DecisionVisitor* visitor)
+}
+
+class Solver {
+  + DefaultSolverParameters() ConstraintSolverParameters
+  + AddConstraint(Constraint*)
+  + Solve(DecisionBuilder*, vector&lt;SearchMonitor*&gt;)
+}
+
+class DecisionBuilder {
+  &lt;color:green&gt; 构造搜索树 &lt;/color&gt;
+  + Decision* Next(Solver*)  &lt;color:green&gt; 返回下一步决策, 如果为空则结束. &lt;/color&gt;
+  + void AppendMonitors(Solver*, vector&lt;SearchMonitor*&gt;*) &lt;color:green&gt; 搜索开始前添加monitor. &lt;/color&gt;
+  + void Accept(ModelVisitor*)
+}
+
+class RestoreAssignment {
+  &lt;color:green&gt; 只执行一次, 将Assignment全部恢复到Var &lt;/color&gt;
+}
+
+DecisionBuilder &lt;|-- RestoreAssignment
+
+class StoreAssignment {
+  &lt;color:green&gt; 只执行一次, 将Var当前值存储到Assignment &lt;/color&gt;
+}
+
+DecisionBuilder &lt;|-- StoreAssignment
+
+DecisionBuilder *--- Decision
+
+class Demon {
+  &lt;color:green&gt; 传播队列的基础元素, 负责在变量值域中传播变量的约束以及删除不满足约束的值 &lt;/color&gt;
+  &lt;color:green&gt; 主要思想是附加到变量上监听变量的修改. &lt;/color&gt;
+  + void {abstract} Run(Solver* s) &lt;color:green&gt; //  &lt;/color&gt;
+  + DemonPriority {abstract} priority() &lt;color:green&gt; // 执行的优先级 &lt;/color&gt;
+  + void inhibit(Solver* s) &lt;color:green&gt; // 在当前位置抑制demon &lt;/color&gt;
+  + void desinhibit(Solver* s) &lt;color:green&gt; // 解除之前的抑制 &lt;/color&gt;
+}
+
+class PropagationBaseObject {
+  + Solver* solver() 
+  + void FreezeQueue()
+  + void UnfreezeQueue()
+  + void EnqueueDelayedDemon(Demon* const d)
+  + void EnqueueVar(Demon* const d)
+  + void ExecuteAll(const SimpleRevFIFO&lt;Demon*&gt;&amp; demons)
+  + void EnqueueAll(const SimpleRevFIFO&lt;Demon*&gt;&amp; demons)
+}
+
+abstract class Constraint {
+  &lt;color:green&gt; 建模约束 &lt;/color&gt;
+  + void {abstract} Post() &lt;color:green&gt; // 在solve过程中将demon附加到var上. &lt;/color&gt;
+  + void {abstract} InitialPropagate() &lt;color:green&gt; // 初始化传播, 在Post之后调用 &lt;/color&gt;
+  void PostAndPropagate() &lt;color:green&gt; // 在root节点是同时做两件事 &lt;/color&gt;
+  + void {abstract} Accept(ModelVisitor* visitor)
+  bool IsCastConstraint() &lt;color:green&gt; // 是否是cast到integer &lt;/color&gt;
+  + IntVar*{abstract} Var(); &lt;color:green&gt; // 返回代表约束满足的bool var, 如果为Null表示不支持 &lt;/color&gt;
+} 
+
+PropagationBaseObject &lt;|-- Constraint
+
+class CastConstraint {
+  &lt;color:green&gt; 特殊的约束 &lt;/color&gt;
+  + IntVar* target_var() 
+}
+
+Constraint &lt;|-- CastConstraint
+
+class IntExpr {
+  &lt;color:green&gt; 整数表达式, 建模的基础, 可以进行如下操作 &lt;/color&gt;
+  &lt;color:green&gt;  1. 查询边界值 &lt;/color&gt;
+  &lt;color:green&gt;  2. 设定边界值 &lt;/color&gt;
+  &lt;color:green&gt;  3. 监听边界值改变 &lt;/color&gt;
+  &lt;color:green&gt;  4. 构造对应var &lt;/color&gt;
+  + int64_t  {abstract} Min();
+  + void  {abstract} SetMin(int64_t m);
+  + int64_t  {abstract} Max();
+  + void  {abstract} SetMax(int64_t m);
+  + void  {abstract} Range(int64_t* l, int64_t* u);
+  + void  {abstract} SetRange(int64_t l, int64_t u);
+  + void  {abstract} SetValue(int64_t v);
+  + bool  {abstract} Bound();
+  + bool  {abstract} IsVar();
+  + IntVar* {abstract}  Var();
+  + void  {abstract} WhenRange(Demon* d);
+}
+
+PropagationBaseObject &lt;|-- IntExpr
+
+class IntVar {
+  &lt;color:green&gt; Var也是表达式 &lt;/color&gt;
+  + int64_t {abstract} Value()
+  + void {abstract} RemoveValue(int64_t v)
+  + void {abstract} RemoveInterval(int64_t l, int64_t u)
+  + void {abstract} RemoveValues(const std::vector&lt;int64_t&gt;&amp; values);
+  + void {abstract} SetValues(const std::vector&lt;int64_t&gt;&amp; values);
+  + void {abstract} WhenBound(Demon* d)
+  + void WhenBound(Solver::Closure closure)
+  + void WhenBound(Solver::Action action)
+  + void {abstract} WhenDomain(Demon* d)
+  + void WhenDomain(Solver::Closure closure)
+  + void WhenDomain(Solver::Action action)
+  + uint64_t {abstract} Size()
+  + bool {abstract} Contains(int64_t v)
+  + IntVarIterator*{abstract}  MakeHoleIterator(bool reversible)
+  + IntVarIterator*{abstract}  MakeDomainIterator(bool reversible)
+  + int64_t {abstract} OldMin()
+  + int64_t {abstract} OldMax()
+  + int {abstract} VarType() const;
+  + IntVar* {abstract} IsEqual(int64_t constant)
+  + IntVar* {abstract} IsDifferent(int64_t constant)
+  + IntVar* {abstract} IsGreaterOrEqual(int64_t constant)
+  + IntVar* {abstract} IsLessOrEqual(int64_t constant)
+  + int index()
+}
+
+IntExpr &lt;|-- IntVar
+
+
+abstract class SearchMonitor {
+  + void {abstract} EnterSearch()
+  + void {abstract} RestartSearch()
+  + void {abstract} ExitSearch()
+  + void {abstract} BeginNextDecision(DecisionBuilder* b)
+  + void {abstract} EndNextDecision(DecisionBuilder* b, Decision* d)
+  + void {abstract} ApplyDecision(Decision* d)
+  + void {abstract} RefuteDecision(Decision* d)
+  + void {abstract} AfterDecision(Decision* d, bool apply)
+  + void {abstract} BeginFail()
+  + void {abstract} EndFail()
+  + void {abstract} BeginInitialPropagation()
+  + void {abstract} EndInitialPropagation()
+  + bool {abstract} AcceptSolution()
+  + bool {abstract} AtSolution()
+  + void {abstract} NoMoreSolutions()
+  + bool {abstract} LocalOptimum()
+  + bool {abstract} AcceptDelta(Assignment* delta, Assignment* deltadelta)
+  + void {abstract} AcceptNeighbor()
+  + void {abstract} AcceptUncheckedNeighbor()
+  + bool {abstract} IsUncheckedSolutionLimitReached(
+  + void {abstract} PeriodicCheck()
+  + int {abstract} ProgressPercent()
+  + void {abstract} Accept(ModelVisitor* visitor)
+  + void {abstract} Install() &lt;b&gt;&lt;color:green&gt; // 注册自身&lt;/color&gt; 
+}
+
+class SolutionCollector {
+  &lt;color:green&gt; 收集添加过的变量 &lt;/color&gt;
+  + void Add(IntVar* var)
+  + void Add(const std::vector&lt;IntVar*&gt;&amp; vars)
+  + void Add(IntervalVar* var)
+  + void Add(const std::vector&lt;IntervalVar*&gt;&amp; vars)
+  + void Add(SequenceVar* var)
+  + void Add(const std::vector&lt;SequenceVar*&gt;&amp; vars)
+  + void AddObjective(IntVar* objective)
+  + void AddObjectives(const std::vector&lt;IntVar*&gt;&amp; objectives)
+}
+
+SearchMonitor &lt;|-- SolutionCollector
+
+class ObjectiveMonitor {
+  &lt;color:green&gt; 优化目标监控基类 &lt;/color&gt;
+  + IntVar* ObjectiveVar(int index)
+  + IntVar* MinimizationVar(int index)
+  + int64_t Step(int index)
+  + bool Maximize(int index)
+  + int64_t BestValue(int index)
+  + int Size()
+  + void EnterSearch()
+  + bool AtSolution()
+  + bool AcceptDelta(Assignment* delta, Assignment* deltadelta)
+  + void Accept(ModelVisitor* visitor)
+}
+
+SearchMonitor &lt;|-- ObjectiveMonitor
+
+class OptimizeVar {
+  &lt;color:green&gt; 概括目标, 指定方向, 变量, 步幅即可 &lt;/color&gt;
+  + int64_t best()
+  + IntVar* var()
+  + void BeginNextDecision(DecisionBuilder* db)
+  + void RefuteDecision(Decision* d)
+  + bool AtSolution()
+  + bool AcceptSolution()
+  + void ApplyBound()
+}
+
+ObjectiveMonitor &lt;|-- OptimizeVar
+
+
+class SearchLimit {
+  + void EnterSearch() 
+  + void BeginNextDecision(DecisionBuilder* b) 
+  + void PeriodicCheck() 
+  + void RefuteDecision(Decision* d) 
+  + void Install()
+  + bool crossed() &lt;b&gt;&lt;color:green&gt; // 检查limit是否已经失败 &lt;/color&gt;  
+  + bool Check() &lt;b&gt;&lt;color:green&gt; // 检查limit状态 &lt;/color&gt;  
+  + bool {abstract} CheckWithOffset(absl::Duration offset) &lt;b&gt;&lt;color:green&gt; // 自定义检查方法 &lt;/color&gt;  
+}
+
+SearchMonitor &lt;|-- SearchLimit
+
+class RegularLimit {
+  &lt;color:green&gt; 基于搜索时间/探索分支数/失败错误来限制搜索 &lt;/color&gt;
+  + bool CheckWithOffset(absl::Duration offset)
+} 
+
+class ImprovementSearchLimit {
+  &lt;color:green&gt;基于目标变量的改善率或者词典序进行限制.&lt;/color&gt;
+  + int64_t wall_time()
+  + int64_t branches()
+  + int64_t failures()
+  + int64_t solutions()
+  + bool CheckWithOffset(absl::Duration offset)
+} 
+
+SearchLimit &lt;|-- RegularLimit
+SearchLimit &lt;|-- ImprovementSearchLimit
+
+
+class IntervalVar {
+  &lt;color:green&gt;包含duration的var.&lt;/color&gt;
+}
+
+PropagationBaseObject &lt;|-- IntervalVar
+
+class SequenceVar {
+  &lt;color:green&gt;包含多个IntervalVar.&lt;/color&gt;
+  + IntervalVar* Interval(int index)
+}
+
+PropagationBaseObject &lt;|-- SequenceVar
+
+class AssignmentElement {
+
+}
+class IntVarElement {
+
+}
+
+AssignmentElement &lt;|-- IntVarElement
+
+class IntervalVarElement {
+
+}
+
+AssignmentElement &lt;|-- IntervalVarElement
+
+class SequenceVarElement {
+
+}
+
+AssignmentElement &lt;|-- SequenceVarElement
+
+class Assignment {
+  &lt;color:green&gt; 包含domain到var的映射, 用于展示solution.&lt;/color&gt;
+  + void Clear();
+  + bool Empty()
+  + int Size()
+  + int NumIntVars()
+  + int NumIntervalVars()
+  + int NumSequenceVars()
+  + void Store()
+  + void Restore()
+  + bool Load(const std::string&amp; filename)
+}
+
+PropagationBaseObject &lt;|-- Assignment
+
+class Pack {
+  &lt;color:green&gt; 多个var映射到bin的约束. &lt;/color&gt;
+  + void AddWeightedSumLessOrEqualConstantDimension(const std::vector&lt;int64_t&gt;&amp; weights, const std::vector&lt;int64_t&gt;&amp; bounds);
+  + void AddWeightedSumLessOrEqualConstantDimension(Solver::IndexEvaluator1 weights, const std::vector&lt;int64_t&gt;&amp; bounds);
+  + void AddWeightedSumLessOrEqualConstantDimension(Solver::IndexEvaluator2 weights, const std::vector&lt;int64_t&gt;&amp; bounds);
+  + void AddWeightedSumEqualVarDimension(const std::vector&lt;int64_t&gt;&amp; weights,const std::vector&lt;IntVar*&gt;&amp; loads);
+  + void AddWeightedSumEqualVarDimension(Solver::IndexEvaluator2 weights,const std::vector&lt;IntVar*&gt;&amp; loads);
+  + void AddSumVariableWeightsLessOrEqualConstantDimension(const std::vector&lt;IntVar*&gt;&amp; usage, const std::vector&lt;int64_t&gt;&amp; capacity);
+  + void AddWeightedSumOfAssignedDimension(const std::vector&lt;int64_t&gt;&amp; weights,IntVar* cost_var);
+  + void AddCountUsedBinDimension(IntVar* count_var);
+  + void AddCountAssignedItemsDimension(IntVar* count_var);
+}
+
+Constraint &lt;|-- Pack
+
+
+Constraint &lt;|-- DisjunctiveConstraint
+
+
+@enduml</code></pre>
+<p>其中整个优化模型由IntExpr和Constraints构成. 构建好约束后通过 DecisionBuilder来生成Decision, 每个Decision会给变量进行分配值, 分配好值</p>
+<pre class="plantuml"><code>@startuml
+NextSolution -&gt; BeginInitialPropagation
+NextSolution &lt;- BeginInitialPropagation
+NextSolution -&gt; Next : DecisionBuilder.Next() 
+Next -&gt; Apply : Decision.Apply() 
+Apply -&gt; SetValue  : Decision.Apply() 
+SetValue -&gt; EnqueueVar : EnqueueVar the Demon Handler
+EnqueueVar -&gt; Queue.Process : when freeze_level_ == 0
+Queue.Process -&gt; Demon.Run : pop the enqueued demons and run it
+Demon.Run -&gt; Var.ExecuteAll : exec the the constraints
+@enduml</code></pre>
+<!-- DecisionBuilder -> Decision -->
+
+
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/zhen8838\.github\.io");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script src="https://utteranc.es/client.js" repo="zhen8838/zhen8838.github.io" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

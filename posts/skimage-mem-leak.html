@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2019-11-01">
+
+<title>skimage中resize内存泄漏 – Zheng’s Notes</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../assets/favicon.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-7072389654d23eff08f359f9aa0d1ee7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">Zheng’s Notes</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#问题原因" id="toc-问题原因" class="nav-link active" data-scroll-target="#问题原因">问题原因</a>
+  <ul class="collapse">
+  <li><a href="#原本的代码" id="toc-原本的代码" class="nav-link" data-scroll-target="#原本的代码">原本的代码:</a></li>
+  <li><a href="#修改后代码" id="toc-修改后代码" class="nav-link" data-scroll-target="#修改后代码">修改后代码</a></li>
+  <li><a href="#只测试resize" id="toc-只测试resize" class="nav-link" data-scroll-target="#只测试resize">只测试resize</a></li>
+  <li><a href="#修改读取方式后" id="toc-修改读取方式后" class="nav-link" data-scroll-target="#修改读取方式后">修改读取方式后</a></li>
+  <li><a href="#进一步定位问题" id="toc-进一步定位问题" class="nav-link" data-scroll-target="#进一步定位问题">进一步定位问题</a></li>
+  <li><a href="#检查下别的tf.data输入是否会出现内存泄漏问题" id="toc-检查下别的tf.data输入是否会出现内存泄漏问题" class="nav-link" data-scroll-target="#检查下别的tf.data输入是否会出现内存泄漏问题">检查下别的tf.data输入是否会出现内存泄漏问题</a></li>
+  <li><a href="#新的问题" id="toc-新的问题" class="nav-link" data-scroll-target="#新的问题">新的问题</a></li>
+  <li><a href="#进一步检查是不是tf.example的格式导致的." id="toc-进一步检查是不是tf.example的格式导致的." class="nav-link" data-scroll-target="#进一步检查是不是tf.example的格式导致的.">进一步检查是不是<code>tf.example</code>的格式导致的.</a></li>
+  </ul></li>
+  <li><a href="#不折腾了" id="toc-不折腾了" class="nav-link" data-scroll-target="#不折腾了">不折腾了</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">skimage中resize内存泄漏</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">深度学习</div>
+  </div>
+  </div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">November 1, 2019</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>我今天运行个模型,跑着跑着内存就泄漏了,我很奇怪,然后用<code>memory_profiler</code>分析了下内存泄漏的点.发现是<code>skimage</code>的<code>resize</code>中出现了泄漏.</p>
+<!--more-->
+<section id="问题原因" class="level1">
+<h1>问题原因</h1>
+<section id="原本的代码" class="level2">
+<h2 class="anchored" data-anchor-id="原本的代码">原本的代码:</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>img <span class="op">=</span> resize(img, [<span class="bu">int</span>(img.shape[<span class="dv">0</span>] <span class="op">*</span> resize_factor),</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>           <span class="bu">int</span>(img.shape[<span class="dv">1</span>] <span class="op">*</span> resize_factor)],</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>     preserve_range<span class="op">=</span><span class="va">True</span>).astype(np.uint8)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>然后分析内存的时候得到如下:</p>
+<pre><code>Line #    Mem usage    Increment   Line Contents
+================================================
+130 871.9648 MiB   0.0000 MiB           img = img_as_ubyte(resize(img, [int(img.shape[0] * resize_factor),
+131 924.0703 MiB  52.1055 MiB                                           int(img.shape[1] * resize_factor)]))
+
+
+130 924.0703 MiB   0.0000 MiB           img = img_as_ubyte(resize(img, [int(img.shape[0] * resize_factor),
+131 946.7148 MiB  22.6445 MiB                                           int(img.shape[1] * resize_factor)]))
+
+130 875.6328 MiB   0.0000 MiB           img = img_as_ubyte(resize(img, [int(img.shape[0] * resize_factor),
+131 932.0742 MiB  56.4414 MiB                                           int(img.shape[1] * resize_factor)]))</code></pre>
+<p><img src="skimage-mem-leak/Figure_1.png" class="img-fluid"></p>
+</section>
+<section id="修改后代码" class="level2">
+<h2 class="anchored" data-anchor-id="修改后代码">修改后代码</h2>
+<p>我参考了网上的人,修改之后发现还是不行</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>img <span class="op">=</span> img_as_ubyte(resize(img, [<span class="bu">int</span>(img.shape[<span class="dv">0</span>] <span class="op">*</span> resize_factor),</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>                                <span class="bu">int</span>(img.shape[<span class="dv">1</span>] <span class="op">*</span> resize_factor)]))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<pre><code>Line #    Mem usage    Increment   Line Contents
+================================================
+132 795.3477 MiB   0.0000 MiB           img = resize(img, [int(img.shape[0] * resize_factor),
+133 795.3477 MiB   0.0000 MiB                              int(img.shape[1] * resize_factor)],
+134 807.4141 MiB  12.0664 MiB                        preserve_range=True).astype(np.uint8)
+
+
+132 807.4141 MiB   0.0000 MiB           img = resize(img, [int(img.shape[0] * resize_factor),
+133 807.4141 MiB   0.0000 MiB                              int(img.shape[1] * resize_factor)],
+134 823.9102 MiB  16.4961 MiB                        preserve_range=True).astype(np.uint8)
+
+132 824.1680 MiB   0.0000 MiB           img = resize(img, [int(img.shape[0] * resize_factor),
+133 824.1680 MiB   0.0000 MiB                              int(img.shape[1] * resize_factor)],
+134 824.1758 MiB   0.0078 MiB                        preserve_range=True).astype(np.uint8)</code></pre>
+<p><img src="skimage-mem-leak/Figure_2.png" class="img-fluid"></p>
+</section>
+<section id="只测试resize" class="level2">
+<h2 class="anchored" data-anchor-id="只测试resize">只测试resize</h2>
+<p>之前的分析文件:</p>
+<pre><code>Line #    Mem usage    Increment   Line Contents
+================================================
+282 880.1875 MiB   0.0000 MiB           if boxes is None:
+283 895.7812 MiB  15.5938 MiB               self._resize_neg_img(im_in, img)
+284                                     else:
+285                                         boxes = self._resize_pos_img(im_in, img, boxes)
+
+
+282 840.2148 MiB   0.0000 MiB           if boxes is None:
+283 889.9688 MiB  49.7539 MiB               self._resize_neg_img(im_in, img)
+284                                     else:
+285                                         boxes = self._resize_pos_img(im_in, img, boxes)
+
+282 889.9688 MiB   0.0000 MiB           if boxes is None:
+283 890.1172 MiB   0.1484 MiB               self._resize_neg_img(im_in, img)
+284                                     else:
+285                                         boxes = self._resize_pos_img(im_in, img, boxes)</code></pre>
+<p>我发现都是<code>_resize_neg_img</code>函数出的问题,然后就只测试这个函数看看有没有问题,发现好像并没有内存泄漏.</p>
+<p><img src="skimage-mem-leak/Figure_2.png" class="img-fluid"></p>
+<p>我发现内存泄漏还是得在<code>tf.data</code>对象运行起来之后才能发现的.所以我得继续测试.</p>
+<p>这里用了那个<code>line_profiler</code>测试了一下代码执行时间.发现了一个大问题:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">img</span> = img_as_ubyte<span class="er">(</span><span class="ex">rescale</span><span class="er">(</span><span class="ex">img,</span> resize_factor, multichannel=True<span class="kw">))</span>  <span class="co"># 107486.0ms</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">img</span> = resize<span class="er">(</span><span class="ex">img,</span> None, fx=resize_factor, fy=resize_factor<span class="kw">)</span>  <span class="co"># 849.4ms</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>!用<code>skimage</code>和<code>opencv</code>的<code>resize</code>速度居然差10倍以上.</p>
+</section>
+<section id="修改读取方式后" class="level2">
+<h2 class="anchored" data-anchor-id="修改读取方式后">修改读取方式后</h2>
+<p>最后我虽然没有找到哪里出现了问题,但是我首先修改了图像处理函数都使用<code>opencv</code>完成.</p>
+<p>第二,我看了一下<code>tfrecord</code>的制作方式,将数据转换为了<code>tfrecord</code>的存储方式. 制作时,我们可以选择将图像解码前的<code>buf</code>序列化,也可以先读取出来然后用<code>tf.io.serialize_tensor()</code>的方式进行序列化,后者所存储的<code>tfrecord</code>会大10倍以上.我经过测试之后发现,直接存未序列化的图像数据比较好,因为读取的时候对<code>tensor</code>反序列化和解码图像速度差不太多.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> make_example(img_string: <span class="bu">str</span>, label: <span class="bu">int</span>, bbox_string: <span class="bu">str</span>):</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">""" make example """</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    feature <span class="op">=</span> {</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>        <span class="st">'img_raw'</span>: tf.train.Feature(bytes_list<span class="op">=</span>tf.train.BytesList(value<span class="op">=</span>[img_string])),</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>        <span class="st">'label'</span>: tf.train.Feature(int64_list<span class="op">=</span>tf.train.Int64List(value<span class="op">=</span>[label])),</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>        <span class="st">'bbox'</span>: tf.train.Feature(bytes_list<span class="op">=</span>tf.train.BytesList(value<span class="op">=</span>[bbox_string])),</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> tf.train.Example(features<span class="op">=</span>tf.train.Features(feature<span class="op">=</span>feature)).SerializeToString()</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> tf.io.TFRecordWriter(<span class="bu">str</span>(record_file)) <span class="im">as</span> writer:</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> idx <span class="kw">in</span> tqdm(idx_list, total<span class="op">=</span><span class="bu">len</span>(idx_list)):</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>        im_buf, label, bboxes <span class="op">=</span> data[idx]</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>        bboxes <span class="op">=</span> tf.io.serialize_tensor(bboxes).numpy()</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>        serialized_example <span class="op">=</span> make_example(im_buf.tostring(), label, bboxes)</span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>        writer.write(serialized_example)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>读取代码实例,<code>tfrecord</code>总体来说还是比较简单的,唯一的不方便就是我们调试的时候不方便,我之前都是从列表里面读取图像的,那样调试的时候直接执行就能很快找到问题,现在需要先启动一个小的<code>dataset</code>对象才可以进行图像读取,比较难受.综合考虑还是性价比较高,训练的速度有明显提升:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> build_datapipe(<span class="va">self</span>, pos_tfrecord: tf.Tensor, neg_tfrecord: tf.Tensor,</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>                   batch_size: <span class="bu">int</span>, rand_seed: <span class="bu">int</span>, is_augment: <span class="bu">bool</span>,</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>                   is_normlize: <span class="bu">bool</span>, is_training: <span class="bu">bool</span>) <span class="op">-&gt;</span> tf.data.Dataset:</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> _wapper(raw_img: np.ndarray, ann: np.ndarray, is_augment: <span class="bu">bool</span>) <span class="op">-&gt;</span> [np.ndarray, <span class="bu">tuple</span>]:</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>        <span class="co">""" wapper for process image and ann to label """</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>        raw_img, ann <span class="op">=</span> <span class="va">self</span>.process_img(raw_img, ann, is_augment, <span class="va">True</span>, <span class="va">False</span>)</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>        labels <span class="op">=</span> <span class="va">self</span>.ann_to_label(ann)</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> (raw_img, <span class="op">*</span>labels)</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> _parser(stream: <span class="bu">bytes</span>):</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>        example <span class="op">=</span> tf.io.parse_single_example(stream, {</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>            <span class="st">'img_raw'</span>: tf.io.FixedLenFeature([], tf.string),</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>            <span class="st">'label'</span>: tf.io.FixedLenFeature([], tf.int64),</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>            <span class="st">'bbox'</span>: tf.io.FixedLenFeature([], tf.string),</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>        })  <span class="co"># type:dict</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>        raw_img <span class="op">=</span> tf.image.decode_image(example[<span class="st">'img_raw'</span>], channels<span class="op">=</span><span class="dv">3</span>)</span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>        label <span class="op">=</span> example[<span class="st">'label'</span>]</span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>        bbox <span class="op">=</span> tf.io.parse_tensor(example[<span class="st">'bbox'</span>], tf.float32)</span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>        <span class="co"># load image -&gt; resize image -&gt; image augmenter -&gt; make labels</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>        raw_img, <span class="op">*</span>labels <span class="op">=</span> tf.numpy_function(</span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>            _wapper, [raw_img, bbox, is_augment],</span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>            [tf.uint8] <span class="op">+</span> [tf.float32] <span class="op">*</span> <span class="va">self</span>.scale_num, name<span class="op">=</span><span class="st">'process_img'</span>)</span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>        <span class="co"># normlize image</span></span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> is_normlize:</span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a>            img <span class="op">=</span> <span class="va">self</span>.normlize_img(raw_img)</span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a>        <span class="cf">else</span>:</span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a>            img <span class="op">=</span> tf.cast(raw_img, tf.float32)</span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> i, v <span class="kw">in</span> <span class="bu">enumerate</span>(<span class="va">self</span>.featuremap_size):</span>
+<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a>            labels[i].set_shape((v, v, <span class="va">self</span>.out_channels <span class="op">+</span> <span class="dv">2</span>))</span>
+<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a>        img.set_shape((<span class="va">self</span>.in_hw[<span class="dv">0</span>], <span class="va">self</span>.in_hw[<span class="dv">1</span>], <span class="dv">3</span>))</span>
+<span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> img, <span class="bu">tuple</span>(labels)</span>
+<span id="cb8-38"><a href="#cb8-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-39"><a href="#cb8-39" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> is_training:</span>
+<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a>        pos_ds <span class="op">=</span> (tf.data.TFRecordDataset(pos_tfrecord, buffer_size<span class="op">=</span><span class="dv">100</span>,</span>
+<span id="cb8-41"><a href="#cb8-41" aria-hidden="true" tabindex="-1"></a>                                          num_parallel_reads<span class="op">=</span><span class="dv">6</span>).</span>
+<span id="cb8-42"><a href="#cb8-42" aria-hidden="true" tabindex="-1"></a>                  shuffle(batch_size <span class="op">*</span> <span class="dv">200</span>, rand_seed).repeat().<span class="bu">map</span>(_parser))</span>
+<span id="cb8-43"><a href="#cb8-43" aria-hidden="true" tabindex="-1"></a>        neg_ds <span class="op">=</span> (tf.data.TFRecordDataset(neg_tfrecord, buffer_size<span class="op">=</span><span class="dv">100</span>,</span>
+<span id="cb8-44"><a href="#cb8-44" aria-hidden="true" tabindex="-1"></a>                                          num_parallel_reads<span class="op">=</span><span class="dv">6</span>).</span>
+<span id="cb8-45"><a href="#cb8-45" aria-hidden="true" tabindex="-1"></a>                  shuffle(batch_size <span class="op">*</span> <span class="dv">200</span>, rand_seed).repeat().<span class="bu">map</span>(_parser))</span>
+<span id="cb8-46"><a href="#cb8-46" aria-hidden="true" tabindex="-1"></a>        ds <span class="op">=</span> (tf.data.experimental.sample_from_datasets(</span>
+<span id="cb8-47"><a href="#cb8-47" aria-hidden="true" tabindex="-1"></a>            [pos_ds, neg_ds], [<span class="dv">1</span> <span class="op">-</span> <span class="va">self</span>.neg_sample_ratio,</span>
+<span id="cb8-48"><a href="#cb8-48" aria-hidden="true" tabindex="-1"></a>                               <span class="va">self</span>.neg_sample_ratio]).</span>
+<span id="cb8-49"><a href="#cb8-49" aria-hidden="true" tabindex="-1"></a>            batch(batch_size, <span class="va">True</span>).prefetch(<span class="op">-</span><span class="dv">1</span>))</span>
+<span id="cb8-50"><a href="#cb8-50" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb8-51"><a href="#cb8-51" aria-hidden="true" tabindex="-1"></a>        <span class="cf">raise</span> <span class="pp">NotImplementedError</span>(<span class="st">'No support to test eval'</span>)</span>
+<span id="cb8-52"><a href="#cb8-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-53"><a href="#cb8-53" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> ds</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="进一步定位问题" class="level2">
+<h2 class="anchored" data-anchor-id="进一步定位问题">进一步定位问题</h2>
+<p>现在我发现虽然用了<code>tfrecord+tf.data</code>的方式,但还是有内存泄漏的问题,不过这次更加进一步的定位到了问题:</p>
+<p>测试代码如下,我检测<code>fn</code>是否报错.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="at">@profile</span>(stream<span class="op">=</span><span class="bu">open</span>(<span class="st">'tmp/process.log'</span>, <span class="st">'w'</span>), precision<span class="op">=</span><span class="dv">4</span>)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> fn(sess, h: LFFDHelper, imgs, bboxs):</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    img, ann <span class="op">=</span> sess.run([imgs, bboxs])</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    img, ann <span class="op">=</span> h.resize_img(img, ann)</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    img, ann <span class="op">=</span> h.data_augmenter(img, ann)</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    label <span class="op">=</span> h.ann_to_label(ann)</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> img, label</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _parser(stream: <span class="bu">bytes</span>):</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>    example <span class="op">=</span> tf.io.parse_single_example(stream, {</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>        <span class="st">'img_raw'</span>: tf.io.FixedLenFeature([], tf.string),</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>        <span class="st">'label'</span>: tf.io.FixedLenFeature([], tf.int64),</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>        <span class="st">'bbox'</span>: tf.io.FixedLenFeature([], tf.string),</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>    })  <span class="co"># type:dict</span></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>    raw_img <span class="op">=</span> tf.image.decode_image(example[<span class="st">'img_raw'</span>], channels<span class="op">=</span><span class="dv">3</span>)</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>    label <span class="op">=</span> example[<span class="st">'label'</span>]</span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>    <span class="co"># bbox = tf.io.parse_tensor(example['bbox'], tf.float32)</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>    bbox <span class="op">=</span> <span class="fl">0.</span></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> raw_img, bbox</span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> test_no_dataset_memory_leak():</span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>    <span class="co">""" 测试以非dataset的方式运行时内存泄漏问题</span></span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a><span class="co">    ! 1.发现问题出现在tf.data读取tfrecord的地方</span></span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a><span class="co">     """</span></span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>    neg_resize_factor <span class="op">=</span> np.array([<span class="fl">0.5</span>, <span class="fl">3.5</span>])</span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>    in_hw <span class="op">=</span> np.array([<span class="dv">640</span>, <span class="dv">640</span>])</span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>    featuremap_size <span class="op">=</span> np.array([<span class="dv">159</span>, <span class="dv">79</span>, <span class="dv">39</span>, <span class="dv">19</span>, <span class="dv">9</span>])</span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>    h <span class="op">=</span> LFFDHelper(<span class="st">'data/lffd_img_ann.npy'</span>,</span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a>                   featuremap_size, in_hw, neg_resize_factor, <span class="fl">0.2</span>, <span class="fl">0.1</span>)</span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a>    batch_size <span class="op">=</span> <span class="dv">16</span></span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a>    pos_ds <span class="op">=</span> (tf.data.Dataset.list_files(h.train_pos, <span class="va">True</span>).</span>
+<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a>              interleave(tf.data.TFRecordDataset, <span class="bu">len</span>(h.train_pos), <span class="dv">1</span>, <span class="dv">4</span>).</span>
+<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a>              shuffle(batch_size <span class="op">*</span> <span class="dv">500</span>).repeat().<span class="bu">map</span>(_parser))</span>
+<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a>    neg_ds <span class="op">=</span> (tf.data.Dataset.list_files(h.train_neg, <span class="va">True</span>).</span>
+<span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a>              interleave(tf.data.TFRecordDataset, <span class="bu">len</span>(h.train_neg), <span class="dv">1</span>, <span class="dv">4</span>).</span>
+<span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a>              shuffle(batch_size <span class="op">*</span> <span class="dv">500</span>).repeat().<span class="bu">map</span>(_parser))</span>
+<span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a>    ds <span class="op">=</span> (tf.data.experimental.sample_from_datasets(</span>
+<span id="cb9-41"><a href="#cb9-41" aria-hidden="true" tabindex="-1"></a>        [pos_ds, neg_ds],</span>
+<span id="cb9-42"><a href="#cb9-42" aria-hidden="true" tabindex="-1"></a>        [<span class="dv">1</span> <span class="op">-</span> h.neg_sample_ratio, h.neg_sample_ratio]).prefetch(<span class="op">-</span><span class="dv">1</span>))</span>
+<span id="cb9-43"><a href="#cb9-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-44"><a href="#cb9-44" aria-hidden="true" tabindex="-1"></a>    iters <span class="op">=</span> ds._make_one_shot_iterator()</span>
+<span id="cb9-45"><a href="#cb9-45" aria-hidden="true" tabindex="-1"></a>    imgs, bboxs <span class="op">=</span> iters.get_next()</span>
+<span id="cb9-46"><a href="#cb9-46" aria-hidden="true" tabindex="-1"></a>    sess <span class="op">=</span> tf.Session()</span>
+<span id="cb9-47"><a href="#cb9-47" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">5000</span>):</span>
+<span id="cb9-48"><a href="#cb9-48" aria-hidden="true" tabindex="-1"></a>        fn(sess, h, imgs, bboxs)</span>
+<span id="cb9-49"><a href="#cb9-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-50"><a href="#cb9-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-51"><a href="#cb9-51" aria-hidden="true" tabindex="-1"></a>test_no_dataset_memory_leak()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>log文件如下,可以发现正常的一个读取<code>tfrecord</code>的流程就会出问题:</p>
+<pre><code>Filename: devlop/dev_lffd.py
+
+Line #    Mem usage    Increment   Line Contents
+================================================
+  1156 2506.0898 MiB 2506.0898 MiB   @profile(stream=open('tmp/process.log', 'w'), precision=4)
+  1157                             def fn(sess, h: LFFDHelper, imgs, bboxs):
+  1158 2506.3477 MiB   0.2578 MiB       img, ann = sess.run([imgs, bboxs])
+  1159 2506.3477 MiB   0.0000 MiB       img, ann = h.resize_img(img, ann)
+  1160 2506.3477 MiB   0.0000 MiB       img, ann = h.data_augmenter(img, ann)
+  1161 2506.3477 MiB   0.0000 MiB       label = h.ann_to_label(ann)
+  1162 2506.3477 MiB   0.0000 MiB       return img, label
+
+
+Filename: devlop/dev_lffd.py
+
+Line #    Mem usage    Increment   Line Contents
+================================================
+  1156 2506.3477 MiB 2506.3477 MiB   @profile(stream=open('tmp/process.log', 'w'), precision=4)
+  1157                             def fn(sess, h: LFFDHelper, imgs, bboxs):
+  1158 2506.6055 MiB   0.2578 MiB       img, ann = sess.run([imgs, bboxs])
+  1159 2506.6055 MiB   0.0000 MiB       img, ann = h.resize_img(img, ann)
+  1160 2506.6055 MiB   0.0000 MiB       img, ann = h.data_augmenter(img, ann)
+  1161 2506.6055 MiB   0.0000 MiB       label = h.ann_to_label(ann)
+  1162 2506.6055 MiB   0.0000 MiB       return img, label
+
+
+Filename: devlop/dev_lffd.py
+
+Line #    Mem usage    Increment   Line Contents
+================================================
+  1156 2506.6055 MiB 2506.6055 MiB   @profile(stream=open('tmp/process.log', 'w'), precision=4)
+  1157                             def fn(sess, h: LFFDHelper, imgs, bboxs):
+  1158 2506.8633 MiB   0.2578 MiB       img, ann = sess.run([imgs, bboxs])
+  1159 2506.8633 MiB   0.0000 MiB       img, ann = h.resize_img(img, ann)
+  1160 2506.8633 MiB   0.0000 MiB       img, ann = h.data_augmenter(img, ann)
+  1161 2506.8633 MiB   0.0000 MiB       label = h.ann_to_label(ann)
+  1162 2506.8633 MiB   0.0000 MiB       return img, label</code></pre>
+<p><img src="skimage-mem-leak/Figure_4.png" class="img-fluid"></p>
+</section>
+<section id="检查下别的tf.data输入是否会出现内存泄漏问题" class="level2">
+<h2 class="anchored" data-anchor-id="检查下别的tf.data输入是否会出现内存泄漏问题">检查下别的tf.data输入是否会出现内存泄漏问题</h2>
+<p>我做了6次实验如下:</p>
+<ol type="1">
+<li><p>去除<code>prefetch</code><strong>依旧内存泄漏</strong></p></li>
+<li><p>两个<code>dataset</code>对象共用一个<code>map</code>函数<strong>依旧内存泄漏</strong></p></li>
+<li><p>只读取一个<code>pos dataset</code><strong>依旧内存泄漏</strong></p></li>
+<li><p>不使用交错读取就没有问题了</p>
+<p>不会内存泄漏的构建过程如下:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> test_sample_dataset_memory_leak():</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    neg_resize_factor <span class="op">=</span> np.array([<span class="fl">0.5</span>, <span class="fl">3.5</span>])</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    in_hw <span class="op">=</span> np.array([<span class="dv">640</span>, <span class="dv">640</span>])</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    featuremap_size <span class="op">=</span> np.array([<span class="dv">159</span>, <span class="dv">79</span>, <span class="dv">39</span>, <span class="dv">19</span>, <span class="dv">9</span>])</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    h <span class="op">=</span> LFFDHelper(<span class="st">'data/lffd_img_ann.npy'</span>,</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>                   featuremap_size, in_hw, neg_resize_factor, <span class="fl">0.2</span>, <span class="fl">0.1</span>)</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>    batch_size <span class="op">=</span> <span class="dv">16</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>    pos_ds <span class="op">=</span> (tf.data.TFRecordDataset(h.train_pos, buffer_size<span class="op">=</span><span class="dv">100</span>, num_parallel_reads<span class="op">=</span><span class="dv">4</span>).</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>              shuffle(batch_size <span class="op">*</span> <span class="dv">500</span>).</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>              repeat().</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>              <span class="bu">map</span>(_parser))</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>    neg_ds <span class="op">=</span> (tf.data.TFRecordDataset(h.train_neg, buffer_size<span class="op">=</span><span class="dv">100</span>, num_parallel_reads<span class="op">=</span><span class="dv">4</span>).</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>              shuffle(batch_size <span class="op">*</span> <span class="dv">500</span>).</span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>              repeat().</span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>              <span class="bu">map</span>(_parser))</span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>    ds <span class="op">=</span> (tf.data.experimental.sample_from_datasets(</span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>        [pos_ds, neg_ds],</span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>        [<span class="dv">1</span> <span class="op">-</span> h.neg_sample_ratio, h.neg_sample_ratio]))</span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>    iters <span class="op">=</span> ds._make_one_shot_iterator()</span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>    imgs, bboxs <span class="op">=</span> iters.get_next()</span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>    sess <span class="op">=</span> tf.Session()</span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">5000</span>):</span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a>        fn(sess, h, imgs, bboxs)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><img src="skimage-mem-leak/Figure_5.png" class="img-fluid"></p></li>
+</ol>
+</section>
+<section id="新的问题" class="level2">
+<h2 class="anchored" data-anchor-id="新的问题">新的问题</h2>
+<p>我之所以需要使用交错读取,是为了保证对多个<code>tfrecord</code>的随机性,如果不能交错读取…那我不能随机训练起来不是很蛋疼么?我得看看非交错读取和交错读取的读取随机性.</p>
+<ol type="1">
+<li><p>首先生成一个总长<code>10000</code>的<code>tfrecord</code>文件.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> test_make_range_tfrecord():</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">""" 生成按顺序的tfrecord,用于检查tfrecord生成的随机性 """</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> np.arange(<span class="dv">10000</span>)</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, <span class="bu">len</span>(a), <span class="dv">2000</span>):</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">with</span> tf.io.TFRecordWriter(<span class="ss">f'tmp/</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">.tfrecords'</span>) <span class="im">as</span> writer:</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> num <span class="kw">in</span> a[i:i <span class="op">+</span> <span class="dv">2000</span>]:</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>                feature <span class="op">=</span> {</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'var'</span>: tf.train.Feature(int64_list<span class="op">=</span>tf.train.Int64List(value<span class="op">=</span>[num])),</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>                }</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>                serialized_example <span class="op">=</span> tf.train.Example(features<span class="op">=</span>tf.train.Features(feature<span class="op">=</span>feature)).SerializeToString()</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>                writer.write(serialized_example)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div></li>
+<li><p>测试无交错的读取<code>tfrecord</code>.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> test_read_range_tfrecord_no_interleave():</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">""" 测试无交错的读取顺序tfrecord dataset """</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    l <span class="op">=</span> [<span class="st">'tmp/0.tfrecords'</span>, <span class="st">'tmp/2000.tfrecords'</span>,</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>        <span class="st">'tmp/4000.tfrecords'</span>, <span class="st">'tmp/6000.tfrecords'</span>,</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>        <span class="st">'tmp/8000.tfrecords'</span>]</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> _par(stream: <span class="bu">bytes</span>):</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>        example <span class="op">=</span> tf.io.parse_single_example(stream, {</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>            <span class="st">'var'</span>: tf.io.FixedLenFeature([], tf.int64),</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>        })  <span class="co"># type:dict</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>        var <span class="op">=</span> example[<span class="st">'var'</span>]</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>        <span class="co"># bbox = tf.io.parse_tensor(example['bbox'], tf.float32)</span></span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> var</span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>    <span class="co"># @profile(stream=open('tmp/_fn.log', 'w'), precision=4)</span></span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> _fn(sess, next_num):</span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>        num <span class="op">=</span> sess.run([next_num])</span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> num[<span class="dv">0</span>]</span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>    ds <span class="op">=</span> (tf.data.TFRecordDataset(l, buffer_size<span class="op">=</span><span class="dv">100</span>, num_parallel_reads<span class="op">=</span><span class="dv">4</span>).</span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a>        <span class="co">#   shuffle(16 * 500).</span></span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a>        repeat().<span class="bu">map</span>(_par))</span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a>    iters <span class="op">=</span> ds._make_one_shot_iterator()</span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a>    next_num <span class="op">=</span> iters.get_next()</span>
+<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a>    sess <span class="op">=</span> tf.Session()</span>
+<span id="cb13-27"><a href="#cb13-27" aria-hidden="true" tabindex="-1"></a>    arr <span class="op">=</span> np.zeros((<span class="dv">10000</span>))</span>
+<span id="cb13-28"><a href="#cb13-28" aria-hidden="true" tabindex="-1"></a>    f <span class="op">=</span> <span class="bu">open</span>(<span class="st">'tmp/_fn.log'</span>, <span class="st">'w'</span>)</span>
+<span id="cb13-29"><a href="#cb13-29" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">10000</span>):</span>
+<span id="cb13-30"><a href="#cb13-30" aria-hidden="true" tabindex="-1"></a>        arr[i] <span class="op">=</span> _fn(sess, next_num)</span>
+<span id="cb13-31"><a href="#cb13-31" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(arr[i], <span class="bu">file</span><span class="op">=</span>f)</span>
+<span id="cb13-32"><a href="#cb13-32" aria-hidden="true" tabindex="-1"></a>    plt.plot(arr)</span>
+<span id="cb13-33"><a href="#cb13-33" aria-hidden="true" tabindex="-1"></a>    plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>输出结果,可以发现采样现场为<code>4</code>,就是从<code>4</code>个<code>tfrecord</code>里面按顺序取: <code>sh  0.0  2000.0  4000.0  6000.0  1.0  2001.0  4001.0  6001.0  2.0  2002.0  4002.0  6002.0  3.0  2003.0  4003.0  6003.0  4.0</code> 但采样到后面就会出现比较单一的情况: <img src="skimage-mem-leak/Figure_6.png" class="img-fluid"> 然后并没有出现内存泄漏的问题: <img src="skimage-mem-leak/Figure_7.png" class="img-fluid"></p></li>
+<li><p>测试有交错的读取<code>tfrecord</code>.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> test_read_range_tfrecord_has_interleave():</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">""" 测试使用交错的读取tfrecord dataset """</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  l <span class="op">=</span> [<span class="st">'tmp/0.tfrecords'</span>, <span class="st">'tmp/2000.tfrecords'</span>,</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>      <span class="st">'tmp/4000.tfrecords'</span>, <span class="st">'tmp/6000.tfrecords'</span>,</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>      <span class="st">'tmp/8000.tfrecords'</span>]</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>  <span class="kw">def</span> _par(stream: <span class="bu">bytes</span>):</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>      example <span class="op">=</span> tf.io.parse_single_example(stream, {</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>          <span class="st">'var'</span>: tf.io.FixedLenFeature([], tf.int64),</span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>      })  <span class="co"># type:dict</span></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>      var <span class="op">=</span> example[<span class="st">'var'</span>]</span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>      <span class="co"># bbox = tf.io.parse_tensor(example['bbox'], tf.float32)</span></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>      <span class="cf">return</span> var</span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>  <span class="co"># @profile(stream=open('tmp/_fn.log', 'w'), precision=4)</span></span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>  <span class="kw">def</span> _fn(sess, next_num):</span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>      num <span class="op">=</span> sess.run([next_num])</span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>      <span class="cf">return</span> num[<span class="dv">0</span>]</span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>  ds <span class="op">=</span> (tf.data.Dataset.list_files(l, <span class="va">True</span>).</span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a>      interleave(tf.data.TFRecordDataset, <span class="bu">len</span>(l), <span class="dv">1</span>, <span class="dv">4</span>).</span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a>      repeat().<span class="bu">map</span>(_par))</span>
+<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a>  iters <span class="op">=</span> ds._make_one_shot_iterator()</span>
+<span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a>  next_num <span class="op">=</span> iters.get_next()</span>
+<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a>  sess <span class="op">=</span> tf.Session()</span>
+<span id="cb14-27"><a href="#cb14-27" aria-hidden="true" tabindex="-1"></a>  arr <span class="op">=</span> np.zeros((<span class="dv">10000</span>))</span>
+<span id="cb14-28"><a href="#cb14-28" aria-hidden="true" tabindex="-1"></a>  f <span class="op">=</span> <span class="bu">open</span>(<span class="st">'tmp/_fn.log'</span>, <span class="st">'w'</span>)</span>
+<span id="cb14-29"><a href="#cb14-29" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">10000</span>):</span>
+<span id="cb14-30"><a href="#cb14-30" aria-hidden="true" tabindex="-1"></a>      arr[i] <span class="op">=</span> (_fn(sess, next_num))</span>
+<span id="cb14-31"><a href="#cb14-31" aria-hidden="true" tabindex="-1"></a>      <span class="bu">print</span>(arr[i], <span class="bu">file</span><span class="op">=</span>f)</span>
+<span id="cb14-32"><a href="#cb14-32" aria-hidden="true" tabindex="-1"></a>  plt.plot(arr)</span>
+<span id="cb14-33"><a href="#cb14-33" aria-hidden="true" tabindex="-1"></a>  plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>我发现这个交错<code>4</code>线程读取,他的预期行为和直接<code>4</code>线程读取<code>tfrecords</code>也是一样的:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb15"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="ex">2000.0</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="ex">0.0</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="ex">8000.0</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="ex">4000.0</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="ex">6000.0</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="ex">2001.0</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a><span class="ex">1.0</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a><span class="ex">8001.0</span></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a><span class="ex">4001.0</span></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a><span class="ex">6001.0</span></span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a><span class="ex">2002.0</span></span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a><span class="ex">2.0</span></span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a><span class="ex">8002.0</span></span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a><span class="ex">4002.0</span></span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a><span class="ex">6002.0</span></span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a><span class="ex">2003.0</span></span>
+<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a><span class="ex">3.0</span></span>
+<span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a><span class="ex">8003.0</span></span>
+<span id="cb15-19"><a href="#cb15-19" aria-hidden="true" tabindex="-1"></a><span class="ex">4003.0</span></span>
+<span id="cb15-20"><a href="#cb15-20" aria-hidden="true" tabindex="-1"></a><span class="ex">6003.0</span></span>
+<span id="cb15-21"><a href="#cb15-21" aria-hidden="true" tabindex="-1"></a><span class="ex">2004.0</span></span>
+<span id="cb15-22"><a href="#cb15-22" aria-hidden="true" tabindex="-1"></a><span class="ex">4.0</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>这个采样到最后就不会出现单一数值的情况: <img src="skimage-mem-leak/Figure_8.png" class="img-fluid"> 但是我发现也没有出现内存泄漏的情况!!我心累了,看来之前的内存泄漏问题<strong>原因还不在这里</strong>. <img src="skimage-mem-leak/Figure_9.png" class="img-fluid"></p></li>
+</ol>
+</section>
+<section id="进一步检查是不是tf.example的格式导致的." class="level2">
+<h2 class="anchored" data-anchor-id="进一步检查是不是tf.example的格式导致的.">进一步检查是不是<code>tf.example</code>的格式导致的.</h2>
+<p>我忽然发现前面定位问题还没定位到,最后一个我认为没有内存泄漏的方式在我运行时间够长之后还是有内存存在的.这个<code>tf.example</code>我尝试了,并不影响.继续尝试:</p>
+<ol type="1">
+<li><p>之前使用非交错读取: <code>python      pos_ds = (tf.data.TFRecordDataset(h.train_pos, buffer_size=100, num_parallel_reads=4).                shuffle(batch_size * 500).                repeat())      neg_ds = (tf.data.TFRecordDataset(h.train_neg, buffer_size=100, num_parallel_reads=4).                shuffle(batch_size * 500).                repeat())      ds = (tf.data.experimental.sample_from_datasets(          [pos_ds, neg_ds],          [1 - h.neg_sample_ratio, h.neg_sample_ratio]).map(_parser))</code></p>
+<p>但是运行时间长了之后: <img src="skimage-mem-leak/Figure_10.png" class="img-fluid"></p></li>
+<li><p>单个数据集非交错读取</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>pos_ds <span class="op">=</span> (tf.data.TFRecordDataset(h.train_pos, buffer_size<span class="op">=</span><span class="dv">100</span>, num_parallel_reads<span class="op">=</span><span class="dv">4</span>).</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>          shuffle(batch_size <span class="op">*</span> <span class="dv">500</span>).</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>          repeat())</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="co"># neg_ds = (tf.data.TFRecordDataset(h.train_neg, buffer_size=100, num_parallel_reads=4).</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a><span class="co">#           shuffle(batch_size * 500).</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="co">#           repeat())</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a><span class="co"># ds = (tf.data.experimental.sample_from_datasets(</span></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a><span class="co">#     [pos_ds, neg_ds],</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a><span class="co">#     [1 - h.neg_sample_ratio, h.neg_sample_ratio]).map(_parser))</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>ds <span class="op">=</span> pos_ds.<span class="bu">map</span>(_parser)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>运行,感觉好像还是有点问题,我人都晕了…: <img src="skimage-mem-leak/Figure_11.png" class="img-fluid"></p></li>
+<li><p>单个数据集交错读取</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>pos_ds <span class="op">=</span> (tf.data.Dataset.list_files(h.train_pos, <span class="va">True</span>).</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>          interleave(tf.data.TFRecordDataset, <span class="bu">len</span>(h.train_pos), <span class="dv">1</span>, <span class="dv">4</span>).</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>          shuffle(batch_size <span class="op">*</span> <span class="dv">500</span>).repeat())</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="co"># neg_ds = (tf.data.TFRecordDataset(h.train_neg, buffer_size=100, num_parallel_reads=4).</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="co">#           shuffle(batch_size * 500).</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="co">#           repeat())</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a><span class="co"># ds = (tf.data.experimental.sample_from_datasets(</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a><span class="co">#     [pos_ds, neg_ds],</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a><span class="co">#     [1 - h.neg_sample_ratio, h.neg_sample_ratio]).map(_parser))</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>ds <span class="op">=</span> pos_ds.<span class="bu">map</span>(_parser)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>运行结果,这个占内存更大并且持续升高比例大: <img src="skimage-mem-leak/Figure_12.png" class="img-fluid"></p></li>
+<li><p>双数据集无交错采样读取:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>pos_ds <span class="op">=</span> (tf.data.TFRecordDataset(h.train_pos, buffer_size<span class="op">=</span><span class="dv">100</span>, num_parallel_reads<span class="op">=</span><span class="dv">8</span>).</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>          shuffle(batch_size <span class="op">*</span> <span class="dv">500</span>).repeat())</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>neg_ds <span class="op">=</span> (tf.data.TFRecordDataset(h.train_neg, buffer_size<span class="op">=</span><span class="dv">100</span>, num_parallel_reads<span class="op">=</span><span class="dv">8</span>).</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>          shuffle(batch_size <span class="op">*</span> <span class="dv">500</span>).repeat())</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>ds <span class="op">=</span> (tf.data.experimental.sample_from_datasets(</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>    [pos_ds, neg_ds],</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>    [<span class="dv">1</span> <span class="op">-</span> h.neg_sample_ratio, h.neg_sample_ratio]).<span class="bu">map</span>(_parser))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>还是在增加,我头大…为什么简单的数据集就不会有这个情况. <img src="skimage-mem-leak/Figure_13.png" class="img-fluid"></p></li>
+</ol>
+</section>
+</section>
+<section id="不折腾了" class="level1">
+<h1>不折腾了</h1>
+<p>这个<code>tfrecord</code>的问题把我恶心到了,我现在直接用我最常用的方式,从<code>range</code>里面索引数据的方式做,这样是最稳妥的,没有出过问题.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>pos_ds <span class="op">=</span> (tf.data.Dataset.<span class="bu">range</span>(<span class="bu">len</span>(pos_list))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>修改成这个方式之后,我的运行内存就一直保持在<code>6.1GB</code>左右了.算是勉强解决了这个傻吊问题.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb20"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="ex">Filename:</span> devlop/dev_lffd.py</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="ex">Line</span> <span class="co">#    Mem usage    Increment   Line Contents</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a><span class="ex">================================================</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>  <span class="ex">1212</span>   6133.3 MiB   6133.3 MiB   @mem_profile</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>  <span class="ex">1213</span>                             def fn<span class="er">(</span><span class="ex">sess,</span> next_op<span class="kw">)</span><span class="bu">:</span></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>  <span class="ex">1214</span>   6131.7 MiB      0.0 MiB       return sess.run<span class="er">(</span><span class="ex">next_op</span><span class="kw">)</span></span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a><span class="ex">Filename:</span> devlop/dev_lffd.py</span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a><span class="ex">Line</span> <span class="co">#    Mem usage    Increment   Line Contents</span></span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a><span class="ex">================================================</span></span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>  <span class="ex">1212</span>   6131.7 MiB   6131.7 MiB   @mem_profile</span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>  <span class="ex">1213</span>                             def fn<span class="er">(</span><span class="ex">sess,</span> next_op<span class="kw">)</span><span class="bu">:</span></span>
+<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a>  <span class="ex">1214</span>   6133.0 MiB      1.3 MiB       return sess.run<span class="er">(</span><span class="ex">next_op</span><span class="kw">)</span></span>
+<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-19"><a href="#cb20-19" aria-hidden="true" tabindex="-1"></a><span class="ex">Filename:</span> devlop/dev_lffd.py</span>
+<span id="cb20-20"><a href="#cb20-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-21"><a href="#cb20-21" aria-hidden="true" tabindex="-1"></a><span class="ex">Line</span> <span class="co">#    Mem usage    Increment   Line Contents</span></span>
+<span id="cb20-22"><a href="#cb20-22" aria-hidden="true" tabindex="-1"></a><span class="ex">================================================</span></span>
+<span id="cb20-23"><a href="#cb20-23" aria-hidden="true" tabindex="-1"></a>  <span class="ex">1212</span>   6133.0 MiB   6133.0 MiB   @mem_profile</span>
+<span id="cb20-24"><a href="#cb20-24" aria-hidden="true" tabindex="-1"></a>  <span class="ex">1213</span>                             def fn<span class="er">(</span><span class="ex">sess,</span> next_op<span class="kw">)</span><span class="bu">:</span></span>
+<span id="cb20-25"><a href="#cb20-25" aria-hidden="true" tabindex="-1"></a>  <span class="ex">1214</span>   6133.1 MiB      0.1 MiB       return sess.run<span class="er">(</span><span class="ex">next_op</span><span class="kw">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/zhen8838\.github\.io");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script src="https://utteranc.es/client.js" repo="zhen8838/zhen8838.github.io" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

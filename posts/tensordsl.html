@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2023-12-20">
+
+<title>Tensor DSL总结 – Zheng’s Notes</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../assets/favicon.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-7072389654d23eff08f359f9aa0d1ee7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">Zheng’s Notes</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#jittor" id="toc-jittor" class="nav-link active" data-scroll-target="#jittor">1. Jittor</a>
+  <ul class="collapse">
+  <li><a href="#dsl语法" id="toc-dsl语法" class="nav-link" data-scroll-target="#dsl语法">1.1 DSL语法</a></li>
+  <li><a href="#测试例子" id="toc-测试例子" class="nav-link" data-scroll-target="#测试例子">1.2 测试例子</a></li>
+  </ul></li>
+  <li><a href="#halide" id="toc-halide" class="nav-link" data-scroll-target="#halide">2. Halide</a>
+  <ul class="collapse">
+  <li><a href="#dsl语法-1" id="toc-dsl语法-1" class="nav-link" data-scroll-target="#dsl语法-1">2.1 DSL语法</a></li>
+  <li><a href="#测试例子-1" id="toc-测试例子-1" class="nav-link" data-scroll-target="#测试例子-1">2.2 测试例子</a></li>
+  </ul></li>
+  <li><a href="#tvm" id="toc-tvm" class="nav-link" data-scroll-target="#tvm">3. TVM</a>
+  <ul class="collapse">
+  <li><a href="#dsl语法-2" id="toc-dsl语法-2" class="nav-link" data-scroll-target="#dsl语法-2">3.1 DSL语法</a></li>
+  <li><a href="#测试例子-2" id="toc-测试例子-2" class="nav-link" data-scroll-target="#测试例子-2">3.2 测试例子</a></li>
+  </ul></li>
+  <li><a href="#mlir" id="toc-mlir" class="nav-link" data-scroll-target="#mlir">4. Mlir</a>
+  <ul class="collapse">
+  <li><a href="#dsl语法-3" id="toc-dsl语法-3" class="nav-link" data-scroll-target="#dsl语法-3">4.1 DSL语法</a></li>
+  <li><a href="#测试例子-3" id="toc-测试例子-3" class="nav-link" data-scroll-target="#测试例子-3">4.2 测试例子</a></li>
+  </ul></li>
+  <li><a href="#tiramisu" id="toc-tiramisu" class="nav-link" data-scroll-target="#tiramisu">5. Tiramisu</a>
+  <ul class="collapse">
+  <li><a href="#dsl语法-4" id="toc-dsl语法-4" class="nav-link" data-scroll-target="#dsl语法-4">5.1 DSL语法</a></li>
+  <li><a href="#测试例子-4" id="toc-测试例子-4" class="nav-link" data-scroll-target="#测试例子-4">5.2 测试例子</a></li>
+  </ul></li>
+  <li><a href="#总结" id="toc-总结" class="nav-link" data-scroll-target="#总结">总结</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Tensor DSL总结</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">编译器</div>
+  </div>
+  </div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">December 20, 2023</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>本文旨在总结一些张量优化的DSL是如何设计的, 尝试从其中发现一些共同点. 接下来我将统一使用<code>Matmul(Transpose(Conv(lhs)),rhs)</code>的例子在不同的框架中进行测试.</p>
+<!--more-->
+<section id="jittor" class="level1">
+<h1>1. <a href="http://scis.scichina.com/en/2020/222103.pdf">Jittor</a></h1>
+<section id="dsl语法" class="level2">
+<h2 class="anchored" data-anchor-id="dsl语法">1.1 DSL语法</h2>
+<p>首先结合论文中的例子讲一下<code>reindex</code>的原理:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> conv(x, p):</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  N,C,H,W <span class="op">=</span> x.shape </span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  o,i,h,w <span class="op">=</span> p.shape </span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  xx <span class="op">=</span> x.reindex(shape<span class="op">=</span>(N,o,H,W,i,h,w),</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>                 indexes<span class="op">=</span>(<span class="st">"i0"</span>, <span class="st">"i4"</span>, <span class="st">"i2-i5"</span>, <span class="st">"i3-i6"</span>) )</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  pp <span class="op">=</span> p.broadcast(xx.shape, dims<span class="op">=</span>(<span class="dv">0</span>,<span class="dv">2</span>,<span class="dv">3</span>))</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  yy <span class="op">=</span> xx<span class="op">*</span>pp</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  y <span class="op">=</span> yy.<span class="bu">sum</span>(dims<span class="op">=</span>(<span class="dv">4</span>,<span class="dv">5</span>,<span class="dv">6</span>))</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> y</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>这里其实是把<code>shape</code>看作为循环层级, 这里的<code>reindex</code>相当于在7层循环的最内层中做类似<code>xx[N,o,H,W,i,h,w] = x[N,i,H-h,W-w]</code>的索引. 然后再把<code>weights</code>也通过<code>boradcast</code>扩展到同样的循环层级<code>pp[N,o,H,W,i,h,w] = p[o,i,h,w]</code>, 在7层循环内部执行<code>xx[N,o,H,W,i,h,w]*pp[N,o,H,W,i,h,w]</code>的操作, 等价于执行<code>x[N,i,H-h,W-w] * p[o,i,h,w]</code>, 然后对<code>i,h,w</code>三层循环做求和.</p>
+<p>可以说通过<code>reindex</code>+<code>broadcast</code>操作, 完成了类似于<code>polyhedral</code>中2d+1表示中的<code>loop dimension align</code>和修改<code>access relation</code>(由<code>indexes</code>指定). <code>Jittor</code>这里并没有考虑让开发者自行调度算子, 后续的优化都交给编译器自动化.</p>
+</section>
+<section id="测试例子" class="level2">
+<h2 class="anchored" data-anchor-id="测试例子">1.2 测试例子</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> jittor <span class="im">as</span> jt</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> conv(x, p):</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  N,C,H,W <span class="op">=</span> x.shape </span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  o,i,h,w <span class="op">=</span> p.shape </span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  xx <span class="op">=</span> x.reindex(shape<span class="op">=</span>(N,o,H,W,i,h,w),</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>                 indexes<span class="op">=</span>(<span class="st">"i0"</span>, <span class="st">"i4"</span>, <span class="st">"i2-i5"</span>, <span class="st">"i3-i6"</span>))</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  pp <span class="op">=</span> p.broadcast(xx.shape, dims<span class="op">=</span>(<span class="dv">0</span>,<span class="dv">2</span>,<span class="dv">3</span>))</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  yy <span class="op">=</span> xx<span class="op">*</span>pp</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  y <span class="op">=</span> yy.<span class="bu">sum</span>(dims<span class="op">=</span>(<span class="dv">4</span>,<span class="dv">5</span>,<span class="dv">6</span>))</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> y</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> matmul(a,b):</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>  bc, c, m,k <span class="op">=</span> a.shape</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>  _, _, _,n <span class="op">=</span> b.shape</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>  shape <span class="op">=</span> [bc, c, m, k, n]</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>  a <span class="op">=</span> a.broadcast(shape, [<span class="op">-</span><span class="dv">1</span>]) <span class="co"># [m,k, ] -&gt; [m,k,n]</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>  b <span class="op">=</span> b.broadcast(shape, [<span class="op">-</span><span class="dv">3</span>]) <span class="co"># [ ,k,n] -&gt; [m,k,n]</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> (a<span class="op">*</span>b).<span class="bu">sum</span>(<span class="op">-</span><span class="dv">2</span>)</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>lhs <span class="op">=</span> jt.randn(<span class="dv">8</span>,<span class="dv">3</span>,<span class="dv">32</span>,<span class="dv">32</span>)</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>kernel <span class="op">=</span> jt.randn(<span class="dv">16</span>,<span class="dv">3</span>,<span class="dv">3</span>,<span class="dv">3</span>)</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>rhs <span class="op">=</span> jt.randn(<span class="dv">8</span>,<span class="dv">32</span>,<span class="dv">16</span>,<span class="dv">64</span>)</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>jt.flags.compile_options<span class="op">=</span>{<span class="st">"compile_shapes"</span>:<span class="dv">1</span>}</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> jt.profile_scope() <span class="im">as</span> report:</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span> matmul(jt.transpose(conv(lhs, kernel), [<span class="dv">0</span>,<span class="dv">2</span>,<span class="dv">3</span>,<span class="dv">1</span>]), rhs).fetch_sync()</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>jt.flags.compile_options<span class="op">=</span>{}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>编译后得到:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">Profile</span> result, sorted by TotalTime</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">(</span><span class="st">'it/s'</span> represent number of iterations per sec<span class="kw">)</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>      <span class="ex">Name</span>  FileName     Count TotalTime    %,cum%   AvgTime   MinTime   MaxTime     Input    Output     InOut   Compute</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="ex">Total</span> time:    12.8ms</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="ex">Total</span> Memory Access:    6.19MB</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="ex">[opkey0:broadcast_to[Tx:float32][DIM=7][BCAST=d][JIT:1][JIT_cpu:1][index_t:int32]][opkey1:reindex[Tx:float32][XDIM=4][YDIM=7][OVERFLOW:itof</span><span class="er">(</span><span class="ex">0x0</span><span class="kw">)</span><span class="ex">][INDEX0:i0][INDEX1:i4][INDEX2:i2-i5][INDEX3:i3-i6][OSIZE=0][ESIZE=0][JIT:1][JIT_cpu:1][index_t:int32]][opkey2:binary[Tx:float32][Ty:float32][Tz:float32][OP:multiply][JIT:1][JIT_cpu:1][index_t:int32]][opkey3:reduce[Tx:float32][Ty:float32][Tz:float32][OP:add][DIM=7][REDUCE=70][JIT:1][JIT_cpu:1][index_t:int32]][JIT:1][JIT_cpu:1][graph:040000,062010,010020,000021,020030,][var_info::041704171724][shapes:[10,3,3,3,],[8,10,20,20,3,3,3,],[8,3,20,20,],[8,10,20,20,3,3,3,],[8,10,20,20,3,3,3,],[8,10,20,20,],][choices:compile_shapes:1,]</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>          <span class="ex">/root/.cache/jittor/jt1.3.1/g++10.5.0/py3.8.18/Linux-5.4.0-42xae/AMDEPYC7T8364-x8f_debug/default/jit/_opkey0_broadcast_to_Tx_float32__DIM_7__BCAST_d__JIT_1__JIT_cpu_1__index_t_int32___opkey1____hash_a2d65b1fd1c3f3d0_op.cc</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>                             <span class="ex">1</span>    8.12ms<span class="er">(</span><span class="ex">63.3%,63.3%</span><span class="kw">)</span>    <span class="ex">8.12ms</span>    8.12ms    8.12ms  11.7MB/s  61.6MB/s  73.3MB/s  436Mit/s</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="va">random</span><span class="op">[</span>T:float32<span class="op">][</span>R:normal<span class="op">][</span>JIT:1<span class="op">][</span>JIT_cpu:1<span class="op">][</span>index_t:int32<span class="op">]</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>          <span class="ex">/root/.cache/jittor/jt1.3.1/g++10.5.0/py3.8.18/Linux-5.4.0-42xae/AMDEPYC7T8364-x8f_debug/default/jit/random_T_float32__R_normal__JIT_1__JIT_cpu_1__index_t_int32__hash_c27874d0aacc5d25_op.cc</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>                             <span class="ex">3</span>    3.68ms<span class="er">(</span><span class="ex">28.7%,91.9%</span><span class="kw">)</span>    <span class="ex">1.23ms</span>    5.58us    3.37ms     0 B/s   298MB/s   298MB/s   78Mit/s</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="ex">[opkey0:broadcast_to[Tx:float32][DIM=5][BCAST=4][JIT:1][JIT_cpu:1][index_t:int32]][opkey1:broadcast_to[Tx:float32][DIM=5][BCAST=10][JIT:1][JIT_cpu:1][index_t:int32]][opkey2:binary[Tx:float32][Ty:float32][Tz:float32][OP:multiply][JIT:1][JIT_cpu:1][index_t:int32]][opkey3:reduce[Tx:float32][Ty:float32][Tz:float32][OP:add][DIM=5][REDUCE=8][JIT:1][JIT_cpu:1][index_t:int32]][JIT:1][JIT_cpu:1][graph:040000,062010,010020,000021,020030,][var_info::041504151524][shapes:[8,20,10,40,],[8,20,20,10,40,],[8,20,20,10,],[8,20,20,10,40,],[8,20,20,10,40,],[8,20,20,40,],][choices:compile_shapes:1,]</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>          <span class="ex">/root/.cache/jittor/jt1.3.1/g++10.5.0/py3.8.18/Linux-5.4.0-42xae/AMDEPYC7T8364-x8f_debug/default/jit/_opkey0_broadcast_to_Tx_float32__DIM_5__BCAST_4__JIT_1__JIT_cpu_1__index_t_int32___opkey1____hash_ef35f9063cf2acdf_op.cc</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>                             <span class="ex">1</span>     828us<span class="er">(</span><span class="ex">6.45%,98.4%</span><span class="kw">)</span>     <span class="ex">828us</span>     828us     828us  1.77GB/s  2.36GB/s  4.13GB/s 10.1Git/s</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="va">transpose</span><span class="op">[</span>Tx:float32<span class="op">][</span>DIM=4<span class="op">][</span>AXES0=0<span class="op">][</span>AXES2=1<span class="op">][</span>AXES3=2<span class="op">][</span>AXES1=3<span class="op">][</span>JIT:1<span class="op">][</span>JIT_cpu:1<span class="op">][</span>index_t:int32<span class="op">]</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>          <span class="ex">/root/.cache/jittor/jt1.3.1/g++10.5.0/py3.8.18/Linux-5.4.0-42xae/AMDEPYC7T8364-x8f_debug/default/jit/transpose_Tx_float32__DIM_4__AXES0_0__AXES2_1__AXES3_2__AXES1_3__JIT_1__JIT_cpu_1__index_t_int32__hash_998b34c8052fe15_op.cc</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>                             <span class="ex">1</span>     208us<span class="er">(</span><span class="ex">1.62%,100%</span><span class="kw">)</span>     <span class="ex">208us</span>     208us     208us  2.35GB/s  2.35GB/s  4.71GB/s  632Mit/s</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>最终我检查他的输出, 发现是分成了三个部分, <code>_opkey0_broadcast_to_Tx_float32__DIM_7__BCAST_d__JIT_1__JIT_cpu_1__index_t_int32___opkey1____hash_a2d65b1fd1c3f3d0_op</code>为卷积实现, <code>_opkey0_broadcast_to_Tx_float32__DIM_5__BCAST_4__JIT_1__JIT_cpu_1__index_t_int32___opkey1____hash_ef35f9063cf2acdf_op</code>为矩阵乘, <code>transpose_Tx_float32__DIM_4__AXES0_0__AXES2_1__AXES3_2__AXES1_3__JIT_1__JIT_cpu_1__index_t_int32__hash_998b34c8052fe15_op</code>为转置.</p>
+</section>
+</section>
+<section id="halide" class="level1">
+<h1>2. <a href="https://halide-lang.org">Halide</a></h1>
+<section id="dsl语法-1" class="level2">
+<h2 class="anchored" data-anchor-id="dsl语法-1">2.1 DSL语法</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> halide <span class="im">as</span> hl</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>inputLhs <span class="op">=</span> hl.ImageParam(hl.Float(<span class="dv">32</span>), <span class="dv">2</span>, <span class="st">"inputLhs"</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>inputRhs <span class="op">=</span> hl.ImageParam(hl.Float(<span class="dv">32</span>), <span class="dv">2</span>, <span class="st">"inputRhs"</span>)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>output <span class="op">=</span> hl.Func(<span class="st">"output"</span>)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>(m, n) <span class="op">=</span> hl.Var(<span class="st">"m"</span>), hl.Var(<span class="st">"n"</span>)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>k <span class="op">=</span> hl.RDom([hl.Range(<span class="dv">0</span>, <span class="va">self</span>.K)], <span class="st">"k"</span>)</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>output[n, m] <span class="op">=</span> <span class="fl">0.0</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>output[n, m] <span class="op">+=</span> inputLhs[k.x, m] <span class="op">*</span> inputRhs[n, k.x]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><code>Halide</code>使用<code>Var</code>来表示循环,对于规约的循环需要用<code>RDom</code>来标识(并且如果定义了规约循环,那么还需要为数据设定初值). 使用<code>Var</code>对张量<code>inputLhs[k.x, m]</code>进行索引操作用于建立<code>access relation</code>，实际计算时的迭代域是分析当前的计算statement所参与的迭代变量来决定的，最终根据<code>Var</code>来构建嵌套循环, 他这里默认应该都会把规约的循环放到最内层. 所以他的循环维度和数据的大小是绑定的，那么怎么去定义一个局部的buffer呢？</p>
+<p>提前声明的循环变量的缺点在于需要开发者手动管理好所有的循环变量, 书写起来较为复杂; 优点在于可以确定上下游操作循环之间的关系, 可以轻易的做到自动<code>fusion</code>上下两层算子.</p>
+</section>
+<section id="测试例子-1" class="level2">
+<h2 class="anchored" data-anchor-id="测试例子-1">2.2 测试例子</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> halide <span class="im">as</span> hl</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="bu">input</span> <span class="op">=</span> hl.ImageParam(hl.Float(<span class="dv">32</span>), <span class="dv">4</span>, <span class="st">"input"</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>weight <span class="op">=</span> hl.ImageParam(hl.Float(<span class="dv">32</span>), <span class="dv">4</span>, <span class="st">"weight"</span>)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>act <span class="op">=</span> hl.ImageParam(hl.Float(<span class="dv">32</span>), <span class="dv">2</span>, <span class="st">"act"</span>)</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>pad_w_before <span class="op">=</span> <span class="dv">0</span>  <span class="co"># hl.Param(hl.Int(32), "pad_w_before")</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>pad_h_before <span class="op">=</span> <span class="dv">0</span>  <span class="co"># hl.Param(hl.Int(32), "pad_h_before")</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>stride_w <span class="op">=</span> <span class="dv">1</span>  <span class="co"># hl.Param(hl.Int(32), "stride_w")</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>stride_h <span class="op">=</span> <span class="dv">1</span>  <span class="co"># hl.Param(hl.Int(32), "stride_h")</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>WO, HO, CI, B, CO <span class="op">=</span> hl.Var(<span class="st">"WO"</span>), hl.Var(<span class="st">"HO"</span>), hl.Var(<span class="st">"CI"</span>), hl.Var(<span class="st">"B"</span>), hl.Var(<span class="st">"CO"</span>)</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>Padding, Paded, Conv, Acted, Clamped, Psumed <span class="op">=</span> hl.Func(<span class="st">"Padding"</span>), hl.Func(</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Paded"</span>), hl.Func(<span class="st">"Conv"</span>), hl.Func(<span class="st">"Acted"</span>), hl.Func(<span class="st">"Clamped"</span>), hl.Func(<span class="st">"Psumed"</span>)</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>r <span class="op">=</span> hl.RDom([hl.Range(<span class="dv">0</span>, weight.width()), hl.Range(<span class="dv">0</span>, weight.height()),</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>            hl.Range(<span class="dv">0</span>, weight.dim(<span class="dv">2</span>).extent())])  <span class="co"># w,h,ic</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>Padding <span class="op">=</span> hl.BoundaryConditions.constant_exterior(</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span>, <span class="dv">0</span>, [hl.Range(<span class="dv">0</span>, <span class="bu">input</span>.width()), hl.Range(<span class="dv">0</span>, <span class="bu">input</span>.height())])</span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>in_channels <span class="op">=</span> <span class="bu">input</span>.dim(<span class="dv">2</span>).extent()</span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>out_channels <span class="op">=</span> weight.dim(<span class="dv">3</span>).extent()</span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>Paded[WO, HO, CI, B] <span class="op">=</span> Padding[WO <span class="op">-</span> pad_w_before, HO <span class="op">-</span> pad_h_before, CI, B]</span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>Conv[WO, HO, CO, B] <span class="op">=</span> <span class="fl">0.0</span></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>Conv[WO, HO, CO, B] <span class="op">+=</span> weight[r[<span class="dv">0</span>], r[<span class="dv">1</span>], r[<span class="dv">2</span>], CO] <span class="op">*</span> Paded[WO <span class="op">*</span> stride_w <span class="op">+</span> r[<span class="dv">0</span>], HO <span class="op">*</span> stride_h <span class="op">+</span> r[<span class="dv">1</span>], r[<span class="dv">2</span>], B]  <span class="co"># use float to sum</span></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>Acted[WO, HO, CO, B] <span class="op">=</span> hl.select(</span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a>    Conv[WO, HO, CO, B] <span class="op">&lt;</span> act[<span class="dv">0</span>, CO],</span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>    Conv[WO, HO, CO, B] <span class="op">*</span> act[<span class="dv">1</span>, CO] <span class="op">+</span> act[<span class="dv">2</span>, CO],</span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a>    Conv[WO, HO, CO, B] <span class="op">*</span> act[<span class="dv">3</span>, CO] <span class="op">+</span> act[<span class="dv">4</span>, CO])  <span class="co"># float</span></span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a>Transpose <span class="op">=</span> hl.Func(<span class="st">"Transpose"</span>)</span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a>Transpose[CO, WO, HO, B] <span class="op">=</span> Acted[WO, HO, CO, B]</span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a>rhs <span class="op">=</span> hl.ImageParam(hl.Float(<span class="dv">32</span>), <span class="dv">4</span>, <span class="st">"rhs"</span>)  <span class="co"># [x,x,K,N]</span></span>
+<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> hl.Var(<span class="st">"N"</span>)</span>
+<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a>kdom <span class="op">=</span> hl.RDom([hl.Range(<span class="dv">0</span>, rhs.dim(<span class="dv">2</span>).extent())], <span class="st">"k"</span>)</span>
+<span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a>Matmul <span class="op">=</span> hl.Func(<span class="st">"Matmul"</span>)</span>
+<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a>Matmul[N, WO, HO, B] <span class="op">=</span> <span class="fl">0.0</span></span>
+<span id="cb5-47"><a href="#cb5-47" aria-hidden="true" tabindex="-1"></a>Matmul[N, WO, HO, B] <span class="op">+=</span> Transpose[kdom.x, WO, HO, B] <span class="op">*</span> rhs[N, kdom.x, HO, B]</span>
+<span id="cb5-48"><a href="#cb5-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-49"><a href="#cb5-49" aria-hidden="true" tabindex="-1"></a>Matmul.print_loop_nest()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>得到的循环嵌套如下:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>produce Matmul:</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> B:</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> HO:</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> WO:</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> N:</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>          Matmul(...) <span class="op">=</span> ...</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> B:</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> HO:</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> WO:</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> N:</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>          <span class="cf">for</span> k:</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>            produce Conv:</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>              Conv(...) <span class="op">=</span> ...</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>              <span class="cf">for</span> r14:</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>                <span class="cf">for</span> r14:</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>                  <span class="cf">for</span> r14:</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>                    Conv(...) <span class="op">=</span> ...</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>            consume Conv:</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>              Matmul(...) <span class="op">=</span> ...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>矩阵层的初始化他默认放到<code>root</code>层级, 下面是自动把<code>Transpose</code>的操作<code>inline</code>了, 也自动把矩阵乘和卷积进行了<code>fusion</code>.</p>
+</section>
+</section>
+<section id="tvm" class="level1">
+<h1>3. <a href="https://tvm.apache.org">TVM</a></h1>
+<p><code>TVM</code>中脱胎于<code>Halide</code>, 他提供了一套<code>Tensor Expression</code>的<code>DSL</code>来协助我们定义算子计算逻辑.</p>
+<section id="dsl语法-2" class="level2">
+<h2 class="anchored" data-anchor-id="dsl语法-2">3.1 DSL语法</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>n <span class="op">=</span> te.var(<span class="st">"n"</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>A <span class="op">=</span> te.placeholder((n,), name<span class="op">=</span><span class="st">"A"</span>)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>B <span class="op">=</span> te.placeholder((n,), name<span class="op">=</span><span class="st">"B"</span>)</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>C <span class="op">=</span> te.compute(A.shape, <span class="kw">lambda</span> i: A[i] <span class="op">+</span> B[i], name<span class="op">=</span><span class="st">"C"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>也是使用<code>shape</code>来表示完美循环, <code>fcompute</code>的回调函数的参数映射迭代变量, 同时也会在最内层循环执行它. 同<code>Jittor</code>类似, 不过使用回调函数的方式更增加了灵活性. 可以使用<code>reduce_axis</code>, 类似于<code>RDom</code>, 会自动最内层循环加上规约的循环, 他这里默认的初始化会放到规约循环外面.</p>
+</section>
+<section id="测试例子-2" class="level2">
+<h2 class="anchored" data-anchor-id="测试例子-2">3.2 测试例子</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> tvm</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tvm <span class="im">import</span> te</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tvm <span class="im">import</span> tir</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>batch_size <span class="op">=</span> <span class="dv">8</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>in_channel <span class="op">=</span> <span class="dv">3</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>out_channel <span class="op">=</span> <span class="dv">16</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>in_height <span class="op">=</span> <span class="dv">32</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>in_width <span class="op">=</span> <span class="dv">32</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>kernel_height <span class="op">=</span> <span class="dv">3</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>kernel_width <span class="op">=</span> <span class="dv">3</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">64</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>Input <span class="op">=</span> te.placeholder(</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>    (batch_size, in_channel, in_height, in_width), name<span class="op">=</span><span class="st">'Input'</span>)</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>Kernel <span class="op">=</span> te.placeholder(</span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>    (out_channel, in_channel, kernel_height, kernel_width), name<span class="op">=</span><span class="st">'Kernel'</span>)</span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>rc <span class="op">=</span> te.reduce_axis((<span class="dv">0</span>, in_channel), name<span class="op">=</span><span class="st">'rc'</span>)</span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>ry <span class="op">=</span> te.reduce_axis((<span class="dv">0</span>, kernel_height), name<span class="op">=</span><span class="st">'ry'</span>)</span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>rx <span class="op">=</span> te.reduce_axis((<span class="dv">0</span>, kernel_width), name<span class="op">=</span><span class="st">'rx'</span>)</span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>Conv <span class="op">=</span> te.compute(</span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>    (batch_size, out_channel, in_height <span class="op">-</span></span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>     kernel_height <span class="op">+</span> <span class="dv">1</span>, in_width <span class="op">-</span> kernel_width <span class="op">+</span> <span class="dv">1</span>),</span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>    <span class="kw">lambda</span> n, f, y, x: te.<span class="bu">sum</span>(</span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a>        Input[n, rc, y <span class="op">+</span> ry, x <span class="op">+</span> rx] <span class="op">*</span> Kernel[f, rc, ry, rx],</span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a>        axis<span class="op">=</span>[rc, ry, rx]</span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a>    name<span class="op">=</span><span class="st">'Conv'</span></span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a>)  <span class="co"># (b,oc,oh,ow)  -&gt; (b,oh,ow,oc)</span></span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a>oh, ow <span class="op">=</span> <span class="dv">30</span>, <span class="dv">30</span></span>
+<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a>rhs <span class="op">=</span> te.placeholder((batch_size, oh, out_channel, N), name<span class="op">=</span><span class="st">'rhs'</span>)</span>
+<span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a>Trans <span class="op">=</span> te.compute(</span>
+<span id="cb8-38"><a href="#cb8-38" aria-hidden="true" tabindex="-1"></a>    (batch_size, oh, ow, out_channel),</span>
+<span id="cb8-39"><a href="#cb8-39" aria-hidden="true" tabindex="-1"></a>    <span class="kw">lambda</span> i0, i1, i2, i3: Conv[i0, i3, i1, i2])</span>
+<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-41"><a href="#cb8-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-42"><a href="#cb8-42" aria-hidden="true" tabindex="-1"></a>rk <span class="op">=</span> te.reduce_axis((<span class="dv">0</span>, out_channel), name<span class="op">=</span><span class="st">'rk'</span>)</span>
+<span id="cb8-43"><a href="#cb8-43" aria-hidden="true" tabindex="-1"></a>MatMul <span class="op">=</span> te.compute(</span>
+<span id="cb8-44"><a href="#cb8-44" aria-hidden="true" tabindex="-1"></a>    (batch_size, oh, ow, N),</span>
+<span id="cb8-45"><a href="#cb8-45" aria-hidden="true" tabindex="-1"></a>    <span class="kw">lambda</span> i0, i1, i2, i3: te.<span class="bu">sum</span>(</span>
+<span id="cb8-46"><a href="#cb8-46" aria-hidden="true" tabindex="-1"></a>        Trans[i0, i1, i2, rk] <span class="op">*</span> rhs[i0, i1, rk, i3], axis<span class="op">=</span>[rk]),</span>
+<span id="cb8-47"><a href="#cb8-47" aria-hidden="true" tabindex="-1"></a>    name<span class="op">=</span><span class="st">'MatMul'</span></span>
+<span id="cb8-48"><a href="#cb8-48" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb8-49"><a href="#cb8-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-50"><a href="#cb8-50" aria-hidden="true" tabindex="-1"></a>s: te.Schedule <span class="op">=</span> te.create_schedule([Conv.op, MatMul.op])</span>
+<span id="cb8-51"><a href="#cb8-51" aria-hidden="true" tabindex="-1"></a>ir <span class="op">=</span> tvm.lower(s, [Input, Kernel, rhs])</span>
+<span id="cb8-52"><a href="#cb8-52" aria-hidden="true" tabindex="-1"></a>ir.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>输出:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="at">@I.ir_module</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Module:</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">@T.prim_func</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> main(Input: T.Buffer((<span class="dv">8</span>, <span class="dv">3</span>, <span class="dv">32</span>, <span class="dv">32</span>), <span class="st">"float32"</span>), Kernel: T.Buffer((<span class="dv">16</span>, <span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">3</span>), <span class="st">"float32"</span>), rhs: T.Buffer((<span class="dv">8</span>, <span class="dv">30</span>, <span class="dv">16</span>, <span class="dv">64</span>), <span class="st">"float32"</span>)):</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>        T.func_attr({<span class="st">"from_legacy_te_schedule"</span>: T.<span class="bu">bool</span>(<span class="va">True</span>), <span class="st">"tir.noalias"</span>: T.<span class="bu">bool</span>(<span class="va">True</span>)})</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>        Conv <span class="op">=</span> T.allocate([<span class="dv">460800</span>], <span class="st">"float32"</span>, <span class="st">"global"</span>)</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>        compute <span class="op">=</span> T.allocate([<span class="dv">115200</span>], <span class="st">"float32"</span>, <span class="st">"global"</span>)</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>        Conv_1 <span class="op">=</span> T.Buffer((<span class="dv">115200</span>,), data<span class="op">=</span>Conv)</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> n, f, y, x <span class="kw">in</span> T.grid(<span class="dv">8</span>, <span class="dv">16</span>, <span class="dv">30</span>, <span class="dv">30</span>):</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>            Conv_1[n <span class="op">*</span> <span class="dv">14400</span> <span class="op">+</span> f <span class="op">*</span> <span class="dv">900</span> <span class="op">+</span> y <span class="op">*</span> <span class="dv">30</span> <span class="op">+</span> x] <span class="op">=</span> T.float32(<span class="dv">0</span>)</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> rc, ry, rx <span class="kw">in</span> T.grid(<span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">3</span>):</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>                cse_var_1: T.int32 <span class="op">=</span> n <span class="op">*</span> <span class="dv">14400</span> <span class="op">+</span> f <span class="op">*</span> <span class="dv">900</span> <span class="op">+</span> y <span class="op">*</span> <span class="dv">30</span> <span class="op">+</span> x</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>                Input_1 <span class="op">=</span> T.Buffer((<span class="dv">24576</span>,), data<span class="op">=</span>Input.data)</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>                Kernel_1 <span class="op">=</span> T.Buffer((<span class="dv">432</span>,), data<span class="op">=</span>Kernel.data)</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>                Conv_1[cse_var_1] <span class="op">=</span> Conv_1[cse_var_1] <span class="op">+</span> Input_1[n <span class="op">*</span> <span class="dv">3072</span> <span class="op">+</span> rc <span class="op">*</span> <span class="dv">1024</span> <span class="op">+</span> y <span class="op">*</span> <span class="dv">32</span> <span class="op">+</span> ry <span class="op">*</span> <span class="dv">32</span> <span class="op">+</span> x <span class="op">+</span> rx] <span class="op">*</span> Kernel_1[f <span class="op">*</span> <span class="dv">27</span> <span class="op">+</span> rc <span class="op">*</span> <span class="dv">9</span> <span class="op">+</span> ry <span class="op">*</span> <span class="dv">3</span> <span class="op">+</span> rx]</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>        compute_1 <span class="op">=</span> T.Buffer((<span class="dv">115200</span>,), data<span class="op">=</span>compute)</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> i0, i1, i2, i3 <span class="kw">in</span> T.grid(<span class="dv">8</span>, <span class="dv">30</span>, <span class="dv">30</span>, <span class="dv">16</span>):</span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>            cse_var_2: T.int32 <span class="op">=</span> i0 <span class="op">*</span> <span class="dv">14400</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>            compute_1[cse_var_2 <span class="op">+</span> i1 <span class="op">*</span> <span class="dv">480</span> <span class="op">+</span> i2 <span class="op">*</span> <span class="dv">16</span> <span class="op">+</span> i3] <span class="op">=</span> Conv_1[cse_var_2 <span class="op">+</span> i3 <span class="op">*</span> <span class="dv">900</span> <span class="op">+</span> i1 <span class="op">*</span> <span class="dv">30</span> <span class="op">+</span> i2]</span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> i0, i1, i2, i3 <span class="kw">in</span> T.grid(<span class="dv">8</span>, <span class="dv">30</span>, <span class="dv">30</span>, <span class="dv">64</span>):</span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>            Conv_2 <span class="op">=</span> T.Buffer((<span class="dv">460800</span>,), data<span class="op">=</span>Conv)</span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>            Conv_2[i0 <span class="op">*</span> <span class="dv">57600</span> <span class="op">+</span> i1 <span class="op">*</span> <span class="dv">1920</span> <span class="op">+</span> i2 <span class="op">*</span> <span class="dv">64</span> <span class="op">+</span> i3] <span class="op">=</span> T.float32(<span class="dv">0</span>)</span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> rk <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">16</span>):</span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>                cse_var_3: T.int32 <span class="op">=</span> i0 <span class="op">*</span> <span class="dv">57600</span> <span class="op">+</span> i1 <span class="op">*</span> <span class="dv">1920</span> <span class="op">+</span> i2 <span class="op">*</span> <span class="dv">64</span> <span class="op">+</span> i3</span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>                rhs_1 <span class="op">=</span> T.Buffer((<span class="dv">245760</span>,), data<span class="op">=</span>rhs.data)</span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>                Conv_2[cse_var_3] <span class="op">=</span> Conv_2[cse_var_3] <span class="op">+</span> compute_1[i0 <span class="op">*</span> <span class="dv">14400</span> <span class="op">+</span> i1 <span class="op">*</span> <span class="dv">480</span> <span class="op">+</span> i2 <span class="op">*</span> <span class="dv">16</span> <span class="op">+</span> rk] <span class="op">*</span> rhs_1[i0 <span class="op">*</span> <span class="dv">30720</span> <span class="op">+</span> i1 <span class="op">*</span> <span class="dv">1024</span> <span class="op">+</span> rk <span class="op">*</span> <span class="dv">64</span> <span class="op">+</span> i3]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>他这里不像<code>Halide</code>一样需要提前定义好循环变量, 但可以从输出中获取<code>axis</code>然后使用类似<code>Halide</code>的调度, 也可以在<code>lower</code>到<code>tir</code>之后使用基于<code>tensor ir</code>的调度. 这里进行<code>lower</code>依据默认的优化流程后, 并无法自动<code>fusion</code>.</p>
+</section>
+</section>
+<section id="mlir" class="level1">
+<h1>4. <a href="https://mlir.llvm.org">Mlir</a></h1>
+<p><code>Mlir</code>基于<code>linalg</code>dialect中的<code>linalg.generic</code>op提供了一套<code>OpDSL</code>.</p>
+<section id="dsl语法-3" class="level2">
+<h2 class="anchored" data-anchor-id="dsl语法-3">4.1 DSL语法</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="at">@linalg_structured_op</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> conv_2d_nhwc_hwcf(</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    I<span class="op">=</span>TensorDef(T1, S.N, S.OH <span class="op">*</span> S.SH <span class="op">+</span> S.KH <span class="op">*</span> S.DH, S.OW <span class="op">*</span> S.SW <span class="op">+</span> S.KW <span class="op">*</span> S.DW, S.C),</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    K<span class="op">=</span>TensorDef(T2, S.KH, S.KW, S.C, S.F),</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    O<span class="op">=</span>TensorDef(U, S.N, S.OH, S.OW, S.F, output<span class="op">=</span><span class="va">True</span>),</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    strides<span class="op">=</span>IndexAttrDef(S.SH, S.SW, default<span class="op">=</span>[<span class="dv">1</span>, <span class="dv">1</span>]),</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>    dilations<span class="op">=</span>IndexAttrDef(S.DH, S.DW, default<span class="op">=</span>[<span class="dv">1</span>, <span class="dv">1</span>]),</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>):</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Performs 2-D convolution.</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="co">    Layout:</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a><span class="co">      * Input: NHWC.</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a><span class="co">      * Kernel: HWCF.</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a><span class="co">    Numeric casting is performed on the operands to the inner multiply, promoting</span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a><span class="co">    them to the same data type as the accumulator/output.</span></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>    implements(ConvolutionOpInterface)</span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>    domain(D.n, D.oh, D.ow, D.f, D.kh, D.kw, D.c)</span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>    O[D.n, D.oh, D.ow, D.f] <span class="op">+=</span> TypeFn.cast_signed(</span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>        U, I[D.n, D.oh <span class="op">*</span> S.SH <span class="op">+</span> D.kh <span class="op">*</span> S.DH, D.ow <span class="op">*</span> S.SW <span class="op">+</span> D.kw <span class="op">*</span> S.DW, D.c]</span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>    ) <span class="op">*</span> TypeFn.cast_signed(U, K[D.kh, D.kw, D.c, D.f])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><code>Mlir</code>这里不使用<code>shape</code>, 使用和<code>polyhedral</code>更加贴近的称呼<code>domain</code>来表示嵌套循环. 我觉得这里更加激进的一点就是完全抛弃循环中的初始化, 也就是忠实的翻译这个<code>OpDSL</code>所描述的内容.</p>
+</section>
+<section id="测试例子-3" class="level2">
+<h2 class="anchored" data-anchor-id="测试例子-3">4.2 测试例子</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> mlir.dialects <span class="im">import</span> arith, builtin, func, linalg, tensor, memref</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> mlir.dialects.linalg.opdsl.lang <span class="im">import</span> <span class="op">*</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> mlir.ir <span class="im">import</span> <span class="op">*</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="at">@linalg_structured_op</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> transpose_nchw_nhwc(</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>    I<span class="op">=</span>TensorDef(TV.T1, S.d0, S.d1, S.d2, S.d3),</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>    O<span class="op">=</span>TensorDef(TV.T1, S.d0, S.d2, S.d3, S.d1, output<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>):</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>    domain(D.d0, D.d1, D.d2, D.d3)</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>    implements(ContractionOpInterface)</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>    O[D.d0, D.d2, D.d3, D.d1] <span class="op">=</span> I[D.d0, D.d1, D.d2, D.d3]</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a><span class="at">@linalg_structured_op</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> matmul_4d(</span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>    A<span class="op">=</span>TensorDef(TV.T1, S.d0, S.d1, S.M, S.K),</span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>    B<span class="op">=</span>TensorDef(TV.T1, S.d0, S.d1, S.K, S.N),</span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>    C<span class="op">=</span>TensorDef(TV.T1, S.d0, S.d2, S.M, S.N, output<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>):</span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>    domain(D.d0, D.d1, D.m, D.n, D.k)</span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>    implements(ContractionOpInterface)</span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>    C[D.d0, D.d1, D.m, D.n] <span class="op">+=</span> A[D.d0, D.d1, D.m, D.k] <span class="op">*</span> B[D.d0, D.d1, D.k, D.n]</span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> testOpResultFromOtherOp():</span>
+<span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> Context(), Location.unknown():</span>
+<span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a>        module <span class="op">=</span> Module.create()</span>
+<span id="cb11-28"><a href="#cb11-28" aria-hidden="true" tabindex="-1"></a>        f32 <span class="op">=</span> F32Type.get()</span>
+<span id="cb11-29"><a href="#cb11-29" aria-hidden="true" tabindex="-1"></a>        index_type <span class="op">=</span> IndexType.get()</span>
+<span id="cb11-30"><a href="#cb11-30" aria-hidden="true" tabindex="-1"></a>        <span class="cf">with</span> InsertionPoint(module.body):</span>
+<span id="cb11-31"><a href="#cb11-31" aria-hidden="true" tabindex="-1"></a>            batch_size <span class="op">=</span> <span class="dv">8</span></span>
+<span id="cb11-32"><a href="#cb11-32" aria-hidden="true" tabindex="-1"></a>            in_channel <span class="op">=</span> <span class="dv">3</span></span>
+<span id="cb11-33"><a href="#cb11-33" aria-hidden="true" tabindex="-1"></a>            out_channel <span class="op">=</span> <span class="dv">16</span></span>
+<span id="cb11-34"><a href="#cb11-34" aria-hidden="true" tabindex="-1"></a>            in_height <span class="op">=</span> <span class="dv">32</span></span>
+<span id="cb11-35"><a href="#cb11-35" aria-hidden="true" tabindex="-1"></a>            out_height <span class="op">=</span> <span class="dv">30</span></span>
+<span id="cb11-36"><a href="#cb11-36" aria-hidden="true" tabindex="-1"></a>            in_width <span class="op">=</span> <span class="dv">32</span></span>
+<span id="cb11-37"><a href="#cb11-37" aria-hidden="true" tabindex="-1"></a>            out_width <span class="op">=</span> <span class="dv">30</span></span>
+<span id="cb11-38"><a href="#cb11-38" aria-hidden="true" tabindex="-1"></a>            kernel_height <span class="op">=</span> <span class="dv">3</span></span>
+<span id="cb11-39"><a href="#cb11-39" aria-hidden="true" tabindex="-1"></a>            kernel_width <span class="op">=</span> <span class="dv">3</span></span>
+<span id="cb11-40"><a href="#cb11-40" aria-hidden="true" tabindex="-1"></a>            N <span class="op">=</span> <span class="dv">64</span></span>
+<span id="cb11-41"><a href="#cb11-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-42"><a href="#cb11-42" aria-hidden="true" tabindex="-1"></a>            <span class="at">@func.FuncOp.from_py_func</span>(</span>
+<span id="cb11-43"><a href="#cb11-43" aria-hidden="true" tabindex="-1"></a>                MemRefType.get(</span>
+<span id="cb11-44"><a href="#cb11-44" aria-hidden="true" tabindex="-1"></a>                    (batch_size, in_channel, in_height, in_width), f32),</span>
+<span id="cb11-45"><a href="#cb11-45" aria-hidden="true" tabindex="-1"></a>                MemRefType.get(</span>
+<span id="cb11-46"><a href="#cb11-46" aria-hidden="true" tabindex="-1"></a>                    (out_channel, in_channel, kernel_height, kernel_width), f32),</span>
+<span id="cb11-47"><a href="#cb11-47" aria-hidden="true" tabindex="-1"></a>                MemRefType.get((batch_size, out_height, out_channel, N), f32),</span>
+<span id="cb11-48"><a href="#cb11-48" aria-hidden="true" tabindex="-1"></a>            )</span>
+<span id="cb11-49"><a href="#cb11-49" aria-hidden="true" tabindex="-1"></a>            <span class="kw">def</span> main(lhs, weight, rhs):</span>
+<span id="cb11-50"><a href="#cb11-50" aria-hidden="true" tabindex="-1"></a>                <span class="co"># conv = tensor.EmptyOp([batch_size, out_channel, out_height, out_width], f32)</span></span>
+<span id="cb11-51"><a href="#cb11-51" aria-hidden="true" tabindex="-1"></a>                zero <span class="op">=</span> arith.ConstantOp(F32Type.get(), <span class="fl">0.0</span>)</span>
+<span id="cb11-52"><a href="#cb11-52" aria-hidden="true" tabindex="-1"></a>                <span class="co"># CHECK: %[[LHS:.*]] = linalg.fill</span></span>
+<span id="cb11-53"><a href="#cb11-53" aria-hidden="true" tabindex="-1"></a>                conv <span class="op">=</span> memref.AllocOp(MemRefType.get(</span>
+<span id="cb11-54"><a href="#cb11-54" aria-hidden="true" tabindex="-1"></a>                    [batch_size, out_channel, out_height, out_width], f32), [], [])</span>
+<span id="cb11-55"><a href="#cb11-55" aria-hidden="true" tabindex="-1"></a>                linalg.fill(zero, outs<span class="op">=</span>[conv])</span>
+<span id="cb11-56"><a href="#cb11-56" aria-hidden="true" tabindex="-1"></a>                linalg.conv_2d_nchw_fchw(lhs, weight, outs<span class="op">=</span>[conv])</span>
+<span id="cb11-57"><a href="#cb11-57" aria-hidden="true" tabindex="-1"></a>                trans <span class="op">=</span> memref.AllocOp(MemRefType.get(</span>
+<span id="cb11-58"><a href="#cb11-58" aria-hidden="true" tabindex="-1"></a>                    [batch_size, out_height, out_width, out_channel], f32), [], [])</span>
+<span id="cb11-59"><a href="#cb11-59" aria-hidden="true" tabindex="-1"></a>                transpose_nchw_nhwc(conv, outs<span class="op">=</span>[trans])</span>
+<span id="cb11-60"><a href="#cb11-60" aria-hidden="true" tabindex="-1"></a>                matmul <span class="op">=</span> memref.AllocOp(MemRefType.get(</span>
+<span id="cb11-61"><a href="#cb11-61" aria-hidden="true" tabindex="-1"></a>                    [batch_size, out_height, out_width, N], f32), [], [])</span>
+<span id="cb11-62"><a href="#cb11-62" aria-hidden="true" tabindex="-1"></a>                matmul_4d(trans, rhs, outs<span class="op">=</span>[matmul])</span>
+<span id="cb11-63"><a href="#cb11-63" aria-hidden="true" tabindex="-1"></a>                <span class="cf">return</span> matmul</span>
+<span id="cb11-64"><a href="#cb11-64" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-65"><a href="#cb11-65" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(module)</span>
+<span id="cb11-66"><a href="#cb11-66" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-67"><a href="#cb11-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-68"><a href="#cb11-68" aria-hidden="true" tabindex="-1"></a>testOpResultFromOtherOp()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>得到<code>convmatmul.mlir</code>:</p>
+<pre class="mlir"><code>#map = affine_map&lt;(d0, d1, d2, d3) -&gt; (d0, d1, d2, d3)&gt;
+#map1 = affine_map&lt;(d0, d1, d2, d3) -&gt; (d0, d2, d3, d1)&gt;
+#map2 = affine_map&lt;(d0, d1, d2, d3, d4) -&gt; (d0, d1, d2, d4)&gt;
+#map3 = affine_map&lt;(d0, d1, d2, d3, d4) -&gt; (d0, d1, d4, d3)&gt;
+#map4 = affine_map&lt;(d0, d1, d2, d3, d4) -&gt; (d0, d1, d2, d3)&gt;
+module {
+  func.func @main(%arg0: memref&lt;8x3x32x32xf32&gt;, %arg1: memref&lt;16x3x3x3xf32&gt;, %arg2: memref&lt;8x30x16x64xf32&gt;) -&gt; memref&lt;8x30x30x64xf32&gt; {
+    %cst = arith.constant 0.000000e+00 : f32
+    %alloc = memref.alloc() : memref&lt;8x16x30x30xf32&gt;
+    linalg.fill ins(%cst : f32) outs(%alloc : memref&lt;8x16x30x30xf32&gt;)
+    linalg.conv_2d_nchw_fchw ins(%arg0, %arg1 : memref&lt;8x3x32x32xf32&gt;, memref&lt;16x3x3x3xf32&gt;) outs(%alloc : memref&lt;8x16x30x30xf32&gt;)
+    %alloc_0 = memref.alloc() : memref&lt;8x30x30x16xf32&gt;
+    linalg.generic {indexing_maps = [#map, #map1], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%alloc : memref&lt;8x16x30x30xf32&gt;) outs(%alloc_0 : memref&lt;8x30x30x16xf32&gt;) {
+    ^bb0(%in: f32, %out: f32):
+      linalg.yield %in : f32
+    }
+    %alloc_1 = memref.alloc() : memref&lt;8x30x30x64xf32&gt;
+    linalg.generic {indexing_maps = [#map2, #map3, #map4], iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction"]} ins(%alloc_0, %arg2 : memref&lt;8x30x30x16xf32&gt;, memref&lt;8x30x16x64xf32&gt;) outs(%alloc_1 : memref&lt;8x30x30x64xf32&gt;) {
+    ^bb0(%in: f32, %in_2: f32, %out: f32):
+      %0 = arith.mulf %in, %in_2 : f32
+      %1 = arith.addf %out, %0 : f32
+      linalg.yield %1 : f32
+    }
+    return %alloc_1 : memref&lt;8x30x30x64xf32&gt;
+  }
+}</code></pre>
+<p>使用<code>mlir-opt</code>进行<code>fusion</code>:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">mlir-opt</span> <span class="at">-allow-unregistered-dialect</span> convmatmul.mlir <span class="at">--convert-linalg-to-affine-loops</span> <span class="at">-o</span> convmatmul1.mlir</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="ex">mlir-opt</span> <span class="at">-allow-unregistered-dialect</span> convmatmul1.mlir <span class="at">-pass-pipeline</span><span class="op">=</span><span class="st">'builtin.module(func.func(affine-loop-fusion))'</span> <span class="at">-o</span> convmatmul2.mlir</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>得到:</p>
+<pre class="mlir"><code>#map = affine_map&lt;(d0, d1) -&gt; (d0 + d1)&gt;
+module {
+  func.func @main(%arg0: memref&lt;8x3x32x32xf32&gt;, %arg1: memref&lt;16x3x3x3xf32&gt;, %arg2: memref&lt;8x30x16x64xf32&gt;) -&gt; memref&lt;8x30x30x64xf32&gt; {
+    %alloc = memref.alloc() : memref&lt;1x1x1x16xf32&gt;
+    %alloc_0 = memref.alloc() : memref&lt;1x1x1x1xf32&gt;
+    %cst = arith.constant 0.000000e+00 : f32
+    %alloc_1 = memref.alloc() : memref&lt;8x30x30x64xf32&gt;
+    affine.for %arg3 = 0 to 8 {
+      affine.for %arg4 = 0 to 30 {
+        affine.for %arg5 = 0 to 30 {
+          affine.for %arg6 = 0 to 16 {
+            affine.store %cst, %alloc_0[0, 0, 0, 0] : memref&lt;1x1x1x1xf32&gt;
+            affine.for %arg7 = 0 to 3 {
+              affine.for %arg8 = 0 to 3 {
+                affine.for %arg9 = 0 to 3 {
+                  %1 = affine.apply #map(%arg4, %arg8)
+                  %2 = affine.apply #map(%arg5, %arg9)
+                  %3 = affine.load %arg0[%arg3, %arg7, %1, %2] : memref&lt;8x3x32x32xf32&gt;
+                  %4 = affine.load %arg1[%arg6, %arg7, %arg8, %arg9] : memref&lt;16x3x3x3xf32&gt;
+                  %5 = affine.load %alloc_0[0, 0, 0, 0] : memref&lt;1x1x1x1xf32&gt;
+                  %6 = arith.mulf %3, %4 : f32
+                  %7 = arith.addf %5, %6 : f32
+                  affine.store %7, %alloc_0[0, 0, 0, 0] : memref&lt;1x1x1x1xf32&gt;
+                }
+              }
+            }
+            %0 = affine.load %alloc_0[0, 0, 0, 0] : memref&lt;1x1x1x1xf32&gt;
+            affine.store %0, %alloc[0, 0, 0, %arg6] : memref&lt;1x1x1x16xf32&gt;
+          }
+          affine.for %arg6 = 0 to 64 {
+            affine.for %arg7 = 0 to 16 {
+              %0 = affine.load %alloc[0, 0, 0, %arg7] : memref&lt;1x1x1x16xf32&gt;
+              %1 = affine.load %arg2[%arg3, %arg4, %arg7, %arg6] : memref&lt;8x30x16x64xf32&gt;
+              %2 = affine.load %alloc_1[%arg3, %arg4, %arg5, %arg6] : memref&lt;8x30x30x64xf32&gt;
+              %3 = arith.mulf %0, %1 : f32
+              %4 = arith.addf %2, %3 : f32
+              affine.store %4, %alloc_1[%arg3, %arg4, %arg5, %arg6] : memref&lt;8x30x30x64xf32&gt;
+            }
+          }
+        }
+      }
+    }
+    return %alloc_1 : memref&lt;8x30x30x64xf32&gt;
+  }
+}</code></pre>
+<p>经过<code>affine-loop-fusion</code>之后的ir基本符合我的预期.</p>
+</section>
+</section>
+<section id="tiramisu" class="level1">
+<h1>5. <a href="http://tiramisu-compiler.org">Tiramisu</a></h1>
+<section id="dsl语法-4" class="level2">
+<h2 class="anchored" data-anchor-id="dsl语法-4">5.1 DSL语法</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> tiramisu <span class="im">as</span> tm</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> shutil</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>tm.init(<span class="st">"matmul"</span>)</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>M <span class="op">=</span> <span class="dv">64</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>K <span class="op">=</span> <span class="dv">256</span></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">128</span></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Level I: specifies "what" should be computed</span></span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>A <span class="op">=</span> tm.<span class="bu">input</span>(<span class="st">"A"</span>, [<span class="st">'m'</span>, <span class="st">'k'</span>], [M, K], tm.primitive_t.p_float32)</span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>B <span class="op">=</span> tm.<span class="bu">input</span>(<span class="st">"B"</span>, [<span class="st">'k'</span>, <span class="st">'n'</span>], [K, N], tm.primitive_t.p_float32)</span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a>m, k, n <span class="op">=</span> tm.var(<span class="st">"m"</span>, <span class="dv">0</span>, M), tm.var(<span class="st">"k"</span>, <span class="dv">0</span>, K), tm.var(<span class="st">"n"</span>, <span class="dv">0</span>, N)</span>
+<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a>C_init <span class="op">=</span> tm.computation(<span class="st">"C_init"</span>, [m, n], tm.expr(<span class="fl">0.0</span>))</span>
+<span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a>C <span class="op">=</span> tm.computation(<span class="st">"C"</span>, [m, n, k], tm.primitive_t.p_float32)</span>
+<span id="cb15-19"><a href="#cb15-19" aria-hidden="true" tabindex="-1"></a>C.set_expression(C[m, n, k <span class="op">-</span> <span class="dv">1</span>] <span class="op">+</span> A[m, k] <span class="op">*</span> B[k, n])</span>
+<span id="cb15-20"><a href="#cb15-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-21"><a href="#cb15-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Level II: level specifies "when" and "where"</span></span>
+<span id="cb15-22"><a href="#cb15-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-23"><a href="#cb15-23" aria-hidden="true" tabindex="-1"></a><span class="co"># schedule the computation oerder</span></span>
+<span id="cb15-24"><a href="#cb15-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-25"><a href="#cb15-25" aria-hidden="true" tabindex="-1"></a><span class="co"># Level III: level specifies "stored"</span></span>
+<span id="cb15-26"><a href="#cb15-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-27"><a href="#cb15-27" aria-hidden="true" tabindex="-1"></a>bufA <span class="op">=</span> tm.<span class="bu">buffer</span>(<span class="st">"bufA"</span>, [M, K], tm.primitive_t.p_float32, tm.argument_t.a_input)</span>
+<span id="cb15-28"><a href="#cb15-28" aria-hidden="true" tabindex="-1"></a>bufB <span class="op">=</span> tm.<span class="bu">buffer</span>(<span class="st">"bufB"</span>, [K, N], tm.primitive_t.p_float32, tm.argument_t.a_input)</span>
+<span id="cb15-29"><a href="#cb15-29" aria-hidden="true" tabindex="-1"></a>bufC <span class="op">=</span> tm.<span class="bu">buffer</span>(<span class="st">"bufC"</span>, [M, N], tm.primitive_t.p_float32, tm.argument_t.a_output)</span>
+<span id="cb15-30"><a href="#cb15-30" aria-hidden="true" tabindex="-1"></a>A.store_in(bufA)</span>
+<span id="cb15-31"><a href="#cb15-31" aria-hidden="true" tabindex="-1"></a>B.store_in(bufB)</span>
+<span id="cb15-32"><a href="#cb15-32" aria-hidden="true" tabindex="-1"></a>C_init.store_in(bufC, [m, n])</span>
+<span id="cb15-33"><a href="#cb15-33" aria-hidden="true" tabindex="-1"></a>C.store_in(bufC, [m, n])</span>
+<span id="cb15-34"><a href="#cb15-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-35"><a href="#cb15-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-36"><a href="#cb15-36" aria-hidden="true" tabindex="-1"></a>f <span class="op">=</span> tm.get_implicit_function()</span>
+<span id="cb15-37"><a href="#cb15-37" aria-hidden="true" tabindex="-1"></a>f.codegen([bufA, bufB, bufC], <span class="st">"matmul.o"</span>, <span class="dv">0</span>, <span class="va">False</span>)</span>
+<span id="cb15-38"><a href="#cb15-38" aria-hidden="true" tabindex="-1"></a>f.dump_halide_stmt()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><code>tiramisu</code>其实是使用更加贴近于<code>polyhedral</code>的思想, <code>computation</code>可以等价于<code>statement</code>. 类似<code>halide</code>一样使用<code>var</code>表示循环, 用于指定当前<code>computation</code>的循环位置. 不过他这里内部都是基于<code>polyhedral</code>, 定义<code>computation</code>后直接得到了<code>iteration domain</code>, 经过<code>loop dimension align</code>可以得到<code>schedule</code>.</p>
+</section>
+<section id="测试例子-4" class="level2">
+<h2 class="anchored" data-anchor-id="测试例子-4">5.2 测试例子</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> tiramisu <span class="im">as</span> tm</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> shutil</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a><span class="co"># f = tm.function("matmul")</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>tm.init(<span class="st">"convmatmul"</span>)</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>B <span class="op">=</span> <span class="dv">8</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>IC <span class="op">=</span> <span class="dv">3</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>OC <span class="op">=</span> <span class="dv">16</span></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>IH, OH <span class="op">=</span> <span class="dv">32</span>, <span class="dv">30</span></span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>IW, OW <span class="op">=</span> <span class="dv">32</span>, <span class="dv">30</span></span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>KH <span class="op">=</span> <span class="dv">3</span></span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>KW <span class="op">=</span> <span class="dv">3</span></span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">64</span></span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Level I: specifies "what" should be computed</span></span>
+<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a>lhs <span class="op">=</span> tm.<span class="bu">input</span>(<span class="st">"lhs"</span>, [<span class="st">'B'</span>, <span class="st">'IC'</span>, <span class="st">'IH'</span>, <span class="st">'IW'</span>], [</span>
+<span id="cb16-20"><a href="#cb16-20" aria-hidden="true" tabindex="-1"></a>               B, IC, IH, IW], tm.primitive_t.p_float64)</span>
+<span id="cb16-21"><a href="#cb16-21" aria-hidden="true" tabindex="-1"></a>rhs <span class="op">=</span> tm.<span class="bu">input</span>(<span class="st">"rhs"</span>, [<span class="st">'B'</span>, <span class="st">'OH'</span>, <span class="st">'OC'</span>, <span class="st">'N'</span>], [</span>
+<span id="cb16-22"><a href="#cb16-22" aria-hidden="true" tabindex="-1"></a>               B, OH, OC, N], tm.primitive_t.p_float64)</span>
+<span id="cb16-23"><a href="#cb16-23" aria-hidden="true" tabindex="-1"></a>kernel <span class="op">=</span> tm.<span class="bu">input</span>(<span class="st">"kernel"</span>, [<span class="st">'OC'</span>, <span class="st">'IC'</span>, <span class="st">'KH'</span>, <span class="st">'KW'</span>], [</span>
+<span id="cb16-24"><a href="#cb16-24" aria-hidden="true" tabindex="-1"></a>    OC, IC, KH, KW], tm.primitive_t.p_float64)</span>
+<span id="cb16-25"><a href="#cb16-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-26"><a href="#cb16-26" aria-hidden="true" tabindex="-1"></a>b, oc, oh, ow, ic, kh, kw <span class="op">=</span> tm.var(<span class="st">'b'</span>, <span class="dv">0</span>, B), tm.var(<span class="st">'oc'</span>, <span class="dv">0</span>, OC), tm.var(<span class="st">'oh'</span>, <span class="dv">0</span>, OH), tm.var(</span>
+<span id="cb16-27"><a href="#cb16-27" aria-hidden="true" tabindex="-1"></a>    <span class="st">'ow'</span>, <span class="dv">0</span>,  OW), tm.var(<span class="st">'ic'</span>, <span class="dv">0</span>, IC), tm.var(<span class="st">'kh'</span>, <span class="dv">0</span>, KH), tm.var(<span class="st">'kw'</span>, <span class="dv">0</span>, KW)</span>
+<span id="cb16-28"><a href="#cb16-28" aria-hidden="true" tabindex="-1"></a>ConvInit <span class="op">=</span> tm.computation(<span class="st">"conv_init"</span>, [b, oc, oh, ow], tm.expr(<span class="fl">0.0</span>))</span>
+<span id="cb16-29"><a href="#cb16-29" aria-hidden="true" tabindex="-1"></a>Conv <span class="op">=</span> tm.computation(</span>
+<span id="cb16-30"><a href="#cb16-30" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Conv"</span>, [b, oc, oh, ow, ic, kh, kw], tm.primitive_t.p_float64)</span>
+<span id="cb16-31"><a href="#cb16-31" aria-hidden="true" tabindex="-1"></a>Conv.set_expression(Conv[b, oc, oh, ow, ic, kh, kw] <span class="op">+</span></span>
+<span id="cb16-32"><a href="#cb16-32" aria-hidden="true" tabindex="-1"></a>                    lhs[b, oc, oh <span class="op">+</span> kh, ow <span class="op">+</span> kw] <span class="op">*</span> kernel[oc, ic, kh, kw])</span>
+<span id="cb16-33"><a href="#cb16-33" aria-hidden="true" tabindex="-1"></a>n <span class="op">=</span> tm.var(<span class="st">'n'</span>, <span class="dv">0</span>, N)</span>
+<span id="cb16-34"><a href="#cb16-34" aria-hidden="true" tabindex="-1"></a>Transpose <span class="op">=</span> tm.computation(<span class="st">"transpose"</span>, [b, oh, ow, oc], ConvInit[b, oc, oh, ow])</span>
+<span id="cb16-35"><a href="#cb16-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-36"><a href="#cb16-36" aria-hidden="true" tabindex="-1"></a>MatmulInit <span class="op">=</span> tm.computation(<span class="st">"matmul_init"</span>, [b, oh, ow, n], tm.expr(<span class="fl">0.0</span>))</span>
+<span id="cb16-37"><a href="#cb16-37" aria-hidden="true" tabindex="-1"></a>Matmul <span class="op">=</span> tm.computation(<span class="st">"Matmul"</span>, [b, oh, ow, n], tm.primitive_t.p_float64)</span>
+<span id="cb16-38"><a href="#cb16-38" aria-hidden="true" tabindex="-1"></a>Matmul.set_expression(</span>
+<span id="cb16-39"><a href="#cb16-39" aria-hidden="true" tabindex="-1"></a>    MatmulInit[b, oh, ow, n] <span class="op">+</span> Transpose[b, oh, ow, oc] <span class="op">*</span> rhs[b, oh, oc, n])</span>
+<span id="cb16-40"><a href="#cb16-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-41"><a href="#cb16-41" aria-hidden="true" tabindex="-1"></a><span class="co"># Level II: level specifies "when" and "where"</span></span>
+<span id="cb16-42"><a href="#cb16-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-43"><a href="#cb16-43" aria-hidden="true" tabindex="-1"></a><span class="co"># Level III: level specifies "stored"</span></span>
+<span id="cb16-44"><a href="#cb16-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-45"><a href="#cb16-45" aria-hidden="true" tabindex="-1"></a>buflhs <span class="op">=</span> tm.<span class="bu">buffer</span>(<span class="st">"buflhs"</span>,  [B, IC, IH, IW], tm.primitive_t.p_float64, tm.argument_t.a_input)</span>
+<span id="cb16-46"><a href="#cb16-46" aria-hidden="true" tabindex="-1"></a>bufrhs <span class="op">=</span> tm.<span class="bu">buffer</span>(<span class="st">"bufrhs"</span>,  [B, OH, OC, N], tm.primitive_t.p_float64, tm.argument_t.a_input)</span>
+<span id="cb16-47"><a href="#cb16-47" aria-hidden="true" tabindex="-1"></a>bufkernel <span class="op">=</span> tm.<span class="bu">buffer</span>(<span class="st">"bufkernel"</span>,  [OC, IC, KH, KW], tm.primitive_t.p_float64, tm.argument_t.a_input)</span>
+<span id="cb16-48"><a href="#cb16-48" aria-hidden="true" tabindex="-1"></a>bufconv <span class="op">=</span> tm.<span class="bu">buffer</span>(<span class="st">"bufconv"</span>,  [B, OC, OH, OW], tm.primitive_t.p_float64, tm.argument_t.a_temporary)</span>
+<span id="cb16-49"><a href="#cb16-49" aria-hidden="true" tabindex="-1"></a>bufmatmul <span class="op">=</span> tm.<span class="bu">buffer</span>(<span class="st">"bufmatmul"</span>,  [B, OH, OW, N], tm.primitive_t.p_float64, tm.argument_t.a_output)</span>
+<span id="cb16-50"><a href="#cb16-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-51"><a href="#cb16-51" aria-hidden="true" tabindex="-1"></a>lhs.store_in(buflhs)</span>
+<span id="cb16-52"><a href="#cb16-52" aria-hidden="true" tabindex="-1"></a>rhs.store_in(bufrhs)</span>
+<span id="cb16-53"><a href="#cb16-53" aria-hidden="true" tabindex="-1"></a>kernel.store_in(bufkernel)</span>
+<span id="cb16-54"><a href="#cb16-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-55"><a href="#cb16-55" aria-hidden="true" tabindex="-1"></a>ConvInit.store_in(bufconv, [b, oc, oh, ow])</span>
+<span id="cb16-56"><a href="#cb16-56" aria-hidden="true" tabindex="-1"></a>Conv.store_in(bufconv, [b, oc, oh, ow])</span>
+<span id="cb16-57"><a href="#cb16-57" aria-hidden="true" tabindex="-1"></a>Transpose.store_in(bufconv, [b, oh, ow, oc])</span>
+<span id="cb16-58"><a href="#cb16-58" aria-hidden="true" tabindex="-1"></a>MatmulInit.store_in(bufmatmul, [b, oh, ow, n])</span>
+<span id="cb16-59"><a href="#cb16-59" aria-hidden="true" tabindex="-1"></a>Matmul.store_in(bufmatmul, [b, oh, ow, n])</span>
+<span id="cb16-60"><a href="#cb16-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-61"><a href="#cb16-61" aria-hidden="true" tabindex="-1"></a>f <span class="op">=</span> tm.get_implicit_function()</span>
+<span id="cb16-62"><a href="#cb16-62" aria-hidden="true" tabindex="-1"></a>f.codegen([buflhs, bufrhs, bufkernel, bufconv, bufmatmul], <span class="st">"matmul.o"</span>, <span class="dv">0</span>, <span class="va">False</span>)</span>
+<span id="cb16-63"><a href="#cb16-63" aria-hidden="true" tabindex="-1"></a>f.dump_halide_stmt()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>输出:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb17"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="ex">produce</span>  {</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a> <span class="ex">allocate</span> _transpose_b5[float64 <span class="pp">*</span> <span class="er">(</span><span class="ex">16</span> <span class="at">-</span> 0<span class="kw">)</span> <span class="ex">*</span> <span class="er">(</span><span class="ex">30</span> <span class="at">-</span> 0<span class="kw">)</span> <span class="ex">*</span> <span class="er">(</span><span class="ex">30</span> <span class="at">-</span> 0<span class="kw">)</span> <span class="ex">*</span> <span class="er">(</span><span class="ex">8</span> <span class="at">-</span> 0<span class="kw">)</span><span class="ex">]</span> in Heap</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a> <span class="ex">allocate</span> _rhs_b1[float64 <span class="pp">*</span> <span class="er">(</span><span class="ex">64</span> <span class="at">-</span> 0<span class="kw">)</span> <span class="ex">*</span> <span class="er">(</span><span class="ex">16</span> <span class="at">-</span> 0<span class="kw">)</span> <span class="ex">*</span> <span class="er">(</span><span class="ex">30</span> <span class="at">-</span> 0<span class="kw">)</span> <span class="ex">*</span> <span class="er">(</span><span class="ex">8</span> <span class="at">-</span> 0<span class="kw">)</span><span class="ex">]</span> in Heap</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a> <span class="ex">allocate</span> _matmul_init_b6[float64 <span class="pp">*</span> <span class="er">(</span><span class="ex">64</span> <span class="at">-</span> 0<span class="kw">)</span> <span class="ex">*</span> <span class="er">(</span><span class="ex">30</span> <span class="at">-</span> 0<span class="kw">)</span> <span class="ex">*</span> <span class="er">(</span><span class="ex">30</span> <span class="at">-</span> 0<span class="kw">)</span> <span class="ex">*</span> <span class="er">(</span><span class="ex">8</span> <span class="at">-</span> 0<span class="kw">)</span><span class="ex">]</span> in Heap</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a> <span class="ex">allocate</span> _lhs_b0[float64 <span class="pp">*</span> <span class="er">(</span><span class="ex">32</span> <span class="at">-</span> 0<span class="kw">)</span> <span class="ex">*</span> <span class="er">(</span><span class="ex">32</span> <span class="at">-</span> 0<span class="kw">)</span> <span class="ex">*</span> <span class="er">(</span><span class="ex">3</span> <span class="at">-</span> 0<span class="kw">)</span> <span class="ex">*</span> <span class="er">(</span><span class="ex">8</span> <span class="at">-</span> 0<span class="kw">)</span><span class="ex">]</span> in Heap</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a> <span class="ex">allocate</span> _kernel_b2[float64 <span class="pp">*</span> <span class="er">(</span><span class="ex">3</span> <span class="at">-</span> 0<span class="kw">)</span> <span class="ex">*</span> <span class="er">(</span><span class="ex">3</span> <span class="at">-</span> 0<span class="kw">)</span> <span class="ex">*</span> <span class="er">(</span><span class="ex">3</span> <span class="at">-</span> 0<span class="kw">)</span> <span class="ex">*</span> <span class="er">(</span><span class="ex">16</span> <span class="at">-</span> 0<span class="kw">)</span><span class="ex">]</span> in Heap</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a> <span class="ex">allocate</span> _conv_init_b3[float64 <span class="pp">*</span> <span class="er">(</span><span class="ex">30</span> <span class="at">-</span> 0<span class="kw">)</span> <span class="ex">*</span> <span class="er">(</span><span class="ex">30</span> <span class="at">-</span> 0<span class="kw">)</span> <span class="ex">*</span> <span class="er">(</span><span class="ex">16</span> <span class="at">-</span> 0<span class="kw">)</span> <span class="ex">*</span> <span class="er">(</span><span class="ex">8</span> <span class="at">-</span> 0<span class="kw">)</span><span class="ex">]</span> in Heap</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a> <span class="ex">allocate</span> _Matmul_b7[float64 <span class="pp">*</span> <span class="er">(</span><span class="ex">64</span> <span class="at">-</span> 0<span class="kw">)</span> <span class="ex">*</span> <span class="er">(</span><span class="ex">30</span> <span class="at">-</span> 0<span class="kw">)</span> <span class="ex">*</span> <span class="er">(</span><span class="ex">30</span> <span class="at">-</span> 0<span class="kw">)</span> <span class="ex">*</span> <span class="er">(</span><span class="ex">8</span> <span class="at">-</span> 0<span class="kw">)</span><span class="ex">]</span> in Heap</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a> <span class="ex">allocate</span> _Conv_b4[float64 <span class="pp">*</span> <span class="er">(</span><span class="ex">3</span> <span class="at">-</span> 0<span class="kw">)</span> <span class="ex">*</span> <span class="er">(</span><span class="ex">3</span> <span class="at">-</span> 0<span class="kw">)</span> <span class="ex">*</span> <span class="er">(</span><span class="ex">3</span> <span class="at">-</span> 0<span class="kw">)</span> <span class="ex">*</span> <span class="er">(</span><span class="ex">30</span> <span class="at">-</span> 0<span class="kw">)</span> <span class="ex">*</span> <span class="er">(</span><span class="ex">30</span> <span class="at">-</span> 0<span class="kw">)</span> <span class="ex">*</span> <span class="er">(</span><span class="ex">16</span> <span class="at">-</span> 0<span class="kw">)</span> <span class="ex">*</span> <span class="er">(</span><span class="ex">8</span> <span class="at">-</span> 0<span class="kw">)</span><span class="ex">]</span> in Heap</span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a> <span class="cf">for</span> <span class="kw">(</span><span class="ex">c1,</span> 0, 8 <span class="at">-</span> 0<span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> <span class="kw">(</span><span class="ex">c3,</span> 0, 30 <span class="at">-</span> 0<span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>   <span class="cf">for</span> <span class="kw">(</span><span class="ex">c5,</span> 0, 30 <span class="at">-</span> 0<span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="kw">(</span><span class="ex">c7,</span> 0, 64 <span class="at">-</span> 0<span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>     <span class="cf">if</span> <span class="kw">(</span><span class="ex">c3</span> <span class="op">&gt;</span>= 16<span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>      <span class="va">bufmatmul</span><span class="op">[</span>(((0 + (c7<span class="pp">*</span>1)) + (c5<span class="pp">*</span>64)) + (c3<span class="pp">*</span>1920)) + (c1<span class="pp">*</span>57600)<span class="op">]</span> <span class="ex">=</span> 0.000000</span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>      <span class="va">bufmatmul</span><span class="op">[</span>(((0 + (c7<span class="pp">*</span>1)) + (c5<span class="pp">*</span>64)) + (c3<span class="pp">*</span>1920)) + (c1<span class="pp">*</span>57600)<span class="op">]</span> <span class="ex">=</span> <span class="er">(</span><span class="ex">float64</span><span class="kw">)</span><span class="va">bufmatmul</span><span class="op">[</span>(((0 + (c7<span class="pp">*</span>1)) + (c5<span class="pp">*</span>64)) + (c3<span class="pp">*</span>1920)) + (c1<span class="pp">*</span>57600)<span class="op">]</span> <span class="ex">+</span> <span class="er">(</span><span class="kw">(</span><span class="ex">float64</span><span class="kw">)</span><span class="va">bufconv</span><span class="op">[</span>(((0 + (oc<span class="pp">*</span>1)) + (c5<span class="pp">*</span>30)) + (c3<span class="pp">*</span>900)) + (c1<span class="pp">*</span>14400)<span class="op">]</span><span class="ex">*</span><span class="er">(</span><span class="ex">float64</span><span class="kw">)</span><span class="va">bufrhs</span><span class="op">[</span>(((0 + (c7<span class="pp">*</span>1)) + (oc<span class="pp">*</span>64)) + (c3<span class="pp">*</span>1024)) + (c1<span class="pp">*</span>30720)<span class="op">]</span><span class="kw">)</span></span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> <span class="kw">(</span><span class="ex">c7</span> <span class="op">&lt;</span>= 15<span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a>       <span class="va">bufconv</span><span class="op">[</span>(((0 + (c7<span class="pp">*</span>1)) + (c5<span class="pp">*</span>30)) + (c3<span class="pp">*</span>900)) + (c1<span class="pp">*</span>14400)<span class="op">]</span> <span class="ex">=</span> <span class="er">(</span><span class="ex">float64</span><span class="kw">)</span><span class="va">bufconv</span><span class="op">[</span>(((0 + (c5<span class="pp">*</span>1)) + (c3<span class="pp">*</span>30)) + (c7<span class="pp">*</span>900)) + (c1<span class="pp">*</span>14400)<span class="op">]</span></span>
+<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a>      <span class="kw">}</span></span>
+<span id="cb17-20"><a href="#cb17-20" aria-hidden="true" tabindex="-1"></a>     <span class="kw">}</span> <span class="cf">else</span> <span class="cf">if</span> <span class="kw">(</span><span class="ex">c7</span> <span class="op">&gt;</span>= 30<span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb17-21"><a href="#cb17-21" aria-hidden="true" tabindex="-1"></a>      <span class="va">bufmatmul</span><span class="op">[</span>(((0 + (c7<span class="pp">*</span>1)) + (c5<span class="pp">*</span>64)) + (c3<span class="pp">*</span>1920)) + (c1<span class="pp">*</span>57600)<span class="op">]</span> <span class="ex">=</span> 0.000000</span>
+<span id="cb17-22"><a href="#cb17-22" aria-hidden="true" tabindex="-1"></a>      <span class="va">bufmatmul</span><span class="op">[</span>(((0 + (c7<span class="pp">*</span>1)) + (c5<span class="pp">*</span>64)) + (c3<span class="pp">*</span>1920)) + (c1<span class="pp">*</span>57600)<span class="op">]</span> <span class="ex">=</span> <span class="er">(</span><span class="ex">float64</span><span class="kw">)</span><span class="va">bufmatmul</span><span class="op">[</span>(((0 + (c7<span class="pp">*</span>1)) + (c5<span class="pp">*</span>64)) + (c3<span class="pp">*</span>1920)) + (c1<span class="pp">*</span>57600)<span class="op">]</span> <span class="ex">+</span> <span class="er">(</span><span class="kw">(</span><span class="ex">float64</span><span class="kw">)</span><span class="va">bufconv</span><span class="op">[</span>(((0 + (oc<span class="pp">*</span>1)) + (c5<span class="pp">*</span>30)) + (c3<span class="pp">*</span>900)) + (c1<span class="pp">*</span>14400)<span class="op">]</span><span class="ex">*</span><span class="er">(</span><span class="ex">float64</span><span class="kw">)</span><span class="va">bufrhs</span><span class="op">[</span>(((0 + (c7<span class="pp">*</span>1)) + (oc<span class="pp">*</span>64)) + (c3<span class="pp">*</span>1024)) + (c1<span class="pp">*</span>30720)<span class="op">]</span><span class="kw">)</span></span>
+<span id="cb17-23"><a href="#cb17-23" aria-hidden="true" tabindex="-1"></a>     <span class="kw">}</span> <span class="cf">else</span> <span class="kw">{</span></span>
+<span id="cb17-24"><a href="#cb17-24" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> <span class="kw">(</span><span class="ex">c9,</span> 0, 3 <span class="at">-</span> 0<span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb17-25"><a href="#cb17-25" aria-hidden="true" tabindex="-1"></a>       <span class="cf">for</span> <span class="kw">(</span><span class="ex">c11,</span> 0, 3 <span class="at">-</span> 0<span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb17-26"><a href="#cb17-26" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> <span class="kw">(</span><span class="ex">c13,</span> 0, 3 <span class="at">-</span> 0<span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb17-27"><a href="#cb17-27" aria-hidden="true" tabindex="-1"></a>         <span class="cf">if</span> <span class="kw">(((</span><span class="ex">c9</span> == 0<span class="kw">)</span> <span class="kw">&amp;&amp;</span> <span class="kw">(</span><span class="ex">c11</span> == 0<span class="kw">))</span> <span class="kw">&amp;&amp;</span> <span class="kw">(</span><span class="ex">c13</span> == 0<span class="kw">))</span> <span class="kw">{</span></span>
+<span id="cb17-28"><a href="#cb17-28" aria-hidden="true" tabindex="-1"></a>          <span class="va">bufmatmul</span><span class="op">[</span>(((0 + (c7<span class="pp">*</span>1)) + (c5<span class="pp">*</span>64)) + (c3<span class="pp">*</span>1920)) + (c1<span class="pp">*</span>57600)<span class="op">]</span> <span class="ex">=</span> 0.000000</span>
+<span id="cb17-29"><a href="#cb17-29" aria-hidden="true" tabindex="-1"></a>         <span class="kw">}</span></span>
+<span id="cb17-30"><a href="#cb17-30" aria-hidden="true" tabindex="-1"></a>         <span class="va">bufconv</span><span class="op">[</span>(((0 + (c7<span class="pp">*</span>1)) + (c5<span class="pp">*</span>30)) + (c3<span class="pp">*</span>900)) + (c1<span class="pp">*</span>14400)<span class="op">]</span> <span class="ex">=</span> <span class="er">(</span><span class="ex">float64</span><span class="kw">)</span><span class="va">bufconv</span><span class="op">[</span>(((0 + (c7<span class="pp">*</span>1)) + (c5<span class="pp">*</span>30)) + (c3<span class="pp">*</span>900)) + (c1<span class="pp">*</span>14400)<span class="op">]</span> <span class="ex">+</span> <span class="er">(</span><span class="kw">(</span><span class="ex">float64</span><span class="kw">)</span><span class="va">buflhs</span><span class="op">[</span>(((0 + ((c7 + c13)<span class="pp">*</span>1)) + ((c5 + c11)<span class="pp">*</span>32)) + (c3<span class="pp">*</span>1024)) + (c1<span class="pp">*</span>3072)<span class="op">]</span><span class="ex">*</span><span class="er">(</span><span class="ex">float64</span><span class="kw">)</span><span class="va">bufkernel</span><span class="op">[</span>(((0 + (c13<span class="pp">*</span>1)) + (c11<span class="pp">*</span>3)) + (c9<span class="pp">*</span>9)) + (c3<span class="pp">*</span>27)<span class="op">]</span><span class="kw">)</span></span>
+<span id="cb17-31"><a href="#cb17-31" aria-hidden="true" tabindex="-1"></a>         <span class="cf">if</span> <span class="kw">(((</span><span class="ex">c9</span> == 0<span class="kw">)</span> <span class="kw">&amp;&amp;</span> <span class="kw">(</span><span class="ex">c11</span> == 0<span class="kw">))</span> <span class="kw">&amp;&amp;</span> <span class="kw">(</span><span class="ex">c13</span> == 0<span class="kw">))</span> <span class="kw">{</span></span>
+<span id="cb17-32"><a href="#cb17-32" aria-hidden="true" tabindex="-1"></a>          <span class="va">bufmatmul</span><span class="op">[</span>(((0 + (c7<span class="pp">*</span>1)) + (c5<span class="pp">*</span>64)) + (c3<span class="pp">*</span>1920)) + (c1<span class="pp">*</span>57600)<span class="op">]</span> <span class="ex">=</span> <span class="er">(</span><span class="ex">float64</span><span class="kw">)</span><span class="va">bufmatmul</span><span class="op">[</span>(((0 + (c7<span class="pp">*</span>1)) + (c5<span class="pp">*</span>64)) + (c3<span class="pp">*</span>1920)) + (c1<span class="pp">*</span>57600)<span class="op">]</span> <span class="ex">+</span> <span class="er">(</span><span class="kw">(</span><span class="ex">float64</span><span class="kw">)</span><span class="va">bufconv</span><span class="op">[</span>(((0 + (oc<span class="pp">*</span>1)) + (c5<span class="pp">*</span>30)) + (c3<span class="pp">*</span>900)) + (c1<span class="pp">*</span>14400)<span class="op">]</span><span class="ex">*</span><span class="er">(</span><span class="ex">float64</span><span class="kw">)</span><span class="va">bufrhs</span><span class="op">[</span>(((0 + (c7<span class="pp">*</span>1)) + (oc<span class="pp">*</span>64)) + (c3<span class="pp">*</span>1024)) + (c1<span class="pp">*</span>30720)<span class="op">]</span><span class="kw">)</span></span>
+<span id="cb17-33"><a href="#cb17-33" aria-hidden="true" tabindex="-1"></a>          <span class="cf">if</span> <span class="kw">(</span><span class="ex">c7</span> <span class="op">&lt;</span>= 15<span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb17-34"><a href="#cb17-34" aria-hidden="true" tabindex="-1"></a>           <span class="va">bufconv</span><span class="op">[</span>(((0 + (c7<span class="pp">*</span>1)) + (c5<span class="pp">*</span>30)) + (c3<span class="pp">*</span>900)) + (c1<span class="pp">*</span>14400)<span class="op">]</span> <span class="ex">=</span> <span class="er">(</span><span class="ex">float64</span><span class="kw">)</span><span class="va">bufconv</span><span class="op">[</span>(((0 + (c5<span class="pp">*</span>1)) + (c3<span class="pp">*</span>30)) + (c7<span class="pp">*</span>900)) + (c1<span class="pp">*</span>14400)<span class="op">]</span></span>
+<span id="cb17-35"><a href="#cb17-35" aria-hidden="true" tabindex="-1"></a>          <span class="kw">}</span></span>
+<span id="cb17-36"><a href="#cb17-36" aria-hidden="true" tabindex="-1"></a>          <span class="va">bufconv</span><span class="op">[</span>(((0 + (c7<span class="pp">*</span>1)) + (c5<span class="pp">*</span>30)) + (c3<span class="pp">*</span>900)) + (c1<span class="pp">*</span>14400)<span class="op">]</span> <span class="ex">=</span> 0.000000</span>
+<span id="cb17-37"><a href="#cb17-37" aria-hidden="true" tabindex="-1"></a>         <span class="kw">}</span></span>
+<span id="cb17-38"><a href="#cb17-38" aria-hidden="true" tabindex="-1"></a>        <span class="kw">}</span></span>
+<span id="cb17-39"><a href="#cb17-39" aria-hidden="true" tabindex="-1"></a>       <span class="kw">}</span></span>
+<span id="cb17-40"><a href="#cb17-40" aria-hidden="true" tabindex="-1"></a>      <span class="kw">}</span></span>
+<span id="cb17-41"><a href="#cb17-41" aria-hidden="true" tabindex="-1"></a>     <span class="kw">}</span></span>
+<span id="cb17-42"><a href="#cb17-42" aria-hidden="true" tabindex="-1"></a>    <span class="kw">}</span></span>
+<span id="cb17-43"><a href="#cb17-43" aria-hidden="true" tabindex="-1"></a>   <span class="kw">}</span></span>
+<span id="cb17-44"><a href="#cb17-44" aria-hidden="true" tabindex="-1"></a>  <span class="kw">}</span></span>
+<span id="cb17-45"><a href="#cb17-45" aria-hidden="true" tabindex="-1"></a> <span class="kw">}</span></span>
+<span id="cb17-46"><a href="#cb17-46" aria-hidden="true" tabindex="-1"></a><span class="er">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>因为<code>tiramisu</code>是完全依赖手动调度, 所以这里的<code>fusion</code>使用的<code>buffer</code>需要提前手动指定, 对于手工优化算子应该会省事情, 但是集成到编译器并不是很合适.</p>
+</section>
+</section>
+<section id="总结" class="level1">
+<h1>总结</h1>
+<p>我认为一个算子的实现取决于<code>compute order</code>, <code>tiling</code>, <code>buffer binding</code>三部分, 作为编译器或者开发者需要利用尽可能多的信息在这三个<code>design space</code>进行选择从而优化计算性能. 我们期待<code>Tensor DSL</code>能带来足够多的信息支持做好这件事.</p>
+<p>目前这些<code>DSL</code>都提供了基本的<code>iteration domain</code>和<code>access relation</code>的信息. 但是只有<code>halide</code>直接记录了循环变量被上下算子共享的信息(目前暂未查到这种信息的书面语), <code>mlir</code>应该是在<code>fusion</code>的优化中通过<code>affine map</code>来推导出这个信息的. 在<a href="https://mlir.llvm.org/docs/Rationale/RationaleLinalgDialect/"><code>linalg</code>的基本原理</a>文档中, <code>mlir</code>总结了不同编译器实现的经验, 需要提供有灵活调度的能力, 又不能像<code>Polyhedral</code>那样复杂, 并且还要保持<code>SSA</code>的形式. 从<code>fusion</code> pass的优化结果上来看, <code>mlir</code>所提炼的方案还是比较实用的.</p>
+<p>在我的设想中, 应该是基于一套<code>symbolic</code>的维度变量, 可以类似<code>einsum</code>一样定义出深度学习中的绝大部分算子(或许<code>einops</code>就是个不错的选择), 定义算子就相当于声明了<code>iteration domain</code>和<code>access relation</code>, 然后也可以在这个图级别<code>ir</code>上能做到<code>tiling/schedule</code>, 最后<code>lower</code>到循环级别或是多面体调度树(可能不支持参数化)时利用好映射关系安排好各种细节的索引, 最终生成正确的代码.</p>
+<p>当然还有许多问题需要考虑:</p>
+<ol type="1">
+<li>如何自然的处理循环顺序?</li>
+</ol>
+<p>上面提到的DSL都是直接写出迭代域的, 但是如果不想手动写出, 直接通过tensor操作来决定循环顺序可能就会和所需要的有差异, 比如<code>loop tool</code>的做法:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> loop_tool <span class="im">as</span> lt</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>[m, n, k] <span class="op">=</span> lt.symbols(<span class="st">"m n k"</span>)</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>a <span class="op">=</span> lt.Tensor(<span class="dv">32</span>, <span class="dv">32</span>).to(m, k)</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>b <span class="op">=</span> lt.Tensor(<span class="dv">32</span>, <span class="dv">32</span>).to(k, n)</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>c <span class="op">=</span> (a <span class="op">*</span> b).<span class="bu">sum</span>(k)</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a><span class="co"># ir:</span></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> m_0 <span class="kw">in</span> <span class="dv">32</span>                     </span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a> <span class="cf">for</span> k_2 <span class="kw">in</span> <span class="dv">32</span></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> n_1 <span class="kw">in</span> <span class="dv">32</span></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>   <span class="op">%</span><span class="dv">2</span>[m_0, k_2, n_1] <span class="op">&lt;-</span> multiply(<span class="op">%</span><span class="dv">0</span>, <span class="op">%</span><span class="dv">1</span>)</span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>   <span class="op">%</span><span class="dv">3</span>[m_0, n_1] <span class="op">&lt;-</span> add(<span class="op">%</span><span class="dv">2</span>)</span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a> <span class="cf">for</span> n_1 <span class="kw">in</span> <span class="dv">32</span></span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>  <span class="op">%</span><span class="dv">4</span>[m_0, n_1] <span class="op">&lt;-</span> write(<span class="op">%</span><span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>他这里<code>[m, k] * [k, n]</code>的时候其实就决定了循环是<code>m k n</code>的顺序, 后面<code>sum(k)</code>并不影响循环顺序. 同时他这里<code>%2,%3</code>的buffer大小都是自动按访问数据区域来分配的.</p>
+<!-- 4.  比如如何支持规约操作的写法? 非完美循环组成的算子如何支持, 直接可以写`native code`或者别的方式? -->
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/zhen8838\.github\.io");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script src="https://utteranc.es/client.js" repo="zhen8838/zhen8838.github.io" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

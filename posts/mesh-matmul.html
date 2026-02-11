@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2024-11-07">
+
+<title>分布式存储架构下的矩阵乘与编译器 – Zheng’s Notes</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../assets/favicon.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-7072389654d23eff08f359f9aa0d1ee7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">Zheng’s Notes</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#目前常用的分布式矩阵乘方法" id="toc-目前常用的分布式矩阵乘方法" class="nav-link active" data-scroll-target="#目前常用的分布式矩阵乘方法">1. 目前常用的分布式矩阵乘方法</a></li>
+  <li><a href="#cannon算法" id="toc-cannon算法" class="nav-link" data-scroll-target="#cannon算法">2. Cannon算法</a>
+  <ul class="collapse">
+  <li><a href="#原理" id="toc-原理" class="nav-link" data-scroll-target="#原理">2.1 原理</a></li>
+  <li><a href="#实现" id="toc-实现" class="nav-link" data-scroll-target="#实现">2.2 实现</a></li>
+  <li><a href="#分析" id="toc-分析" class="nav-link" data-scroll-target="#分析">2.3 分析</a></li>
+  </ul></li>
+  <li><a href="#summa算法" id="toc-summa算法" class="nav-link" data-scroll-target="#summa算法">3. SUMMA算法</a>
+  <ul class="collapse">
+  <li><a href="#原理-1" id="toc-原理-1" class="nav-link" data-scroll-target="#原理-1">3.1 原理</a></li>
+  <li><a href="#实现-1" id="toc-实现-1" class="nav-link" data-scroll-target="#实现-1">3.2 实现</a></li>
+  <li><a href="#分析-1" id="toc-分析-1" class="nav-link" data-scroll-target="#分析-1">3.3 分析</a></li>
+  </ul></li>
+  <li><a href="#d-summa算法" id="toc-d-summa算法" class="nav-link" data-scroll-target="#d-summa算法">4. 3D SUMMA算法</a>
+  <ul class="collapse">
+  <li><a href="#原理-2" id="toc-原理-2" class="nav-link" data-scroll-target="#原理-2">4.1 原理</a></li>
+  <li><a href="#实现-2" id="toc-实现-2" class="nav-link" data-scroll-target="#实现-2">4.2 实现</a></li>
+  <li><a href="#分析-2" id="toc-分析-2" class="nav-link" data-scroll-target="#分析-2">4.3 分析</a></li>
+  </ul></li>
+  <li><a href="#d-summa-算法" id="toc-d-summa-算法" class="nav-link" data-scroll-target="#d-summa-算法">5. 2.5D SUMMA 算法</a>
+  <ul class="collapse">
+  <li><a href="#原理-3" id="toc-原理-3" class="nav-link" data-scroll-target="#原理-3">5.1 原理</a></li>
+  <li><a href="#实现-3" id="toc-实现-3" class="nav-link" data-scroll-target="#实现-3">5.2 实现</a></li>
+  <li><a href="#分析-3" id="toc-分析-3" class="nav-link" data-scroll-target="#分析-3">5.3 分析</a></li>
+  </ul></li>
+  <li><a href="#大模型中的2.5d与3d并行" id="toc-大模型中的2.5d与3d并行" class="nav-link" data-scroll-target="#大模型中的2.5d与3d并行">6. 大模型中的2.5D与3D并行</a>
+  <ul class="collapse">
+  <li><a href="#tesseract" id="toc-tesseract" class="nav-link" data-scroll-target="#tesseract">6.1 Tesseract</a></li>
+  <li><a href="#nus版3d并行" id="toc-nus版3d并行" class="nav-link" data-scroll-target="#nus版3d并行">6.2 NUS版3D并行</a></li>
+  </ul></li>
+  <li><a href="#t10-inter-core-connected-compiler" id="toc-t10-inter-core-connected-compiler" class="nav-link" data-scroll-target="#t10-inter-core-connected-compiler">7. T10: Inter-core Connected Compiler</a>
+  <ul class="collapse">
+  <li><a href="#rtensor抽象" id="toc-rtensor抽象" class="nav-link" data-scroll-target="#rtensor抽象">7.1 rTensor抽象</a></li>
+  <li><a href="#自动搜索rtensor" id="toc-自动搜索rtensor" class="nav-link" data-scroll-target="#自动搜索rtensor">7.2 自动搜索rTensor</a></li>
+  <li><a href="#算子内与算子间trade-off" id="toc-算子内与算子间trade-off" class="nav-link" data-scroll-target="#算子内与算子间trade-off">7.3 算子内与算子间trade-off</a></li>
+  <li><a href="#子张量放置" id="toc-子张量放置" class="nav-link" data-scroll-target="#子张量放置">7.4 子张量放置</a></li>
+  <li><a href="#分析-4" id="toc-分析-4" class="nav-link" data-scroll-target="#分析-4">7.5 分析</a></li>
+  </ul></li>
+  <li><a href="#parallel-matrix-multiplication-a-systematic-journey" id="toc-parallel-matrix-multiplication-a-systematic-journey" class="nav-link" data-scroll-target="#parallel-matrix-multiplication-a-systematic-journey">8. Parallel Matrix Multiplication: A Systematic Journey</a></li>
+  <li><a href="#总结" id="toc-总结" class="nav-link" data-scroll-target="#总结">9. 总结</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">分布式存储架构下的矩阵乘与编译器</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">编译器</div>
+  </div>
+  </div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">November 7, 2024</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>分布式内存计算机的出现主要是为了满足大规模计算任务对计算能力和内存容量的需求, 但是由于物理限制与成本考虑, 单处理器的性能提升存在极限, 而分布式内存计算机通过使用多个相对简单/成本较低的处理器组成集群, 可以在不突破物理限制的情况下, 以较低的成本实现更高的计算性能.</p>
+<!--more-->
+<p>分布式内存架构是一个多处理器计算机系统, 其中每个处理器都有自己的私有内存, 以及处理器之间某种形式的互联. 计算任务只能对本地数据进行操作, 如果需要远程数据, 则计算任务必须与一个或多个远程处理器通信.</p>
+<p><img src="mesh-matmul/Distributed-Memory-Architecture.png" class="img-fluid"></p>
+<p>在分布式内存架构下, 数据可以静态分布, 也可以通过节点移动; 既可以按需移动数据, 也可以提前将数据推送到新节点. 因此他的编程模型更复杂, 实现高性能计算任务时, 除了通常数据局部性还需要考虑通信开销, 也就是需要在考虑拓扑结构的同时设计数据的存储,通信的策略等. 仅仅是矩阵乘的计算就有非常多种方式, 接下来我将逐一介绍.</p>
+<section id="目前常用的分布式矩阵乘方法" class="level1">
+<h1>1. 目前常用的分布式矩阵乘方法</h1>
+<p>目前大家对于大模型分布式可能比较熟悉, 因此我从大模型中的TP开始举例, 首先原始的TP是在一维拓扑上切分模型的权重, 也就是每个处理器节点存储<code>A[M,K], B[K,N/P]</code>大小的数据:</p>
+<p><img src="mesh-matmul/TP 1D.png" class="img-fluid"></p>
+<p>套用<a href="https://arxiv.org/abs/2110.15032">oneflow</a>中sbp的表示方式, 这里的切分逻辑可以表示为: <span class="math display">\[
+\begin{aligned}
+  (broadcast) \times (split(1)) = (split(1))
+\end{aligned}
+\]</span></p>
+<p>那么假设扩展到二维拓扑下, 我们可以自然的想到对K维度进行切分, 那么每个阶段存储<code>A[M,K/P], B[K/P,N/P]</code>大小的数据:</p>
+<p><img src="mesh-matmul/TP 2D.png" class="img-fluid"></p>
+<p>当然这里别忘记K维度切分后需要做Core间reduce, 使用sbp可以按如下描述 <span class="math display">\[
+\begin{aligned}
+  (broadcast, split(1)) \times (split(1), split(0)) = (split(1), partialsum)\\
+  (split(1), partialsum) \xrightarrow{\text{boxing}} (split(1), broadcast)
+\end{aligned}
+\]</span></p>
+<p>同样还可以切分M和N:</p>
+<p><span class="math display">\[
+\begin{aligned}
+  (split(0), broadcast) \times (broadcast, split(1)) = (split(0), split(1))
+\end{aligned}
+\]</span></p>
+<p>不知道大家有没有发现, 在sbp的表示方法下, 它所指示的切分代表实际存储的数据分片, 并且计算的数据完全来自本地数据, 那么在它的表示下, 矩阵乘总是有一个维度是无法被切分的, 因为在M,K,N同时被二维拓扑切分时, 按他的逻辑所计算出的结果会不完整. 这带来的第一个问题即是每个节点的内存占用较高.</p>
+</section>
+<section id="cannon算法" class="level1">
+<h1>2. Cannon算法</h1>
+<section id="原理" class="level2">
+<h2 class="anchored" data-anchor-id="原理">2.1 原理</h2>
+<p>Cannon算法来自于1969年的论文<a href="https://dl.acm.org/doi/book/10.5555/905686">A cellular computer to implement the Kalman Filter Algorithm</a>, 它适用在均匀的2D mesh上实现分布式矩阵乘, 他的优势在于完全对三个维度进行切分, 不会增加内存占用:</p>
+<p><img src="mesh-matmul/Cannon Alg.png" class="img-fluid"></p>
+<p>它将K维度的reduce依旧放在同一个core上执行, 但是同时需要把K维度进行切分, 通过时间上的迭代逐渐<code>shift</code>需要的k到目标core上. 因此需要对矩阵A,B进行预先分布, 并且此时的切分状态就无法使用类似SBP的形式表示, 需要用映射的方式来表示: <span class="math display">\[
+\begin{aligned}
+  [j, (i+j) \% \sqrt{P}] \rightarrow [m,k] \\
+  [(i+j) \% \sqrt{P}, i] \rightarrow [k,n] \\
+\end{aligned}
+\]</span></p>
+<p>下图展示了在二维mesh的第一行处理器上所分布的数据状态:</p>
+<p><img src="mesh-matmul/Cannon.png" class="img-fluid"></p>
+<p>接下来分别是<code>矩阵乘累加</code>以及<code>shift</code>, <code>shift</code>表示在x和y方向上对A,B的数据分片进行ring的传输, 下图展示的是<code>shift</code>后数据分片变化情况:</p>
+<p><img src="mesh-matmul/Canon Compute.gif" class="img-fluid"></p>
+</section>
+<section id="实现" class="level2">
+<h2 class="anchored" data-anchor-id="实现">2.2 实现</h2>
+<p>下面是一个基于mpi4py实现的cannon算法实例:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> mpi4py <span class="im">import</span> MPI</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> viztracer <span class="im">import</span> log_sparse</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>np.set_printoptions(suppress<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> matmul(c: np.ndarray, a, b):</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  c <span class="op">+=</span> a <span class="op">@</span> b</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="at">@log_sparse</span>(stack_depth<span class="op">=</span><span class="dv">3</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> cannon(A: np.ndarray, B: np.ndarray, C: np.ndarray, P, comm2d: MPI.Cartcomm):</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  (M, K) <span class="op">=</span> A.shape</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  N <span class="op">=</span> B.shape[<span class="dv">1</span>]</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  (mTile, nTile, kTile) <span class="op">=</span> (M <span class="op">//</span> P, N <span class="op">//</span> P, K <span class="op">//</span> P)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  (j, i) <span class="op">=</span> comm2d.Get_coords(rank)  <span class="co"># topology is row major</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  <span class="co"># align data</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  k <span class="op">=</span> (i <span class="op">+</span> j) <span class="op">%</span> P</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  a <span class="op">=</span> np.ascontiguousarray(A[j <span class="op">*</span> mTile:(j <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> mTile, k <span class="op">*</span> kTile:(k <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> kTile].copy())</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>  b <span class="op">=</span> np.ascontiguousarray(B[k <span class="op">*</span> kTile:(k <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> kTile, i <span class="op">*</span> nTile:(i <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> nTile].copy())</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>  <span class="co"># compute and shift</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>  c <span class="op">=</span> np.empty([mTile, nTile], np.float32)</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> t <span class="kw">in</span> <span class="bu">range</span>(P):</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    matmul(c.view(), a, b)</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> t <span class="op">==</span> P <span class="op">-</span> <span class="dv">1</span>: <span class="cf">continue</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    <span class="co"># top right is (0,0)</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>    right, left <span class="op">=</span> comm2d.Get_cart_rank([j, (i <span class="op">+</span> <span class="dv">1</span>) <span class="op">%</span> P]), comm2d.Get_cart_rank([j, (i <span class="op">-</span> <span class="dv">1</span>) <span class="op">%</span> P])</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    comm2d.Sendrecv_replace(a, dest<span class="op">=</span>left, source<span class="op">=</span>right)</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>    top, down <span class="op">=</span> comm2d.Get_cart_rank([(j <span class="op">-</span> <span class="dv">1</span>) <span class="op">%</span> P, i]), comm2d.Get_cart_rank([(j <span class="op">+</span> <span class="dv">1</span>) <span class="op">%</span> P, i])</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>    comm2d.Sendrecv_replace(b, dest<span class="op">=</span>top, source<span class="op">=</span>down)</span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>  <span class="co"># compare result</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>  ref <span class="op">=</span> C[j <span class="op">*</span> mTile:(j <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> mTile, i <span class="op">*</span> nTile:(i <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> nTile]</span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>  <span class="cf">assert</span> np.allclose(c, ref)</span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">'__main__'</span>:</span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>  A, B, C <span class="op">=</span> np.load(<span class="st">'A.npy'</span>, <span class="st">'r'</span>), np.load(<span class="st">'B.npy'</span>, <span class="st">'r'</span>), np.load(<span class="st">'C.npy'</span>, <span class="st">'r'</span>)</span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>  P <span class="op">=</span> <span class="dv">3</span></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>  comm <span class="op">=</span> MPI.COMM_WORLD</span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>  rank <span class="op">=</span> comm.Get_rank()</span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>  comm2d <span class="op">=</span> comm.Create_cart([P, P], [<span class="va">False</span>, <span class="va">False</span>])</span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>  cannon(A, B, C, P, comm2d)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>我这里构造了<code>M:11520,K:7680,N:12288</code>大小的矩阵, 并使用9个处理器执行:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">mpiexec</span> <span class="at">-n</span> 9 python cannon.py               </span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>此代码的profiling结果如下: <img src="mesh-matmul/Cannon Trace.png" class="img-fluid"></p>
+</section>
+<section id="分析" class="level2">
+<h2 class="anchored" data-anchor-id="分析">2.3 分析</h2>
+<p>首先我们使用<a href="https://www.cs.utexas.edu/~pingali/CSE392/2011sp/lectures/Conc_Comp.pdf">此处</a>所提出的alpha-beta模型分析代价:</p>
+<p><img src="mesh-matmul/Cost Model.png" class="img-fluid"></p>
+<p>对于Cannon算法, 假设处理器个数为<span class="math inline">\(P\)</span>, 并且矩阵三个维度均为<span class="math inline">\(n\)</span>, 在忽略初始分布开销的情况下, 通信代价下限为: <span class="math display">\[
+\begin{aligned}
+  Cost = 2(\sqrt{P}-1)(\alpha + \frac{n^2}{P} \beta)
+\end{aligned}
+\]</span></p>
+</section>
+</section>
+<section id="summa算法" class="level1">
+<h1>3. SUMMA算法</h1>
+<p>SUMMA算法来源于1995年的论文<a href="https://dl.acm.org/doi/10.5555/899248">Scalable Universal Matrix Multiplication Algorithm</a>, 他克服了cannon算法限制处理器阵列必须为方形的缺点, 提出了一种更加通用以及便于实现的算法:</p>
+<p><img src="mesh-matmul/SUMMA Alg.png" class="img-fluid"></p>
+<section id="原理-1" class="level2">
+<h2 class="anchored" data-anchor-id="原理-1">3.1 原理</h2>
+<p>他是典型的计算的存储分离的模式, 他同样将数据进行了完全切分, 每个节点上没有重复存储, 此时可以使用类似SBP的方式来表示: <span class="math display">\[
+\begin{aligned}
+    (split(0), split(1)) \times (split(0), split(1)) = (split(0), split(1))
+\end{aligned}
+\]</span></p>
+<p>对应的示意图如下:</p>
+<p><img src="mesh-matmul/SUMMA.png" class="img-fluid"></p>
+<p>计算和使用SIMD指令进行外积形式的矩阵乘一致, 在K维度迭代, 只是数据需要从存储它的节点broadcast到其他节点:</p>
+<p><img src="mesh-matmul/SUMMA Compute.gif" class="img-fluid"></p>
+</section>
+<section id="实现-1" class="level2">
+<h2 class="anchored" data-anchor-id="实现-1">3.2 实现</h2>
+<p>为了简单起见, 依旧使用<code>M:11520,K:7680,N:12288</code>大小的矩阵, 并使用9个处理器执行:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> mpi4py <span class="im">import</span> MPI</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> viztracer <span class="im">import</span> log_sparse</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>np.set_printoptions(suppress<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> matmul(c: np.ndarray, a, b):</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  c <span class="op">+=</span> a <span class="op">@</span> b</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="at">@log_sparse</span>(stack_depth<span class="op">=</span><span class="dv">5</span>)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> summa(A: np.ndarray, B: np.ndarray, C: np.ndarray, P, comm2d: MPI.Cartcomm):</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  col_comm <span class="op">=</span> comm2d.Sub([<span class="va">True</span>, <span class="va">False</span>])</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  row_comm <span class="op">=</span> comm2d.Sub([<span class="va">False</span>, <span class="va">True</span>])</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  (M, K) <span class="op">=</span> A.shape</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  N <span class="op">=</span> B.shape[<span class="dv">1</span>]</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>  (mTile, nTile, kTile) <span class="op">=</span> (M <span class="op">//</span> P, N <span class="op">//</span> P, K <span class="op">//</span> P)</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  (j, i) <span class="op">=</span> comm2d.Get_coords(rank)  <span class="co"># topology is row major</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>  <span class="co"># align data</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>  a <span class="op">=</span> np.ascontiguousarray(A[j <span class="op">*</span> mTile:(j <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> mTile, i <span class="op">*</span> kTile:(i <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> kTile].copy())</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>  b <span class="op">=</span> np.ascontiguousarray(B[j <span class="op">*</span> kTile:(j <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> kTile, i <span class="op">*</span> nTile:(i <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> nTile].copy())</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>  <span class="co"># compute and broadcast</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>  c <span class="op">=</span> np.empty([mTile, nTile], np.float32)</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> k <span class="kw">in</span> <span class="bu">range</span>(P):</span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>    Atemp <span class="op">=</span> a <span class="cf">if</span> k <span class="op">==</span> i <span class="cf">else</span> np.empty_like(a)</span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>    Btemp <span class="op">=</span> b <span class="cf">if</span> k <span class="op">==</span> j <span class="cf">else</span> np.empty_like(b)</span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>    row_comm.Bcast(Atemp, root<span class="op">=</span>k)</span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>    col_comm.Bcast(Btemp, root<span class="op">=</span>k)</span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>    matmul(c.view(), Atemp, Btemp)</span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>  <span class="co"># compare result</span></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>  ref <span class="op">=</span> C[j <span class="op">*</span> mTile:(j <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> mTile, i <span class="op">*</span> nTile:(i <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> nTile]</span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>  <span class="cf">assert</span> np.allclose(c, ref)</span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">'__main__'</span>:</span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a>  A, B, C <span class="op">=</span> np.load(<span class="st">'A.npy'</span>, <span class="st">'r'</span>), np.load(<span class="st">'B.npy'</span>, <span class="st">'r'</span>), np.load(<span class="st">'C.npy'</span>, <span class="st">'r'</span>)</span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a>  P <span class="op">=</span> <span class="dv">3</span></span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a>  comm <span class="op">=</span> MPI.COMM_WORLD</span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a>  rank <span class="op">=</span> comm.Get_rank()</span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a>  comm2d <span class="op">=</span> comm.Create_cart([P, P], [<span class="va">False</span>, <span class="va">False</span>])</span>
+<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a>  summa(A, B, C, P, comm2d)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>此代码的profiling结果如下: <img src="mesh-matmul/SUMMA Trace.png" class="img-fluid"></p>
+</section>
+<section id="分析-1" class="level2">
+<h2 class="anchored" data-anchor-id="分析-1">3.3 分析</h2>
+<p>同样保持与之前类似的假设, 计算得通信代价下界为:</p>
+<p><span class="math display">\[
+\begin{aligned}
+  Cost =  2 \sqrt{P} (\alpha\log \sqrt{P} + \frac{n^2}{P}\beta)
+\end{aligned}
+\]</span></p>
+</section>
+</section>
+<section id="d-summa算法" class="level1">
+<h1>4. 3D SUMMA算法</h1>
+<p>3D SUMMA算法来自于论文<a href="https://ieeexplore.ieee.org/document/5389455">A three-dimensional approach to parallel matrix multiplication</a>, 主要用于三维拓扑结构下进行矩阵乘计算, 他的优点是通信量比2d summa更小:</p>
+<p><img src="mesh-matmul/SUMMA 3D Alg.png" class="img-fluid"></p>
+<section id="原理-2" class="level2">
+<h2 class="anchored" data-anchor-id="原理-2">4.1 原理</h2>
+<p>它首先把处理器节点构造为一个立方体拓扑结构, 然后将数据尽量切分映射到不同的节点上:</p>
+<p><img src="mesh-matmul/SUMMA 3D.png" class="img-fluid"></p>
+<p>使用SBP的表示方式来描述: <span class="math display">\[
+\begin{aligned}
+  &amp;(split(1), split(1), split(0)) \times  (split(1), split(0), split(0)) = (split(1), split(1), split(0)) \\
+  &amp;A:[i,j+l] \rightarrow [m,k]\\
+  &amp;B:[l,j+i] \rightarrow [k,n]\\
+  &amp;C:[i,j+l] \rightarrow [m,n]
+\end{aligned}
+\]</span></p>
+<p>为了尽量减少存储开销, 对于A,B都在三个维度进行了切分, 同时其中两个维度切的是同一个轴. 先通过<code>Allgather</code>将A,B收集并广播,然后计算矩阵乘得到<span class="math inline">\(D_{ijl}\)</span>, 然后通过一个<code>Alltoall</code>将z轴的k换成了n的切分, 然后每个core单独执行reduce操作即可:</p>
+<p><img src="mesh-matmul/SUMMA 3D Compute.png" class="img-fluid"></p>
+</section>
+<section id="实现-2" class="level2">
+<h2 class="anchored" data-anchor-id="实现-2">4.2 实现</h2>
+<p>为了简单起见, 依旧使用<code>M:11520,K:7680,N:12288</code>大小的矩阵, 并使用8个处理器执行:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sys</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> mpi4py <span class="im">import</span> MPI</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> viztracer <span class="im">import</span> log_sparse</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>np.set_printoptions(suppress<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="at">@log_sparse</span>(stack_depth<span class="op">=</span><span class="dv">3</span>)</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> summa_3d(A: np.ndarray, B: np.ndarray, C: np.ndarray, p, comm3d: MPI.Cartcomm):</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  x_comm <span class="op">=</span> comm3d.Sub([<span class="va">False</span>, <span class="va">False</span>, <span class="va">True</span>])</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  y_comm <span class="op">=</span> comm3d.Sub([<span class="va">False</span>, <span class="va">True</span>, <span class="va">False</span>])</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  z_comm <span class="op">=</span> comm3d.Sub([<span class="va">True</span>, <span class="va">False</span>, <span class="va">False</span>])</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  (M, K) <span class="op">=</span> A.shape</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>  N <span class="op">=</span> B.shape[<span class="dv">1</span>]</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>  (MTile, NTile, KTile) <span class="op">=</span> (M <span class="op">//</span> p, N <span class="op">//</span> p, K <span class="op">//</span> p)</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>  (mTile, nTile, kTile) <span class="op">=</span> (MTile <span class="op">//</span> p, NTile <span class="op">//</span> p, KTile <span class="op">//</span> p)</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>  (l, j, i) <span class="op">=</span> comm3d.Get_coords(rank)  <span class="co"># topology is row major</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>  <span class="co"># align data</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>  a <span class="op">=</span> np.ascontiguousarray(A[i <span class="op">*</span> MTile:(i <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> MTile, l <span class="op">*</span> KTile:(l <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> KTile]</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>                           [:, j <span class="op">*</span> kTile: (j <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> kTile].copy())</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>  b <span class="op">=</span> np.ascontiguousarray(B[l <span class="op">*</span> KTile:(l <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> KTile, j <span class="op">*</span> NTile:(j <span class="op">+</span> <span class="dv">1</span>)</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>                           <span class="op">*</span> NTile][:, i <span class="op">*</span> nTile: (i <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> nTile].copy())</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>  <span class="co"># compute and passing data</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>  c <span class="op">=</span> np.zeros([MTile, nTile], np.float32)</span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>  Atemp <span class="op">=</span> np.empty([p, MTile, kTile], np.float32)</span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>  Btemp <span class="op">=</span> np.empty([p, KTile, nTile], np.float32)</span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>  y_comm.Allgather(a, Atemp)</span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>  x_comm.Allgather(b, Btemp)</span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>  Atemp <span class="op">=</span> Atemp.transpose([<span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">2</span>]).reshape(MTile, KTile)</span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>  Btemp <span class="op">=</span> Btemp.transpose([<span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">2</span>]).reshape(KTile, NTile)</span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>  Dl <span class="op">=</span> np.dot(Atemp, Btemp)  <span class="co"># [MTile, NTile]</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>  Dr <span class="op">=</span> np.empty([p, MTile, nTile], np.float32)</span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Note that mpi4py will send data sequentially. So, we want to resplit on N. We had to split it first.</span></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a>  Dsend <span class="op">=</span> np.ascontiguousarray(np.stack(np.split(Dl, p, axis<span class="op">=-</span><span class="dv">1</span>)))</span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>  z_comm.Alltoall(Dsend, Dr)</span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a>  c <span class="op">+=</span> np.<span class="bu">sum</span>(Dr, axis<span class="op">=</span><span class="dv">0</span>, keepdims<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a>  <span class="co"># compare result</span></span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>  ref <span class="op">=</span> C[i <span class="op">*</span> MTile:(i <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> MTile, j <span class="op">*</span> NTile:(j <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> NTile][:, l <span class="op">*</span> nTile:(l <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> nTile]</span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a>  <span class="cf">assert</span> np.allclose(c, ref)</span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">'__main__'</span>:</span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a>  A, B, C <span class="op">=</span> np.load(<span class="st">'A.npy'</span>, <span class="st">'r'</span>), np.load(<span class="st">'B.npy'</span>, <span class="st">'r'</span>), np.load(<span class="st">'C.npy'</span>, <span class="st">'r'</span>)</span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a>  p <span class="op">=</span> <span class="dv">2</span></span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a>  comm <span class="op">=</span> MPI.COMM_WORLD</span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a>  rank <span class="op">=</span> comm.Get_rank()</span>
+<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a>  comm3d <span class="op">=</span> comm.Create_cart([p, p, p], [<span class="va">False</span>, <span class="va">False</span>, <span class="va">False</span>])</span>
+<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a>  summa_3d(A, B, C, p, comm3d)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>注意由于<code>mpi4py</code>所提供一些接口限制, 中间引入了一些必要的数据重排操作来保证通信的正确性, 此代码的profiling结果如下: <img src="mesh-matmul/SUMMA 3D Trace.png" class="img-fluid"></p>
+</section>
+<section id="分析-2" class="level2">
+<h2 class="anchored" data-anchor-id="分析-2">4.3 分析</h2>
+<p>同样保持与之前类似的假设, 计算得通信代价下界为: <span class="math display">\[
+\begin{aligned}
+  Cost &amp;= 2(\alpha\log\sqrt[3]{P} + \frac{(\sqrt[3]{P}-1)}{\sqrt[3]{P}}\frac{N^2}{P}\beta) + (\alpha\log\sqrt[3]{P} + \frac{(\sqrt[3]{P}-1)}{\sqrt[3]{P}} \frac{N^2}{P^{\frac{2}{3}}} \beta ) \\
+      &amp;= 3\alpha\log\sqrt[3]{P} + \frac{(\sqrt[3]{P}-1)}{\sqrt[3]{P}}(\frac{2N^2}{P} + \frac{N^2}{P^{\frac{2}{3}}})\beta
+\end{aligned}
+\]</span></p>
+<p>总的来说, 3D算法可以比2D算法少传输<span class="math inline">\(P^{\frac{1}{6}}\)</span>倍的数据.</p>
+</section>
+</section>
+<section id="d-summa-算法" class="level1">
+<h1>5. 2.5D SUMMA 算法</h1>
+<p>实际上2.5D算法有两种, 一种是<a href="https://link.springer.com/chapter/10.1007/978-3-642-23397-5_10">基于Cannon改进版</a>, 另一种是<a href="https://ieeexplore.ieee.org/document/6114461">基于SUMMA改进版</a>.不过他们都是在$p p d,1 d p $的拓扑结构下执行的一种泛化算法:</p>
+<p><img src="mesh-matmul/2.5D Grid.png" class="img-fluid"></p>
+<p>其中Cannon改进版还有存在拓扑结构为方阵的约束, 并且计算逻辑复杂:</p>
+<p><img src="mesh-matmul/Cannon 2.5D ALG.png" class="img-fluid"></p>
+<p>后来作者提出SUMMA改进版, 可以推广到非方阵拓扑, 计算过程简单, 并且和上面的算法有相同的理论下限:</p>
+<p><img src="mesh-matmul/SUMMA 2.5D ALG.png" class="img-fluid"></p>
+<section id="原理-3" class="level2">
+<h2 class="anchored" data-anchor-id="原理-3">5.1 原理</h2>
+<p>支持可以变化的拓扑结构, d可以降低到1退化为2D并行, 也可以提高到p进化为3d并行. 使用SBP的表示方式来描述: <span class="math display">\[
+\begin{aligned}
+  &amp;(broadcast, split(1), split(0)) \times (broadcast, split(1), split(0)) = (partialsum, split(1), split(0)) \\
+  &amp;A:[i,j] \rightarrow [m,k]\\
+  &amp;B:[i,j] \rightarrow [k,n]\\
+  &amp;C:[i,j,l] \rightarrow [m,n,k^*]
+\end{aligned}
+\]</span></p>
+<p>首先在z轴为0处分布A,B矩阵, 然后broadcast到整个阵列. 接着是横向纵向重新分布a,b, 实现在z轴重新切分K, 最后矩阵乘并在z轴reduce得到结果:</p>
+<p><img src="mesh-matmul/SUMMA 2.5D Compute.png" class="img-fluid"></p>
+</section>
+<section id="实现-3" class="level2">
+<h2 class="anchored" data-anchor-id="实现-3">5.2 实现</h2>
+<p>为了简单起见, 依旧使用<code>M:11520,K:7680,N:12288</code>大小的矩阵, 并使用18个处理器执行:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> math</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> mpi4py <span class="im">import</span> MPI</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> viztracer <span class="im">import</span> log_sparse</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>np.set_printoptions(suppress<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="at">@log_sparse</span>(stack_depth<span class="op">=</span><span class="dv">3</span>)</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> summa_2_5d(A: np.ndarray, B: np.ndarray, C: np.ndarray, p, d, comm3d: MPI.Cartcomm):</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  x_comm <span class="op">=</span> comm3d.Sub([<span class="va">False</span>, <span class="va">False</span>, <span class="va">True</span>])</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  y_comm <span class="op">=</span> comm3d.Sub([<span class="va">False</span>, <span class="va">True</span>, <span class="va">False</span>])</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  z_comm <span class="op">=</span> comm3d.Sub([<span class="va">True</span>, <span class="va">False</span>, <span class="va">False</span>])</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>  (M, K) <span class="op">=</span> A.shape</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>  N <span class="op">=</span> B.shape[<span class="dv">1</span>]</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>  (MTile, NTile, KPTile, KDTile) <span class="op">=</span> (M <span class="op">//</span> p, N <span class="op">//</span> p, K <span class="op">//</span> p, K <span class="op">//</span> d)</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>  (l, j, i) <span class="op">=</span> comm3d.Get_coords(rank)  <span class="co"># topology is row major</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>  <span class="co"># align data</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>  a <span class="op">=</span> np.ascontiguousarray(A[i <span class="op">*</span> MTile:(i <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> MTile, j <span class="op">*</span> KPTile:(j <span class="op">+</span> <span class="dv">1</span>)</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>                           <span class="op">*</span> KPTile]) <span class="cf">if</span> l <span class="op">==</span> <span class="dv">0</span> <span class="cf">else</span> np.ones([MTile, KPTile], np.float32)</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>  b <span class="op">=</span> np.ascontiguousarray(B[i <span class="op">*</span> KPTile:(i <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> KPTile, j <span class="op">*</span> NTile:(j <span class="op">+</span> <span class="dv">1</span>)</span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>                           <span class="op">*</span> NTile]) <span class="cf">if</span> l <span class="op">==</span> <span class="dv">0</span> <span class="cf">else</span> np.ones([KPTile, NTile], np.float32)</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>  c <span class="op">=</span> np.zeros([MTile, NTile], dtype<span class="op">=</span><span class="bu">float</span>)</span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>  <span class="co"># compute and passing data</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>  z_comm.Bcast(a, root<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>  z_comm.Bcast(b, root<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>  ktile <span class="op">=</span> math.gcd(KPTile, KDTile)</span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> k <span class="kw">in</span> <span class="bu">range</span>((l <span class="op">*</span> KDTile) <span class="op">//</span> ktile, ((l <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> KDTile) <span class="op">//</span> ktile):</span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>    aroot <span class="op">=</span> ((k <span class="op">*</span> ktile) <span class="op">//</span> KPTile)</span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>    Atemp <span class="op">=</span> np.copy(a[:, (k <span class="op">*</span> ktile) <span class="op">-</span> (aroot <span class="op">*</span> KPTile):</span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a>                      ((k <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> ktile) <span class="op">-</span> (aroot <span class="op">*</span> KPTile)]) <span class="cf">if</span> aroot <span class="op">==</span> j <span class="cf">else</span> np.empty([MTile, ktile], np.float32)</span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>    y_comm.Bcast(Atemp, root<span class="op">=</span>aroot)</span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a>    broot <span class="op">=</span> ((k <span class="op">*</span> ktile) <span class="op">//</span> KPTile)</span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a>    Btemp <span class="op">=</span> np.copy(b[(k <span class="op">*</span> ktile) <span class="op">-</span> (broot <span class="op">*</span> KPTile):</span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a>                      ((k <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> ktile) <span class="op">-</span> (broot <span class="op">*</span> KPTile), :]) <span class="cf">if</span> broot <span class="op">==</span> i <span class="cf">else</span> np.empty([ktile, NTile], np.float32)</span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a>    x_comm.Bcast(Btemp, root<span class="op">=</span>broot)</span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a>    np.add(c, np.dot(Atemp, Btemp), out<span class="op">=</span>c)</span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a>  cr <span class="op">=</span> np.empty([MTile, NTile], dtype<span class="op">=</span><span class="bu">float</span>) <span class="cf">if</span> l <span class="op">==</span> <span class="dv">0</span> <span class="cf">else</span> <span class="va">None</span></span>
+<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a>  z_comm.Reduce(c, cr)</span>
+<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a>  <span class="co"># compare result</span></span>
+<span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> l <span class="op">==</span> <span class="dv">0</span>:</span>
+<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a>    ref <span class="op">=</span> C[i <span class="op">*</span> MTile:(i <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> MTile, j <span class="op">*</span> NTile:(j <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> NTile]</span>
+<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> np.allclose(cr, ref)</span>
+<span id="cb5-47"><a href="#cb5-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-48"><a href="#cb5-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-49"><a href="#cb5-49" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">'__main__'</span>:</span>
+<span id="cb5-50"><a href="#cb5-50" aria-hidden="true" tabindex="-1"></a>  A, B, C <span class="op">=</span> np.load(<span class="st">'A.npy'</span>, <span class="st">'r'</span>), np.load(<span class="st">'B.npy'</span>, <span class="st">'r'</span>), np.load(<span class="st">'C.npy'</span>, <span class="st">'r'</span>)</span>
+<span id="cb5-51"><a href="#cb5-51" aria-hidden="true" tabindex="-1"></a>  p <span class="op">=</span> <span class="dv">3</span></span>
+<span id="cb5-52"><a href="#cb5-52" aria-hidden="true" tabindex="-1"></a>  d <span class="op">=</span> <span class="dv">2</span></span>
+<span id="cb5-53"><a href="#cb5-53" aria-hidden="true" tabindex="-1"></a>  comm <span class="op">=</span> MPI.COMM_WORLD</span>
+<span id="cb5-54"><a href="#cb5-54" aria-hidden="true" tabindex="-1"></a>  rank <span class="op">=</span> comm.Get_rank()</span>
+<span id="cb5-55"><a href="#cb5-55" aria-hidden="true" tabindex="-1"></a>  comm3d <span class="op">=</span> comm.Create_cart([d, p, p], [<span class="va">False</span>, <span class="va">False</span>, <span class="va">False</span>])</span>
+<span id="cb5-56"><a href="#cb5-56" aria-hidden="true" tabindex="-1"></a>  summa_2_5d(A, B, C, p, d, comm3d)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>实现的时候需要考虑跟多的细节, 因为他这里实际上重新对K进行了切分, 所以迭代k的时候需要按更小的块来广播, 此代码的profiling结果如下: <img src="mesh-matmul/SUMMA 2.5D Trace.png" class="img-fluid"></p>
+</section>
+<section id="分析-3" class="level2">
+<h2 class="anchored" data-anchor-id="分析-3">5.3 分析</h2>
+<p>假设处理器维度为<span class="math inline">\(p,p,d\)</span>, 并且忽略第一次的分布的代价, 计算通信代价为: <span class="math display">\[
+\begin{aligned}
+  Cost &amp; = 2\alpha \log p  + 2\frac{n^2}{pd} \beta +  \alpha \log d+ 2\frac{(d-1)n^2}{d}  \beta \\
+\end{aligned}
+\]</span></p>
+<p>注意到SUMMA 2.5D实际上在d上多存储A,B矩阵.</p>
+</section>
+</section>
+<section id="大模型中的2.5d与3d并行" class="level1">
+<h1>6. 大模型中的2.5D与3D并行</h1>
+<section id="tesseract" class="level2">
+<h2 class="anchored" data-anchor-id="tesseract">6.1 <a href="https://arxiv.org/pdf/2105.14500">Tesseract</a></h2>
+<p>Tesseract实际上就是在大模型训练中被大家所熟知的2.5D并行, 他注意到了SUMMA 2.5D算法额外的内存开销问题, 提出进一步切分A矩阵:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>A</th>
+<th>B</th>
+<th>C</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><img src="mesh-matmul/Tesseract A.png" class="img-fluid"></td>
+<td><img src="mesh-matmul/Tesseract B.png" class="img-fluid"></td>
+<td><img src="mesh-matmul/Tesseract C.png" class="img-fluid"></td>
+</tr>
+</tbody>
+</table>
+<p>并且把拓扑结构构造为<span class="math inline">\(p,p,d\)</span>的形式来更有效的分配数据和计算.</p>
+<p>可以在结果中发现2.5D在进化到3D并行时取得了最好的效果.</p>
+<p><img src="mesh-matmul/Tesseract Result.png" class="img-fluid"></p>
+</section>
+<section id="nus版3d并行" class="level2">
+<h2 class="anchored" data-anchor-id="nus版3d并行">6.2 <a href="https://arxiv.org/pdf/2105.14450">NUS版3D并行</a></h2>
+<p>这篇论文有三个改进, 分别是负载均衡, 优化矩阵矩阵乘, 优化矩阵向量乘. 但他这里的提到原始的3D并行只在两个维度切分A,B矩阵这是不对的, 本文第四节严格按照3D并行原论文进行了实现, 实际上是对于A矩阵的K是在<code>j,l</code>,以及B矩阵的N在<code>j,i</code>都做了进一步的切分的.</p>
+<p>不过NUS版对于A矩阵的进一步切分维度确实与原论文不同: <span class="math display">\[
+\begin{align}
+  A:[i+j,l] \rightarrow [M,K]\\
+  B:[l, j+i] \rightarrow [K,N]
+\end{align}
+\]</span></p>
+<p><img src="mesh-matmul/NUS 3D.png" class="img-fluid"></p>
+<p>最终取得了良好的效果, 但是他这里并没有和Tesseract来对比:</p>
+<p><img src="mesh-matmul/NUS 3D Result.png" class="img-fluid"></p>
+</section>
+</section>
+<section id="t10-inter-core-connected-compiler" class="level1">
+<h1>7. <a href="https://arxiv.org/abs/2408.04808">T10: Inter-core Connected Compiler</a></h1>
+<p>T10是针对核间互联架构IPU所提出的专用编译器, 对于不太了解的读者可以先参考<a href="https://zhuanlan.zhihu.com/p/1899480206">冯Jungle​的解读</a>, 本文就直接分析T10所提出的rTensor抽象的底层逻辑. 首先T10提出了在核间互联架构上有一种内存高效的计算模式:</p>
+<p><img src="mesh-matmul/T10 Compute Pattern.png" class="img-fluid"></p>
+<p>即多个core之间切分矩阵, 计算后通过ring的方式交换子矩阵, 再计算得下一部分的结果, 这样可以在空间和时间的角度同时切分矩阵, 从而最小化内存的使用量.</p>
+<section id="rtensor抽象" class="level2">
+<h2 class="anchored" data-anchor-id="rtensor抽象">7.1 rTensor抽象</h2>
+<p>为了在编译器中表达这样一种计算模式, 因此他提出了rTensor的抽象:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> RotatingTensor <span class="op">{</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  vector <span class="op">&lt;</span> <span class="dt">size_t</span> <span class="op">&gt;</span> shape <span class="op">;</span> </span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  DataType type <span class="op">;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  vector <span class="op">&lt;</span> <span class="dt">size_t</span> <span class="op">&gt;</span> spatial_partition_factor <span class="op">;</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  vector <span class="op">&lt;</span> <span class="dt">size_t</span> <span class="op">&gt;</span> temporal_partition_factor <span class="op">;</span> </span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  vector <span class="op">&lt;</span> <span class="dt">size_t</span> <span class="op">&gt;</span> rotating_pace <span class="op">;</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>rTensor中的参数解释:</p>
+<p><span class="math display">\[
+\begin{aligned}
+  &amp;f_s^X : \textbf{Spatial Partition Factor},\ \text{Spatially partitions a tensor X into sub-tensors.} \\
+  &amp;f_t^X : \textbf{Temporal Partition Factor},\ \text{Temporally partitions a sub-tensor of X into sub-tensor partitions.} \\
+  &amp;rp : \textbf{Rotating Pace},\ \text{Specifies how sub-tensor partitions are shifted among cores.}\\
+  &amp;F_{op}:  \textbf{ Operator Partition Factor},\ \text{Spatially partitions an entire operator into sub-operators.}
+\end{aligned}
+\]</span></p>
+<p>下面给定一个rTensor具体实例, 通过执行示意图来理解每个参数的含义:</p>
+<p><img src="mesh-matmul/T10 rTensor.png" class="img-fluid"></p>
+<p>上图中首先通过<span class="math inline">\(f_s\)</span>在空间上切分矩阵, 然后由于矩阵在计算上的数据依赖, 是无法再使用空间上的并行, 因此采用<span class="math inline">\(f_t\)</span>在时间维度上切分矩阵, 最后使用<span class="math inline">\(rp\)</span>选择每次传输的数据块大小. 并且看到右下角的例子中<span class="math inline">\(rp\)</span>可以小于时间上的分块, 对应到实际计算中就可以用于平衡计算和通信的时间.</p>
+</section>
+<section id="自动搜索rtensor" class="level2">
+<h2 class="anchored" data-anchor-id="自动搜索rtensor">7.2 自动搜索rTensor</h2>
+<p>目前有了形式化的描述方法, 那么就可以考虑如何构造搜索域并自动化搜索最优执行方式. T10并没有采用随机添加rTensor的配置来构造搜索域, 而是通过对原始计算语义上的切分来先行构造rTensor可选的配置域. 这也就是上一小节中<span class="math inline">\(F_{op}\)</span>的作用, 他根据当前op的计算定义来<strong>对矩阵计算进行切分</strong>:</p>
+<p><span class="math display">\[
+\begin{aligned}
+  &amp;C[M,N] \mathrel{+}= A[M,K] * B[K,N] \\
+  \text{if } &amp;F_{op}[m,k,n] :\\
+  \text{each core: } &amp;C[\frac{M}{m},\frac{N}{n}] \mathrel{+}= A[\frac{M}{m},\frac{K}{k}] * B[\frac{K}{k},\frac{N}{n}] \\
+  &amp;\text{total cores} = \prod_{i=0}^{2} F_{op}[i]
+\end{aligned}
+\]</span></p>
+<p>假设<span class="math inline">\(F_{op}\)</span>确定时, 就可以确定总core数, 以及每个core上的子任务所依赖的数据量: <span class="math display">\[
+\begin{aligned}
+  &amp;  C[2,3] \mathrel{+}= A[2,6] * B[6,3] \\
+  &amp;F_{op} = [2,1,3] :\\
+  \text{each core: } &amp; C[1,1] \mathrel{+}= A[1,6] * B[6,1] \\
+  &amp;\text{total cores} = 6
+\end{aligned}
+\]</span></p>
+<p>通过子任务的数据量, 就可以<strong>推导出三个矩阵的空间切分参数</strong>: <span class="math display">\[
+\begin{aligned}
+\begin{matrix}
+   &amp; \textbf{m} &amp; \textbf{k} &amp; \textbf{n} \\
+  F_{op} &amp; 2 &amp; 1 &amp; 3 \\
+  f_s^A &amp; 2 &amp; 1 &amp; \\
+  f_s^B &amp;  &amp; 1 &amp; 3 \\
+  f_s^C &amp; 2 &amp;  &amp; 3
+\end{matrix}
+\end{aligned}
+\]</span></p>
+<p>观察上表可以发现A,B,C矩阵都有一个维度不参与他们的空间切分, 但实际上为了计算出最终结果, 这个不参与空间切分的维度是被当前矩阵完全依赖的, T10称这个维度为<code>missing axis</code>, 因此采用时间切分来分割<code>missing axis</code>. 比如当前一共6个core, B矩阵在空间上被切分了3组, 那么还剩下<span class="math inline">\(P = \frac{6}{3} = 2\)</span>组可以用于切分, 因此按这个逻辑<strong>推导时间切分</strong>:</p>
+<p><span class="math display">\[
+\begin{aligned}
+\begin{matrix}
+   &amp; \textbf{m} &amp; \textbf{k} &amp; \textbf{n} \\
+  F_{op} &amp; 2 &amp; 1 &amp; 3 \\
+  f_s^A &amp; 2 &amp; 1 &amp; \\
+  f_t^A &amp; \color{blue}1 &amp; \color{red}3 &amp; \\
+  f_s^B &amp;  &amp; 1 &amp; 3 \\
+  f_t^B &amp; &amp; \color{red}2 &amp; \color{blue}1 \\
+  f_s^C &amp; 2 &amp;  &amp; 3 \\
+  f_t^C &amp; \color{blue}1 &amp; &amp; \color{blue}1 \\
+\end{matrix}
+\end{aligned}
+\]</span></p>
+<p>注意, T10限制了<span class="math inline">\(\frac{P}{\prod f_t}\)</span>必须是整数, 因为它其实就是ring的圈数, 如果非整数就无法支持. 当<span class="math inline">\(\frac{P}{\prod f_t}\)</span>大于1时, 则表明ring的圈不止一个, 那么为了保证每个圈都可以得到正确的数据, 就需要把子张量复制<span class="math inline">\(\frac{P}{\prod f_t}\)</span>次.</p>
+<p>最后进行<strong>旋转参数对齐</strong>, 按照上面的切分, 可以发现A的K维度在分为3组, 而B的K维度被分为2组, 那么每个节点上所拥有的K分块大小并不一样, 这个时候只能按小的K分块进行计算和旋转:</p>
+<p><span class="math display">\[
+\begin{aligned}
+  rp^A &amp;= [0,k^A]\\
+  rp^B &amp;= [k^B,0] \\
+  k^A , k^B &amp;\in [1,\min(2,3)]
+\end{aligned}
+\]</span></p>
+<p>整体的流程如图所示:</p>
+<p><img src="mesh-matmul/T10 Partitioning.png" class="img-fluid"></p>
+</section>
+<section id="算子内与算子间trade-off" class="level2">
+<h2 class="anchored" data-anchor-id="算子内与算子间trade-off">7.3 算子内与算子间trade-off</h2>
+<p>对于每个算子,都存在大量涉及不同空间和时间以及旋转因子确定的执行计划. 此外一个端到端的模型由众多算子组成, 这就产生了一个巨大的组合优化空间. T10采用的是两级权衡, 首先对每个算子搜索执行时间和内存消耗的最优平衡, 再在不同算子间最优计划之上优化全局内存分配, 这里就不进一步展开了.</p>
+</section>
+<section id="子张量放置" class="level2">
+<h2 class="anchored" data-anchor-id="子张量放置">7.4 子张量放置</h2>
+<p>优化内存分配之后, 还需要考虑数据放置问题, 因为ring shift只能在相邻节点之间传输数据, 如果初始数据放置的位置不合理, 会导致计算错误, 这在Cannon算法中称为<code>align data</code>过程. 而T10可以从编译器的角度, 看到上下算子的执行计算, 这给他们提供了全局张量放置优化机会. 比如一个算子的计算依赖于另一个算子的输出, T10会将这些相关的子张量放置在合适的核上, 减少数据准备过程的开销. 并且T10还总是按照阵列轴的方向升序排列数据, 避免出现乱序带来的错误.</p>
+<p>在这个3x3阵列上, T10所放置的子张量如图所示:</p>
+<p><img src="mesh-matmul/T10 Align.png" class="img-fluid"></p>
+<p>可以回到第一节查看Cannon算法的初始放置, 两者是一模一样的.</p>
+</section>
+<section id="分析-4" class="level2">
+<h2 class="anchored" data-anchor-id="分析-4">7.5 分析</h2>
+<p>因此T10的本质是形式化与泛化了Cannon算法, 并将其用于核间互联架构. 那么他的问题也与Cannon一样, 即通信量会比SUMMA 3D等方法大, 比SUMMA 2D方法少<span class="math inline">\(\frac{1}{\sqrt{P}}\)</span>.</p>
+<p><span class="math display">\[
+\begin{aligned}
+  Cost = 2(\sqrt{P}-1)(\alpha + \frac{n^2}{P} \beta)
+\end{aligned}
+\]</span></p>
+</section>
+</section>
+<section id="parallel-matrix-multiplication-a-systematic-journey" class="level1">
+<h1>8. <a href="https://epubs.siam.org/doi/10.1137/140993478">Parallel Matrix Multiplication: A Systematic Journey</a></h1>
+<p>这篇文章是blis作者Flame等人所写, 他通过系统性分析, 提出一种形式化的描述推导出SUMMA 2D/3D矩阵乘, 并分析不同的尺寸的矩阵下如何选择不同的数据广播策略.</p>
+<p>首先他通过一种类似<span class="math inline">\(x[(0,1),()]\)</span>来表示数据在节点上的切分状态, 这里表示的是x的M在阵列的行列均切分, N没有切分, 然后基于mpi的通信原语对切分状态进行转换: <img src="mesh-matmul/Flame Formula.png" class="img-fluid"></p>
+<p>而后基于切分状态描述不同的算法, 并且根据不同的输入尺寸设计不同的计算方法, 下图左侧是Stationary C算法, 右侧是Stationary A算法:</p>
+<p><img src="mesh-matmul/Flame ALG.png" class="img-fluid"></p>
+<p>Stationary C 算法, 在<span class="math inline">\(m=n\)</span>, 且方阵的情况对于任意的k值都有较好的弱可扩展性. Stationary A 算法, 虽然其通信开销相对较大, 但在<span class="math inline">\(m\)</span>和<span class="math inline">\(k\)</span>较大而<span class="math inline">\(n\)</span>较小时, 该算法能够实现较好的并行性, 因为在这种情况下通信量减少.</p>
+<p>最终, 总结在二维阵列上计算矩阵乘的通信量下限为<span class="math inline">\(\Omega(\frac{n^2}{\sqrt{P}}\)</span>, 在二维阵列上计算矩阵乘的通信量下限为<span class="math inline">\(\Omega(\frac{n^2}{\sqrt[3]{P^2}})\)</span>, 但是具体的场景还需要根据矩阵乘的尺寸带来的不同的通信量, 来选择不同的计算方法.</p>
+</section>
+<section id="总结" class="level1">
+<h1>9. 总结</h1>
+<ol type="1">
+<li>传统分布式矩阵乘的论文所计算的通信量通常假设矩阵大小相同, 但实际上需要分析当前场景下不同尺寸的通信开销.</li>
+<li>T10是一个好的例子, 但是他的计算模式还在固定在Cannon算法, 如何推广到SUMMA?</li>
+<li>如何推广更高维度阵列下的矩阵乘切分和映射?</li>
+<li>如何对于一个支持RMA(Remote Memory Access)的架构, 是直接读取远端数据还是通过broadcast的方式把计算模式回落到SUMMA或Cannon?
+<ol type="1">
+<li>理论上RMA所需要读取的数据量与SUMMA是一致的, 但实现性能可能需要进一步测试.</li>
+</ol></li>
+</ol>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/zhen8838\.github\.io");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script src="https://utteranc.es/client.js" repo="zhen8838/zhen8838.github.io" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

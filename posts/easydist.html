@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2023-09-19">
+
+<title>Alibaba EasyDist 浅析 – Zheng’s Notes</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../assets/favicon.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-7072389654d23eff08f359f9aa0d1ee7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">Zheng’s Notes</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#整体流程" id="toc-整体流程" class="nav-link active" data-scroll-target="#整体流程">整体流程</a>
+  <ul class="collapse">
+  <li><a href="#切分标注" id="toc-切分标注" class="nav-link" data-scroll-target="#切分标注">切分标注</a></li>
+  <li><a href="#图转换" id="toc-图转换" class="nav-link" data-scroll-target="#图转换">图转换</a></li>
+  <li><a href="#约束模型与求解" id="toc-约束模型与求解" class="nav-link" data-scroll-target="#约束模型与求解">约束模型与求解</a></li>
+  </ul></li>
+  <li><a href="#总结" id="toc-总结" class="nav-link" data-scroll-target="#总结">总结</a></li>
+  <li><a href="#待解决的问题" id="toc-待解决的问题" class="nav-link" data-scroll-target="#待解决的问题">待解决的问题</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Alibaba EasyDist 浅析</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">编译器</div>
+  </div>
+  </div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">September 19, 2023</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>对于阿里巴巴开源的<a href="https://github.com/alibaba/easydist">EasyDist: Automated Parallelization System and Infrastructure for Multiple Ecosystems</a>代码解读, 主要关注IR设计与搜索域构造.</p>
+<!--more-->
+<section id="整体流程" class="level1">
+<h1>整体流程</h1>
+<p>主要核心为4步, 预处理, 切分标注, 图转换, 构造约束模型并求解.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> easydist_shard(fx_module: torch.fx.GraphModule, state_tensor_num, <span class="op">*</span>args, <span class="op">**</span>kwargs):</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="co"># (1) preprocess pass</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    fx_module <span class="op">=</span> preprocess_traced_graph(fx_module)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> mdconfig.log_level <span class="op">&lt;=</span> logging.DEBUG:</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        fx_module.print_readable()</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="co"># (2) sharding annotation</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> _sharding_ann_env():</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        start_t <span class="op">=</span> time.perf_counter()</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        sharding_interpreter <span class="op">=</span> EDTorchShardingAnn(fx_module)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        flatten_args <span class="op">=</span> tree_flatten_spec(<span class="bu">list</span>(args) <span class="op">+</span> <span class="bu">list</span>(kwargs.values()), fx_module._in_spec)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        sharding_info, shape_info <span class="op">=</span> sharding_interpreter.run(<span class="op">*</span>flatten_args)</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>        logger.info(<span class="ss">f"[EDTorchShardingAnn.time]:</span><span class="ch">\t</span><span class="ss"> </span><span class="sc">{</span>time<span class="sc">.</span>perf_counter() <span class="op">-</span> start_t<span class="sc">}</span><span class="ss"> s."</span>)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> mdconfig.log_level <span class="op">&lt;=</span> logging.DEBUG:</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>            rich.<span class="bu">print</span>(<span class="st">"sharding_info:</span><span class="ch">\n</span><span class="st">"</span>, sharding_info)</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>            rich.<span class="bu">print</span>(<span class="st">"shape_info:</span><span class="ch">\n</span><span class="st">"</span>, shape_info)</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    <span class="co"># sync sharding info for all process</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    torch.distributed.broadcast_object_list(sharding_info, src<span class="op">=</span><span class="dv">0</span>, device<span class="op">=</span><span class="st">"cuda"</span>)</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    <span class="co"># (3) translate fx.GraphModule into MetaGraph</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    meta_graph <span class="op">=</span> torch2meta_graph(fx_module, state_tensor_num, sharding_info, shape_info)</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    meta_graph.dump()</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> mdconfig.log_level <span class="op">&lt;=</span> logging.DEBUG:</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>        rich.<span class="bu">print</span>(meta_graph)</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>    <span class="co"># (4) construct AutoFlowSolver and run ILP</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>    device_mesh <span class="op">=</span> get_device_mesh()</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>    device_mesh_shape <span class="op">=</span> (device_mesh.size(<span class="dv">0</span>), device_mesh.size(<span class="dv">1</span>))</span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>    total_memery <span class="op">=</span> torch.cuda.get_device_properties(torch.cuda.current_device()).total_memory</span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>    solver <span class="op">=</span> AutoFlowSolver(device_mesh_shape, total_memery<span class="op">=</span>total_memery)</span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> mdconfig.enable_graph_coarsen:</span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>        logger.info(<span class="ss">f"enable graph coarsen with level </span><span class="sc">{</span>mdconfig<span class="sc">.</span>coarsen_level<span class="sc">}</span><span class="ss">."</span>)</span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>        solver.add_coarsen_graph(meta_graph)</span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>        solver.add_graph(meta_graph)</span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>    start_t <span class="op">=</span> time.perf_counter()</span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> mdconfig.enable_graph_coarsen:</span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a>        opt_strategy <span class="op">=</span> solver.ilp_solve()</span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a>        opt_strategy <span class="op">=</span> solver.ilp_optimize()</span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>    logger.info(<span class="ss">f"[AutoFlowSolver.time]:</span><span class="ch">\t</span><span class="ss"> </span><span class="sc">{</span>time<span class="sc">.</span>perf_counter() <span class="op">-</span> start_t<span class="sc">}</span><span class="ss"> s."</span>)</span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> mdconfig.log_level <span class="op">&lt;=</span> logging.DEBUG:</span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>        rich.<span class="bu">print</span>(opt_strategy)</span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>    sharding_strategies <span class="op">=</span> get_torch_sharding_strategy(fx_module, opt_strategy)</span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> mdconfig.log_level <span class="op">&lt;=</span> logging.DEBUG:</span>
+<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a>        rich.<span class="bu">print</span>(sharding_strategies)</span>
+<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> shape_info, meta_graph, opt_strategy, sharding_strategies</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<section id="切分标注" class="level2">
+<h2 class="anchored" data-anchor-id="切分标注">切分标注</h2>
+<p>首先引入切分的数据结构:</p>
+<p><img src="easydist/shardann.png" class="img-fluid"></p>
+<p>这里<code>ShardDim</code>表示的是先<code>chunk</code>划分再切分的逻辑,比如<code>[1, 1, 2, 2]</code>可以先划分两块<code>(chunk)-&gt; [1, 1] and [2, 2]</code>,再切分<code>(shard)-&gt; [1, 2] | [1, 2]</code>. 使用一维数组<code>[ShardDim]</code>表示一个输入参数所对应的切分, 多个输入时得到类似<code>[[ShardDim], ...]</code>的二维数组, 因此<code>ShardAnnotation</code>就是使用二维数组来存储切分信息, 来表示一个操作的切分输入切分信息.</p>
+<p>假设一个在两个gpu上运行的简单的小网络:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Net(nn.Module):</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, <span class="op">*</span>args, <span class="op">**</span>kwargs) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>().<span class="fu">__init__</span>(<span class="op">*</span>args, <span class="op">**</span>kwargs)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.fc <span class="op">=</span> torch.nn.Linear(<span class="dv">32</span><span class="op">*</span><span class="dv">32</span><span class="op">*</span><span class="dv">3</span>, <span class="dv">64</span>, <span class="va">False</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> forward(<span class="va">self</span>, x: torch.Tensor):<span class="dv">0</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        v0 <span class="op">=</span> torch.flatten(x, <span class="dv">1</span>) <span class="co"># 128,32*32*3</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        v1 <span class="op">=</span> <span class="va">self</span>.fc(v0)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> v1</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>以上计算的计算图如下:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> <span class="op">&lt;</span>lambda<span class="op">&gt;(</span>torch<span class="op">.</span>nn<span class="op">.</span>Module<span class="op">):</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    def forward<span class="op">(</span>self<span class="op">,</span> arg0<span class="op">,</span> arg1<span class="op">,</span> arg2<span class="op">,</span> arg3<span class="op">,</span> arg4<span class="op">):</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        arg0_1<span class="op">:</span> f32<span class="op">[</span><span class="dv">64</span><span class="op">,</span> <span class="dv">3072</span><span class="op">],</span> arg3_1<span class="op">,</span> arg3_2<span class="op">:</span> f32<span class="op">[</span><span class="dv">128</span><span class="op">,</span> <span class="dv">3</span><span class="op">,</span> <span class="dv">32</span><span class="op">,</span> <span class="dv">32</span><span class="op">],</span> <span class="op">=</span> fx_pytree<span class="op">.</span>tree_flatten_spec<span class="op">([</span>arg0<span class="op">,</span> arg1<span class="op">,</span> arg2<span class="op">,</span> arg3<span class="op">,</span> arg4<span class="op">],</span> self<span class="op">.</span>_in_spec<span class="op">)</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>        <span class="pp"># </span><span class="er">No stacktrace found for following nodes</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        view<span class="op">:</span> f32<span class="op">[</span><span class="dv">128</span><span class="op">,</span> <span class="dv">3072</span><span class="op">]</span> <span class="op">=</span> torch<span class="op">.</span>ops<span class="op">.</span>aten<span class="op">.</span>view<span class="op">.</span><span class="cf">default</span><span class="op">(</span>arg3_2<span class="op">,</span> <span class="op">[</span><span class="dv">128</span><span class="op">,</span> <span class="dv">3072</span><span class="op">]);</span>  arg3_2 <span class="op">=</span> None</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        t<span class="op">:</span> f32<span class="op">[</span><span class="dv">3072</span><span class="op">,</span> <span class="dv">64</span><span class="op">]</span> <span class="op">=</span> torch<span class="op">.</span>ops<span class="op">.</span>aten<span class="op">.</span>t<span class="op">.</span><span class="cf">default</span><span class="op">(</span>arg0_1<span class="op">)</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        mm<span class="op">:</span> f32<span class="op">[</span><span class="dv">128</span><span class="op">,</span> <span class="dv">64</span><span class="op">]</span> <span class="op">=</span> torch<span class="op">.</span>ops<span class="op">.</span>aten<span class="op">.</span>mm<span class="op">.</span><span class="cf">default</span><span class="op">(</span>view<span class="op">,</span> t<span class="op">);</span>  view <span class="op">=</span> t <span class="op">=</span> None</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> pytree<span class="op">.</span>tree_unflatten<span class="op">([</span>arg0_1<span class="op">,</span> None<span class="op">,</span> mm<span class="op">],</span> self<span class="op">.</span>_out_spec<span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>通过一个继承了torch fx的<code>Interpreter</code>的类<code>EDTorchShardingAnn</code>来解释执行整个图, 一边执行一遍获取修改. 对于不同的节点类型, 执行不同的visitleaf函数:</p>
+<ol type="1">
+<li>placeholder</li>
+</ol>
+<p>placeholder对应的应该输入节点, 如果检查到当前节点没有sharding annotation以及combination annotation, 那么会进入<code>preset_meta_spmd</code>函数进行统一处理.</p>
+<p><code>preset_meta_spmd</code>函数通过不同的op类型分发到不同的rule中进行获取.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> preset_meta_spmd(meta_op, input_args<span class="op">=</span><span class="va">None</span>):</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="bu">isinstance</span>(meta_op, <span class="bu">str</span>):</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>        args, kwargs <span class="op">=</span> input_args</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> PresetMetaSPMD.op_rules[meta_op](args, kwargs)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">elif</span> meta_op.name <span class="kw">in</span> PresetMetaSPMD.op_rules:</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> input_args <span class="kw">is</span> <span class="va">None</span>:</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>            args, kwargs <span class="op">=</span> meta_op.input_args</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">else</span>:</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>            args, kwargs <span class="op">=</span> input_args</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> PresetMetaSPMD.op_rules[meta_op.name](args, kwargs)</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="va">None</span>, <span class="va">None</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>对于placeholder则进入<code>meta_spmd_placeholder</code>函数进行处理, 这里也是使用了统一的<code>view_propagation</code>函数构造sharding annotation以及combination annotation.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> meta_spmd_placeholder(args, kwargs):</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    input_shape <span class="op">=</span> args.shape</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    output_shape <span class="op">=</span> args.shape</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    view_ann <span class="op">=</span> view_propagation(input_shape, output_shape, world_size<span class="op">=</span>device_mesh_world_size())</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> view_ann[<span class="st">'sharding_ann'</span>], view_ann[<span class="st">'combination_ann'</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><code>view_propagation</code>的过程比较复杂, 但是对于输入shape和输出shape相同的节点来说还是比较简单的. 他这里会首先构造<code>[[NoShardDim]* ShapeRank]</code>作为sharding annotation, 比如输入shape为<code>[128, 3, 32, 32]</code>, 那么构造出<code>[[NoShardDim, NoShardDim, NoShardDim, NoShardDim]]</code>表示全部不切分. 然后遍历每个维度, 如果当前维度大于<code>world size</code>(所有并行度), 则表示可以切分, 那么就构造一个<code>ShardDim(id++)</code>, 对于这个例子将会构造出<code>[[ShardDim(1), NoShardDim, NoShardDim, NoShardDim]]</code>.</p>
+<ol start="2" type="1">
+<li>call_function</li>
+</ol>
+<p>在visit call_function时, 构造出<code>MetaOp</code>后再使用<code>meta_exec</code>去执行. 然后检查是否有sharding_ann, combination_ann的cache,如果没有那么使用<code>preset_meta_spmd</code>来构造.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>args, kwargs <span class="op">=</span> materialize_args_kwargs(args_meta, kwargs_meta)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>meta_op <span class="op">=</span> MetaOp(func<span class="op">=</span>target,</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>                  input_args<span class="op">=</span>(args, kwargs),</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>                  shard_size<span class="op">=</span>device_mesh_world_size(),</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>                  name<span class="op">=</span>ops_name)</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="co"># user fake tensor here, maybe use shape/dtype info from `make_fx`</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>meta_out <span class="op">=</span> meta_op.meta_exec(flat_meta_input<span class="op">=</span>pytree.tree_flatten((args_meta,</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>                                                                  kwargs_meta))[<span class="dv">0</span>])</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>.</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>.</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>.</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>sharding_ann, combination_ann <span class="op">=</span> preset_meta_spmd(meta_op, (args_meta, kwargs_meta))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>对于<code>expand</code>来说, 并没有对应的切分信息构造, 所以他的sharding_ann为<code>[[NoShardDim, NoShardDim, NoShardDim]]</code>. 对于<code>view</code>, sharding_ann也是通过<code>view_propagation</code>来构造的. 对于矩阵乘, 通过<code>meta_bmm</code>来构造标注, 此时构造标注时除了需要检查是否可以切分, 同时还需要匹配切分的维度, 比如这里两个输入的batch维度使用相同的id, 矩阵的k维度用相同的id: <code>ShardAnnotation([[ShardDim(1), ShardDim(2)], [ShardDim(2), ShardDim(3)]])</code></p>
+<p>在<code>preset_meta_spmd</code>中, 也有一些算子没有添加对应的rule, 所以此时就进入<code>meta_op.sharding_discovery</code>构造对应的shard annotation. 比如对于<code>torch.ops.aten.t.default</code>算子, 会在<code>sharding_discovery</code>中调用<code>_try_sharding(self, fixed_annotation, subsequence_annotation, global_output, start_dim=0)</code>函数获得对应的shard annotation. <code>_try_sharding</code>是一个递归的函数, 第一次进入时<code>fixed_annotation=ShardAnnotation([]), subsequence_annotation=ShardAnnotation([[NoShardDim, NoShardDim]])</code>. 然后在其中遍历所有的输入shape dim,逐一修改原始的<code>subsequence_annotation[0]</code>, 获得<code>try_annotation</code>, 然后再进入<code>_try_sharding</code>.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> dim <span class="kw">in</span> <span class="bu">range</span>(start_dim, <span class="bu">len</span>(subsequence_annotation[<span class="dv">0</span>])):</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> subsequence_annotation[<span class="dv">0</span>][dim].shard_dim_id <span class="op">!=</span> <span class="dv">0</span>:</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">continue</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    try_annotation <span class="op">=</span> copy.deepcopy(subsequence_annotation[<span class="dv">0</span>])</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    try_annotation[dim] <span class="op">=</span> ShardDim.get_shard_dim(shard_dim_id_flag)</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>._try_sharding(fixed_annotation <span class="op">+</span> ShardAnnotation([try_annotation]),</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>                        subsequence_annotation[<span class="dv">1</span>:], global_output)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>再次进入时此时shard annotation的subsequence为空, 首先使用当前的<code>fixed_annotation</code>执行<code>self.exec</code>, 获得切分过的<code>sharded_output</code>. 对于这个转置操作, 原本的输出为<code>torch.Size([3072, 64])</code>, 而在<code>fixed_annotation=ShardAnnotation([[ShardDim(1), NoShardDim]])</code>的条件下则获得到<code>[torch.Size([3072, 32]),torch.Size([3072, 32])]</code>(转置操作的输入切分在dim 0上,则输出切分在dim 1上).</p>
+<p>进入<code>try_combination(sharded_output, global_output)</code>函数, 这里输入只有一个tensor, 所以进入<code>try_combination_single</code>, 他这里的逻辑就是遍历三种组合函数<code>['try_combination_identity','try_combination_reduce', 'try_combination_gather']</code>, 找到当前所需要的, 显然这个例子中尝试成功后得到的<code>combination_func</code>为<code>functools.partial(&lt;function CombinationFunc.gather at 0x7f5bd501f0d0&gt;, dim=1)</code>. 因为将sharded_output gather就可以还原到global_output.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> try_combination_single(sharded_output_, global_output_):</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="co"># check all sharded tensor have equal dimension of global_output</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> sharded_tensor <span class="kw">in</span> sharded_output_:</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="bu">len</span>(sharded_tensor.shape) <span class="op">!=</span> <span class="bu">len</span>(global_output_.shape):</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="va">None</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> func_name <span class="kw">in</span> TRY_COMBINATION_FUNC:</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>        combination_func <span class="op">=</span> TRY_COMBINATION_FUNC[func_name](sharded_output_, global_output_)</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> combination_func:</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> combination_func</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="va">None</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">len</span>(subsequence_annotation) <span class="op">==</span> <span class="dv">0</span>:</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">try</span>:</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>        sharded_output <span class="op">=</span> <span class="va">self</span>.<span class="bu">exec</span>(shard_annotation<span class="op">=</span>fixed_annotation,</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>                                    priority_shard_dim_id<span class="op">=</span>shard_dim_id_flag)</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">except</span> <span class="pp">RuntimeError</span> <span class="im">as</span> e:</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>        logger.debug(<span class="ss">f"[</span><span class="sc">{</span>fixed_annotation<span class="sc">}</span><span class="ss">] </span><span class="sc">{</span>e<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">except</span>:</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>        logger.debug(<span class="ss">f"[</span><span class="sc">{</span>fixed_annotation<span class="sc">}</span><span class="ss">] run op.exec failed"</span>)</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>    haloinfo <span class="op">=</span> <span class="va">None</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>    combination_func <span class="op">=</span> try_combination(sharded_output, global_output)</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>    .</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>    .</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>    .</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> combination_func <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span> <span class="kw">and</span> <span class="kw">not</span> <span class="bu">isinstance</span>(combination_func, HaloHint):</span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.__combination_ann[shard_dim_id_flag] <span class="op">=</span> combination_func</span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>        <span class="co"># inject haloinfo</span></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>        fixed_annotation.inject_haloinfo(haloinfo, shard_dim_id_flag)</span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.__sharding_annotion <span class="op">=</span> copy.deepcopy(fixed_annotation)</span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.__find_new_strategy <span class="op">=</span> <span class="va">True</span></span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>        logger.debug(<span class="ss">f"[</span><span class="sc">{</span>fixed_annotation<span class="sc">}</span><span class="ss">] combination failed"</span>)</span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="图转换" class="level2">
+<h2 class="anchored" data-anchor-id="图转换">图转换</h2>
+<p>这里需要先描述一下meta ir的数据结构: <img src="easydist/metair.png" class="img-fluid"></p>
+<p>在<code>torch2meta_graph(fx_module: torch.fx.GraphModule, state_tensor_num, sharding_info, meta_info)</code>函数中将原本的带有sharding annotation的fx graph转换为meta的graph, 同时将sharding info也转换为torch的SPMD表示. 具体流程如下:</p>
+<ol type="1">
+<li>构造meta_graph</li>
+<li>遍历fx_module中所有的节点, 根据节点类型进行处理(每个fx graph的输出节点除了list/tuple都构造MetaVar, 除了getitem都构造MetaNode)</li>
+</ol>
+<ul>
+<li>call_function
+<ol type="1">
+<li>构造MetaVar, 此时metavar表示为当前call的输出, <code>MetaVar(name=node.name, shape=meta_info[node.name]["shape"], dtype=ABSTRACT_DTYPE[meta_info[node.name]["dtype"]])</code></li>
+<li>构造MetaNode, 此时outvars为当前的MetaVar, invars为空.</li>
+<li>记录Node到MetaGraph的Nodes中</li>
+</ol></li>
+<li>placeholder或者get_attr
+<ol type="1">
+<li>构造MetaVar, 同上.</li>
+<li>构造MetaNode, <code>MetaNode(name=node.name,op_name=node.op,invars=[],outvars=[meta_var],sharding_info=node_sharding_info,is_placeholder=True)</code></li>
+<li>记录Node到MetaGraph的Nodes和Inputs中</li>
+</ol></li>
+<li>output
+<ol type="1">
+<li>获取output_names</li>
+</ol></li>
+</ul>
+<ol start="3" type="1">
+<li>重新遍历fx module中的所有节点, 更新MetaNode和MetaVar的连接关系</li>
+</ol>
+<ul>
+<li>call_function
+<ol type="1">
+<li>遍历当前call function对应的MetaNode的输入参数</li>
+<li>对于如果输入参数存在对应的MetaVar, 那么对调用<code>meta_node.set_in_var(in_var, idx)</code>来更新当前meta_node中的invars</li>
+</ol></li>
+</ul>
+<ol start="4" type="1">
+<li>根据output_names把对应的meta var添加到meta graph中</li>
+<li>构造state_io_map, 遍历state_tensor_num, 将输入的node映射到输出的var上</li>
+<li>调用<code>graph.coarsen</code>函数来构造clusters, 这里根据不同的级别选择不同的构造方式, 默认使用<code>build_cone_clusters</code>函数来构造:
+<ol type="1">
+<li>遍历所有节点, 收集所有的cone root
+<ul>
+<li>如果节点有多个下游节点或者没有下游节点,那么作为cone root.</li>
+<li>如果只有一个下游节点时, 有多个上游节点也是cone root, 有一个上游节点时则需要判断数据量, 如果输出数据量小于输入数据量那么也是cone root</li>
+</ul></li>
+<li>获取所有cone roots的id, 得到root_ids.</li>
+<li>遍历所有的cone roots构造Cluster
+<ul>
+<li>构造<code>MetaNodeCluster(unique_id=cluster_id)</code>, 其中cluster_id自动递增</li>
+<li>调用<code>build_cone_cluster(cone_root, root_ids, cluster)</code>填充cluster.
+<ol type="1">
+<li>将当前root添加到当前cluster中<code>cluster.add_node(cone_root)</code>, 此时设定root node的cluster id</li>
+<li>遍历当前cone root的输入节点, 如果当前节点不在之前收集的cone roots中,那么递归的调用<code>build_cone_cluster(up_node, root_ids, cluster)</code>填充cluster</li>
+</ol></li>
+<li>调用<code>finalize</code>函数
+<ol type="1">
+<li>确定当前cluster的args和output node</li>
+<li>为当前cluster构造<code>ClusterStrategyPool(self)</code></li>
+<li>获取输出节点的out_strtg_pool <code>NodeSPMDStrategyPool</code>,
+<ul>
+<li>如果当前节点存在<code>strtg_pool</code>的属性那么直接返回</li>
+<li>否则通过<code>sharding_info</code>进行构造</li>
+<li>首先遍历shard ann, 将每一个可切分的维度都构造出一个NodeSPMDStrategy(这里构造则是将<code>ShardDim</code>的表示转换为<code>SPMD</code>的表示)</li>
+<li>比如对于一个<code>[[ShardDim(1), ShardDim(2)]]</code>的shard ann 将构造出三组切分策略<code>NodeSPMDStrategy(in_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([SHARD({'dim': 0})])]), out_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([SHARD({'dim': 0})])])),  NodeSPMDStrategy(in_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([SHARD({'dim': 1})])]), out_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([SHARD({'dim': 1})])])),  NodeSPMDStrategy(in_strtg_group: VarSPMDStrategyGroup([]), out_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE])]))</code></li>
+<li>然后再因为当前的DEVICE_MESH_1D==0, 再将每个NodeSPMDStrategy都进行扩展REPLICATE得到类似<code>NodeSPMDStrategy(in_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD({'dim': 0})])]), out_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD({'dim': 0})])]))</code></li>
+<li>这里我设置的gpu个数为两个, 但是实际上获取到的device mesh为<code>(1,2)</code>, 所以应该是为了保证sbp的个数应该和拓扑结构的维度相同, 所以需要扩展VarSPMDStrategy的维度.</li>
+</ul></li>
+<li>遍历out_strtg_pool
+<ol type="1">
+<li>构造<code>ClusterStrategy</code> cluster_strtg</li>
+<li>给cluster_strtg设置当前的node_strategy</li>
+<li>使用<code>back_build_strategy</code>将当前的策略反向更新到cluster的其他节点</li>
+<li>将当前cluster_strtg添加到strategy_pool中</li>
+</ol></li>
+</ol></li>
+</ul></li>
+</ol></li>
+</ol>
+<p>最终得到的meta graph的一部分如下, 总的来说就是将原图中的节点转换为MetaNode以及MetaVar, 然后根据一定的策略划分出MetaNodeCluster的子图, 接下来对每个Cluster中的所有Node添加一系列的切分候选集:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="op">=====================</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>[MetaIR]</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>input_list: [arg0_1, arg2_1, arg3_3, arg3_4]</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>[arg0_1] <span class="op">&lt;---</span> [placeholder] <span class="op">---</span> []</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>[arg2_1] <span class="op">&lt;---</span> [placeholder] <span class="op">---</span> []</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>[arg3_3] <span class="op">&lt;---</span> [placeholder] <span class="op">---</span> []</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>[arg3_4] <span class="op">&lt;---</span> [placeholder] <span class="op">---</span> []</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>[view] <span class="op">&lt;---</span> [torch.ops.aten.view.default] <span class="op">---</span> [arg3_3]</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>[t] <span class="op">&lt;---</span> [torch.ops.aten.t.default] <span class="op">---</span> [arg0_1]</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>[mm] <span class="op">&lt;---</span> [torch.ops.aten.mm.default] <span class="op">---</span> [view, t]</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>[_log_softmax] <span class="op">&lt;---</span> [torch.ops.aten._log_softmax.default] <span class="op">---</span> [mm]</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>[getitem, getitem_1] <span class="op">&lt;---</span> [torch.ops.aten.nll_loss_forward.default] <span class="op">---</span> [_log_softmax, arg3_4]</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>[ones_like] <span class="op">&lt;---</span> [torch.ops.aten.ones_like.default] <span class="op">---</span> [getitem]</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>[nll_loss_backward] <span class="op">&lt;---</span> [torch.ops.aten.nll_loss_backward.default] <span class="op">---</span> [ones_like, _log_softmax, arg3_4, getitem_1]</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>[_log_softmax_backward_data] <span class="op">&lt;---</span> [torch.ops.aten._log_softmax_backward_data.default] <span class="op">---</span> [nll_loss_backward, _log_softmax]</span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>[t_1] <span class="op">&lt;---</span> [torch.ops.aten.t.default] <span class="op">---</span> [_log_softmax_backward_data]</span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>[mm_1] <span class="op">&lt;---</span> [torch.ops.aten.mm.default] <span class="op">---</span> [t_1, view]</span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>[t_2] <span class="op">&lt;---</span> [torch.ops.aten.t.default] <span class="op">---</span> [mm_1]</span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>[t_3] <span class="op">&lt;---</span> [torch.ops.aten.t.default] <span class="op">---</span> [t_2]</span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>[mul_] <span class="op">&lt;---</span> [torch.ops.aten.mul_.Tensor] <span class="op">---</span> [arg2_1]</span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>[add_] <span class="op">&lt;---</span> [torch.ops.aten.add_.Tensor] <span class="op">---</span> [mul_, t_3]</span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>[add__1] <span class="op">&lt;---</span> [torch.ops.aten.add_.Tensor] <span class="op">---</span> [arg0_1, add_]</span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a>output_list: [add__1, add_, getitem]</span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a><span class="op">=====================</span></span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a>node clusters:</span>
+<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a>cluster <span class="bu">id</span>: <span class="dv">0</span></span>
+<span id="cb10-31"><a href="#cb10-31" aria-hidden="true" tabindex="-1"></a>  nodes: arg0_1, </span>
+<span id="cb10-32"><a href="#cb10-32" aria-hidden="true" tabindex="-1"></a>  inputs: [[arg0_1, <span class="dv">0</span>]]</span>
+<span id="cb10-33"><a href="#cb10-33" aria-hidden="true" tabindex="-1"></a>  output: arg0_1</span>
+<span id="cb10-34"><a href="#cb10-34" aria-hidden="true" tabindex="-1"></a>strategies:</span>
+<span id="cb10-35"><a href="#cb10-35" aria-hidden="true" tabindex="-1"></a>node strategies: </span>
+<span id="cb10-36"><a href="#cb10-36" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb10-37"><a href="#cb10-37" aria-hidden="true" tabindex="-1"></a><span class="dv">1</span>: [NodeSPMDStrategy(in_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD({<span class="st">'dim'</span>: <span class="dv">0</span>})])]), out_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD({<span class="st">'dim'</span>: <span class="dv">0</span>})])])),</span>
+<span id="cb10-38"><a href="#cb10-38" aria-hidden="true" tabindex="-1"></a>    NodeSPMDStrategy(in_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD({<span class="st">'dim'</span>: <span class="dv">1</span>})])]), out_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD({<span class="st">'dim'</span>: <span class="dv">1</span>})])])),</span>
+<span id="cb10-39"><a href="#cb10-39" aria-hidden="true" tabindex="-1"></a>    NodeSPMDStrategy(in_strtg_group: VarSPMDStrategyGroup([]), out_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, REPLICATE])]))],</span>
+<span id="cb10-40"><a href="#cb10-40" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb10-41"><a href="#cb10-41" aria-hidden="true" tabindex="-1"></a>node io strategies: </span>
+<span id="cb10-42"><a href="#cb10-42" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb10-43"><a href="#cb10-43" aria-hidden="true" tabindex="-1"></a><span class="dv">1</span>: arg0_1</span>
+<span id="cb10-44"><a href="#cb10-44" aria-hidden="true" tabindex="-1"></a><span class="kw">in</span> strategies: [[VarSPMDStrategy([REPLICATE, SHARD({<span class="st">'dim'</span>: <span class="dv">0</span>})]), VarSPMDStrategy([REPLICATE, SHARD({<span class="st">'dim'</span>: <span class="dv">1</span>})]), VarSPMDStrategy([REPLICATE, REPLICATE])]]</span>
+<span id="cb10-45"><a href="#cb10-45" aria-hidden="true" tabindex="-1"></a>output strategies: [[VarSPMDStrategy([REPLICATE, SHARD({<span class="st">'dim'</span>: <span class="dv">0</span>})]), VarSPMDStrategy([REPLICATE, SHARD({<span class="st">'dim'</span>: <span class="dv">1</span>})]), VarSPMDStrategy([REPLICATE, REPLICATE])]],</span>
+<span id="cb10-46"><a href="#cb10-46" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb10-47"><a href="#cb10-47" aria-hidden="true" tabindex="-1"></a>cluster <span class="bu">id</span>: <span class="dv">1</span></span>
+<span id="cb10-48"><a href="#cb10-48" aria-hidden="true" tabindex="-1"></a>  nodes: arg3_4, </span>
+<span id="cb10-49"><a href="#cb10-49" aria-hidden="true" tabindex="-1"></a>  inputs: [[arg3_4, <span class="dv">0</span>]]</span>
+<span id="cb10-50"><a href="#cb10-50" aria-hidden="true" tabindex="-1"></a>  output: arg3_4</span>
+<span id="cb10-51"><a href="#cb10-51" aria-hidden="true" tabindex="-1"></a>strategies:</span>
+<span id="cb10-52"><a href="#cb10-52" aria-hidden="true" tabindex="-1"></a>node strategies: </span>
+<span id="cb10-53"><a href="#cb10-53" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb10-54"><a href="#cb10-54" aria-hidden="true" tabindex="-1"></a><span class="dv">7</span>: [NodeSPMDStrategy(in_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD({<span class="st">'dim'</span>: <span class="dv">0</span>})])]), out_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD({<span class="st">'dim'</span>: <span class="dv">0</span>})])])),</span>
+<span id="cb10-55"><a href="#cb10-55" aria-hidden="true" tabindex="-1"></a>    NodeSPMDStrategy(in_strtg_group: VarSPMDStrategyGroup([]), out_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, REPLICATE])]))],</span>
+<span id="cb10-56"><a href="#cb10-56" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb10-57"><a href="#cb10-57" aria-hidden="true" tabindex="-1"></a>node io strategies: </span>
+<span id="cb10-58"><a href="#cb10-58" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb10-59"><a href="#cb10-59" aria-hidden="true" tabindex="-1"></a><span class="dv">7</span>: arg3_4</span>
+<span id="cb10-60"><a href="#cb10-60" aria-hidden="true" tabindex="-1"></a><span class="kw">in</span> strategies: [[VarSPMDStrategy([REPLICATE, SHARD({<span class="st">'dim'</span>: <span class="dv">0</span>})]), VarSPMDStrategy([REPLICATE, REPLICATE])]]</span>
+<span id="cb10-61"><a href="#cb10-61" aria-hidden="true" tabindex="-1"></a>output strategies: [[VarSPMDStrategy([REPLICATE, SHARD({<span class="st">'dim'</span>: <span class="dv">0</span>})]), VarSPMDStrategy([REPLICATE, REPLICATE])]],</span>
+<span id="cb10-62"><a href="#cb10-62" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb10-63"><a href="#cb10-63" aria-hidden="true" tabindex="-1"></a>cluster <span class="bu">id</span>: <span class="dv">2</span></span>
+<span id="cb10-64"><a href="#cb10-64" aria-hidden="true" tabindex="-1"></a>  nodes: view, arg3_3, </span>
+<span id="cb10-65"><a href="#cb10-65" aria-hidden="true" tabindex="-1"></a>  inputs: [[arg3_3, <span class="dv">0</span>]]</span>
+<span id="cb10-66"><a href="#cb10-66" aria-hidden="true" tabindex="-1"></a>  output: view</span>
+<span id="cb10-67"><a href="#cb10-67" aria-hidden="true" tabindex="-1"></a>strategies:</span>
+<span id="cb10-68"><a href="#cb10-68" aria-hidden="true" tabindex="-1"></a>node strategies: </span>
+<span id="cb10-69"><a href="#cb10-69" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb10-70"><a href="#cb10-70" aria-hidden="true" tabindex="-1"></a><span class="dv">9</span>: [NodeSPMDStrategy(in_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD({<span class="st">'dim'</span>: <span class="dv">0</span>})])]), out_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD({<span class="st">'dim'</span>: <span class="dv">0</span>})])])),</span>
+<span id="cb10-71"><a href="#cb10-71" aria-hidden="true" tabindex="-1"></a>    NodeSPMDStrategy(in_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD({<span class="st">'dim'</span>: <span class="dv">1</span>})])]), out_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD({<span class="st">'dim'</span>: <span class="dv">1</span>})])])),</span>
+<span id="cb10-72"><a href="#cb10-72" aria-hidden="true" tabindex="-1"></a>    NodeSPMDStrategy(in_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, REPLICATE])]), out_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, REPLICATE])]))],</span>
+<span id="cb10-73"><a href="#cb10-73" aria-hidden="true" tabindex="-1"></a><span class="dv">5</span>: [NodeSPMDStrategy(in_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD({<span class="st">'dim'</span>: <span class="dv">0</span>})])]), out_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD({<span class="st">'dim'</span>: <span class="dv">0</span>})])])),</span>
+<span id="cb10-74"><a href="#cb10-74" aria-hidden="true" tabindex="-1"></a>    NodeSPMDStrategy(in_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD({<span class="st">'dim'</span>: <span class="dv">1</span>})])]), out_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, SHARD({<span class="st">'dim'</span>: <span class="dv">1</span>})])])),</span>
+<span id="cb10-75"><a href="#cb10-75" aria-hidden="true" tabindex="-1"></a>    NodeSPMDStrategy(in_strtg_group: VarSPMDStrategyGroup([]), out_strtg_group: VarSPMDStrategyGroup([VarSPMDStrategy([REPLICATE, REPLICATE])]))],</span>
+<span id="cb10-76"><a href="#cb10-76" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb10-77"><a href="#cb10-77" aria-hidden="true" tabindex="-1"></a>.</span>
+<span id="cb10-78"><a href="#cb10-78" aria-hidden="true" tabindex="-1"></a>.</span>
+<span id="cb10-79"><a href="#cb10-79" aria-hidden="true" tabindex="-1"></a>.</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="约束模型与求解" class="level2">
+<h2 class="anchored" data-anchor-id="约束模型与求解">约束模型与求解</h2>
+<p>这里使用mip构造了一个约束模型, 对于<code>enable_graph_coarsen</code>的配置下, 会进入<code>add_coarsen_graph</code>来将meta graph转换为约束模型. 在这个函数中遍历所有meta graph中的cluster执行<code>add_cluster</code>.</p>
+<p>具体看一下<code>add_cluster</code>: 1. 获取cluster的strtg_pool 2. 遍历pool中的切分策略, 为每个切分策略构造出一个对应的binary var, 来表示是否选择这个切分. 3. 使用对应的pool与pick vars构造出<code>mip_info = ClusterMipInfo(cluster, cluster_strtg_pool, mip_vars)</code> 4. 遍历当前cluster的args进行加边<code>self.add_cluster_edge(var, input_idx, down_node=input_node)</code> 1. 对于一个有上下连接关系的cluster,需要进行加边 2. 获取他的输入node的outvar的切分策略up_out_strategy_list,获取他输出node的invar切分策略候选down_in_strategy_list 3. 构造出<code>[up_out_strategy_list,down_in_strategy_list]</code>大小的mip binary var矩阵, 用于标记每个连接是否选择 4. 再计算<code>[up_out_strategy_list,down_in_strategy_list]</code>大小的通信开销矩阵, 也就是对于每个切分的组合计算额外的通信开销 5. 再计算<code>[up_out_strategy_list,down_in_strategy_list]</code>大小的内存开销矩阵 5. 开始ilp_solve 1. 添加约束目标, 初始化comm_cost, mem_cost, 再遍历所有的cluster edge进行update 2. <code>comm_cost += mip.xsum(mip_var[i][j] * comm_matrix[i][j] for i in range(shape_1) for j in range(shape_2))</code> 3. <code>mem_cost += mip.xsum(mip_var[i][j] * mem_matrix[i][j] for i in range(shape_1) for j in range(shape_2))</code> 4. 遍历<code>[up_out_strategy_list,down_in_strategy_list]</code>大小的矩阵添加总cost中. 5. 再次遍历所有的cluster edge 6. 添加<code>[up_out_strategy_list,down_in_strategy_list]</code>的binary var矩阵和为1的约束, 这样确保只选择一种切分 7. 添加上下连接关系的约束, 也就是输入/输出选择某种切分, 那么矩阵中对应的节点也必须选择某种切分. 8. 遍历所有的cluster, 添加每个cluster只选择一个切分的约束 9. 添加目标为<code>mip.minimize(comm_cost + 0.00000001 * mem_cost)</code> 6. 求解并提取出新的graph</p>
+</section>
+</section>
+<section id="总结" class="level1">
+<h1>总结</h1>
+<p>以上内容都是在浏览的时候记录的, 如果有部分内容理解错误可以在评论区指出. 总的来说easydist的shard annotation部分以及combination annotation的设计的很优雅, 通过shard_id的方式把一些计算上有依赖的维度的依赖关系表示出来了, 如果是SPMD的表示方式, 需要编写代码时自己维护这种相关性. 后者可以在没有添加推导函数的情况下自动做一些切分推导, 并且可以通过偏函数的方式进行组合, 代码复用程度高.</p>
+<p>后续的meta graph转换部分我看的比较困难, 主要是各种数据结构的交互比较多, 还有就是因为代码中有一些入侵的修改类实例的地方比较难读. 不过总体来讲就是切子图,然后添加候选集.最后就是用一个约束模型来求解.</p>
+<p>相比起easydist, 我自己实现的自动分布式切分方法就比较暴力, 直接列出所有的可切分方式以及必要情况下的重新切分方式作为候选集, 然后结合通信/计算/内存移动开销进行求解.</p>
+<p>全部的候选集: <img src="easydist/pick.png" class="img-fluid"> 求解出来的图: <img src="easydist/autodist.png" class="img-fluid"></p>
+</section>
+<section id="待解决的问题" class="level1">
+<h1>待解决的问题</h1>
+<p>虽然自动分布式切分搜索可以解决选择切分方式的问题, 但是预计还会有许多别的问题, 这里抛砖引玉提出一些, 希望可以和大家多多讨论:</p>
+<ol type="1">
+<li>子图合并的问题</li>
+</ol>
+<p>自动并行切分通常只考虑了通信上的开销, 没有考虑带宽瓶颈导致的性能损失以及静态内存分配的优化带来的性能提升. 比如一些带宽瓶颈的操作或者一些concat/view的操作原本可以通过编写高性能fused kernel来进行优化, 有可能自动切分会在这些算子中间添加了reshard, 那么硬件利用率就不高了. 所以可能还是需要先匹配到可以做合并的算子再做自动并行切分, 但是这个事情需要手动来做, 手动来实现还需要考虑合并那些部分, 都是比较复杂的问题.</p>
+<ol start="2" type="1">
+<li>流水并行问题</li>
+</ol>
+<p>流水并行没有办法在自动切分搜索的时候体现, 如果在切分搜索的时候贪心的找到前面n层可在gpu上放下的层, 但是不同的分布式切分也会影响内存使用大小, 此时只能贪心的去添加层没法做到整体最优. 或者通过手动的方式去划分出一个子图进行自动切分搜索.</p>
+<ol start="3" type="1">
+<li>重计算问题</li>
+</ol>
+<p>如果对resize/conv来说如果切分了h/w, 那么就需要考虑上面的层需要多计算一部分数据, 那就需要引入bounds infer了. 当然如果不考虑这样切分就不会有这个问题.</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/zhen8838\.github\.io");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script src="https://utteranc.es/client.js" repo="zhen8838/zhen8838.github.io" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

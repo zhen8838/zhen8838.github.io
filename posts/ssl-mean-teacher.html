@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2020-01-30">
+
+<title>半监督学习：mean teacher – Zheng’s Notes</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../assets/favicon.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-7072389654d23eff08f359f9aa0d1ee7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">Zheng’s Notes</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#算法理论" id="toc-算法理论" class="nav-link active" data-scroll-target="#算法理论">算法理论</a>
+  <ul class="collapse">
+  <li><a href="#mean-teacher" id="toc-mean-teacher" class="nav-link" data-scroll-target="#mean-teacher">mean teacher</a></li>
+  </ul></li>
+  <li><a href="#代码" id="toc-代码" class="nav-link" data-scroll-target="#代码">代码</a></li>
+  <li><a href="#测试结果" id="toc-测试结果" class="nav-link" data-scroll-target="#测试结果">测试结果</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">半监督学习：mean teacher</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">深度学习</div>
+  </div>
+  </div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">January 30, 2020</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>第三个算法<code>mean teacher</code>，此算法是对<code>Π model</code>的升级。</p>
+<!--more-->
+<section id="算法理论" class="level1">
+<h1>算法理论</h1>
+<p><code>mean teacher</code>的引言写的非常好，所以我翻译并精简：</p>
+<p>深度学习模型需要大量参数，从而易于过度拟合(图1a)。此外，将高质量标签手动添加到训练数据通常很昂贵。因此，希望使用可有效利用未标记数据的正则化方法，以减少半监督学习中的过度拟合。 (<strong>半监督实际是减少过拟合</strong>)</p>
+<p>当输入略有变化时，人们通常仍将其视为同一对象。相应地，分类模型应该偏向为相似数据点提供一致输出的函数。实现此目的的一种方法是将噪声添加到模型的输入中。为了使模型能够学习更多抽象不变性，可以将噪声添加到中间表示中，这一见解激发了许多正则化技术，例如Dropout。正则化模型不是使输入空间的零维数据点上的分类成本最小化，而是使每个数据点周围的流形上的成本最小化，从而使决策边界远离带标签的数据点(图1b) (<strong>类间间距大，类内间距小</strong>)</p>
+<p>由于对于未标记的示例未定义分类成本，因此噪声正则化本身无助于半监督学习。为了克服这个问题，<code>Γ model</code>评估了有无噪声的每个数据点，然后在两个预测之间应用了<code>consistency cost</code>。在这种情况下，模型承担着<code>teacher</code>和<code>student</code>的双重角色。作为<code>student</code>，它像以前一样学习。作为<code>teacher</code>，它会生成标签让<code>student</code>学习。由于模型本身会生成标签，因此它们很可能是<strong>错误</strong>的。如果对生成的标签给予过多的权重，则<code>consistency cost</code>将超过错误分类的损失，从而阻止学习新信息。实际上，模型存在确认偏差(图1c)，这种风险可以通过提高标签质量来减轻。</p>
+<p>至少有两种方法可以提高目标质量。一种方法是仔细选择表示的扰动，而不是仅仅施加加性或乘性噪声。另一种方法是谨慎选择<code>teacher</code>模型，而不是仅仅复制<code>student</code>模型。同时，在我们的研究中，<code>Virtual Adversarial Training</code>采用了第一种方法可以产生令人印象深刻的结果。我们采取第二种方法，并将表明它也提供了显著的好处。同时这两种方法是兼容的，并且它们的组合可能会产生更好的结果。</p>
+<p>因此，我们的目标是在没有额外训练的情况下从<code>student</code>模型中形成更好的教师模型。第一步，考虑模型的<code>softmax</code>输出通常不会在训练数据之外提供准确的预测。通过在<code>dropout</code>推理时将噪声添加到模型中，可以部分缓解这种情况，因此，带噪声的<code>teacher</code>可以产生更准确的目标(图1d)。该<code>Π model</code>近来已证明在半监督图像分类中效果很好。我们将使用该名称及其版本作为我们实验的基础。</p>
+<p>可以通过<code>Temporal Ensembling</code>进一步改进<code>Π model</code>，该模型为每个训练示例保持了指数移动平均值(EMA)预测。在每个训练步骤中，都会基于新的预测更新该小批中示例的所有EMA预测。因此，每个示例的EMA预测由模型的当前版本和评估同一示例的早期版本组成。这种集成可以提高预测的质量，并将其用作<code>teacher</code>的预测可以改善结果。然而，由于每个目标每个时期仅更新一次，所以学习的信息以缓慢的速度被合并到训练过程中。数据集越大，更新的时间越长，并且在在线学习的情况下，很难完全使用<code>Temporal Ensembling</code>。(一个时期可以周期性地对所有目标进行一次评估，但要使评估范围保持恒定，则每个时期需要O(n2)次评估，而训练示例的数量也是如此。)</p>
+<p><img src="ssl-mean-teacher/mean-teacher-1.png" class="img-fluid"></p>
+<p>带有两个标记示例(大蓝点)和一个无标签样本的二元分类任务的草图，展示了无标签样本(黑色圆圈)如何影响拟合函数(灰色曲线)。<strong>(a)</strong>没有正则化的模型可以自由地拟合任何可以很好地预测带标签样本。<strong>(b)</strong>经过训练的模型带有嘈杂的标记数据(小点)，可以学习为带标签样本周围提供一致的预测 <strong>(c)</strong>无标签样本周围的噪声一致性提供了额外的平滑度。为了清楚起见，首先将<code>teacher</code>模型(灰色曲线)拟合到标记的样本点中，然后在训练学生模型时保持不变。同样为了清楚起见，我们将省略图d和e中的小点 <strong>(d)</strong> <code>teacher</code>模型上的噪音可减少目标的偏差，而无需额外的培训。随机梯度下降的预期方向是朝向各个有噪声目标(小蓝色圆圈)的平均值(大蓝色圆圈) <strong>(e)</strong> 一组模型给出了更好的预期目标。<code>Temporal Ensembling</code>和<code>mean teacher</code>方法都使用此方法。</p>
+<section id="mean-teacher" class="level2">
+<h2 class="anchored" data-anchor-id="mean-teacher">mean teacher</h2>
+<p>为了克服<code>Temporal Ensembling</code>的局限性，建议对模型权重取平均而不是预测结果。由于<code>teacher</code>模型是连续的<code>student</code>模型权重平均值，因此将其称为<code>mean teacher</code>方法(图2)。 在训练步骤的上平均模型权重往往会产生比直接使用最终权重更准确的模型。我们可以在培训过程中利用这一优势来构建更好的目标。与使用学生模型共享权重不同，教师模型使用学生模型的EMA权重。现在，它可以在每个步骤之后而不是每个时期都汇总信息。另外，由于权重平均值改善了所有层的输出，而不仅仅是顶部输出，因此目标模型具有更好的中间表示。这些方面在时间合计方面具有两个实践优势：首先，目标标签更准确可导致学生模型与教师模型之间的反馈回路更快，从而提高测试准确性。其次，该方法可扩展到大型数据集和在线学习。</p>
+<p><img src="ssl-mean-teacher/mean-teacher-2.png" class="img-fluid"></p>
+<p>好了到这里其实应该清晰了，<code>mean teacher</code>对于<code>Temporal Ensembling</code>的实际改进其实就在与<code>teacher</code>模型的权重更新方式，使用的是<code>student</code>模型权重的滑动平均，而<code>student</code>模型实际上和<code>Π model</code>相同。</p>
+</section>
+</section>
+<section id="代码" class="level1">
+<h1>代码</h1>
+<p>和<code>Π model</code>的区别就在于使用了<code>ema</code>更新<code>teacher</code>模型的权重。</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>hwc <span class="op">=</span> [<span class="va">self</span>.dataset.height, <span class="va">self</span>.dataset.width, <span class="va">self</span>.dataset.colors]</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>xt_in <span class="op">=</span> tf.placeholder(tf.float32, [batch] <span class="op">+</span> hwc, <span class="st">'xt'</span>)  <span class="co"># For training</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>x_in <span class="op">=</span> tf.placeholder(tf.float32, [<span class="va">None</span>] <span class="op">+</span> hwc, <span class="st">'x'</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>y_in <span class="op">=</span> tf.placeholder(tf.float32, [batch, <span class="dv">2</span>] <span class="op">+</span> hwc, <span class="st">'y'</span>) <span class="co"># 一次输入两个无标签样本</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>l_in <span class="op">=</span> tf.placeholder(tf.int32, [batch], <span class="st">'labels'</span>)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>l <span class="op">=</span> tf.one_hot(l_in, <span class="va">self</span>.nclass)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>warmup <span class="op">=</span> tf.clip_by_value(tf.to_float(<span class="va">self</span>.step) <span class="op">/</span> (warmup_pos <span class="op">*</span> (FLAGS.train_kimg <span class="op">&lt;&lt;</span> <span class="dv">10</span>)), <span class="dv">0</span>, <span class="dv">1</span>)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>lrate <span class="op">=</span> tf.clip_by_value(tf.to_float(<span class="va">self</span>.step) <span class="op">/</span> (FLAGS.train_kimg <span class="op">&lt;&lt;</span> <span class="dv">10</span>), <span class="dv">0</span>, <span class="dv">1</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>lr <span class="op">*=</span> tf.cos(lrate <span class="op">*</span> (<span class="dv">7</span> <span class="op">*</span> np.pi) <span class="op">/</span> (<span class="dv">2</span> <span class="op">*</span> <span class="dv">8</span>))</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>tf.summary.scalar(<span class="st">'monitors/lr'</span>, lr)</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co"># classifier是网络输入到输出的流程函数，实际上每次调用都构建了一个新的网络，不过他auto reuse了</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>classifier <span class="op">=</span> <span class="kw">lambda</span> x, <span class="op">**</span>kw: <span class="va">self</span>.classifier(x, <span class="op">**</span>kw, <span class="op">**</span>kwargs).logits</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>logits_x <span class="op">=</span> classifier(xt_in, training<span class="op">=</span><span class="va">True</span>)  <span class="co"># 定义有标签数据的分类器</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>post_ops <span class="op">=</span> tf.get_collection(tf.GraphKeys.UPDATE_OPS)  <span class="co"># Take only first call to update batch norm.</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> tf.reshape(tf.transpose(y_in, [<span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">4</span>]), [<span class="op">-</span><span class="dv">1</span>] <span class="op">+</span> hwc)</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>y_1, y_2 <span class="op">=</span> tf.split(y, <span class="dv">2</span>)</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="co"># 指定全部的变量getter</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>ema <span class="op">=</span> tf.train.ExponentialMovingAverage(decay<span class="op">=</span>ema)</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>ema_op <span class="op">=</span> ema.<span class="bu">apply</span>(utils.model_vars())</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>ema_getter <span class="op">=</span> functools.partial(utils.getter_ema, ema)</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="co"># 第一个无标签数据的概率作为teacher</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>logits_y <span class="op">=</span> classifier(y_1, training<span class="op">=</span><span class="va">True</span>, getter<span class="op">=</span>ema_getter)  <span class="co"># 定义teacher模型，并通过ema更新</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>logits_teacher <span class="op">=</span> tf.stop_gradient(logits_y) <span class="co"># 但是屏蔽梯度，使其无法通过梯度下降更新</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a><span class="co"># 第二个无标签数据的概率作为student</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>logits_student <span class="op">=</span> classifier(y_2, training<span class="op">=</span><span class="va">True</span>)  <span class="co"># 定义student模型</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a><span class="co"># 以teacher和student间的mse损失学习其一致性</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>loss_mt <span class="op">=</span> tf.reduce_mean((tf.nn.softmax(logits_teacher) <span class="op">-</span> tf.nn.softmax(logits_student)) <span class="op">**</span> <span class="dv">2</span>, <span class="op">-</span><span class="dv">1</span>)</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>loss_mt <span class="op">=</span> tf.reduce_mean(loss_mt)</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a><span class="co"># 分类损失</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>loss <span class="op">=</span> tf.nn.softmax_cross_entropy_with_logits_v2(labels<span class="op">=</span>l, logits<span class="op">=</span>logits_x)</span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>loss <span class="op">=</span> tf.reduce_mean(loss)</span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>tf.summary.scalar(<span class="st">'losses/xe'</span>, loss)</span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>tf.summary.scalar(<span class="st">'losses/mt'</span>, loss_mt)</span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a><span class="co"># 权重l2正则化</span></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>loss_wd <span class="op">=</span> <span class="bu">sum</span>(tf.nn.l2_loss(v) <span class="cf">for</span> v <span class="kw">in</span> utils.model_vars(<span class="st">'classify'</span>) <span class="cf">if</span> <span class="st">'kernel'</span> <span class="kw">in</span> v.name)</span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>tf.summary.scalar(<span class="st">'losses/wd'</span>, loss_wd)</span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>post_ops.append(ema_op)</span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>train_op <span class="op">=</span> tf.train.MomentumOptimizer(lr, <span class="fl">0.9</span>, use_nesterov<span class="op">=</span><span class="va">True</span>).minimize(</span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>    loss <span class="op">+</span> loss_mt <span class="op">*</span> warmup <span class="op">*</span> consistency_weight <span class="op">+</span> wd <span class="op">*</span> loss_wd, colocate_gradients_with_ops<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> tf.control_dependencies([train_op]):</span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 梯度下降一次后更新teacher权重</span></span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a>    train_op <span class="op">=</span> tf.group(<span class="op">*</span>post_ops)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="测试结果" class="level1">
+<h1>测试结果</h1>
+<p>使用默认参数以及cifar10中250张标注样本训练128个epoch，得到测试集准确率如下，效果好于之前两个模型，但训练到后面有退化的迹象：</p>
+<pre><code>"last01": 50.95000076293945,
+"last10": 51.114999771118164,
+"last20": 51.3799991607666,
+"last50": 52.079999923706055</code></pre>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/zhen8838\.github\.io");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script src="https://utteranc.es/client.js" repo="zhen8838/zhen8838.github.io" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

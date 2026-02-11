@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2019-03-25">
+
+<title>声音信号处理-DTF与DTFT – Zheng’s Notes</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../assets/favicon.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-7072389654d23eff08f359f9aa0d1ee7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">Zheng’s Notes</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#dft变换" id="toc-dft变换" class="nav-link active" data-scroll-target="#dft变换">DFT变换</a>
+  <ul class="collapse">
+  <li><a href="#例子-1" id="toc-例子-1" class="nav-link" data-scroll-target="#例子-1">例子 1</a></li>
+  <li><a href="#例子2-标量乘积" id="toc-例子2-标量乘积" class="nav-link" data-scroll-target="#例子2-标量乘积">例子2 : 标量乘积</a></li>
+  <li><a href="#例子-3" id="toc-例子-3" class="nav-link" data-scroll-target="#例子-3">例子 3</a></li>
+  </ul></li>
+  <li><a href="#复数sin曲线的dft" id="toc-复数sin曲线的dft" class="nav-link" data-scroll-target="#复数sin曲线的dft">复数sin曲线的DFT</a></li>
+  <li><a href="#纯实sin信号的dft" id="toc-纯实sin信号的dft" class="nav-link" data-scroll-target="#纯实sin信号的dft">纯实sin信号的DFT</a></li>
+  <li><a href="#idft" id="toc-idft" class="nav-link" data-scroll-target="#idft">IDFT</a>
+  <ul class="collapse">
+  <li><a href="#例子-1-1" id="toc-例子-1-1" class="nav-link" data-scroll-target="#例子-1-1">例子 1</a></li>
+  <li><a href="#例子-2" id="toc-例子-2" class="nav-link" data-scroll-target="#例子-2">例子 2</a></li>
+  </ul></li>
+  <li><a href="#普通的-sin函数" id="toc-普通的-sin函数" class="nav-link" data-scroll-target="#普通的-sin函数">普通的 sin函数</a></li>
+  <li><a href="#复数形式的sin曲线" id="toc-复数形式的sin曲线" class="nav-link" data-scroll-target="#复数形式的sin曲线">复数形式的sin曲线</a></li>
+  <li><a href="#dft" id="toc-dft" class="nav-link" data-scroll-target="#dft">DFT</a>
+  <ul class="collapse">
+  <li><a href="#复数sin波形的dft" id="toc-复数sin波形的dft" class="nav-link" data-scroll-target="#复数sin波形的dft">复数sin波形的DFT</a></li>
+  <li><a href="#实数sin波形的dft" id="toc-实数sin波形的dft" class="nav-link" data-scroll-target="#实数sin波形的dft">实数sin波形的DFT</a></li>
+  </ul></li>
+  <li><a href="#idft-1" id="toc-idft-1" class="nav-link" data-scroll-target="#idft-1">IDFT</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">声音信号处理-DTF与DTFT</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">机器学习</div>
+  </div>
+  </div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">March 25, 2019</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>现在要做声音相关,所以先学习声音信号处理的内容,这个将会成为一个系列.</p>
+<!--more-->
+<section id="dft变换" class="level1">
+<h1>DFT变换</h1>
+<p>将长度为<code>N</code>离散的时域信号变化成两个长度为<code>N/2+1</code>的实部与虚部信号 ## 标准DFT计算公式 <span class="math display">\[
+\begin{align}
+X[k] &amp; =\sum^{N-1}_{n=0}x[n]e^{-j2\pi k n / N} \ \ k=0,...,N-1 \\
+n &amp;: 离散时间索引　\\
+k &amp;: 离散频域索引 \\
+\omega_k=2 \pi k /N &amp;: 角频率 \\
+f_k = f_s k / N &amp;: 频率　(f_s : 采样率)
+\end{align}
+\]</span></p>
+<section id="例子-1" class="level2">
+<h2 class="anchored" data-anchor-id="例子-1">例子 1</h2>
+<p><span class="math display">\[
+\begin{align}
+s^*_k&amp;=e^{-j2\pi k n / N}=cos(2 \pi k n / N)-jsin(2 \pi k n/N) \\
+如果 N&amp;=4，那么n=0,1,2,3; k=0,1,2,3 \\
+s^*_0&amp;=cos(2\pi*0*n/4)-jsin(2\pi*0*n/4)=[1,1,1,1] \\
+s^*_1&amp;=cos(2\pi*1*n/4)-jsin(2\pi*1*n/4)=[1,-j,-1,j] \\
+s^*_2&amp;=cos(2\pi*2*n/4)-jsin(2\pi*2*n/4)=[1,-1,1,-1] \\
+s^*_3&amp;=cos(2\pi*3*n/4)-jsin(2\pi*3*n/4)=[1,j,-1,-j] \\
+\end{align}
+\]</span> 可以观察下面的图,实际上<code>DFT</code>就是每个频率点与不同正弦波进行內积.如果內积为<code>0</code>那么说明特定频率的正弦波不存在与此波形中.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 例子 1</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">8</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>plt.figure(<span class="dv">1</span>, figsize<span class="op">=</span>(<span class="fl">9.5</span>, <span class="dv">6</span>))</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> k <span class="kw">in</span> <span class="bu">range</span>(N):</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    s <span class="op">=</span> np.exp(<span class="op">-</span><span class="ot">1j</span><span class="op">*</span><span class="dv">2</span><span class="op">*</span>np.pi<span class="op">*</span>k<span class="op">/</span>N<span class="op">*</span>np.arange(N))</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    plt.subplot(N<span class="op">/</span><span class="dv">2</span>, <span class="dv">2</span>, k<span class="op">+</span><span class="dv">1</span>)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    plt.plot(np.real(s), <span class="st">'b'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    plt.axis([<span class="dv">0</span>,N<span class="op">-</span><span class="dv">1</span>,<span class="op">-</span><span class="fl">1.5</span>,<span class="fl">1.5</span>])</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    plt.title(<span class="vs">r"</span><span class="dv">$</span><span class="vs">s</span><span class="dv">^</span><span class="vs">{</span><span class="op">*</span><span class="vs">}_{%s}</span><span class="dv">$</span><span class="vs">"</span><span class="op">%</span>(k), fontsize<span class="op">=</span><span class="dv">18</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    plt.subplot(N<span class="op">/</span><span class="dv">2</span>, <span class="dv">2</span>, k<span class="op">+</span><span class="dv">1</span>)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    plt.plot(np.imag(s), <span class="st">'g'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    plt.axis([<span class="dv">0</span>,N<span class="op">-</span><span class="dv">1</span>,<span class="op">-</span><span class="fl">1.5</span>,<span class="fl">1.5</span>])</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><img src="dtf-idft/dtf-idft_3_0.png" class="img-fluid"></p>
+</section>
+<section id="例子2-标量乘积" class="level2">
+<h2 class="anchored" data-anchor-id="例子2-标量乘积">例子2 : 标量乘积</h2>
+<p>下面给定一个x=[1,1,1,1,-1,-1,-1,-1]进行计算</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> np.array([<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>,<span class="op">-</span><span class="dv">1</span>,<span class="op">-</span><span class="dv">1</span>,<span class="op">-</span><span class="dv">1</span>,<span class="op">-</span><span class="dv">1</span>])</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">8</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>mX <span class="op">=</span> ()</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>pX <span class="op">=</span> ()</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>plt.figure(<span class="dv">1</span>, figsize<span class="op">=</span>(<span class="fl">9.5</span>, <span class="dv">6</span>))</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">3</span>,<span class="dv">1</span>,<span class="dv">1</span>)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>plt.plot(x,marker<span class="op">=</span><span class="st">'x'</span>,color<span class="op">=</span><span class="st">'b'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="dv">0</span>,N<span class="op">-</span><span class="dv">1</span>,<span class="op">-</span><span class="fl">1.5</span>,<span class="fl">1.5</span>])</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'x = [1,1,1,1,-1,-1,-1,-1]'</span>, fontsize<span class="op">=</span><span class="dv">18</span>)</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> k <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">8</span>):</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    s <span class="op">=</span> np.exp(<span class="ot">1j</span><span class="op">*</span><span class="dv">2</span><span class="op">*</span>np.pi<span class="op">*</span>k<span class="op">/</span>N<span class="op">*</span>np.arange(N))</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    X <span class="op">=</span> <span class="bu">sum</span>(x<span class="op">*</span>np.conjugate(s))</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    mX <span class="op">=</span> np.append(mX, np.<span class="bu">abs</span>(X))</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    pX <span class="op">=</span> np.append(pX, np.angle(X))</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">3</span>,<span class="dv">1</span>,<span class="dv">2</span>)</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>plt.plot(mX, marker<span class="op">=</span><span class="st">'x'</span>, color<span class="op">=</span><span class="st">'r'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'$abs(&lt;x,s_k&gt;)$'</span>, fontsize<span class="op">=</span><span class="dv">18</span>) <span class="co"># 幅度谱</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">3</span>,<span class="dv">1</span>,<span class="dv">3</span>)</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>plt.plot(pX, marker<span class="op">=</span><span class="st">'x'</span>, color<span class="op">=</span><span class="st">'c'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'$angle(&lt;x,s_k&gt;)$'</span>, fontsize<span class="op">=</span><span class="dv">18</span>) <span class="co"># 相位谱</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><img src="dtf-idft/dtf-idft_5_0.png" class="img-fluid"></p>
+</section>
+<section id="例子-3" class="level2">
+<h2 class="anchored" data-anchor-id="例子-3">例子 3</h2>
+<p>对一段音频数据进行<code>DFT</code>变换</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sys</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> math</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>sys.path.append(<span class="st">'../software/models'</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> utilFunctions <span class="im">as</span> UF</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> dftModel <span class="im">as</span> DFT</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>(fs, x) <span class="op">=</span> UF.wavread(<span class="st">'../sounds/oboe-A4.wav'</span>)</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>w <span class="op">=</span> np.hamming(<span class="dv">511</span>)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">512</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>pin <span class="op">=</span> <span class="dv">5000</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>hM1 <span class="op">=</span> <span class="bu">int</span>(math.floor((w.size<span class="op">+</span><span class="dv">1</span>)<span class="op">/</span><span class="dv">2</span>)) </span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>hM2 <span class="op">=</span> <span class="bu">int</span>(math.floor(w.size<span class="op">/</span><span class="dv">2</span>))  </span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>x1 <span class="op">=</span> x[pin<span class="op">-</span>hM1:pin<span class="op">+</span>hM2]</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>mX, pX <span class="op">=</span> DFT.dftAnal(x1, w, N)</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>plt.figure(<span class="dv">1</span>, figsize<span class="op">=</span>(<span class="fl">9.5</span>, <span class="dv">7</span>))</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">311</span>)</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="op">-</span>hM1, hM2), x1, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="op">-</span>hM1, hM2, <span class="bu">min</span>(x1), <span class="bu">max</span>(x1)])</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">'amplitude'</span>)</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'x (oboe-A4.wav)'</span>)</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">3</span>,<span class="dv">1</span>,<span class="dv">2</span>)</span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(mX.size), mX, <span class="st">'r'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="dv">0</span>,mX.size,<span class="bu">min</span>(mX),<span class="bu">max</span>(mX)])</span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>plt.title (<span class="st">'magnitude spectrum: mX = 20*log10(abs(X))'</span>)</span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">'amplitude (dB)'</span>)</span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">3</span>,<span class="dv">1</span>,<span class="dv">3</span>)</span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(mX.size), pX, <span class="st">'c'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="dv">0</span>,mX.size,<span class="bu">min</span>(pX),<span class="bu">max</span>(pX)])</span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>plt.title (<span class="st">'phase spectrum: pX=unwrap(angle(X))'</span>)</span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">'phase (radians)'</span>)</span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><img src="dtf-idft/dtf-idft_7_0.png" class="img-fluid"></p>
+</section>
+</section>
+<section id="复数sin曲线的dft" class="level1">
+<h1>复数sin曲线的DFT</h1>
+<p>当输入的信号为复数<code>sin</code>曲线是如何进行<code>DFT</code>变换? <span class="math display">\[
+\begin{align}
+x_1[n] &amp; = e^{j2\pi k_0 n / N} \ \ k=0,...,N-1 \\
+X_1[k] &amp; = \sum^{N-1}_{n=0} x_1[n]  e^{-j2\pi k_0 n / N} \\
+    &amp;=\sum^{N-1}_{n=0}e^{j2\pi k_0n/N}e^{-j2\pi kn/N} \\
+    &amp;=\sum^{N-1}_{n=0}e^{-j2\pi (k-k_0)n/N} \\
+    &amp;=\frac{1-e^{-j2\pi (k-k_0)}}{1-e^{-j2\pi (k-k_0)/N}} (一个几何序列的总和.)
+\end{align}
+\]</span> 如果<span class="math inline">\(k\neq k_0\)</span>,分母不为0且分子为0</p>
+<p>如果<span class="math inline">\(k=k_0\)</span>那么<span class="math inline">\(X_1[k]=N\)</span>,<span class="math inline">\(k\neq k_0\)</span>时<span class="math inline">\(X_1[k]=0\)</span></p>
+<p>对于程序上来说还是没有很大的区别</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>tol <span class="op">=</span> <span class="fl">1e-5</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>plt.figure(<span class="dv">1</span>, figsize<span class="op">=</span>(<span class="fl">9.5</span>, <span class="dv">7</span>))</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">64</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>k0 <span class="op">=</span> <span class="fl">7.5</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>X <span class="op">=</span> np.array([])</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> np.exp(<span class="ot">1j</span><span class="op">*</span><span class="dv">2</span><span class="op">*</span>np.pi<span class="op">*</span>k0<span class="op">/</span>N<span class="op">*</span>np.arange(N))</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">311</span>)</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'complex sinewave: x; k_0 = 7.5, N = 64'</span>)</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(N), np.real(x),<span class="st">'b'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(N), np.imag(x),<span class="st">'g'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="dv">0</span>,N<span class="op">-</span><span class="dv">1</span>,<span class="op">-</span><span class="dv">1</span>,<span class="dv">1</span>])</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> k <span class="kw">in</span> <span class="bu">range</span>(N):</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>    s <span class="op">=</span> np.exp(<span class="ot">1j</span><span class="op">*</span><span class="dv">2</span><span class="op">*</span>np.pi<span class="op">*</span>k<span class="op">/</span>N<span class="op">*</span>np.arange(N))</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>    X <span class="op">=</span> np.append(X, <span class="bu">sum</span>(x<span class="op">*</span>np.conjugate(s)))</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>X.real[np.<span class="bu">abs</span>(X.real) <span class="op">&lt;</span> tol] <span class="op">=</span> <span class="fl">0.0</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>X.imag[np.<span class="bu">abs</span>(X.imag) <span class="op">&lt;</span> tol] <span class="op">=</span> <span class="fl">0.0</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">312</span>)</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'magnitude spectrum: abs(X)'</span>)</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(N), <span class="bu">abs</span>(X), <span class="st">'r'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="dv">0</span>,N<span class="op">-</span><span class="dv">1</span>,<span class="dv">0</span>,N])</span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">313</span>)</span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'phase spectrum: angle(X)'</span>)</span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(N), np.angle(X),<span class="st">'c'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="dv">0</span>,N<span class="op">-</span><span class="dv">1</span>,<span class="op">-</span>np.pi,np.pi])</span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><img src="dtf-idft/dtf-idft_9_0.png" class="img-fluid"></p>
+</section>
+<section id="纯实sin信号的dft" class="level1">
+<h1>纯实sin信号的DFT</h1>
+<p><span class="math display">\[
+\begin{align}
+x_3[n] &amp; = A_0cos(2\pi k_0 n/N)=A_0/2e^{j2\pi k_0n/N}+A_0/2e^{-j2\pi k_0n/N} \\
+X_3[k]&amp;=\sum^{N/2-1}_{n=-N/2}x_3[n]e^{-j2\pi kn/N}\\
+&amp;=\sum^{N/2-1}_{n=-N/2}(\frac{A_0}{2}e^{j2\pi k_0n/N}+\frac{A_0}{2}e^{-j2\pi k_0n/N})e^{-j2\pi kn/N} \\
+&amp;=\sum^{N/2-1}_{n=-N/2}\frac{A_0}{2}e^{j2\pi k_0n/N}e^{-j2\pi kn/N}+\sum^{N/2-1}_{n=-N/2}\frac{A_0}{2}e^{-j2\pi k_0n/N}e^{-j2\pi kn/N} \\
+&amp;=\sum^{N/2-1}_{n=-N/2}\frac{A_0}{2}e^{-j2\pi(k-k_0)n/N} + \sum^{N/2-1}_{n=-N/2}\frac{A_0}{2}e^{-j2\pi(k+k_0)n/N}\\
+&amp;=N\frac{A_0}{2} \ \ \ \ 当 k=k_0,-k_0 ; 0表示剩下的k
+\end{align}
+\]</span></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>tol <span class="op">=</span> <span class="fl">1e-5</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>plt.figure(<span class="dv">1</span>, figsize<span class="op">=</span>(<span class="fl">9.5</span>, <span class="dv">7</span>))</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">64</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>k0 <span class="op">=</span> <span class="fl">7.5</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>X <span class="op">=</span> np.array([])</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>nv <span class="op">=</span> np.arange(<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>, N<span class="op">/</span><span class="dv">2</span>)</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>kv <span class="op">=</span> np.arange(<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>, N<span class="op">/</span><span class="dv">2</span>)</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> np.cos(<span class="dv">2</span><span class="op">*</span>np.pi<span class="op">*</span>k0<span class="op">/</span>N<span class="op">*</span>nv)</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">311</span>)</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'x; k_0 = 7.5, N = 64'</span>)</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>plt.plot(nv, x,<span class="st">'b'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>,N<span class="op">/</span><span class="dv">2</span><span class="op">-</span><span class="dv">1</span>,<span class="op">-</span><span class="dv">1</span>,<span class="dv">1</span>])</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> k <span class="kw">in</span> kv:</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    s <span class="op">=</span> np.exp(<span class="ot">1j</span><span class="op">*</span><span class="dv">2</span><span class="op">*</span>np.pi<span class="op">*</span>k<span class="op">/</span>N<span class="op">*</span>nv)</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>    X <span class="op">=</span> np.append(X, <span class="bu">sum</span>(x<span class="op">*</span>np.conjugate(s)))</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>X.real[np.<span class="bu">abs</span>(X.real) <span class="op">&lt;</span> tol] <span class="op">=</span> <span class="fl">0.0</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>X.imag[np.<span class="bu">abs</span>(X.imag) <span class="op">&lt;</span> tol] <span class="op">=</span> <span class="fl">0.0</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">312</span>)</span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'magnitude spectrum: abs(X)'</span>)</span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>plt.plot(kv, <span class="bu">abs</span>(X), <span class="st">'r'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>,N<span class="op">/</span><span class="dv">2</span><span class="op">-</span><span class="dv">1</span>,<span class="dv">0</span>,N])</span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">313</span>)</span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'phase spectrum: angle(X)'</span>)</span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>plt.plot(kv, np.angle(X),<span class="st">'c'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>,N<span class="op">/</span><span class="dv">2</span><span class="op">-</span><span class="dv">1</span>,<span class="op">-</span>np.pi,np.pi])</span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><img src="dtf-idft/dtf-idft_11_0.png" class="img-fluid"></p>
+</section>
+<section id="idft" class="level1">
+<h1>IDFT</h1>
+<p><span class="math display">\[
+\begin{align}
+x[n]=\frac{1}{N}X[k]s_k[n]=\frac{1}{N}\sum^{N-1}_{k=0}X[k]e^{j2\pi kn/N}\ \ \ \ n=0,...,N-1
+\end{align}
+\]</span></p>
+<section id="例子-1-1" class="level2">
+<h2 class="anchored" data-anchor-id="例子-1-1">例子 1</h2>
+<p><span class="math display">\[
+\begin{align}
+X[k]&amp;=[0,4,0,0];\ \ N=4 \\
+x[0]&amp;=\frac{1}{4}(X*x)[n=0]=\frac{1}{4}(0*1+4*1+0*1+0*1)=1 \\
+x[1]&amp;=\frac{1}{4}(X*x)[n=1]=\frac{1}{4}(0*1+4*1+0*(-1)+0*(-j))=j \\
+x[2]&amp;=\frac{1}{4}(X*x)[n=2]=\frac{1}{4}(0*1+4*(-1)+0*1+0*(-1))=-1 \\
+x[3]&amp;=\frac{1}{4}(X*x)[n=3]=\frac{1}{4}(0*1+4*(-j)+0*(-1)+0*j)=-j
+\end{align}
+\]</span></p>
+</section>
+<section id="例子-2" class="level2">
+<h2 class="anchored" data-anchor-id="例子-2">例子 2</h2>
+<p>真实信号的逆DFT <span class="math display">\[X[k]=|X[k]e^{j&lt;X[k]} and X[-K]=|X[k]|e^{-j&lt;X[k]}\ \ \ \ k=0,1,...,N/2-1\]</span></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sys</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>sys.path.append(<span class="st">'../software/models/'</span>)</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> dftModel <span class="im">as</span> DFT</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> math</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>k0 <span class="op">=</span> <span class="fl">8.5</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">64</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>w <span class="op">=</span> np.ones(N)</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> np.cos(<span class="dv">2</span><span class="op">*</span>np.pi<span class="op">*</span>k0<span class="op">/</span>N<span class="op">*</span>np.arange(<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>,N<span class="op">/</span><span class="dv">2</span>))</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>mX, pX <span class="op">=</span> DFT.dftAnal(x, w, N)</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> DFT.dftSynth(mX, pX, N)</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>plt.figure(<span class="dv">1</span>, figsize<span class="op">=</span>(<span class="fl">9.5</span>, <span class="dv">5</span>))</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">311</span>)</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'positive freq. magnitude spectrum in dB: mX'</span>)</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(mX.size), mX, <span class="st">'r'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="dv">0</span>,mX.size, <span class="bu">min</span>(mX), <span class="bu">max</span>(mX)<span class="op">+</span><span class="dv">1</span>])</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">312</span>)</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'positive freq. phase spectrum: pX'</span>)</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(pX.size), pX, <span class="st">'c'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="dv">0</span>, pX.size,<span class="op">-</span>np.pi,np.pi])</span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">313</span>)</span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'inverse spectrum: IDFT(X)'</span>)</span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>, N<span class="op">/</span><span class="dv">2</span>), y,<span class="st">'b'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>,N<span class="op">/</span><span class="dv">2</span><span class="op">-</span><span class="dv">1</span>,<span class="bu">min</span>(y), <span class="bu">max</span>(y)])</span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><img src="dtf-idft/dtf-idft_15_0.png" class="img-fluid"></p>
+</section>
+</section>
+<section id="普通的-sin函数" class="level1">
+<h1>普通的 sin函数</h1>
+<p><span class="math display">\[x[n]=Acos(2\pi fnT+/phi)\]</span></p>
+<p>A=幅值</p>
+<p>f=频率</p>
+<p>n=时间索引</p>
+<p>T=抽样周期</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>A <span class="op">=</span> <span class="fl">.8</span> <span class="co"># 幅值</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>f0 <span class="op">=</span> <span class="dv">1000</span> <span class="co"># 信号频率</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>phi <span class="op">=</span> np.pi<span class="op">/</span><span class="dv">2</span> <span class="co"># 初始相位</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>fs <span class="op">=</span> <span class="dv">44100</span> <span class="co"># 采样频率</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>t <span class="op">=</span> np.arange(<span class="op">-</span><span class="fl">.002</span>, <span class="fl">.002</span>, <span class="fl">1.0</span><span class="op">/</span>fs)</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> A<span class="op">*</span>np.cos(<span class="dv">2</span><span class="op">*</span>np.pi<span class="op">*</span>f0<span class="op">*</span>t<span class="op">+</span>phi)</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>plt.plot(t, x)</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="op">-</span><span class="fl">.002</span>, <span class="fl">.002</span>, <span class="op">-</span><span class="fl">.8</span>, <span class="fl">.8</span>])</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">'time'</span>)</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">'amplitude'</span>)</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><img src="dtf-idft/dtf-idft_17_0.png" class="img-fluid"></p>
+</section>
+<section id="复数形式的sin曲线" class="level1">
+<h1>复数形式的sin曲线</h1>
+<p><span class="math display">\[
+\bar{x}=Ae^{j(\omega n T + \phi)}=Acos(\omega n T +\phi)+jAsin(\omega n T +\phi)
+\]</span></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">500</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>k <span class="op">=</span> <span class="dv">3</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>n <span class="op">=</span> np.arange(<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>, N<span class="op">/</span><span class="dv">2</span>)</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>s <span class="op">=</span> np.exp(<span class="ot">1j</span><span class="op">*</span><span class="dv">2</span><span class="op">*</span>np.pi<span class="op">*</span>k<span class="op">*</span>n<span class="op">/</span>N)</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>plt.plot(n, np.real(s))</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>plt.plot(n, np.imag(s))</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>, N<span class="op">/</span><span class="dv">2</span>, <span class="op">-</span><span class="dv">1</span>, <span class="dv">1</span>])</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">'n'</span>)</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">'amplitude'</span>)</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><img src="dtf-idft/dtf-idft_19_0.png" class="img-fluid"></p>
+</section>
+<section id="dft" class="level1">
+<h1>DFT</h1>
+<p><span class="math display">\[X[k]=\sum^{N-1}_{n=0}x[n]e^{-j2\pi kn/N}\ \ \ \ k=0,...,N-1\]</span></p>
+<section id="复数sin波形的dft" class="level2">
+<h2 class="anchored" data-anchor-id="复数sin波形的dft">复数sin波形的DFT</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>N<span class="op">=</span><span class="dv">64</span> <span class="co"># 长度64</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>k0<span class="op">=</span><span class="dv">7</span> <span class="co"># 频率7</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>x<span class="op">=</span>np.exp(<span class="ot">1j</span><span class="op">*</span><span class="dv">2</span><span class="op">*</span>np.pi<span class="op">*</span>k0<span class="op">/</span>N<span class="op">*</span>np.arange(N))<span class="co"># 构造一个正弦信号</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>X<span class="op">=</span>np.array([])</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> k <span class="kw">in</span> <span class="bu">range</span>(N):</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    s<span class="op">=</span>np.exp(<span class="ot">1j</span><span class="op">*</span><span class="dv">2</span><span class="op">*</span>np.pi<span class="op">*</span>k<span class="op">/</span>N<span class="op">*</span>np.arange(N)) <span class="co"># 特定的sin曲线</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    X<span class="op">=</span>np.append(X,<span class="bu">sum</span>(x<span class="op">*</span>np.conjugate(s))) <span class="co"># x * sin曲线的复数共轭</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(N),np.<span class="bu">abs</span>(X))</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="dv">0</span>,N,<span class="dv">0</span>,N])</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><img src="dtf-idft/dtf-idft_24_0.png" class="img-fluid"></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 设置一个频率是7的sin信号</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>N<span class="op">=</span><span class="dv">64</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>k0<span class="op">=</span><span class="dv">7</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>x<span class="op">=</span>np.cos(<span class="dv">2</span><span class="op">*</span>np.pi<span class="op">*</span>k0<span class="op">/</span>N <span class="op">*</span> np.arange(N))</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>X<span class="op">=</span>np.array([])</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> k <span class="kw">in</span> <span class="bu">range</span>(N):</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>    s<span class="op">=</span>np.exp(<span class="ot">1j</span><span class="op">*</span><span class="dv">2</span><span class="op">*</span>np.pi<span class="op">*</span>k<span class="op">/</span>N<span class="op">*</span>np.arange(N))</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>    X<span class="op">=</span>np.append(X,<span class="bu">sum</span>(x<span class="op">*</span>np.conjugate(s))) <span class="co"># conjugate 复数共轭</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(N),np.<span class="bu">abs</span>(X))</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="dv">0</span>,N,<span class="dv">0</span>,N])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<pre><code>[0, 64, 0, 64]</code></pre>
+<p><img src="dtf-idft/dtf-idft_25_1.png" class="img-fluid"></p>
+</section>
+<section id="实数sin波形的dft" class="level2">
+<h2 class="anchored" data-anchor-id="实数sin波形的dft">实数sin波形的DFT</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>N<span class="op">=</span><span class="dv">64</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>k0<span class="op">=</span><span class="fl">7.5</span> <span class="co"># 频率 7.5</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>x<span class="op">=</span>np.cos(<span class="dv">2</span><span class="op">*</span>np.pi<span class="op">*</span>k0<span class="op">/</span>N <span class="op">*</span> np.arange(N))</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>X<span class="op">=</span>np.array([])</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>kv<span class="op">=</span>np.arange(<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>,N<span class="op">/</span><span class="dv">2</span>)</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> k <span class="kw">in</span> kv:</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>    s<span class="op">=</span>np.exp(<span class="ot">1j</span><span class="op">*</span><span class="dv">2</span><span class="op">*</span>np.pi<span class="op">*</span>k<span class="op">/</span>N<span class="op">*</span>np.arange(N))</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    X<span class="op">=</span>np.append(X,<span class="bu">sum</span>(x<span class="op">*</span>np.conjugate(s))) <span class="co"># conjugate 复数共轭</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>plt.plot(kv,np.<span class="bu">abs</span>(X))</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>,N<span class="op">/</span><span class="dv">2</span><span class="op">-</span><span class="dv">1</span>,<span class="dv">0</span>,N])</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><img src="dtf-idft/dtf-idft_27_0.png" class="img-fluid"></p>
+</section>
+</section>
+<section id="idft-1" class="level1">
+<h1>IDFT</h1>
+<p><span class="math display">\[\begin{align}
+x[n]=\frac{1}{N}\sum^{N-1}_{k=0}X[k]e^{j2\pi kn/N}\ \ \ \ n=0,...,N-1
+\end{align}\]</span></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>y<span class="op">=</span>np.array([])</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>nv<span class="op">=</span>np.arange(<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>,N<span class="op">/</span><span class="dv">2</span>)</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> n <span class="kw">in</span> nv:</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    s<span class="op">=</span>np.exp(<span class="ot">1j</span><span class="op">*</span><span class="dv">2</span><span class="op">*</span>np.pi<span class="op">*</span>n<span class="op">/</span>N<span class="op">*</span>nv)</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    y<span class="op">=</span>np.append(y,<span class="dv">1</span><span class="op">/</span>N<span class="op">*</span><span class="bu">sum</span>(X<span class="op">*</span>s))</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>plt.plot(kv,y)</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>,N<span class="op">/</span><span class="dv">2</span>,<span class="op">-</span><span class="dv">1</span>,<span class="dv">1</span>])</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><img src="dtf-idft/dtf-idft_29_0.png" class="img-fluid"></p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/zhen8838\.github\.io");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script src="https://utteranc.es/client.js" repo="zhen8838/zhen8838.github.io" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

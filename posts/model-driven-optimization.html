@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2024-04-30">
+
+<title>Model Driven Optimization – Zheng’s Notes</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../assets/favicon.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-7072389654d23eff08f359f9aa0d1ee7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">Zheng’s Notes</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#单内存层级建模" id="toc-单内存层级建模" class="nav-link active" data-scroll-target="#单内存层级建模">1. 单内存层级建模</a></li>
+  <li><a href="#多内存层级建模" id="toc-多内存层级建模" class="nav-link" data-scroll-target="#多内存层级建模">2. 多内存层级建模</a></li>
+  <li><a href="#估计执行时间" id="toc-估计执行时间" class="nav-link" data-scroll-target="#估计执行时间">3. 估计执行时间</a></li>
+  <li><a href="#tilesize与循环排列选择" id="toc-tilesize与循环排列选择" class="nav-link" data-scroll-target="#tilesize与循环排列选择">4. tilesize与循环排列选择</a></li>
+  <li><a href="#micro-kernel" id="toc-micro-kernel" class="nav-link" data-scroll-target="#micro-kernel">5. micro kernel</a></li>
+  <li><a href="#疑问" id="toc-疑问" class="nav-link" data-scroll-target="#疑问">6. 疑问</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Model Driven Optimization</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">编译器</div>
+  </div>
+  </div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">April 30, 2024</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>关于<code>Model-Driven Optimization For Tensor Computations</code>论文的阅读笔记.</p>
+<!--more-->
+<section id="单内存层级建模" class="level1">
+<h1>1. 单内存层级建模</h1>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="op">(</span>i2 <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i2 <span class="op">&lt;</span> Ni<span class="op">;</span> i2<span class="op">+=</span>Ti1<span class="op">)</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> <span class="op">(</span>j2 <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> j2 <span class="op">&lt;</span> Nj<span class="op">;</span> j2<span class="op">+=</span>Tj1<span class="op">)</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span>k2 <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> k2 <span class="op">&lt;</span> Nk<span class="op">;</span> k2<span class="op">+=</span>Tk1<span class="op">)</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> <span class="op">(</span>i1 <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i1 <span class="op">&lt;</span> Ti1<span class="op">;</span> i1<span class="op">++)</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> <span class="op">(</span>j1 <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> j1 <span class="op">&lt;</span> Tj1<span class="op">;</span> j1<span class="op">++)</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>          <span class="cf">for</span> <span class="op">(</span>k1 <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> k1 <span class="op">&lt;</span> Tk1<span class="op">;</span> k1<span class="op">++)</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>            C<span class="op">[</span>i1<span class="op">+</span>i2<span class="op">][</span>j1<span class="op">+</span>j2<span class="op">]</span> <span class="op">+=</span> A<span class="op">[</span>i1<span class="op">+</span>i2<span class="op">][</span>k1<span class="op">+</span>k2<span class="op">]</span> <span class="op">*</span> B<span class="op">[</span>k1<span class="op">+</span>k2<span class="op">][</span>j1<span class="op">+</span>j2<span class="op">];</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>以这样的矩阵乘作为例子, 进行单层内存层级的tiling建模. 首先循环变量表示为<span class="math inline">\(i_{1},i_{2},\ldots,i_{l+1}\)</span>, 其中<span class="math inline">\(l\)</span>为tiling层级(我理解这个应该就是循环层级), <span class="math inline">\(l==0\)</span>表示的是statement, <span class="math inline">\(l+1\)</span>表示的就是最外层循环,<span class="math inline">\(l==1\)</span>表示最内层循环. tilesize变量表示为<span class="math inline">\(T_{i_{1}},T_{i_{2}},\ldots,T{i_{l+1}}\)</span>.</p>
+<p>对于一个固定的循环order, 我们可以用上面定义的变量来建模数据移动. 令<span class="math inline">\(DF(A,i)\)</span>表示的是数组<span class="math inline">\(A\)</span>从循环<span class="math inline">\(i\)</span>开始的被访问过的<strong>不同</strong>元素的数量(Data Footprint).令<span class="math inline">\(DM(A,i)\)</span>表示在循环<span class="math inline">\(i\)</span>处数组<span class="math inline">\(A\)</span>从主存到cache的数据移动(Data Movement). 下面这段代码展示令如何计算这两个不同的项目, 其实他们的区别也就是在于存在数据复用的时候, 内存足迹是不改变的, 但是内存移动量在内存足迹大于cache size的时候是需要重复load的. 根据这个计算方式, 也就是表示如果有一个维度足够小, 可以让数据完整的放在cache中, 那么他的就不需要重复load.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode csharp code-with-copy"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">foreach</span> <span class="op">(</span>loop i <span class="kw">in</span> Loops<span class="op">.</span><span class="fu">Reverse</span><span class="op">())</span>  <span class="op">{</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">if</span> <span class="op">(</span>i <span class="op">==</span> <span class="dv">0</span><span class="op">)</span> <span class="op">{</span> <span class="co">// statement level</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">foreach</span><span class="op">(</span>tensor A <span class="kw">in</span> Tensors<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>      <span class="fu">DM</span><span class="op">(</span>A<span class="op">,</span> i<span class="op">)</span> <span class="op">=</span> <span class="fu">DF</span><span class="op">(</span>A<span class="op">,</span> i<span class="op">)</span> <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="kw">else</span> <span class="op">{</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">foreach</span><span class="op">(</span>tensor A <span class="kw">in</span> Tensors<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>      <span class="kw">if</span> <span class="op">(</span>A<span class="op">.</span><span class="fu">Indices</span><span class="op">.</span><span class="fu">Contains</span><span class="op">(</span>i<span class="op">))</span> <span class="op">{</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        <span class="fu">DM</span><span class="op">(</span>A<span class="op">,</span> i<span class="op">)</span> <span class="op">=</span> <span class="fu">DM</span><span class="op">(</span>A<span class="op">,</span> i − <span class="dv">1</span><span class="op">)</span> <span class="op">*</span> <span class="fu">range</span><span class="op">(</span>i<span class="op">);</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        <span class="fu">DF</span><span class="op">(</span>A<span class="op">,</span> i<span class="op">)</span> <span class="op">=</span> <span class="fu">DF</span><span class="op">(</span>A<span class="op">,</span> i − <span class="dv">1</span><span class="op">)</span> <span class="op">*</span> <span class="fu">range</span><span class="op">(</span>i<span class="op">);</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>      <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        <span class="fu">DF</span><span class="op">(</span>A<span class="op">,</span> i<span class="op">)</span> <span class="op">=</span> <span class="fu">DF</span><span class="op">(</span>A<span class="op">,</span> i − <span class="dv">1</span><span class="op">);</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        <span class="kw">if</span> <span class="op">(</span><span class="fu">Sum</span><span class="op">(</span>Tensors<span class="op">,</span> A <span class="op">=&gt;</span> <span class="fu">DF</span><span class="op">(</span>A<span class="op">,</span> i − <span class="dv">1</span><span class="op">))</span> <span class="op">&lt;</span> CacheCapacity<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>          <span class="fu">DM</span><span class="op">(</span>A<span class="op">,</span> i<span class="op">)</span> <span class="op">=</span> <span class="fu">DM</span><span class="op">(</span>A<span class="op">,</span> i − <span class="dv">1</span><span class="op">);</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>          <span class="fu">DM</span><span class="op">(</span>A<span class="op">,</span> i<span class="op">)</span> <span class="op">=</span> <span class="fu">DM</span><span class="op">(</span>A<span class="op">,</span> i − <span class="dv">1</span><span class="op">)</span> <span class="op">*</span> <span class="fu">range</span><span class="op">(</span>i<span class="op">);</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>      <span class="op">}</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="多内存层级建模" class="level1">
+<h1>2. 多内存层级建模</h1>
+<p>目前的现代处理架构通常有多个内存层级, 更高的内存层级会有更大的存储以及更小的带宽. 假设每一个循环只能tile到其中一个内存层级, 对于一个两级内存层级的tiling示例代码如下:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="op">(</span>i3 <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i3 <span class="op">&lt;</span> Ni<span class="op">;</span> i3<span class="op">+=</span>Ti2<span class="op">)</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> <span class="op">(</span>j3 <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> j3 <span class="op">&lt;</span> Nj<span class="op">;</span> j3<span class="op">+=</span>Tj2<span class="op">)</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span>k3 <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> k3 <span class="op">&lt;</span> Nk<span class="op">;</span> k3<span class="op">+=</span>Tk2<span class="op">)</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> <span class="op">(</span>i2 <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i2 <span class="op">&lt;</span> Ti2<span class="op">;</span> i2<span class="op">+=</span>Ti1<span class="op">)</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> <span class="op">(</span>j2 <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> j2 <span class="op">&lt;</span> Tj2<span class="op">;</span> j2<span class="op">+=</span>Tj1<span class="op">)</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>          <span class="cf">for</span> <span class="op">(</span>k2 <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> k2 <span class="op">&lt;</span> Tk2<span class="op">;</span> k2<span class="op">+=</span>Tk1<span class="op">)</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> <span class="op">(</span>i1 <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i1 <span class="op">&lt;</span> Ti1<span class="op">;</span> i1<span class="op">++)</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>              <span class="cf">for</span> <span class="op">(</span>j1 <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> j1 <span class="op">&lt;</span> Tj1<span class="op">;</span> j1<span class="op">++)</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>                <span class="cf">for</span> <span class="op">(</span>k1 <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> k1 <span class="op">&lt;</span> Tk1<span class="op">;</span> k1<span class="op">++)</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>                  C<span class="op">[</span>i1<span class="op">+</span>i2<span class="op">+</span>i3<span class="op">][</span>j1<span class="op">+</span>j2<span class="op">+</span>j3<span class="op">]</span> <span class="op">+=</span> A<span class="op">[</span>i1<span class="op">+</span>i2<span class="op">+</span>i3<span class="op">][</span>k1<span class="op">+</span>k2<span class="op">+</span>k3<span class="op">]</span> <span class="op">*</span> B<span class="op">[</span>k1<span class="op">+</span>k2<span class="op">+</span>k3<span class="op">][</span>j1<span class="op">+</span>j2<span class="op">+</span>j3<span class="op">];</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>为了适配多内存层级, 需要修改<span class="math inline">\(DM\)</span>的定义为<span class="math inline">\(DM(A,i,l)\)</span>表示数组<span class="math inline">\(A\)</span>在循环<span class="math inline">\(i\)</span>上从内存层级<span class="math inline">\(l\)</span>到<span class="math inline">\(l+1\)</span>的数据移动, 但原始论文只说了更新建模的代码从<code>Sum(Tensors, A =&gt; DF(A, i − 1)) &lt; CacheCapacity</code>到<code>Sum(Tensors, A =&gt; DF(A, i − 1)) &lt; CacheCapacity(l)</code>, 并没有给出完整的实现. 这里实际上每一个出现<code>DM</code>的地方都需要添加<span class="math inline">\(l\)</span>参数, 那么可能需要在最外层再添加关于内存层级的循环, 但是从直觉上来说内存层级的选择这里是多分支的, 不是简单的双循环就可以构造出来的.</p>
+</section>
+<section id="估计执行时间" class="level1">
+<h1>3. 估计执行时间</h1>
+<p>这里假设访存是主要的瓶颈, 那么通过统计每个内存层级的数据移动量以及对应的带宽大小来估计总时间. 令<span class="math inline">\(L\)</span>表示内存层级编号, <span class="math inline">\(C_1,\ldots,C_{L}\)</span>表示各个内层层级, 而<span class="math inline">\(C_0\)</span>表示计算单元,<span class="math inline">\(C_{L+1}\)</span>表示主存. 令<span class="math inline">\(BW_1,\ldots,BW_{L+1}\)</span>表示各个内存层级的带宽. 令<span class="math inline">\(C\_DM_(l)\)</span>表示从内存层级<span class="math inline">\(l\)</span>到<span class="math inline">\(l-1\)</span>的数据移动量,<span class="math inline">\(C\_Time(\mathcal{P}, l)\)</span>在特定的循环排列下从内存层级<span class="math inline">\(l\)</span>到<span class="math inline">\(l-1\)</span>的数据移动时间. 那么给定一个固定的循环排列<span class="math inline">\(\mathcal{P}\)</span>,对应的时间为: <span class="math display">\[
+\begin{aligned}
+  C\_Time(\mathcal{P}, l) &amp;= C\_DM(l) / BW_l \\
+  TotTime(\mathcal{P}) &amp;= \max_{l = 1}^{L+1} \left( C\_Time(\mathcal{P}, l) \right)
+\end{aligned}
+\]</span></p>
+</section>
+<section id="tilesize与循环排列选择" class="level1">
+<h1>4. tilesize与循环排列选择</h1>
+<p>首先对于一个固定循环排列下的tile size选择就变成了一个约束求解问题: <span class="math display">\[
+\begin{aligned}
+  \arg \min_{tile-sizes}(TotTime(\mathcal{P})) = \arg \min_{tile-sizes}\left(\max_{l = 1}^{L+1} \left( C\_Time(\mathcal{P}, l) \right)\right)
+\end{aligned}
+\]</span></p>
+<p>为了减少搜索空间, 限制对于内存层级<span class="math inline">\(l\)</span>的所有内存移动量<span class="math inline">\(C\_DM(l)\)</span>必须小于等于内存层级的容量, 令<span class="math inline">\(group\_outer(l)\)</span>表示属于内存层级<span class="math inline">\(l\)</span>的最外层循环, 构建容量约束如下: <span class="math display">\[
+\begin{aligned}
+  \forall l \in [1,L],\ \sum_{A\in Tensors} DM(A, group\_outer(l)) \leq CacheCapacity(l)
+\end{aligned}
+\]</span></p>
+<p>但这样还是没有考虑tile size对于不同层级的访存速度影响, 需要构建一个多级约束. 令<span class="math inline">\(T\)</span>表示所有的tile变量集合, <span class="math inline">\(T_l\)</span>表示会影响内存层级<span class="math inline">\(l\)</span>的总数据移动量<span class="math inline">\(C\_DM(l)\)</span>的tile变量子集. 也就是多个循环可以对应同一个内存层级, 那么这些循环对应的tile变量组成的子集, 这些变量每个都会影响当前内存层级的数据移动量.</p>
+<p>假设<span class="math inline">\(j\)</span>是最大瓶颈的内存层级, 也就是他的时间大于其他内存层级时间: <span class="math display">\[
+\begin{aligned}
+  \forall i \in [1, L+1], \ (C\_DM(j)/C\_BW(j)) \geq (C\_DM(i)/C\_BW (i)
+\end{aligned}
+\]</span></p>
+<p>当固定了<span class="math inline">\(j\)</span>层级的tile size后, 下一个瓶颈的内存层级可以使用如下公式找到: <span class="math display">\[
+\begin{aligned}
+  \argmin_{T-T_j} (\max_{l\in[1,L+1] - T_j} C\_Time(\mathcal{P},l))
+\end{aligned}
+\]</span></p>
+<p>但是论文中并没有详细描述怎么进行多级优化, 这里的约束应该都还是变量, 除非是求解器可以通过某种方式添加优化指导.</p>
+<p>接下来就是考虑不同的循环排列, 对于两级tiling, 就有9个循环那么排列方式就有9!种. 但其实只需要考虑每个tile出来的循环内部进行排序,也就是<span class="math inline">\(3!\times3!\times3! = 216\)</span>种即可. 最终的解为: <span class="math display">\[
+\begin{aligned}
+final\_solution =  \argmin_{\mathcal{P}\in \mathcal{R}} (\argmin_{tile\_sizes}(TotTime(\mathcal{P})))
+\end{aligned}
+\]</span></p>
+</section>
+<section id="micro-kernel" class="level1">
+<h1>5. micro kernel</h1>
+<p>对于包含SIMD的指令集的处理器来说, 需要考虑设计一个最大硬件利用率的micro kernel, 这里需要对micro kernel也进行建模. 首先是<code>MaxIssue</code>表示一个时钟周期最大可以发射的指令数, <code>WordPerVec</code>表示指令集宽度, <code>Latency</code>表示一个指令周期所需要的时钟周期数. 假设在一个指令周期中每个时钟周期都可以发射<code>MaxIssue</code>个指令数, 并且他们之间是没有数据依赖的, 那么<code>MaxIssue * Latency</code>则是可以保证流水线打满的最小指令数, <code>MaxIssue * Latency * WordPerVec</code>则表示最小寄存器容量. 比如在<code>BLIS</code>库中,通常使用外积的方式来设计micro kernel, 但是这个kernel它需要一块布局优化后的数据块才可以开始计算, 这就要求进行<strong>packing</strong>.</p>
+<p>packing的一个好处是可以减少Conflict Miss,现代处理器中cache的存放策略通常是<a href="https://en.wikipedia.org/wiki/Cache_placement_policies#Set-associative_cache">set-associative</a>, 整个缓存被划分为多个set,而这些set内部进一步被细分为lines/ways. 一个映射函数决定内存地址到set的映射. 在每个set内,一个给定的内存地址可能出现在任意一个cache line上. 当在多个不同的内存地址由于缓存映射规则而被迫存储在同一个cache line时, 由于每个缓存行只能存储一个数据块, 当一个新的数据块需要被存储到这个缓存行时, 原有的数据块必须被替换掉, 在理想情况下, 被替换的应该是最近最少使用(LRU)的数据块, 然而在某些情况下, 由于映射规则的限制, 一个不是LRU的数据块也可能被替换, 这就是发生了Conflict Miss.</p>
+<p>通过选择合适tile大小,并依赖于packing设计,可以将即数据元素的排列顺序与它们将被访问的顺序相同,从而避免Conflict Miss. 虽然packed buffer在内存中是连续的存储. 但是实际上他们分散在cache中各个地方, 由于大部分的cache是无法编程的, 加载新的数据会将其他tensor从cache中驱除, 为了避免这种情况, 每个tensor拥有的cache line的数量要被小心的控制, 对于矩阵乘的例子这里计算分配给各个tensor的cache line数量: <span class="math display">\[
+\begin{aligned}
+lineA = [DF(A,l) / (NumOfSets(l)*lineSize(l))] \\
+lineB = [DF(B,l) / (NumOfSets(l)*lineSize(l))] \\
+lineC = [DF(C,l) / (NumOfSets(l)*lineSize(l))] \\
+s.t Line_A(l)+Line_B(l)+Line_C(l) \leq Associativity(l) \\
+\end{aligned}
+\]</span> 假设只访问A/B矩阵, 考虑在l层级的j循环, A矩阵并没有被j索引, 但是在k循环中多次访问A行, 此时A会停留在cache中, 而B矩阵的行j循环才会被访问, 因此B矩阵在cache中是流式传输的.</p>
+<p>packing 会增加额外的数据移动, 为了减少packing带来的额外时间. 比如要复用pack过的数据, 但是由于cache容量的限制, 大部分情况是没办法存储整个的buffer的. 假设A时需要pack的tneosr, 设<span class="math inline">\(IS\)</span>表示整个迭代空间, 令<span class="math inline">\(IS_A\)</span>表示参与访问A的循环子集, 设packing在最后一层cache <span class="math inline">\(ll\)</span>, 那么packing的cost为包含从主存加载以及存储数据到<span class="math inline">\(ll\)</span>层上:</p>
+<p><span class="math display">\[
+\begin{aligned}
+PackCost^{A, buf\in Mem}_{mem \rightarrow l3} = \prod_{idx \in IS_A} idx
+\end{aligned}
+\]</span></p>
+<p>假设l3级别的tiling循环为<span class="math inline">\(i_1^{L3},i_2^{L3},\ldots,i_l^{L3}\)</span>, 假设只有<span class="math inline">\(i_2^{L3}, i_l^{L3}\)</span>是A的reuse index,那么意味着<span class="math inline">\(i_2^{L3}, i_l^{L3} \notin IS_A\)</span>. 假设packed A在level 3进行构造, 那么代码可能类似这样: <span class="math display">\[
+\begin{aligned}
+for\ loop&amp;\  i_1^{L3}\\
+for\ &amp;loop\  i_2^{L3} \\
+&amp; \ldots\\
+&amp;for\ loop\  i_l^{L3}\\
+&amp; \text{Packing buffer resides here;}
+\end{aligned}
+\]</span></p>
+<p>注意这里packed A将会在<span class="math inline">\(i_2^{L3}\)</span>的循环中被填充满, 即使<span class="math inline">\(i_2^{L3}\)</span>是他的reuse index, 这意味着对于给定tenors的内部cache packing的总数据移动是tensor size和packing cache level以上的所有reuse loops的乘积. 公式化的描述如下:</p>
+<p><span class="math display">\[
+\begin{gathered}
+R D X^{L 3}=\left\{i_g^{L 3} \mid i_g \notin I S_A \wedge\left(\exists i_h \in I S_A\right)\left[i_g^{L 3}&gt;i_h^{L 3}\right]\right\} \\
+\text { PackCost } t_{m e m \rightarrow L b}^{A, b u f \in L 3}=\prod_{i d x \in I S_A} i d x * \prod_{r d x \in R D X^{L 3}} \operatorname{NIter}(r d x)
+\end{gathered}
+\]</span></p>
+<p>首先令<span class="math inline">\(i^{L3}_p&gt; i^{L3}_q\)</span>表示在L3内存层级中<span class="math inline">\(i^{L3}_p\)</span>循环在<span class="math inline">\(i^{L3}_q\)</span>之上. 再令<span class="math inline">\(\operatorname{NIter}(i^{L3}_p)\)</span>表示循环的迭代次数, 令<span class="math inline">\(Tile(i^{L3}_p )\)</span>表示索引<span class="math inline">\(p\)</span>的tile大小, <span class="math inline">\(N_p\)</span>表示索引<span class="math inline">\(p\)</span>的全局大小(我理解就是这个tensor在<span class="math inline">\(p\)</span>维度的大小). 然后<span class="math inline">\(RDX^{L3}\)</span>表示在与A无关的循环迭代中, 存在的迭代<span class="math inline">\(i_g^{L 3}\)</span>级别高于<span class="math inline">\(i_h^{L 3}\)</span>, 将这些迭代的总次数累积起来与参与A的循环<span class="math inline">\(idx\)</span>进行乘积.</p>
+<p>对于任意内存层级的pack cost可以通过如下公式计算:</p>
+<p><span class="math display">\[
+\begin{aligned}
+&amp; R D X^{L_c}=\left\{i_g^{L_c} \mid i_g \notin I S_A \wedge\left(\exists i_h \in I S_A\right)\left[i_g^{L_c}&gt;i_h^{L_c}\right]\right\} \\
+&amp; \text { PackCost } \operatorname{mem}_{m \rightarrow L_c}^{A, b u f \in L_c}=\prod_{i d x \in I S_A} i d x * \prod_{r d x \in R D X^{L_c}} \text { NIter }(r d x) \\
+&amp; =\prod_{i d x \in I S_A} i d x * \prod_{i_p \in R D X^{L_c}}\left(N_p / \text { Tile }\left(i_p^{L_c}\right)\right) \\
+&amp;
+\end{aligned}
+\]</span></p>
+</section>
+<section id="疑问" class="level1">
+<h1>6. 疑问</h1>
+<ol type="1">
+<li>我在思考他这里的DM和DF和显式的指定sub tensor放置在哪个循环下是否有共同性.</li>
+<li>他这里的<code>group_outer(l)</code>的函数是一个离散函数, 但是求解器只能支持连续的变量, 现在问题转化为如何通过连续的变量构造出分段函数? 这个方法实际上和对于多层memory的循环加在哪个位置息息相关.</li>
+<li>在约束编程中通过什么方式控制几个变量属于一个区间?</li>
+<li>怎么样进行多阶段求解?</li>
+<li>他这里感觉没有考虑在l1上cache packed buffer, 实际上可以开很大一块buffer, 然后在l1的循环中每次load并pack一小块, 然后在l1中缓存起来, 这样切换m/n的时候可以尽量复用.</li>
+</ol>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/zhen8838\.github\.io");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script src="https://utteranc.es/client.js" repo="zhen8838/zhen8838.github.io" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

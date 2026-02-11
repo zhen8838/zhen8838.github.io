@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2025-02-04">
+
+<title>DISTAL: The Distributed Tensor Algebra Compiler – Zheng’s Notes</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../assets/favicon.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-7072389654d23eff08f359f9aa0d1ee7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">Zheng’s Notes</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#index-notation" id="toc-index-notation" class="nav-link active" data-scroll-target="#index-notation">Index Notation</a></li>
+  <li><a href="#tensor-distribution-notation" id="toc-tensor-distribution-notation" class="nav-link" data-scroll-target="#tensor-distribution-notation">Tensor Distribution Notation</a></li>
+  <li><a href="#computation-schedule" id="toc-computation-schedule" class="nav-link" data-scroll-target="#computation-schedule">Computation Schedule</a>
+  <ul class="collapse">
+  <li><a href="#distribute" id="toc-distribute" class="nav-link" data-scroll-target="#distribute">Distribute</a></li>
+  <li><a href="#communicate" id="toc-communicate" class="nav-link" data-scroll-target="#communicate">Communicate</a></li>
+  <li><a href="#rotate" id="toc-rotate" class="nav-link" data-scroll-target="#rotate">Rotate</a></li>
+  </ul></li>
+  <li><a href="#case-studies" id="toc-case-studies" class="nav-link" data-scroll-target="#case-studies">Case Studies</a>
+  <ul class="collapse">
+  <li><a href="#summa" id="toc-summa" class="nav-link" data-scroll-target="#summa">Summa</a></li>
+  </ul></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">DISTAL: The Distributed Tensor Algebra Compiler</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">编译器</div>
+  </div>
+  </div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">February 4, 2025</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>这篇论文主要是介绍了一个分布式张量代数编译器， 它通过自定义的DSL可以帮助我们快速生成分布式计算代码。</p>
+<!--more-->
+<section id="index-notation" class="level1">
+<h1>Index Notation</h1>
+<p>首先这篇论文是在<a href="http://tensor-compiler.org">taco</a>之上实现的，计算的描述依旧是index notation, 例如： <span class="math display">\[
+A(i, j) = B(i, k) * C(k, j)
+\]</span></p>
+<p>和其他的<a href="https://zhuanlan.zhihu.com/p/674882975">tensor expression dsl</a>类似, 也同样是用相对简单的代码构建出对应的循环/计算的ir。对于这个例子，它的ir是：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>forall<span class="op">(</span>i<span class="op">,</span> forall<span class="op">(</span>j<span class="op">,</span> forall<span class="op">(</span>k<span class="op">,</span> A<span class="op">(</span>i<span class="op">,</span>j<span class="op">)</span> <span class="op">+=</span> B<span class="op">(</span>i<span class="op">,</span>k<span class="op">)</span> <span class="op">*</span> C<span class="op">(</span>k<span class="op">,</span>j<span class="op">))))</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="tensor-distribution-notation" class="level1">
+<h1>Tensor Distribution Notation</h1>
+<p>distal很好的发扬了多面体模型的思想，数据分布到不同的机器上的本质就是数据点的集合被放置到了不同的机器上，因此他采用了多面体中映射的概念，通过tensor distribution notation来描述数据点集合和设备的映射关系来表达数据分布： <span class="math display">\[
+\begin{aligned}
+&amp;\text{Machine}: \mathcal{M}\ \ \  \text{Tensors}: \mathcal{T}  \\
+&amp;\text{Dimension Variables}: d \\
+&amp;\text{Dimension Name}\ \  n ::= d | \mathbin{N} | * \\
+&amp;\text{Tensor Distribution}\ \ \mathcal{D} ::= \mathcal{T}_{d^+}\mapsto_{n^+} \mathcal{M}
+\end{aligned}
+\]</span></p>
+<p>其中<span class="math inline">\(\mathcal{T}_{d^+}\)</span>描述的tensor本身，由于tensor的维度个数可能是动态的，因此用多个维度变量<span class="math inline">\(d^+\)</span>来表示， 维度变量的个数等于tensor的维度。而机器<span class="math inline">\(\mathcal{M}\)</span>的描述则是多个维度名<span class="math inline">\(n^+\)</span>，维度名的个数等于拓扑的维度，注意维度名可以由维度变量/正整数/通配符<code>*</code>表示，这为描述数据分布提供了较大的灵活性。 同时这里隐含了一个约束就是</p>
+<p>下面来看几个具体的例子， 首先假设<span class="math inline">\(\mathcal{T}\)</span>的shape为<code>[100]</code>, <span class="math inline">\(\mathcal{D}\)</span>的个数是<code>[10]</code></p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 39%">
+<col style="width: 32%">
+<col style="width: 28%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>预设</th>
+<th>描述</th>
+<th>解释</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(\mathcal{T}\)</span>:<code>[100]</code>, <span class="math inline">\(\mathcal{M}\)</span>: <code>[10]</code></td>
+<td><span class="math inline">\(\mathcal{T} _{x} \mapsto_{x} \mathcal{M}\)</span></td>
+<td>每个设备拥有<code>[10]</code>的数据</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\mathcal{T}\)</span>:<code>[100,100]</code>, <span class="math inline">\(\mathcal{M}\)</span>: <code>[10]</code></td>
+<td><span class="math inline">\(\mathcal{T} _{xy} \mapsto_{x} \mathcal{M}\)</span></td>
+<td>每个设备拥有<code>[10,y]</code>的数据</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\mathcal{T}\)</span>:<code>[100,100]</code>, <span class="math inline">\(\mathcal{M}\)</span>: <code>[10,10]</code></td>
+<td><span class="math inline">\(\mathcal{T} _{xy} \mapsto_{xy} \mathcal{M}\)</span></td>
+<td>每个设备拥有<code>[10,10]</code>的数据</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\mathcal{T}\)</span>:<code>[100,100]</code>, <span class="math inline">\(\mathcal{M}\)</span>: <code>[10,10,10]</code></td>
+<td><span class="math inline">\(\mathcal{T} _{xy} \mapsto_{xy0} \mathcal{M}\)</span></td>
+<td>某一个平面的每个设备拥有<code>[10,10]</code>的数据</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\mathcal{T}\)</span>:<code>[100,100]</code>, <span class="math inline">\(\mathcal{M}\)</span>: <code>[10,10,10]</code></td>
+<td><span class="math inline">\(\mathcal{T} _{xy} \mapsto_{xy*} \mathcal{M}\)</span></td>
+<td>每个平面的每个设备拥有<code>[10,10]</code>的数据</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\mathcal{T}\)</span>:<code>[100,100,100]</code>, <span class="math inline">\(\mathcal{M}\)</span>: <code>[10,10]</code></td>
+<td><span class="math inline">\(\mathcal{T} _{xyz} \mapsto_{xy} \mathcal{M}\)</span></td>
+<td>每个设备拥有<code>[10,10,100]</code>的数据</td>
+</tr>
+</tbody>
+</table>
+<p>对应上述表格中每一个例子的具体示意图如下： <img src="distal/distribution-samples.png" class="img-fluid"></p>
+<p>可以把tensor看作为一系列坐标-值的集合，machine可以看作是坐标的集合，而tensor distribution notation <span class="math inline">\(\mathcal{T}_{X}\mapsto_{Y}\mathcal{M}\)</span> 就是一个映射函数，将tensor的坐标映射到machine的坐标。由于映射的时候存在broadcast或单独指定的情况，因此这种映射并不一定是一对多或多对一映射，为了实现复杂的映射，实际上映射函数由两部分组合而成，第一部分是<span class="math inline">\(\mathcal{P}: \mathcal{T} \mapsto \text{color}\)</span>，第二部分<span class="math inline">\(\mathcal{F}: \text{color} \mapsto \mathcal{M}\)</span>, 相当于先进行多对一映射再进行一对多映射，其中<span class="math inline">\(\text{color}\)</span>作为独一无二的标记存在，并且<span class="math inline">\(\text{color}\)</span>由<span class="math inline">\(Y\)</span>中有效的维度变量组合而成：<span class="math inline">\((X \bigcap Y) \subseteq Y\)</span>。 举个例子，假设<span class="math inline">\(\mathcal{T}: [4,4]\)</span>,<span class="math inline">\(\mathcal{M}: [2,2,2]\)</span>, distribution notation为<span class="math inline">\(\mathcal{T}_{xy} \mapsto_{xy*} \mathcal{M}\)</span>, 那么映射<span class="math inline">\(\mathcal{P}\)</span>如下： <span class="math display">\[
+\begin{aligned}
+\mathcal{P} = \{
+&amp;\{ (0,0),(1,0),(0,1),(1,1) \} \mapsto  (0,0),
+\{ (2,0),(3,0),(2,1),(3,1) \} \mapsto  (0,1), \\
+&amp;\{ (0,2),(1,2),(0,3),(1,3) \} \mapsto  (1,0),
+\{ (2,2),(3,2),(2,3),(3,3) \} \mapsto  (0,0) \}
+\end{aligned}
+\]</span></p>
+<p>而映射<span class="math inline">\(\mathcal{F}\)</span>如下： <span class="math display">\[
+\begin{aligned}
+\mathcal{F} =\{
+  &amp;(0,0) \mapsto \{(0,0,0),(0,0,1)\},
+  (0,1) \mapsto \{(0,1,0),(0,1,1)\},\\
+  &amp;(1,0) \mapsto \{(1,0,0),(1,0,1)\},
+  (0,0) \mapsto \{(0,0,0),(0,0,1)\}
+\}
+\end{aligned}
+\]</span></p>
+<p>通过上述这种分阶段的简单映射从而实现了复杂的映射。</p>
+</section>
+<section id="computation-schedule" class="level1">
+<h1>Computation Schedule</h1>
+<p>考虑这样一段计算：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">3</span>):</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> j <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">3</span>):</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    A[i] <span class="op">+=</span> B[j]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>使用多面体模型表示他所对应的迭代域为：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>domain <span class="op">=</span> isl.<span class="bu">set</span>(<span class="st">"{ S[i, j] : 0 &lt;= i &lt; 3 and 0 &lt;= j &lt; 3}"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>如图所示：</p>
+<p><img src="distal/domain.png" class="img-fluid"></p>
+<section id="distribute" class="level2">
+<h2 class="anchored" data-anchor-id="distribute">Distribute</h2>
+<p>distal在taco的基础上使用distribute的调度来修改迭代域，从而表示分布式计算。内部的实现如下：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>distribute<span class="op">(</span>vector<span class="op">&lt;</span>IndexVar<span class="op">&gt;</span> targets<span class="op">,</span> vector<span class="op">&lt;</span>IndexVar<span class="op">&gt;</span> dist<span class="op">,</span> vector<span class="op">&lt;</span>IndexVar<span class="op">&gt;</span> local<span class="op">,</span> Machine m<span class="op">):</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Divide each dimension by the corresponding machine dimension.</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> i in range<span class="op">(</span><span class="dv">0</span><span class="op">,</span> m<span class="op">.</span>dim<span class="op">):</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Reorder loops so each outer divided variable is on the outside.</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    divide<span class="op">(</span>targets<span class="op">[</span>i<span class="op">],</span> dist<span class="op">[</span>i<span class="op">],</span> local<span class="op">[</span>i<span class="op">],</span> m<span class="op">.</span>dims<span class="op">[</span>i<span class="op">])</span> </span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Distribute all of the outer divided variables.</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  reorder<span class="op">(</span>dist <span class="op">+</span> local<span class="op">)</span> </span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  distribute<span class="op">(</span>dist<span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>实际上就是将循环进行split后再进行reorder，再标记外层循环与machine进行对应。</p>
+<p>当distribution notation为<span class="math inline">\(\mathcal{a}_{x} \mapsto_{x} \mathcal{M}\)</span>,<span class="math inline">\(\mathcal{b}_{x} \mapsto_{x} \mathcal{M}\)</span>, 那么对应的分布式调度为<code>distribute(i,io,ii,M)</code>, 经过调度后的迭代域如下：</p>
+<p><img src="distal/domain_distribute.png" class="img-fluid"></p>
+<p>灰色区域所表示的是单独的分布式节点，在循环i上进行分布式后，所有的循环j都被划分到了不同的处理器节点上。</p>
+</section>
+<section id="communicate" class="level2">
+<h2 class="anchored" data-anchor-id="communicate">Communicate</h2>
+<p>当数据分布在不同的处理器上时，在发生计算时就需要将所依赖的数据从别的处理器节点上获取，因此需要进行数据的通信。基于distribution notation以及多面体分析，我们可以计算得到每一次迭代所需要传输的数据。将这种数据依赖以及循环j的前三次迭代绘制出来，如下所示：</p>
+<p><img src="distal/communicate_naive.png" class="img-fluid"></p>
+<p>可以看到，<code>a,b</code>在循环i上进行分布，那么每个i的迭代对应他们的一部分数据区域，在每次j的迭代中，每个节点会需要从其他节点获取到b的部分数据。当然这是基于数据的分布式情况以及依赖分析所得到的naive 通信方式。</p>
+<p>在上面这种情况下，如果采用一个更大块的通信操作，直接从节点获取多次计算所需要的数据，而不是每次迭代都获取数据，那么性能可能会更好，这就引出了通信频率和内存使用的trade-off。为了在这种trade-off的场景下可以进行调节，distal提供了<span class="math inline">\(\text{communicate}(\mathcal{T}, i)\)</span>的调度。他通过指定迭代循环的方式，配合数据分布以及数据依赖分析，把迭代循环内部所有嵌套循环所依赖的数据放到所指定循环的开始来获取。比如执行<code>distribute(b,i)</code>后，计算如图所示：</p>
+<p><img src="distal/communicate_opt.png" class="img-fluid"></p>
+<p>distal的communicate调度是进行了简化设计，因为如果要指定send/receive或者设备编号等，整个事情就会变的非常复杂。</p>
+</section>
+<section id="rotate" class="level2">
+<h2 class="anchored" data-anchor-id="rotate">Rotate</h2>
+<p>许多分布式算法采用脉动的方式实现，处理器反复将数据shift到相邻节点。脉动算法可以有效利用互连的机器架构，并通过避免对相同数据的竞争来提高性能。</p>
+<p>首先继续从<code>distribute(i)</code>的调度开始，默认可以认为他执行的是broadcast的通信操作，在每个时间片上，都会向所有处理器发送对相同数据的通信请求，如下图所示： <img src="distal/rotate_naive.png" class="img-fluid"></p>
+<p>为了表达脉动计算，distal引入rotate调度, 他是通过引入时间维度的映射，让j的迭代空间在时间上旋转，从而实现脉动式通信模式。如下图所示，实际上现在的横轴已经不是j的迭代空间了，而是时间维度，真正的j的迭代空间在每个时间片上发生了旋转。 如果对于每个i的迭代，j的迭代空间被旋转且j的第i次迭代先发生，那么称整个execution space具备脉动模式： <img src="distal/rotate_opt.png" class="img-fluid"></p>
+<p>给定一组索引变量<span class="math inline">\(I\)</span>，目标索引变量<span class="math inline">\(t\)</span>, 以及结果索引变量<span class="math inline">\(r\)</span>, <code>rotate(t,I,r)</code>的调度会另迭代空间<span class="math inline">\(t\)</span>根据<span class="math inline">\(\sum_{i\in I} i \mod \text{extent(t)}\)</span>发生旋转。 旋转后，对于所有的<span class="math inline">\(i\in I\)</span>，给定其一个固定的剩余迭代<span class="math inline">\(i'\in (I-i)\)</span>, <span class="math inline">\(r\)</span>的相同迭代会在<span class="math inline">\(i\)</span>的不同迭代上发生。假设<span class="math inline">\(t\)</span>在<span class="math inline">\(i,j\)</span>两个维度上进行了rotate, 那么每次<span class="math inline">\(i\)</span>或<span class="math inline">\(j\)</span>的迭代开始时,<span class="math inline">\(r\)</span>的值都是不同的。</p>
+</section>
+</section>
+<section id="case-studies" class="level1">
+<h1>Case Studies</h1>
+<p>distal中采用Tensor Distribution Notation和Computation Schedule可以组合起来表达各种各样的分布式算法。当然大量分布式算法都集中在分布式矩阵乘法算法上。因此distal展示了实现各种分布式矩阵乘算法的例子：</p>
+<p><img src="distal/examples.png" class="img-fluid"></p>
+<section id="summa" class="level2">
+<h2 class="anchored" data-anchor-id="summa">Summa</h2>
+<p>首先定义各种分布式tensor以及循环域。</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>  <span class="dt">int</span> dim <span class="op">=</span> <span class="dv">1024</span><span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Place each tensor onto a processor grid.</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">auto</span> gx <span class="op">=</span> ir<span class="op">::</span>Var<span class="op">::</span>make<span class="op">(</span><span class="st">"gridX"</span><span class="op">,</span> Int32<span class="op">,</span> <span class="kw">false</span><span class="op">,</span> <span class="kw">false</span><span class="op">,</span> <span class="kw">true</span><span class="op">);</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">auto</span> gy <span class="op">=</span> ir<span class="op">::</span>Var<span class="op">::</span>make<span class="op">(</span><span class="st">"gridY"</span><span class="op">,</span> Int32<span class="op">,</span> <span class="kw">false</span><span class="op">,</span> <span class="kw">false</span><span class="op">,</span> <span class="kw">true</span><span class="op">);</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">auto</span> grid <span class="op">=</span> Grid<span class="op">(</span>gx<span class="op">,</span> gy<span class="op">);</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">auto</span> dist <span class="op">=</span> TensorDistribution<span class="op">(</span>grid<span class="op">);</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  Tensor<span class="op">&lt;</span><span class="dt">double</span><span class="op">&gt;</span> a<span class="op">(</span><span class="st">"a"</span><span class="op">,</span> <span class="op">{</span>dim<span class="op">,</span> dim<span class="op">},</span> Format<span class="op">{</span>Dense<span class="op">,</span> Dense<span class="op">},</span> dist<span class="op">);</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  Tensor<span class="op">&lt;</span><span class="dt">double</span><span class="op">&gt;</span> b<span class="op">(</span><span class="st">"b"</span><span class="op">,</span> <span class="op">{</span>dim<span class="op">,</span> dim<span class="op">},</span> Format<span class="op">{</span>Dense<span class="op">,</span> Dense<span class="op">},</span> dist<span class="op">);</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  Tensor<span class="op">&lt;</span><span class="dt">double</span><span class="op">&gt;</span> c<span class="op">(</span><span class="st">"c"</span><span class="op">,</span> <span class="op">{</span>dim<span class="op">,</span> dim<span class="op">},</span> Format<span class="op">{</span>Dense<span class="op">,</span> Dense<span class="op">},</span> dist<span class="op">);</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  IndexVar i<span class="op">(</span><span class="st">"i"</span><span class="op">),</span> j<span class="op">(</span><span class="st">"j"</span><span class="op">),</span> io<span class="op">(</span><span class="st">"in"</span><span class="op">),</span> jo<span class="op">(</span><span class="st">"jn"</span><span class="op">),</span> ii<span class="op">(</span><span class="st">"il"</span><span class="op">),</span> ji<span class="op">(</span><span class="st">"jl"</span><span class="op">),</span> k<span class="op">(</span><span class="st">"k"</span><span class="op">),</span> ki<span class="op">(</span><span class="st">"ki"</span><span class="op">),</span> ko<span class="op">(</span><span class="st">"ko"</span><span class="op">);</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>  IndexVar iln<span class="op">(</span><span class="st">"iln"</span><span class="op">),</span> ill<span class="op">(</span><span class="st">"ill"</span><span class="op">);</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>  a<span class="op">(</span>i<span class="op">,</span> j<span class="op">)</span> <span class="op">=</span> b<span class="op">(</span>i<span class="op">,</span> k<span class="op">)</span> <span class="op">*</span> c<span class="op">(</span>k<span class="op">,</span> j<span class="op">);</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>  <span class="kw">auto</span> placeALowered <span class="op">=</span> lowerLegionSeparatePartitionCompute<span class="op">(</span>a<span class="op">.</span>getPlacementStatement<span class="op">(),</span> <span class="st">"placeLegionA"</span><span class="op">);</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>  <span class="kw">auto</span> placeBLowered <span class="op">=</span> lowerLegionSeparatePartitionCompute<span class="op">(</span>b<span class="op">.</span>getPlacementStatement<span class="op">(),</span> <span class="st">"placeLegionB"</span><span class="op">);</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>  <span class="kw">auto</span> placeCLowered <span class="op">=</span> lowerLegionSeparatePartitionCompute<span class="op">(</span>c<span class="op">.</span>getPlacementStatement<span class="op">(),</span> <span class="st">"placeLegionC"</span><span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>采用distal提供的调度接口：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>  <span class="kw">auto</span> stmt <span class="op">=</span> a<span class="op">.</span>getAssignment<span class="op">().</span>concretize<span class="op">()</span> </span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span>distribute<span class="op">({</span>i<span class="op">,</span> j<span class="op">},</span> <span class="op">{</span>io<span class="op">,</span> jo<span class="op">},</span> <span class="op">{</span>ii<span class="op">,</span> ji<span class="op">},</span> grid<span class="op">);</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span>divide<span class="op">(</span>k<span class="op">,</span> ko<span class="op">,</span> ki<span class="op">,</span> gx<span class="op">);</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span>reorder<span class="op">({</span>ko<span class="op">,</span> ii<span class="op">,</span> ji<span class="op">,</span> ki<span class="op">});</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span>communicate<span class="op">(</span>a<span class="op">(</span>i<span class="op">,</span> j<span class="op">),</span> jo<span class="op">);</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span>communicate<span class="op">(</span>b<span class="op">(</span>i<span class="op">,</span> k<span class="op">),</span> ko<span class="op">);</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span>communicate<span class="op">(</span>c<span class="op">(</span>i<span class="op">,</span> j<span class="op">),</span> ko<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>这里每一步的调度返回值都可以打印为文本形式：</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 10%">
+<col style="width: 89%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>schedule</th>
+<th>stmt</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>a(i, j) = b(i, k) * c(k, j);</td>
+<td>forall(i, forall(j, forall(k, a(i,j) += b(i,k) * c(k,j))))</td>
+</tr>
+<tr class="even">
+<td>distribute({i, j}, {io, jo}, {ii, ji}, grid)</td>
+<td>suchthat(forall(distFused, forall(il, forall(jl, forall(k, a(i,j) += b(i,k) * c(k,j)))), Distributed, NoRaces), divide(i, in, il, gridX) and divide(j, jn, jl, gridY) and multiFuse({in, jn}, reorder(in, jn)))</td>
+</tr>
+<tr class="odd">
+<td>divide(k, ko, ki, gx)</td>
+<td>suchthat(forall(distFused, forall(il, forall(jl, forall(ko, forall(ki, a(i,j) += b(i,k) * c(k,j))))), Distributed, NoRaces), divide(i, in, il, gridX) and divide(j, jn, jl, gridY) and multiFuse({in, jn}, reorder(in, jn)) and divide(k, ko, ki, gridX))</td>
+</tr>
+<tr class="even">
+<td>reorder({ko, ii, ji, ki})</td>
+<td>suchthat(forall(distFused, forall(ko, forall(il, forall(jl, forall(ki, a(i,j) += b(i,k) * c(k,j))))), Distributed, NoRaces), divide(i, in, il, gridX) and divide(j, jn, jl, gridY) and multiFuse({in, jn}, reorder(in, jn)) and divide(k, ko, ki, gridX))</td>
+</tr>
+<tr class="odd">
+<td>communicate(a(i, j), jo)</td>
+<td>suchthat(forall(distFused, forall(ko, forall(il, forall(jl, forall(ki, a(i,j) += b(i,k) * c(k,j))))), Distributed, NoRaces, transfers: transfer(a(i,j))), divide(i, in, il, gridX) and divide(j, jn, jl, gridY) and multiFuse({in, jn}, reorder(in, jn)) and divide(k, ko, ki, gridX))</td>
+</tr>
+<tr class="even">
+<td>communicate(b(i, k), ko)</td>
+<td>suchthat(forall(distFused, forall(ko, forall(il, forall(jl, forall(ki, a(i,j) += b(i,k) * c(k,j)))), transfers: transfer(b(i,k))), Distributed, NoRaces, transfers: transfer(a(i,j)), transfer(b(i,k))), divide(i, in, il, gridX) and divide(j, jn, jl, gridY) and multiFuse({in, jn}, reorder(in, jn)) and divide(k, ko, ki, gridX))</td>
+</tr>
+<tr class="odd">
+<td>communicate(c(i, j), ko)</td>
+<td>suchthat(forall(distFused, forall(ko, forall(il, forall(jl, forall(ki, a(i,j) += b(i,k) * c(k,j)))), transfers: transfer(b(i,k)), transfer(c(i,j))), Distributed, NoRaces, transfers: transfer(a(i,j)), transfer(b(i,k)), transfer(c(i,j))), divide(i, in, il, gridX) and divide(j, jn, jl, gridY) and multiFuse({in, jn}, reorder(in, jn)) and divide(k, ko, ki, gridX))</td>
+</tr>
+</tbody>
+</table>
+<p>如果采用伪代码的形式可以更好理解：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># naive</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, M):</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> j <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, N):</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> k <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, K):</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>      a[i,j] <span class="op">+=</span> b[i,k] <span class="op">*</span> c[k,j]</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="co"># distribute</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> io <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, X): <span class="op">@</span> parallel</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> jo <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, Y): <span class="op">@</span> parallel</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> ii <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, M <span class="op">/</span> X):</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> jj <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, N <span class="op">/</span> Y):</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> k <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, K):</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>          a[io<span class="op">*</span>(M<span class="op">/</span>X)<span class="op">+</span>ii,jo<span class="op">*</span>(N<span class="op">/</span>Y)<span class="op">+</span>ji] <span class="op">+=</span> b[io<span class="op">*</span>(M<span class="op">/</span>X)<span class="op">+</span>ii,k] <span class="op">*</span> c[k,jo<span class="op">*</span>(N<span class="op">/</span>Y)<span class="op">+</span>ji]</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="co"># divide</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> io <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, X): <span class="op">@</span> parallel</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> jo <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, Y): <span class="op">@</span> parallel</span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> ii <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, M <span class="op">/</span> X):</span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> jj <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, N <span class="op">/</span> Y):</span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> ko <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, X):</span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>          <span class="cf">for</span> ki <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, K <span class="op">/</span> X):</span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>            a[io<span class="op">*</span>(M<span class="op">/</span>X)<span class="op">+</span>ii,jo<span class="op">*</span>(N<span class="op">/</span>Y)<span class="op">+</span>ji] <span class="op">+=</span> b[io<span class="op">*</span>(M<span class="op">/</span>X)<span class="op">+</span>ii,ko<span class="op">*</span>(K<span class="op">/</span>X)<span class="op">+</span>ki] <span class="op">*</span> c[ko<span class="op">*</span>(K<span class="op">/</span>X)<span class="op">+</span>ki,jo<span class="op">*</span>(N<span class="op">/</span>Y)<span class="op">+</span>ji]</span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a><span class="co"># reorder</span></span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> io <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, X): <span class="op">@</span> parallel</span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> jo <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, Y): <span class="op">@</span> parallel</span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> ko <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, X):</span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> ii <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, M <span class="op">/</span> X):</span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> jj <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, N <span class="op">/</span> Y):</span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a>          <span class="cf">for</span> ki <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, K <span class="op">/</span> X):</span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a>            a[io<span class="op">*</span>(M<span class="op">/</span>X)<span class="op">+</span>ii,jo<span class="op">*</span>(N<span class="op">/</span>Y)<span class="op">+</span>ji] <span class="op">+=</span> b[io<span class="op">*</span>(M<span class="op">/</span>X)<span class="op">+</span>ii,ko<span class="op">*</span>(K<span class="op">/</span>X)<span class="op">+</span>ki] <span class="op">*</span> c[ko<span class="op">*</span>(K<span class="op">/</span>X)<span class="op">+</span>ki,jo<span class="op">*</span>(N<span class="op">/</span>Y)<span class="op">+</span>ji]</span>
+<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a><span class="co"># communicate</span></span>
+<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> io <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, X): <span class="op">@</span> parallel</span>
+<span id="cb7-31"><a href="#cb7-31" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> jo <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, Y): <span class="op">@</span> parallel</span>
+<span id="cb7-32"><a href="#cb7-32" aria-hidden="true" tabindex="-1"></a>    sub_a <span class="op">=</span> load(a[M<span class="op">/</span>X,N<span class="op">/</span>Y])</span>
+<span id="cb7-33"><a href="#cb7-33" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> ko <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, X):</span>
+<span id="cb7-34"><a href="#cb7-34" aria-hidden="true" tabindex="-1"></a>      sub_b <span class="op">=</span> load(b[M<span class="op">/</span>X,K<span class="op">/</span>X])</span>
+<span id="cb7-35"><a href="#cb7-35" aria-hidden="true" tabindex="-1"></a>      sub_c <span class="op">=</span> load(c[K<span class="op">/</span>X,N<span class="op">/</span>Y])</span>
+<span id="cb7-36"><a href="#cb7-36" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> ii <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, M <span class="op">/</span> X):</span>
+<span id="cb7-37"><a href="#cb7-37" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> jj <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, N <span class="op">/</span> Y):</span>
+<span id="cb7-38"><a href="#cb7-38" aria-hidden="true" tabindex="-1"></a>          <span class="cf">for</span> ki <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, K <span class="op">/</span> X):</span>
+<span id="cb7-39"><a href="#cb7-39" aria-hidden="true" tabindex="-1"></a>            sub_a[ii,ji] <span class="op">+=</span> sub_b[ii,ki] <span class="op">*</span> sub_c[ki,ji]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/zhen8838\.github\.io");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script src="https://utteranc.es/client.js" repo="zhen8838/zhen8838.github.io" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

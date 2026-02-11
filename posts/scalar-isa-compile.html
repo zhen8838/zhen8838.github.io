@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2022-04-23">
+
+<title>标量指令集编译器简易实现 – Zheng’s Notes</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../assets/favicon.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-7072389654d23eff08f359f9aa0d1ee7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">Zheng’s Notes</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#x86-通用寄存器使用建议" id="toc-x86-通用寄存器使用建议" class="nav-link active" data-scroll-target="#x86-通用寄存器使用建议">x86 通用寄存器使用建议</a></li>
+  <li><a href="#基于chibicc检查具体行为" id="toc-基于chibicc检查具体行为" class="nav-link" data-scroll-target="#基于chibicc检查具体行为">基于chibicc检查具体行为</a>
+  <ul class="collapse">
+  <li><a href="#函数调用帧栈指针行为" id="toc-函数调用帧栈指针行为" class="nav-link" data-scroll-target="#函数调用帧栈指针行为">函数调用帧栈指针行为</a>
+  <ul class="collapse">
+  <li><a href="#在main函数中" id="toc-在main函数中" class="nav-link" data-scroll-target="#在main函数中">1. 在main函数中</a></li>
+  <li><a href="#在foo函数中" id="toc-在foo函数中" class="nav-link" data-scroll-target="#在foo函数中">2. 在foo函数中</a></li>
+  </ul></li>
+  <li><a href="#函数通过栈传参行为分析" id="toc-函数通过栈传参行为分析" class="nav-link" data-scroll-target="#函数通过栈传参行为分析">函数通过栈传参行为分析</a></li>
+  <li><a href="#函数调用相对地址计算" id="toc-函数调用相对地址计算" class="nav-link" data-scroll-target="#函数调用相对地址计算">函数调用相对地址计算</a></li>
+  </ul></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">标量指令集编译器简易实现</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">编译器</div>
+  </div>
+  </div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">April 23, 2022</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>之前没有接触过标量isa的编译器该怎么写,所以需要学习一下. 主要参考自RednaxelaFX的<a href="https://www.zhihu.com/question/29355187/answer/51935409">寄存器分配问题</a> 以及<a href="https://github.com/rui314/chibicc"><code>chibicc</code></a>简易c编译器.</p>
+<!--more-->
+<section id="x86-通用寄存器使用建议" class="level1">
+<h1>x86 通用寄存器使用建议</h1>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 8%">
+<col style="width: 16%">
+<col style="width: 75%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>寄存器</th>
+<th>Callee Save</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>%rax</td>
+<td></td>
+<td>结果寄存器;同时被用于idiv/imul指令中</td>
+</tr>
+<tr class="even">
+<td>%rbx</td>
+<td>yes</td>
+<td>杂项寄存器</td>
+</tr>
+<tr class="odd">
+<td>%rcx</td>
+<td></td>
+<td>第4个参数寄存器</td>
+</tr>
+<tr class="even">
+<td>%rdx</td>
+<td></td>
+<td>第3个参数寄存器; 也被用在idiv / imul指令</td>
+</tr>
+<tr class="odd">
+<td>%rsp</td>
+<td></td>
+<td>栈指针</td>
+</tr>
+<tr class="even">
+<td>%rbp</td>
+<td>yes</td>
+<td>帧指针</td>
+</tr>
+<tr class="odd">
+<td>%rsi</td>
+<td></td>
+<td>第2个参数寄存器</td>
+</tr>
+<tr class="even">
+<td>%rdi</td>
+<td></td>
+<td>第1个参数寄存器</td>
+</tr>
+<tr class="odd">
+<td>%r8</td>
+<td></td>
+<td>第5个参数寄存器</td>
+</tr>
+<tr class="even">
+<td>%r9</td>
+<td></td>
+<td>第6个参数寄存器</td>
+</tr>
+<tr class="odd">
+<td>%r10</td>
+<td></td>
+<td>杂项寄存器</td>
+</tr>
+<tr class="even">
+<td>%r11</td>
+<td></td>
+<td>杂项寄存器</td>
+</tr>
+<tr class="odd">
+<td>%r12</td>
+<td>yes</td>
+<td>杂项寄存器</td>
+</tr>
+<tr class="even">
+<td>%r13</td>
+<td>yes</td>
+<td>杂项寄存器 杂项寄存器</td>
+</tr>
+<tr class="odd">
+<td>%r14</td>
+<td>yes</td>
+<td>杂项寄存器</td>
+</tr>
+<tr class="even">
+<td>%r15</td>
+<td>yes</td>
+<td>杂项寄存器</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>%rax 通常用于存储函数调用的返回结果，同时也用于乘法和除法指令中。在imul 指令中，两个64位的乘法最多会产生128位的结果，需要 %rax 与 %rdx 共同存储乘法结果，在div 指令中被除数是128 位的，同样需要%rax 与 %rdx 共同存储被除数。</li>
+<li>%rsp指向了内存中堆栈的栈顶,堆栈的 pop 和push 操作就是通过改变 %rsp 的值即移动堆栈指针的位置来实现的。</li>
+<li>%rbp是当前的栈帧指针,标记当前栈帧的起始位置</li>
+<li><strong>Callee Save</strong>表示当前寄存器的值是<code>被调用者保存</code>,也就是发生函数调用的时候,这些寄存器的值在进去子函数后,子函数先保存这些寄存器的值,然后在返回上一级时恢复.</li>
+<li><strong>Caller Save</strong>表示在进行子函数调用前，就需要由调用者提前保存好这些寄存器的值，保存方法通常是把寄存器的值压入堆栈中，调用者保存完成后，在被调用者（子函数）中就可以随意覆盖这些寄存器的值.</li>
+</ul>
+</section>
+<section id="基于chibicc检查具体行为" class="level1">
+<h1>基于chibicc检查具体行为</h1>
+<p>我利用<a href="https://github.com/rui314/chibicc"><code>chibicc</code></a>对一些代码进行编译,然后调试汇编进行检查他的行为.</p>
+<section id="函数调用帧栈指针行为" class="level2">
+<h2 class="anchored" data-anchor-id="函数调用帧栈指针行为">函数调用帧栈指针行为</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode c code-with-copy"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">"test.h"</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> foo<span class="op">(</span><span class="dt">int</span> a<span class="op">,</span><span class="dt">int</span> b<span class="op">){</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> a <span class="op">+</span> b<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> main<span class="op">(){</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  foo<span class="op">(</span><span class="dv">1</span><span class="op">,</span><span class="dv">2</span><span class="op">);</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<section id="在main函数中" class="level3">
+<h3 class="anchored" data-anchor-id="在main函数中">1. 在main函数中</h3>
+<p>这里先把imm加载,然后push到栈上,然后再pop到两个寄存器上.开始调用foo</p>
+<pre class="x86asm"><code>0040117D: 48 C7 C0 02 00 00 00       movq   $0x2, %rax 
+00401184: 50                         pushq  %rax
+00401185: 48 C7 C0 01 00 00 00       movq   $0x1, %rax
+0040118C: 50                         pushq  %rax
+0040118D: 48 8D 05 1F 00 00 00       leaq   0x1f(%rip), %rax  ; foo 
+00401194: 5F                         popq   %rdi
+00401195: 5E                         popq   %rsi
+00401196: 49 89 C2                   movq   %rax, %r10
+00401199: 48 C7 C0 00 00 00 00       movq   $0x0, %rax
+004011A0: 41 FF D2                   callq  *%r10 # 此时rsp = 0xbc10, rbp = 0xbca0</code></pre>
+<section id="step-1-调用前" class="level4">
+<h4 class="anchored" data-anchor-id="step-1-调用前">step 1 调用前</h4>
+<pre><code>%rbp -&gt; | xxx             |  high 
+        | xxx             |   ^
+%rsp -&gt; | main 函数最后参数 |   |
+        | empty           |   |
+        | empty           |   |
+        | empty           |   |
+        | empty           |  low</code></pre>
+</section>
+<section id="step-2-开始调用" class="level4">
+<h4 class="anchored" data-anchor-id="step-2-开始调用">step 2 开始调用</h4>
+<p><code>callq  *%r10</code>后的结果如下: 因为<code>call</code>会把<code>call</code>下一条指令的地址压到栈上作为return要用的address.</p>
+<pre><code>%rbp -&gt; | xxx             |  high 
+        | xxx             |   ^
+        | main 函数最后参数 |   |
+%rsp -&gt; | return address  |   |
+        | empty           |   |
+        | empty           |   |
+        | empty           |  low</code></pre>
+</section>
+</section>
+<section id="在foo函数中" class="level3">
+<h3 class="anchored" data-anchor-id="在foo函数中">2. 在foo函数中</h3>
+<pre class="x86asm"><code>004011B3: 55                         pushq  %rbp # 保存之前的rbp之后, rsp = 0xbc08
+004011B4: 48 89 E5                   movq   %rsp, %rbp
+004011B7: 48 83 EC 10                subq   $0x10, %rsp
+004011BB: 48 89 65 F8                movq   %rsp, -0x8(%rbp)
+004011BF: 89 7D F4                   movl   %edi, -0xc(%rbp)
+004011C2: 89 75 F0                   movl   %esi, -0x10(%rbp)
+004011C5: 48 8D 45 F0                leaq   -0x10(%rbp), %rax
+004011C9: 48 63 00                   movslq (%rax), %rax
+004011CC: 50                         pushq  %rax
+004011CD: 48 8D 45 F4                leaq   -0xc(%rbp), %rax
+004011D1: 48 63 00                   movslq (%rax), %rax
+004011D4: 5F                         popq   %rdi
+004011D5: 01 F8                      addl   %edi, %eax
+004011D7: EB 00                      jmp    0x4011d9
+004011D9: 48 89 EC                   movq   %rbp, %rsp
+004011DC: 5D                         popq   %rbp
+004011DD: C3                         retq   </code></pre>
+<section id="step-1" class="level4">
+<h4 class="anchored" data-anchor-id="step-1">step 1</h4>
+<p><code>push %rbq</code></p>
+<p>⚠️ rsp的push是先递减然后修改对应的值!</p>
+<pre><code>%rbp -&gt; | xxx             |  high 
+        | xxx             |   ^
+        | xxx             |   |
+        | return address  |   |
+%rsp -&gt; | old rbp         |   |
+        | empty           |   |
+        | empty           |  low</code></pre>
+</section>
+<section id="step-2" class="level4">
+<h4 class="anchored" data-anchor-id="step-2">step 2</h4>
+<p><code>movq   %rsp, %rbp</code></p>
+<pre><code>              | xxx             |  high 
+              | xxx             |   ^
+              | xxx             |   |
+              | return address  |   |
+%rbp, %rsp -&gt; | old rbp         |   |
+              | empty           |   |
+              | empty           |  low</code></pre>
+</section>
+<section id="step-3" class="level4">
+<h4 class="anchored" data-anchor-id="step-3">step 3</h4>
+<p><code>subq   $0x10, %rsp</code></p>
+<pre><code>              | xxx             |  high &lt;-┐
+              | xxx             |   ^     |
+              | xxx             |   |     |
+              | return address  |   |     |
+%rbp       -&gt; | old rbp         |   | ----┘
+              | empty           |   |
+              | empty           |   |
+              | empty           |   |
+%rsp       -&gt; | empty           |  low</code></pre>
+</section>
+<section id="step-4" class="level4">
+<h4 class="anchored" data-anchor-id="step-4">step 4</h4>
+<p>从寄存器中把参数写入内存. 他这里还有存了一个rsp,可能是有别的用途.?</p>
+<pre class="x86asm"><code>movq   %rsp, -0x8(%rbp)
+movl   %edi, -0xc(%rbp)
+movl   %esi, -0x10(%rbp)</code></pre>
+<pre><code>              | xxx             |  high &lt;---┐
+              | xxx             |   ^       |
+              | xxx             |   |       |
+              | return address  |   |       |
+%rbp       -&gt; | old rbp         |   | ------┘
+              | empty           |   |
+              | old rsp         |   | ------┐
+              | 1  (arg 0)      |   |       ⏐
+%rsp       -&gt; | 2  (arg 1)      |  low &lt;----┘</code></pre>
+</section>
+<section id="step-5" class="level4">
+<h4 class="anchored" data-anchor-id="step-5">step 5</h4>
+<p><code>addl   %edi, %eax</code>这里把计算结果存入<code>eax</code>,<code>eax</code>是<code>rax</code>的一半.</p>
+</section>
+<section id="step-6" class="level4">
+<h4 class="anchored" data-anchor-id="step-6">step 6</h4>
+<pre class="x86asm"><code>004011D7: EB 00                      jmp    0x4011d9
+004011D9: 48 89 EC                   movq   %rbp, %rsp</code></pre>
+<p>返回时, 先jmp到return的位置, 然后rsp指向当前帧顶部:</p>
+<pre><code>              | xxx             |  high &lt;---┐
+              | xxx             |   ^       |
+              | xxx             |   |       |
+              | return address  |   |       |
+%rbp %rsp  -&gt; | old rbp         |   | ------┘
+              | empty           |   |
+              | old rsp         |   | ------┐
+              | 1  (arg 0)      |   |       ⏐
+              | 2  (arg 1)      |  low &lt;----┘</code></pre>
+</section>
+<section id="step-7" class="level4">
+<h4 class="anchored" data-anchor-id="step-7">step 7</h4>
+<pre class="x86asm"><code>004011DC: 5D                         popq   %rbp</code></pre>
+<p>接下来恢复rbp到上一帧的栈顶, 此时<code>rsp</code>指向返回地址.</p>
+<pre><code>%rbp  -&gt;    | xxx             |  high &lt;---┐
+            | xxx             |   ^       |
+            | xxx             |   |       |
+%rsp  -&gt;    | return address  |   |       |
+            | old rbp         |   | ------┘
+            | empty           |   |
+            | old rsp         |   | ------┐
+            | 1  (arg 0)      |   |       ⏐
+            | 2  (arg 1)      |  low &lt;----┘</code></pre>
+</section>
+<section id="step-8" class="level4">
+<h4 class="anchored" data-anchor-id="step-8">step 8</h4>
+<pre class="x86asm"><code>004011DD: C3                         retq </code></pre>
+<p>return实际上是先推出rsp的中的值,然后根据此地址进行跳转.这里的return address就是之前call的下一条指令.</p>
+<pre><code>%rbp  -&gt;    | xxx             |  high &lt;---┐
+            | xxx             |   ^       |
+%rsp  -&gt;    | xxx             |   |       |
+            | return address  |   |       |
+            | old rbp         |   | ------┘
+            | empty           |   |
+            | old rsp         |   | ------┐
+            | 1  (arg 0)      |   |       ⏐
+            | 2  (arg 1)      |  low &lt;----┘</code></pre>
+</section>
+</section>
+</section>
+<section id="函数通过栈传参行为分析" class="level2">
+<h2 class="anchored" data-anchor-id="函数通过栈传参行为分析">函数通过栈传参行为分析</h2>
+<p>在x86中,通常通过6个寄存器进行int类型参数传递,分别是<code>rdi</code>, <code>rsi</code>, <code>rdx</code>, <code>rcx</code>, <code>r8</code>, <code>r9</code>. 如果是浮点类型的参数,利用的是8个浮点寄存器.当参数为大的结构体/联合体,或者参数个数超过寄存器能容纳的数量时, 将通过栈传递参数.</p>
+<p>栈传递参数是在caller中进行的, 将函数参数从右到左的压到栈上(便于支持变长参数):</p>
+<pre><code>%rbp -&gt; | xxx             |  high 
+        | xxx             |   ^
+        | callee arg 9    |   |
+        | callee arg 8    |   |
+%rsp -&gt; | callee arg 7    |   |
+        | empty           |   |
+        | empty           |   |
+        | empty           |   |
+        | empty           |  low</code></pre>
+<p>压完栈之后进入函数中后,帧栈位置如下:</p>
+<pre><code>%rbp -&gt; | xxx             |  high &lt;---┐
+        | xxx             |   ^       |
+        | callee arg 9    |   |       |
+        | callee arg 8    |   |       |
+        | callee arg 7    |   |       |
+        | return address  |   |       |
+%rsp -&gt; | old rbp         |   | ------┘
+        | empty           |   |
+        | empty           |  low</code></pre>
+<p>在代码生成前我们就需要确定所有的参数是通过寄存器传递还是栈传递,因此在子函数中获取local var只需要给出之前分配变量位置时设定的偏移即可.</p>
+<p>同时要注意,结构体的压栈顺序也是倒序的,例如结构体如下:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb19"><pre class="sourceCode c code-with-copy"><code class="sourceCode c"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="kw">typedef</span> <span class="kw">struct</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> n<span class="op">;</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> c<span class="op">;</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> h<span class="op">;</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> w<span class="op">;</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span> shape_t<span class="op">;</span></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a><span class="kw">typedef</span> <span class="kw">struct</span></span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>    shape_t shape<span class="op">;</span></span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>    <span class="dt">unsigned</span> <span class="dt">int</span> addr<span class="op">;</span></span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span> buffer_t<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>压栈的时候是先把栈向下到对应位置,然后向上copy, 最终的数据摆放应该是如下的:</p>
+<pre><code>%rbp -&gt; | xxx             |  high &lt;---┐
+        | xxx             |   ^       |
+        | buffer.addr     |   |       |
+        | buffer.shape.w  |   |       |
+        | buffer.shape.h  |   |       |
+        | buffer.shape.c  |   |       |
+        | buffer.shape.n  |   |       |
+        | return address  |   |       |
+%rsp -&gt; | old rbp         |   | ------┘
+        | empty           |   |
+        | empty           |  low</code></pre>
+</section>
+<section id="函数调用相对地址计算" class="level2">
+<h2 class="anchored" data-anchor-id="函数调用相对地址计算">函数调用相对地址计算</h2>
+<p>我才发现在调用函数的时候是通过<code>%rip</code>寄存器去寻址的,给出如下函数:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb21"><pre class="sourceCode c code-with-copy"><code class="sourceCode c"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> foo<span class="op">(</span><span class="dt">int</span> a<span class="op">)</span> <span class="op">{</span> <span class="cf">return</span> a <span class="op">+</span> <span class="dv">1</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> foo2<span class="op">(</span><span class="dt">int</span> a<span class="op">)</span> <span class="op">{</span> <span class="cf">return</span> foo<span class="op">(</span>a<span class="op">)</span> <span class="op">+</span> <span class="dv">2</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">int</span> b <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>  foo2<span class="op">(</span>b<span class="op">);</span></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>编译结果: 注意到下面调用函数时使用了<code>lea foo2(%rip), %rax</code>来获得对应的地址. 然后我查看了<code>%rip</code>的作用是:</p>
+<blockquote class="blockquote">
+<p><strong>The role of the %rip register</strong> The <code>%rip</code> register on x86-64 is a special-purpose register that always holds the memory address of the next instruction to execute in the program’s code segment. The processor increments <code>%rip</code> automatically after each instruction, and control flow instructions like branches set the value of <code>%rip</code> to change the next instruction. Perhaps surprisingly, <code>%rip</code> also shows up when an assembly program refers to a global variable. See the sidebar under “Addressing modes” below to understand how <code>%rip</code>-relative addressing works.</p>
+</blockquote>
+<p>也就是他指向了下一个指令的地址.</p>
+<pre class="x86asm"><code>main:
+  . # 忽略一些指令
+  .
+  .
+  mov $4, %rcx
+  lea -4(%rbp), %rdi
+  mov $0, %al
+  rep stosb
+  lea -4(%rbp), %rax
+  push %rax
+  mov $1, %rax
+  pop %rdi
+  mov %eax, (%rdi)
+  lea -4(%rbp), %rax
+  movsxd (%rax), %rax
+  push %rax
+  lea foo2(%rip), %rax
+  pop %rdi
+  mov %rax, %r10
+  mov $0, %rax
+  call *%r10
+  add $0, %rsp
+  mov $0, %rax
+  jmp .L.return.main
+  mov $0, %rax
+.L.return.main:
+  mov %rbp, %rsp
+  pop %rbp
+  ret
+  .globl foo2
+  .text
+  .type foo2, @function
+foo2:
+  push %rbp
+  mov %rsp, %rbp
+  sub $16, %rsp
+  mov %rsp, -8(%rbp)
+  mov %edi, -12(%rbp)
+  mov $2, %rax
+  push %rax
+  sub $8, %rsp
+  lea -12(%rbp), %rax
+  movsxd (%rax), %rax
+  push %rax
+  lea foo(%rip), %rax
+  pop %rdi
+  mov %rax, %r10
+  mov $0, %rax
+  call *%r10
+  add $8, %rsp
+  pop %rdi
+  add %edi, %eax
+  jmp .L.return.foo2
+.L.return.foo2:
+  mov %rbp, %rsp
+  pop %rbp
+  ret
+  .globl foo
+  .text
+  .type foo, @function
+foo:
+  push %rbp
+  mov %rsp, %rbp
+  sub $16, %rsp
+  mov %rsp, -8(%rbp)
+  mov %edi, -12(%rbp)
+  mov $1, %rax
+  push %rax
+  lea -12(%rbp), %rax
+  movsxd (%rax), %rax
+  pop %rdi
+  add %edi, %eax
+  jmp .L.return.foo
+.L.return.foo:
+  mov %rbp, %rsp
+  pop %rbp
+  ret</code></pre>
+<p>接下来我再用<code>gnu as</code>进行汇编得到:</p>
+<pre class="x86asm"><code>main:
+ push   rbp
+ mov    rbp,rsp
+ sub    rsp,0xa0
+ mov    QWORD PTR [rbp-0x10],rsp
+ mov    DWORD PTR [rbp-0xa0],0x0
+ mov    DWORD PTR [rbp-0x9c],0x30
+ mov    QWORD PTR [rbp-0x98],rbp
+ add    QWORD PTR [rbp-0x98],0x10
+ mov    QWORD PTR [rbp-0x90],rbp
+ add    QWORD PTR [rbp-0x90],0xffffffffffffff78
+ mov    QWORD PTR [rbp-0x88],rdi
+ mov    QWORD PTR [rbp-0x80],rsi
+ mov    QWORD PTR [rbp-0x78],rdx
+ mov    QWORD PTR [rbp-0x70],rcx
+ mov    QWORD PTR [rbp-0x68],r8
+ mov    QWORD PTR [rbp-0x60],r9
+ movsd  QWORD PTR [rbp-0x58],xmm0
+ movsd  QWORD PTR [rbp-0x50],xmm1
+ movsd  QWORD PTR [rbp-0x48],xmm2
+ movsd  QWORD PTR [rbp-0x40],xmm3
+ movsd  QWORD PTR [rbp-0x38],xmm4
+ movsd  QWORD PTR [rbp-0x30],xmm5
+ movsd  QWORD PTR [rbp-0x28],xmm6
+ movsd  QWORD PTR [rbp-0x20],xmm7
+ mov    rcx,0x4
+ lea    rdi,[rbp-0x4]
+ mov    al,0x0
+ rep stos BYTE PTR es:[rdi],al
+ lea    rax,[rbp-0x4]
+ push   rax
+ mov    rax,0x1
+ pop    rdi
+ mov    DWORD PTR [rdi],eax
+ lea    rax,[rbp-0x4]
+ movsxd rax,DWORD PTR [rax]
+ push   rax
+ lea    rax,[rip+0x0]        # b4 &lt;main+0xb4&gt;
+ pop    rdi
+ mov    r10,rax
+ mov    rax,0x0
+ call   r10
+ add    rsp,0x0
+ mov    rax,0x0
+ jmp    d6 &lt;main+0xd6&gt;
+ mov    rax,0x0
+ mov    rsp,rbp
+ pop    rbp
+ ret    
+foo2:
+ push   rbp
+ mov    rbp,rsp
+ sub    rsp,0x10
+ mov    QWORD PTR [rbp-0x8],rsp
+ mov    DWORD PTR [rbp-0xc],edi
+ mov    rax,0x2
+ push   rax
+ sub    rsp,0x8
+ lea    rax,[rbp-0xc]
+ movsxd rax,DWORD PTR [rax]
+ push   rax
+ lea    rax,[rip+0x0]        # 105 &lt;foo2+0x2a&gt;
+ pop    rdi
+ mov    r10,rax
+ mov    rax,0x0
+ call   r10
+ add    rsp,0x8
+ pop    rdi
+ add    eax,edi
+ jmp    11c &lt;foo2+0x41&gt;
+ mov    rsp,rbp
+ pop    rbp
+ ret    
+foo:
+ push   rbp
+ mov    rbp,rsp
+ sub    rsp,0x10
+ mov    QWORD PTR [rbp-0x8],rsp
+ mov    DWORD PTR [rbp-0xc],edi
+ mov    rax,0x1
+ push   rax
+ lea    rax,[rbp-0xc]
+ movsxd rax,DWORD PTR [rax]
+ pop    rdi
+ add    eax,edi
+ jmp    144 &lt;foo+0x23&gt;
+ mov    rsp,rbp
+ pop    rbp
+ ret    </code></pre>
+<p>上面有个很奇怪的地方,<code>lea</code>不是应该得到的是<code>foo</code>的地址, 他这里的注释的解释如下:</p>
+<pre class="x86asm"><code>lea    rax,[rip+0x0]        # b4 &lt;main+0xb4&gt; , b4 是下一个指令的地址, &lt;main + 0xb4&gt;就是main为0,加上偏移b4
+
+lea    rax,[rip+0x0]        # 105 &lt;foo2+0x2a&gt;, 105 是下一个指令的地址, &lt;foo2 + 0x2a&gt;就是foo2为0xdb,加上偏移2a</code></pre>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/zhen8838\.github\.io");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script src="https://utteranc.es/client.js" repo="zhen8838/zhen8838.github.io" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

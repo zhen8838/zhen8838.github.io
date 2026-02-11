@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2020-06-17">
+
+<title>Proxy Anchor Loss for Deep Metric Learning论文解读 – Zheng’s Notes</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../assets/favicon.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-7072389654d23eff08f359f9aa0d1ee7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">Zheng’s Notes</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#原理" id="toc-原理" class="nav-link active" data-scroll-target="#原理">原理</a>
+  <ul class="collapse">
+  <li><a href="#基于pair的损失" id="toc-基于pair的损失" class="nav-link" data-scroll-target="#基于pair的损失">基于pair的损失</a></li>
+  <li><a href="#基于proxy的损失" id="toc-基于proxy的损失" class="nav-link" data-scroll-target="#基于proxy的损失">基于proxy的损失</a></li>
+  <li><a href="#proxy-nca-loss" id="toc-proxy-nca-loss" class="nav-link" data-scroll-target="#proxy-nca-loss">Proxy-NCA Loss</a></li>
+  <li><a href="#proxy-anchor-loss" id="toc-proxy-anchor-loss" class="nav-link" data-scroll-target="#proxy-anchor-loss">Proxy-Anchor Loss</a></li>
+  <li><a href="#额外实验1" id="toc-额外实验1" class="nav-link" data-scroll-target="#额外实验1">额外实验1</a></li>
+  <li><a href="#额外实验2" id="toc-额外实验2" class="nav-link" data-scroll-target="#额外实验2">额外实验2</a></li>
+  </ul></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Proxy Anchor Loss for Deep Metric Learning论文解读</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">深度学习</div>
+  </div>
+  </div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">June 17, 2020</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>这是<code>CVPR2020</code>的一篇度量学习的论文.来自韩国.我觉得还蛮有意思的,因此学习一番.</p>
+<p>他的图画的是真好看,虽然做的事情其实就是把<code>amsoftmax</code>换个皮…</p>
+<!--more-->
+<section id="原理" class="level1">
+<h1>原理</h1>
+<p><img src="proxy-anchor/proxy_1.png" class="img-fluid"></p>
+<p>论文主要提出了一个名为<code>Proxy Anchor</code>的损失函数.他相比于上图中<code>a,b,c,d</code>的方法.同时考虑了间距的大小作为损失的系数,且利用了整个<code>batch</code>中所有的数据,并用<code>anchor</code>作为<code>proxy</code>使得聚类中心更加明确.</p>
+<section id="基于pair的损失" class="level3">
+<h3 class="anchored" data-anchor-id="基于pair的损失">基于pair的损失</h3>
+<p>对于一些没有利用整个<code>batch</code>所有数据的方法,那就需要依赖采样来取得<code>triplet pair</code>,<code>N-pair</code>等等,这样实际上引用了额外的复杂度.因此使用基于<code>proxy</code>的方法,不需要<code>pair</code>采样的方式.</p>
+</section>
+<section id="基于proxy的损失" class="level3">
+<h3 class="anchored" data-anchor-id="基于proxy的损失">基于proxy的损失</h3>
+<p>基于<code>proxy</code>的度量学习是一种相对较新的方法，可以解决基于<code>pair</code>的损失的复杂性问题。<code>proxy</code>表示训练数据子集的代表，并被估计为嵌入网络参数的一部分。此类别中方法的共同思想是推断一小组的<code>proxy</code>，这些<code>proxy</code>捕获嵌入空间的全局结构，并将每个数据点与<code>proxy</code>相关联，而不是训练过程中的其他数据点。由于<code>proxy</code>的数量明显少于训练数据的数量，因此可以大大减少训练的复杂性.</p>
+<p>第一个基于<code>proxy</code>的方法为<code>Proxy-NCA</code>,他使用<code>proxies</code>的<code>Neighborhood Component Analysis</code>作为一种近似,首先为每个类别设置一个<code>proxy</code>,将数据点与<code>proxy</code>关联,拉近正类的距离,拉开负类的距离.</p>
+<p>使用<code>proxy</code>有助于极大地提高训练的收敛性，但有一个固有的局限性：由于每个数据点仅与<code>proxy</code>相关联，因此基于<code>pair</code>的方法的丰富的数据间关系不再可用。因此提出<code>Proxy Anchor</code>损失可以克服此问题，因为它的梯度可以反映数据的相对联系，这允许它们的嵌入向量在训练过程中相互影响.</p>
+</section>
+<section id="proxy-nca-loss" class="level3">
+<h3 class="anchored" data-anchor-id="proxy-nca-loss">Proxy-NCA Loss</h3>
+<p>首先介绍原本的损失.<code>Proxy-NCA</code>损失将<code>proxy</code>分配给每个类别，<code>proxy</code>的数量与类别标签的数量相同。给定一个输入数据点作为<code>anchor</code>，将同一类输入的<code>proxy</code>视为正，其他<code>proxy</code>为负。令<span class="math inline">\(x\)</span>表示输入的嵌入向量，<span class="math inline">\(p^+\)</span>为正<code>proxy</code>，<span class="math inline">\(p^-\)</span>为负<code>proxy</code>。损失则为如下:</p>
+<p><span class="math display">\[
+\begin{aligned}
+\ell(X) &amp;=\sum_{x \in X}-\log \frac{e^{s\left(x, p^{+}\right)}}{\sum\limits_{p^{-} \in P^{-}} e^{s\left(x, p^{-}\right)}} \\
+&amp;=\sum_{x \in X}\left\{-s\left(x, p^{+}\right)+\underset{p^{-} \in P^{-}}{\operatorname{LSE}} s\left(x, p^{-}\right)\right\}
+\end{aligned}
+\]</span></p>
+<p>其中<span class="math inline">\(X\)</span>为整个<code>batch</code>的嵌入向量,<span class="math inline">\(P^-\)</span>为负<code>proxy</code>的集合,<span class="math inline">\(s(\cdot,\cdot)\)</span>表示余弦相似度.其中<span class="math inline">\(\operatorname{LSE}\)</span>为<code>log sum exp</code>.熟悉基于<code>softmax</code>损失的同学应该已经看出来了,这里其实就是交叉熵换了个皮.</p>
+<p>对于此损失的梯度如下: <span class="math display">\[
+\frac{\partial \ell(X)}{\partial s(x, p)}=\left\{\begin{array}{ll}
+-1, &amp; \text { if } p=p^{+} \\
+\frac{e^{s(x, p)}}{\sum\limits_{p^{-} \in P^{-}} e^{s\left(x, p^{-}\right)}}, &amp; \text {otherwise }
+\end{array}\right.
+\]</span></p>
+<p>训练时会使得<span class="math inline">\(x\)</span>与<span class="math inline">\(p^+\)</span>尽量接近,使得<span class="math inline">\(x\)</span>与<span class="math inline">\(p^-\)</span>远离.不过注意到对于正类的梯度是恒定的,对于负类的梯度是有考虑到相似度的.此损失还是比较鲁棒的,但是由于损失仅使每个嵌入向量与<code>proxy</code>相关联，因此它无法利用细粒度的数据间关系。这种缺点限制了通过<code>Proxy-NCA</code>嵌入的能力.</p>
+</section>
+<section id="proxy-anchor-loss" class="level3">
+<h3 class="anchored" data-anchor-id="proxy-anchor-loss">Proxy-Anchor Loss</h3>
+<p><code>Proxy-Anchor</code>损失旨在克服<code>Proxy-NCA</code>的局限性，同时保持较低的训练复杂性。主要思想是将每个<code>proxy</code>作为锚，并将其与整个数据批关联，以便在训练过程中数据通过<code>proxy anchor</code>彼此交互。此损失先按照<code>Proxy-NCA</code>的标准设置为每个类别分配一个<code>proxy</code>，公式为:</p>
+<p><span class="math display">\[
+\begin{aligned}
+\ell(X)=&amp; \frac{1}{|P+|} \sum_{p \in P^{+}} \log \left(1+\sum_{x \in X_{p}^{+}} e^{-\alpha(s(x, p)-\delta)}\right) \\
+&amp;+\frac{1}{|P|} \sum_{p \in P} \log \left(1+\sum_{x \in X_{p}^{-}} e^{\alpha(s(x, p)+\delta)}\right)
+\end{aligned}
+\]</span></p>
+<p>这个也是比较老套的设置方法,其中<span class="math inline">\(\delta\)</span>为<code>margin</code>,<span class="math inline">\(\alpha\)</span>为尺度系数.将一个<code>batch</code>中所有的嵌入向量<span class="math inline">\(X\)</span>分成两个子集<span class="math inline">\(X_p^+,X_p^-\)</span>,其中<span class="math inline">\(X_p^+\)</span>表示<code>proxy</code><span class="math inline">\(p\)</span>的正样本嵌入向量,<span class="math inline">\(X_p^-\)</span>则是剩下的所有向量.</p>
+<p>将损失换一个形式: <span class="math display">\[
+\begin{aligned}
+\ell(X)=&amp; \frac{1}{\left|P^{+}\right|} \sum_{p \in P^{+}}[\text {Softplus }(\mathop{\operatorname{LSE}}\limits_{x \in X_{p}^{+}} -\alpha(s(x, p)-\delta))] \\
+&amp;+\frac{1}{|P|} \sum_{p \in P}\left[\text {Softplus }\left(\mathop{\operatorname{LSE}}\limits_{p \in X_{p}^{-}} \alpha(s(x, p)+\delta)\right)\right]
+\end{aligned}
+\]</span></p>
+<p>这样更加符合<code>circle loss</code>中所提出的统一形式了.其中这里的<span class="math inline">\(|P^+|\)</span>是正样本的统计数量,<span class="math inline">\(|P|\)</span>是总类别数.<del>这个系数我觉得不加也没关系</del>…</p>
+<p><strong>NOTE</strong> 我看了下他官方的代码,实际上什么基于<code>proxy</code>的方法就是额外再加一个可训练的聚类中心…我之前的各种损失函数的实现是直接把最后一层作为聚类中心(也就是他们所说的<code>proxy</code>),这么看来把<code>circle loss</code>拉到度量学习的标准任务里肯定也是很能打的.</p>
+</section>
+<section id="额外实验1" class="level2">
+<h2 class="anchored" data-anchor-id="额外实验1">额外实验1</h2>
+<p>我做的cifar10分类实现，实际上<code>batchsize</code>改成500之后<span class="math inline">\(|P^+|\)</span>有99.99的概率为10，<span class="math inline">\(|P|\)</span>为10。我训练结果只和<code>circle loss</code>差0.8个点。然后我认为删除这个系数没有关系，但结果立马打脸了，差7个点了。其实这个问题还是在于<span class="math inline">\(\alpha\)</span>系数上面，对于<code>proxy anchor loss</code>和<code>amsoftmax loss</code>来说没有像<code>circle loss</code>中的<code>自适应pace</code>，优化到后期可以说学习率太大也可以说是梯度太大，模型参数波动性会较大。这个实验佐证了<code>自适应pace</code>的重要性。</p>
+</section>
+<section id="额外实验2" class="level2">
+<h2 class="anchored" data-anchor-id="额外实验2">额外实验2</h2>
+<p>后面我又做了一下关于<span class="math inline">\(margin\)</span>的实验，实际上我们考虑<code>softmax</code>分类的过程，要使他分类难度增强应该是降低正确类别的数值，因此应该是<span class="math inline">\(s_p=cos(\theta_{y_i})-m\)</span>，这样才会强制正确类别的向量夹角更小。那么对于不正确的的分类类别，应该是加大他的数值，<span class="math inline">\(s_n=cos(\theta_{j\neq y_i})+m\)</span>,这样会强制降低向量更加接近垂直。</p>
+<p>这里留个小坑，对于<code>circle loss</code>里面的<span class="math inline">\(margin\)</span>设置我还是得重新仔细看看。</p>
+<p><strong>NOTE</strong> 2020-6-23日更新，因为<code>circle loss</code>设置了<code>自定义pace</code>，因此他计算决策面的时候将<span class="math inline">\(\alpha\)</span>考虑进去了，所以他得到的<span class="math inline">\(margin\)</span>和我之前设想的不一样。然后我又做了一下他的间距分布图，其实这个损失还是可以继续改进的，大家可以看到当<span class="math inline">\(\cos(\theta_p)=0，\cos(\theta_n)\in(\pi,\frac{\pi}{2})\)</span>时，对于负<code>pair</code>的损失是较小的。他所说的<code>circle</code>区域实际上是在<span class="math inline">\(\cos(\theta_p)=0，\cos(\theta_n)=\frac{\pi}{2}\)</span>有一个更小的凹槽，这里是我们的<code>ideal</code>区域。</p>
+<p>接下来如果有老哥可以把<span class="math inline">\(\cos(\theta_p)=0，\cos(\theta_n)\in(\pi,\frac{\pi}{2})\)</span>这块区域的损失重新设计一下，应该可以得到更好的收敛效果。</p>
+<p>等等。。这样判断太武断了，应该还需要分析一下梯度的变化。我这里就不继续深入了。</p>
+<p><img src="proxy-anchor/proxy_2.png" class="img-fluid"></p>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/zhen8838\.github\.io");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script src="https://utteranc.es/client.js" repo="zhen8838/zhen8838.github.io" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

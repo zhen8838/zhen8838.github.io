@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2024-01-11">
+
+<title>Affine Fusion Pass浅析 – Zheng’s Notes</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../assets/favicon.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-7072389654d23eff08f359f9aa0d1ee7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">Zheng’s Notes</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#准备工作" id="toc-准备工作" class="nav-link active" data-scroll-target="#准备工作">1. 准备工作</a></li>
+  <li><a href="#performfusionsintodestunsigned-dstid-unsigned-maxsrcusercount" id="toc-performfusionsintodestunsigned-dstid-unsigned-maxsrcusercount" class="nav-link" data-scroll-target="#performfusionsintodestunsigned-dstid-unsigned-maxsrcusercount">2. <code>performFusionsIntoDest(unsigned dstId, unsigned maxSrcUserCount)</code></a></li>
+  <li><a href="#affinecanfuseloopssrcaffineforop-dstaffineforop-i-depthsliceunionsi---1-strategy" id="toc-affinecanfuseloopssrcaffineforop-dstaffineforop-i-depthsliceunionsi---1-strategy" class="nav-link" data-scroll-target="#affinecanfuseloopssrcaffineforop-dstaffineforop-i-depthsliceunionsi---1-strategy">3. <code>affine::canFuseLoops(srcAffineForOp, dstAffineForOp, i, &amp;depthSliceUnions[i - 1], strategy)</code></a>
+  <ul class="collapse">
+  <li><a href="#computesliceunion" id="toc-computesliceunion" class="nav-link" data-scroll-target="#computesliceunion">3.1 <code>computeSliceUnion</code></a></li>
+  <li><a href="#checkmemrefaccessdependence" id="toc-checkmemrefaccessdependence" class="nav-link" data-scroll-target="#checkmemrefaccessdependence">3.2 <code>checkMemrefAccessDependence</code></a></li>
+  <li><a href="#getcomputationslicestate" id="toc-getcomputationslicestate" class="nav-link" data-scroll-target="#getcomputationslicestate">3.3 <code>getComputationSliceState</code></a></li>
+  </ul></li>
+  <li><a href="#isfusionprofitable" id="toc-isfusionprofitable" class="nav-link" data-scroll-target="#isfusionprofitable">4. isFusionProfitable</a></li>
+  <li><a href="#getfusioncomputecost" id="toc-getfusioncomputecost" class="nav-link" data-scroll-target="#getfusioncomputecost">4.1 getFusionComputeCost</a></li>
+  <li><a href="#update-bestdstloopdepth" id="toc-update-bestdstloopdepth" class="nav-link" data-scroll-target="#update-bestdstloopdepth">4.2 Update bestDstLoopDepth</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Affine Fusion Pass浅析</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">编译器</div>
+  </div>
+  </div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">January 11, 2024</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>学习<code>mlir</code>中<code>Affine Fusion Pass</code>, 主要关注依赖分析部分.</p>
+<!--more-->
+<section id="准备工作" class="level1">
+<h1>1. 准备工作</h1>
+<p>首先我们的待测试的<code>ir</code>为:</p>
+<pre class="mlir"><code>module {
+  func.func @main(%arg0: memref&lt;8x128x384xf32&gt;, %arg1: memref&lt;8x384x512xf32&gt;, %arg2: memref&lt;8x128x512xf32&gt;, %arg3: memref&lt;8x512x64xf32&gt;, %arg4: memref&lt;8x128x64xf32&gt;) {
+    affine.for %arg5 = 0 to 8 {
+      affine.for %arg6 = 0 to 128 {
+        affine.for %arg7 = 0 to 512 {
+          affine.for %arg8 = 0 to 384 {
+            %0 = affine.load %arg0[%arg5, %arg6, %arg8] : memref&lt;8x128x384xf32&gt;
+            %1 = affine.load %arg1[%arg5, %arg8, %arg7] : memref&lt;8x384x512xf32&gt;
+            %2 = affine.load %arg2[%arg5, %arg6, %arg7] : memref&lt;8x128x512xf32&gt;
+            %3 = arith.mulf %0, %1 : f32
+            %4 = arith.addf %2, %3 : f32
+            affine.store %4, %arg2[%arg5, %arg6, %arg7] : memref&lt;8x128x512xf32&gt;
+          }
+        }
+      }
+    }
+    affine.for %arg5 = 0 to 8 {
+      affine.for %arg6 = 0 to 128 {
+        affine.for %arg7 = 0 to 64 {
+          affine.for %arg8 = 0 to 512 {
+            %0 = affine.load %arg2[%arg5, %arg6, %arg8] : memref&lt;8x128x512xf32&gt;
+            %1 = affine.load %arg3[%arg5, %arg8, %arg7] : memref&lt;8x512x64xf32&gt;
+            %2 = affine.load %arg4[%arg5, %arg6, %arg7] : memref&lt;8x128x64xf32&gt;
+            %3 = arith.mulf %0, %1 : f32
+            %4 = arith.addf %2, %3 : f32
+            affine.store %4, %arg4[%arg5, %arg6, %arg7] : memref&lt;8x128x64xf32&gt;
+          }
+        }
+      }
+    }
+    return
+  }
+}</code></pre>
+</section>
+<section id="performfusionsintodestunsigned-dstid-unsigned-maxsrcusercount" class="level1">
+<h1>2. <code>performFusionsIntoDest(unsigned dstId, unsigned maxSrcUserCount)</code></h1>
+<ol type="1">
+<li><p>进入<code>affine fusion pass</code>之后, 通过<code>dstId</code>在<code>MemRefDependenceGraph</code>中找到<code>producer</code>的<code>affine for</code>节点作为<code>src</code>节点. 在我们的例子中, 显然是融合上下两个循环块.</p></li>
+<li><p>通过<code>gatherProducerConsumerMemrefs(srcId, dstId, mdg, producerConsumerMemrefs)</code>收集<code>src</code>节点与<code>dst</code>节点中的存在生产消费链接的<code>store/load</code>.</p></li>
+<li><p>通过<code>dstLoopDepthTest = getInnermostCommonLoopDepth(dstMemrefOps)</code>获取<code>dst</code>节点中的内存操作的循环层级, 我们的例子中的循环深度为4.</p></li>
+<li><p>遍历目标循环的深度<code>[1, dstLoopDepthTest]</code>通过<code>FusionResult result = affine::canFuseLoops(...) }</code>测试能否将<code>src loop</code>放到<code>dest loop</code>中</p></li>
+</ol>
+</section>
+<section id="affinecanfuseloopssrcaffineforop-dstaffineforop-i-depthsliceunionsi---1-strategy" class="level1">
+<h1>3. <code>affine::canFuseLoops(srcAffineForOp, dstAffineForOp, i, &amp;depthSliceUnions[i - 1], strategy)</code></h1>
+<p>验证是否可以<code>fusion</code>是一个复杂的过程. 经过一些琐碎的边界条件处理后, 开始执行判断过程.</p>
+<ol type="1">
+<li><p><code>numCommonLoops = affine::getNumCommonSurroundingLoops(*srcForOp, *dstForOp);</code>检查两个<code>op</code>外围是否存在共同的循环, 目前的例子中并没有.</p></li>
+<li><p><code>switch (fusionStrategy.getStrategy())</code>根据不同的策略放入不同的关键路径<code>op</code>, 这里<code>opsA</code>表示producer, <code>opsB</code>表示consumer的.</p></li>
+<li><p><code>sliceComputationResult = affine::computeSliceUnion(strategyOpsA, opsB, dstLoopDepth, numCommonLoops, isSrcForOpBeforeDstForOp, srcSlice)</code></p></li>
+</ol>
+<section id="computesliceunion" class="level2">
+<h2 class="anchored" data-anchor-id="computesliceunion">3.1 <code>computeSliceUnion</code></h2>
+<p>计算<code>opsA</code>和<code>OpsB</code>在指定循环层级位置计算得到的<code>slice bounds</code>是否满足他们之间的依赖. 首先对于producer来说只有写出是重要的, 因此这里的opsA为<code>affine.store %4, %arg2[%arg5, %arg6, %arg7] : memref&lt;8x128x512xf32&gt;</code>. 对于consumer来说, 读写同样重要, 因此此时的opsB为</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="op">%</span><span class="dv">0</span> <span class="op">=</span> affine<span class="op">.</span>load <span class="op">%</span>arg2<span class="op">[%</span>arg5<span class="op">,</span> <span class="op">%</span>arg6<span class="op">,</span> <span class="op">%</span>arg8<span class="op">]</span> <span class="op">:</span> memref<span class="op">&lt;</span><span class="dv">8</span><span class="er">x128x512xf32</span><span class="op">&gt;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">%</span><span class="dv">1</span> <span class="op">=</span> affine<span class="op">.</span>load <span class="op">%</span>arg3<span class="op">[%</span>arg5<span class="op">,</span> <span class="op">%</span>arg8<span class="op">,</span> <span class="op">%</span>arg7<span class="op">]</span> <span class="op">:</span> memref<span class="op">&lt;</span><span class="dv">8</span><span class="er">x512x64xf32</span><span class="op">&gt;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="op">%</span><span class="dv">2</span> <span class="op">=</span> affine<span class="op">.</span>load <span class="op">%</span>arg4<span class="op">[%</span>arg5<span class="op">,</span> <span class="op">%</span>arg6<span class="op">,</span> <span class="op">%</span>arg7<span class="op">]</span> <span class="op">:</span> memref<span class="op">&lt;</span><span class="dv">8</span><span class="er">x128x64xf32</span><span class="op">&gt;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>affine<span class="op">.</span>store <span class="op">%</span><span class="dv">4</span><span class="op">,</span> <span class="op">%</span>arg4<span class="op">[%</span>arg5<span class="op">,</span> <span class="op">%</span>arg6<span class="op">,</span> <span class="op">%</span>arg7<span class="op">]</span> <span class="op">:</span> memref<span class="op">&lt;</span><span class="dv">8</span><span class="er">x128x64xf32</span><span class="op">&gt;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>因为我们需要测试前一个执行节点的内存对后面所有的执行的内存的依赖关系, 所以这里是一个全排列组合的测试:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> <span class="op">(</span><span class="kw">auto</span> <span class="op">*</span>i <span class="op">:</span> opsA<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    MemRefAccess srcAccess<span class="op">(</span>i<span class="op">);</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span><span class="kw">auto</span> <span class="op">*</span>j <span class="op">:</span> opsB<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>      MemRefAccess dstAccess<span class="op">(</span>j<span class="op">);</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> <span class="op">(</span>srcAccess<span class="op">.</span>memref <span class="op">!=</span> dstAccess<span class="op">.</span>memref<span class="op">)</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">continue</span><span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>如果他们读写的是同一块<code>memref</code>, 那么也就是存在着依赖, 那么就可能存在着潜在的依赖, 需要进行进一步的依赖测试:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">bool</span> readReadAccesses <span class="op">=</span> isa<span class="op">&lt;</span>AffineReadOpInterface<span class="op">&gt;(</span>srcAccess<span class="op">.</span>opInst<span class="op">)</span> <span class="op">&amp;&amp;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>                        isa<span class="op">&lt;</span>AffineReadOpInterface<span class="op">&gt;(</span>dstAccess<span class="op">.</span>opInst<span class="op">);</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>FlatAffineValueConstraints dependenceConstraints<span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Check dependence between 'srcAccess' and 'dstAccess'.</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>DependenceResult result <span class="op">=</span> checkMemrefAccessDependence<span class="op">(</span> <span class="co">/* 如果操作的是同一个buffer, 那么需要检查依赖 */</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    srcAccess<span class="op">,</span> dstAccess<span class="op">,</span> <span class="co">/*loopDepth=*/</span>numCommonLoops <span class="op">+</span> <span class="dv">1</span><span class="op">,</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">&amp;</span>dependenceConstraints<span class="op">,</span> <span class="co">/*dependenceComponents=*/</span><span class="kw">nullptr</span><span class="op">,</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">/*allowRAR=*/</span>readReadAccesses<span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="checkmemrefaccessdependence" class="level2">
+<h2 class="anchored" data-anchor-id="checkmemrefaccessdependence">3.2 <code>checkMemrefAccessDependence</code></h2>
+<p>此时我们的<code>src/dst</code>分别为:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">Checking</span> for dependence at depth: 1 between:</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">mlir-asm-printer:</span> Verifying operation: func.func</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="ex">affine.store</span> %4, %arg2[%arg5, %arg6, %arg7] : memref<span class="op">&lt;</span>8x128x512xf32<span class="op">&gt;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="ex">mlir-asm-printer:</span> Verifying operation: func.func</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="ex">%0</span> = affine.load %arg2[%arg5, %arg6, %arg8] : memref<span class="op">&lt;</span>8x128x512xf32<span class="op">&gt;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>接下来从<code>access</code>中获得对应的<code>access relation</code>:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Create access relation from each MemRefAccess.</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>FlatAffineRelation srcRel<span class="op">,</span> dstRel<span class="op">;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>failed<span class="op">(</span>srcAccess<span class="op">.</span>getAccessRelation<span class="op">(</span>srcRel<span class="op">)))</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> DependenceResult<span class="op">::</span>Failure<span class="op">;</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>failed<span class="op">(</span>dstAccess<span class="op">.</span>getAccessRelation<span class="op">(</span>dstRel<span class="op">)))</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> DependenceResult<span class="op">::</span>Failure<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>首先展示srcRel和dstRel的FlatAffineRelation:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>srcRel:</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>Domain: <span class="dv">0</span>, Range: <span class="dv">7</span>, Symbols: <span class="dv">0</span>, Locals: <span class="dv">0</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="dv">11</span> constraints</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>(Value  Value   Value   Value   <span class="va">None</span>    <span class="va">None</span>    <span class="va">None</span>    const)</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a> <span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">1</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">1</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a> <span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a> <span class="op">-</span><span class="dv">1</span>     <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">7</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">1</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">127</span>     <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">1</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">511</span>     <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">1</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">383</span>     <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>dstRel:</span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>Domain: <span class="dv">0</span>, Range: <span class="dv">7</span>, Symbols: <span class="dv">0</span>, Locals: <span class="dv">0</span></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a><span class="dv">11</span> constraints</span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>(Value  Value   Value   Value   <span class="va">None</span>    <span class="va">None</span>    <span class="va">None</span>    const)</span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a> <span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">1</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">1</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a> <span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a> <span class="op">-</span><span class="dv">1</span>     <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">7</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">1</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">127</span>     <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">1</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">63</span>      <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">1</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">511</span>     <span class="op">&gt;=</span> <span class="dv">0</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>这里需要先讲解一下mlir中的PresburgerSpace的变量类型<code>enum class VarKind { Symbol, Local, Domain, Range, SetDim = Range };</code>:</p>
+<ol type="1">
+<li>Symbol, 表示一个固定但是展示未知的值.</li>
+<li>Local, 表示的是存在量化变量(existentially quantified variables), 我理解就是farkas引理中的lambda系数, 可以通过约束求解来消除. 考虑这个一个space为<code>(x,exists q)</code>, 约束为<code>1 &lt;= x &lt;= 7, x = 2q</code>, 此时x为维度变量,q为存在量化变量, 即<code>(x) : (exists q : q &lt;= x &lt;= 7, x = 2q)</code>. 此时带入一些值进去, 可以得到满足约束的结果集<code>{(2,1),(4,2),(6,3)}</code></li>
+<li>Dimension变量被进一步分为Domain 和 Range变量.</li>
+</ol>
+<p>在mlir中多面体是和ir深度结合的,比如这里的FlatAffineValueConstraints中是包含了PresburgerSpace以及AffineValue的, 上面输出依赖多面体中的Value列实际上就是一个affine ir的ssa value, 这个例子中其实就是四个迭代变量<code>%arg5,%arg6,%arg7,%arg8</code>. 并且access relation中的<code>numDomainDims</code>和<code>numRangeDims</code>与presburger space中的<code>numDomainVars</code>和<code>numRangeVars</code>并不是一致的. 上面两个约束他们的domainDims和RangeDims分别都是4和3, 但是这些dim对应的变量类型都是<code>SetDim = Range</code>, 所以上面两个relation的Ranges变量个数为<code>4+3=7</code></p>
+<p>将两个relation写为isl的形式如下:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>srcRel <span class="op">=</span> [i0,i1,i2,i3] <span class="op">-&gt;</span> [l0,l1,l2] : </span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a> i0 <span class="op">==</span> l0 <span class="kw">and</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a> i1 <span class="op">==</span> l1 <span class="kw">and</span> </span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a> i2 <span class="op">==</span> l2 <span class="kw">and</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span> <span class="op">&lt;=</span> i0 <span class="op">&lt;</span> <span class="dv">8</span> <span class="kw">and</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span> <span class="op">&lt;=</span> i1 <span class="op">&lt;</span> <span class="dv">128</span> <span class="kw">and</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span> <span class="op">&lt;=</span> i2 <span class="op">&lt;</span> <span class="dv">512</span> <span class="kw">and</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span> <span class="op">&lt;=</span> i3 <span class="op">&lt;</span> <span class="dv">384</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>dstRel <span class="op">=</span> [j0,j1,j2,j3] <span class="op">-&gt;</span> [l0,l1,l2] : </span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a> j0 <span class="op">==</span> l0 <span class="kw">and</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a> j1 <span class="op">==</span> l1 <span class="kw">and</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a> j3 <span class="op">==</span> l2 <span class="kw">and</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span> <span class="op">&lt;=</span> j0 <span class="op">&lt;</span> <span class="dv">8</span> <span class="kw">and</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span> <span class="op">&lt;=</span> j1 <span class="op">&lt;</span> <span class="dv">128</span> <span class="kw">and</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span> <span class="op">&lt;=</span> j2 <span class="op">&lt;</span> <span class="dv">64</span> <span class="kw">and</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span> <span class="op">&lt;=</span> j3 <span class="op">&lt;</span> <span class="dv">512</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>这里获得对应的他们对应的domain:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>FlatAffineValueConstraints srcDomain <span class="op">=</span> srcRel<span class="op">.</span>getDomainSet<span class="op">();</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>FlatAffineValueConstraints dstDomain <span class="op">=</span> dstRel<span class="op">.</span>getDomainSet<span class="op">();</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>此时srcDomain和dstDomain的约束多面体分别如下:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>srcDomain:</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>Domain: <span class="dv">0</span>, Range: <span class="dv">4</span>, Symbols: <span class="dv">0</span>, Locals: <span class="dv">3</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="dv">11</span> constraints</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>(Value  Value   Value   Value   Local   Local   Local   const)</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a> <span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">1</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">1</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a> <span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a> <span class="op">-</span><span class="dv">1</span>     <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">7</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">1</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">127</span>     <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">1</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">511</span>     <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">1</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">383</span>     <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>dstDomain:</span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>Domain: <span class="dv">0</span>, Range: <span class="dv">4</span>, Symbols: <span class="dv">0</span>, Locals: <span class="dv">3</span></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a><span class="dv">11</span> constraints</span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>(Value  Value   Value   Value   Local   Local   Local   const)</span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a> <span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">1</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">1</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a> <span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a> <span class="op">-</span><span class="dv">1</span>     <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">7</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">1</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">127</span>     <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">1</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">63</span>      <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">1</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb10-31"><a href="#cb10-31" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">511</span>     <span class="op">&gt;=</span> <span class="dv">0</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>实际domain的约束多面体和access relation的多面体并无大的区别, 将一些变量的类型进行了转换, 同时作为一个set他是不存在domain dims和range dims的.</p>
+<p>然后组合两个<code>relation</code>, 这里的compose实际上等价<code>srcRel.apply_range(dstRel)</code></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>  dstRel<span class="op">.</span>inverse<span class="op">();</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  dstRel<span class="op">.</span>compose<span class="op">(</span>srcRel<span class="op">);</span> <span class="co">// src.domain -&gt; [src.range == dst.domain] -&gt; dst.range</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><code>compose</code>后此时<code>dstRel</code>为:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>Domain: <span class="dv">0</span>, Range: <span class="dv">8</span>, Symbols: <span class="dv">0</span>, Locals: <span class="dv">0</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="dv">19</span> constraints</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>(Value  Value   Value   Value   Value   Value   Value   Value   const)</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a> <span class="op">-</span><span class="dv">1</span>     <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">1</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">1</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">1</span>       <span class="dv">0</span>       <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a> <span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a> <span class="op">-</span><span class="dv">1</span>     <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">7</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">1</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">127</span>     <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">1</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">511</span>     <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">1</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">383</span>     <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">1</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">7</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">1</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">127</span>     <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">1</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">63</span>      <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">1</span>       <span class="dv">0</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">-</span><span class="dv">1</span>      <span class="dv">511</span>     <span class="op">&gt;=</span> <span class="dv">0</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>这里的Range为8是因为只存在上下两个循环迭代变量的range变量, 此时的domain dims和range dims均为4, 用isl形式表示应该是:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>{ [i0, i1, i2, i3] <span class="op">-&gt;</span> [j0 <span class="op">=</span> i0, j1 <span class="op">=</span> i1, j2, j3 <span class="op">=</span> i2] : <span class="dv">0</span> <span class="op">&lt;=</span> i0 <span class="op">&lt;</span> <span class="dv">8</span> <span class="kw">and</span> <span class="dv">0</span> <span class="op">&lt;=</span> i1 <span class="op">&lt;</span> <span class="dv">128</span> <span class="kw">and</span> <span class="dv">0</span> <span class="op">&lt;=</span> i2 <span class="op">&lt;</span> <span class="dv">512</span> <span class="kw">and</span> <span class="dv">0</span> <span class="op">&lt;=</span> i3 <span class="op">&lt;</span> <span class="dv">384</span> <span class="kw">and</span> <span class="dv">0</span> <span class="op">&lt;=</span> j0 <span class="op">&lt;</span> <span class="dv">8</span> <span class="kw">and</span> <span class="dv">0</span> <span class="op">&lt;=</span> j1 <span class="op">&lt;</span> <span class="dv">128</span> <span class="kw">and</span> <span class="dv">0</span> <span class="op">&lt;=</span> j2 <span class="op">&lt;</span> <span class="dv">64</span> <span class="kw">and</span> <span class="dv">0</span> <span class="op">&lt;=</span> j3 <span class="op">&lt;</span> <span class="dv">512</span> }</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>得到新的<code>dstRel</code>后, 添加顺序约束, 也就是当他们的外侧还存在有共享循环时, 需要添加顺序约束, 目前这个例子中没有共享循环, 所以也不做什么.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Add 'src' happens before 'dst' ordering constraints.</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>addOrderingConstraints<span class="op">(</span>srcDomain<span class="op">,</span> dstDomain<span class="op">,</span> loopDepth<span class="op">,</span> <span class="op">&amp;</span>dstRel<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>最终就是检查约束<code>dstRel.isEmpty()</code>, 这里<code>isEmpty</code>检查的是否存在整数解, 也就是在当前order下上面的map约束是否能满足.</p>
+</section>
+<section id="getcomputationslicestate" class="level2">
+<h2 class="anchored" data-anchor-id="getcomputationslicestate">3.3 <code>getComputationSliceState</code></h2>
+<p>上面这个case检测到存在依赖, 接下来计算依赖的slice大小:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb15"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>mlir<span class="op">::</span>affine<span class="op">::</span>getComputationSliceState<span class="op">(</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    Operation <span class="op">*</span>depSourceOp<span class="op">,</span> Operation <span class="op">*</span>depSinkOp<span class="op">,</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    FlatAffineValueConstraints <span class="op">*</span>dependenceConstraints<span class="op">,</span> <span class="dt">unsigned</span> loopDepth<span class="op">,</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">bool</span> isBackwardSlice<span class="op">,</span> ComputationSliceState <span class="op">*</span>sliceState<span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>首先这个case传入的参数<code>depSourceOp</code>为前一个块的store, <code>depSinkOp</code>为后一个块的load,<code>dependenceConstraints</code>为上一步计算得到的dst-&gt;src的map, <code>loopDepth</code>为需要合并到的循环深度, 当前为1. <code>isBackwardSlice</code>为true, 因为source op是在sink op前执行的.</p>
+<p>因为我们要计算的是插入到<code>loopDepth</code>时的slice大小, 那么第一步则是要删除所有高于<code>loopDepth</code>的维度. 因为是反向依赖, 所以dst loop的var在后面, 因此pos为<code>src loop nums + loopDepth = 5</code>, 然后num为<code>dst loop nums - loopDepth = 3</code> .</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb16"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Project out dimensions other than those up to 'loopDepth'.</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">unsigned</span> pos <span class="op">=</span> isBackwardSlice <span class="op">?</span> numSrcLoopIVs <span class="op">+</span> loopDepth <span class="op">:</span> loopDepth<span class="op">;</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">unsigned</span> num <span class="op">=</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>      isBackwardSlice <span class="op">?</span> numDstLoopIVs <span class="op">-</span> loopDepth <span class="op">:</span> numSrcLoopIVs <span class="op">-</span> loopDepth<span class="op">;</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  dependenceConstraints<span class="op">-&gt;</span>projectOut<span class="op">(</span>pos<span class="op">,</span> num<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>消除不需要的变量后, <code>dependenceConstraints</code>为如下:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>Domain: <span class="dv">0</span>, Range: <span class="dv">5</span>, Symbols: <span class="dv">0</span>, Locals: <span class="dv">0</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="dv">11</span> constraints</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>(Value  Value   Value   Value   Value   const)</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a> <span class="op">-</span><span class="dv">1</span>     <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">1</span>       <span class="dv">0</span>       <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a> <span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a> <span class="op">-</span><span class="dv">1</span>     <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">7</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">1</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">127</span>     <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">1</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">511</span>     <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">1</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">-</span><span class="dv">1</span>      <span class="dv">0</span>       <span class="dv">383</span>     <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">1</span>       <span class="dv">0</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a> <span class="dv">0</span>      <span class="dv">0</span>       <span class="dv">0</span>       <span class="dv">0</span>       <span class="op">-</span><span class="dv">1</span>      <span class="dv">7</span>       <span class="op">&gt;=</span> <span class="dv">0</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>等价于:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>{ [i0, i1, i2, i3] <span class="op">-&gt;</span> [j0 <span class="op">=</span> i0] : <span class="dv">0</span> <span class="op">&lt;=</span> i0 <span class="op">&lt;=</span> <span class="dv">7</span> <span class="kw">and</span> <span class="dv">0</span> <span class="op">&lt;=</span> i1 <span class="op">&lt;=</span> <span class="dv">127</span> <span class="kw">and</span> <span class="dv">0</span> <span class="op">&lt;=</span> i2 <span class="op">&lt;=</span> <span class="dv">511</span> <span class="kw">and</span> <span class="dv">0</span> <span class="op">&lt;=</span> i3 <span class="op">&lt;=</span> <span class="dv">383</span> }</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>获得循环迭代的SSAValue, 这里因为是backward,因此src变量的起点为0, 总个数在这个例子中为4.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb19"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Add slice loop IV values to 'sliceState'.</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="dt">unsigned</span> offset <span class="op">=</span> isBackwardSlice <span class="op">?</span> <span class="dv">0</span> <span class="op">:</span> loopDepth<span class="op">;</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a><span class="dt">unsigned</span> numSliceLoopIVs <span class="op">=</span> isBackwardSlice <span class="op">?</span> numSrcLoopIVs <span class="op">:</span> numDstLoopIVs<span class="op">;</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>dependenceConstraints<span class="op">-&gt;</span>getValues<span class="op">(</span>offset<span class="op">,</span> offset <span class="op">+</span> numSliceLoopIVs<span class="op">,</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>                                  <span class="op">&amp;</span>sliceState<span class="op">-&gt;</span>ivs<span class="op">);</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Set up lower/upper bound affine maps for the slice.</span></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>sliceState<span class="op">-&gt;</span>lbs<span class="op">.</span>resize<span class="op">(</span>numSliceLoopIVs<span class="op">,</span> AffineMap<span class="op">());</span></span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>sliceState<span class="op">-&gt;</span>ubs<span class="op">.</span>resize<span class="op">(</span>numSliceLoopIVs<span class="op">,</span> AffineMap<span class="op">());</span></span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a><span class="co">// Get bounds for slice IVs in terms of other IVs, symbols, and constants.</span></span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>dependenceConstraints<span class="op">-&gt;</span>getSliceBounds<span class="op">(</span>offset<span class="op">,</span> numSliceLoopIVs<span class="op">,</span></span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>                                      depSourceOp<span class="op">-&gt;</span>getContext<span class="op">(),</span></span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>                                      <span class="op">&amp;</span>sliceState<span class="op">-&gt;</span>lbs<span class="op">,</span> <span class="op">&amp;</span>sliceState<span class="op">-&gt;</span>ubs<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>更新后<code>sliceState-&gt;ivs</code>中存在了<code>i0,i1,i2,i3</code>四个变量. 同时为slice state的lower bounds 和 upper bounds分配好四个affine map, 并通过ir的连接关系得到这些affine map. <code>getSliceBounds</code>是将从offset开始的前num个维度变量上下界作为剩余变量的map, 也就是说要基于上一步的依赖约束得到基于dst为domain所对应src domain的上下界, 由于上一步中project掉了三个dst的循环变量, 因此bounds map的domain维度为1, 同时因为<code>i0=j0</code>, 因此得到的lower bounds为<code>[(d0) -&gt; (d0), (d0) -&gt; (0), (d0) -&gt; (0), (d0) -&gt; (0)]</code>, upper bounds为<code>[(d0) -&gt; (d0 + 1), (d0) -&gt; (128), (d0) -&gt; (512), (d0) -&gt; (384)]</code>.</p>
+<p>接下来获取dst循环的iter var value, 因为这里project out之后所以<code>numDimsAndSymbols</code>, 然后又跳过了<code>offset + numSliceLoopIVs</code>, 因此这里<code>sliceBoundOperands</code>只保留了一个<code>j0</code>. 然后将这个vector再分配给<code>lbOperands, ubOperands</code>. 最好这里的insertPoint就是dst loop在loop depth的位置.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb20"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>  SmallVector<span class="op">&lt;</span>Value<span class="op">,</span> <span class="dv">4</span><span class="op">&gt;</span> sliceBoundOperands<span class="op">;</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">unsigned</span> numDimsAndSymbols <span class="op">=</span> dependenceConstraints<span class="op">-&gt;</span>getNumDimAndSymbolVars<span class="op">();</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> <span class="op">(</span><span class="dt">unsigned</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> numDimsAndSymbols<span class="op">;</span> <span class="op">++</span>i<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>i <span class="op">&lt;</span> offset <span class="op">||</span> i <span class="op">&gt;=</span> offset <span class="op">+</span> numSliceLoopIVs<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>      sliceBoundOperands<span class="op">.</span>push_back<span class="op">(</span>dependenceConstraints<span class="op">-&gt;</span>getValue<span class="op">(</span>i<span class="op">));</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Give each bound its own copy of 'sliceBoundOperands' for subsequent</span></span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>  <span class="co">// canonicalization.</span></span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>  sliceState<span class="op">-&gt;</span>lbOperands<span class="op">.</span>resize<span class="op">(</span>numSliceLoopIVs<span class="op">,</span> sliceBoundOperands<span class="op">);</span></span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>  sliceState<span class="op">-&gt;</span>ubOperands<span class="op">.</span>resize<span class="op">(</span>numSliceLoopIVs<span class="op">,</span> sliceBoundOperands<span class="op">);</span></span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Set destination loop nest insertion point to block start at 'dstLoopDepth'.</span></span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>  sliceState<span class="op">-&gt;</span>insertPoint <span class="op">=</span></span>
+<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a>      isBackwardSlice <span class="op">?</span> dstLoopIVs<span class="op">[</span>loopDepth <span class="op">-</span> <span class="dv">1</span><span class="op">].</span>getBody<span class="op">()-&gt;</span>begin<span class="op">()</span></span>
+<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a>                      <span class="op">:</span> <span class="bu">std::</span>prev<span class="op">(</span>srcLoopIVs<span class="op">[</span>loopDepth <span class="op">-</span> <span class="dv">1</span><span class="op">].</span>getBody<span class="op">()-&gt;</span>end<span class="op">());</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>此时如果不考虑复杂的情况, sliceState就算是更新完毕了. 这里直接回到了canFuseLoops之后.</p>
+</section>
+</section>
+<section id="isfusionprofitable" class="level1">
+<h1>4. isFusionProfitable</h1>
+<p>前面是遍历了dst循环的四个insert point, 检测在这些循环内能否插入source循环.在我们的这个例子中, 显然四个层级都可以插入source 循环. 那么就需要找到最合适的循环插入位置.</p>
+<p>首先获得srcloop的循环变量, 然后拿到是两个循环分析结果.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb21"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Compute cost of sliced and unsliced src loop nest.</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  SmallVector<span class="op">&lt;</span>AffineForOp<span class="op">,</span> <span class="dv">4</span><span class="op">&gt;</span> srcLoopIVs<span class="op">;</span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  getAffineForIVs<span class="op">(*</span>srcOpInst<span class="op">,</span> <span class="op">&amp;</span>srcLoopIVs<span class="op">);</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Walk src loop nest and collect stats.</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>  LoopNestStats srcLoopNestStats<span class="op">;</span></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="op">(!</span>getLoopNestStats<span class="op">(</span>srcLoopIVs<span class="op">[</span><span class="dv">0</span><span class="op">],</span> <span class="op">&amp;</span>srcLoopNestStats<span class="op">))</span></span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Compute cost of dst loop nest.</span></span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>  LoopNestStats dstLoopNestStats<span class="op">;</span></span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="op">(!</span>getLoopNestStats<span class="op">(</span>dstForOp<span class="op">,</span> <span class="op">&amp;</span>dstLoopNestStats<span class="op">))</span></span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="kw">false</span><span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>然后计算原始src loop的cost, 以及dst loop的cost</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb22"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Compute op instance count for the src loop nest without iteration slicing.</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">uint64_t</span> srcLoopNestCost <span class="op">=</span> getComputeCost<span class="op">(</span>srcLoopIVs<span class="op">[</span><span class="dv">0</span><span class="op">],</span> srcLoopNestStats<span class="op">);</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Compute src loop nest write region size.</span></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>  MemRefRegion srcWriteRegion<span class="op">(</span>srcStoreOpInst<span class="op">-&gt;</span>getLoc<span class="op">());</span></span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="op">(</span>failed<span class="op">(</span>srcWriteRegion<span class="op">.</span>compute<span class="op">(</span>srcStoreOpInst<span class="op">,</span> <span class="co">/*loopDepth=*/</span><span class="dv">0</span><span class="op">)))</span> <span class="op">{</span></span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>    LLVM_DEBUG<span class="op">(</span>llvm<span class="op">::</span>dbgs<span class="op">()</span></span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>               <span class="op">&lt;&lt;</span> <span class="st">"Unable to compute MemRefRegion for source operation</span><span class="sc">\n</span><span class="st">"</span><span class="op">);</span></span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>  <span class="bu">std::</span>optional<span class="op">&lt;</span><span class="dt">int64_t</span><span class="op">&gt;</span> maybeSrcWriteRegionSizeBytes <span class="op">=</span></span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>      srcWriteRegion<span class="op">.</span>getRegionSize<span class="op">();</span></span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="op">(!</span>maybeSrcWriteRegionSizeBytes<span class="op">.</span>has_value<span class="op">())</span></span>
+<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb22-16"><a href="#cb22-16" aria-hidden="true" tabindex="-1"></a>  <span class="dt">int64_t</span> srcWriteRegionSizeBytes <span class="op">=</span> <span class="op">*</span>maybeSrcWriteRegionSizeBytes<span class="op">;</span></span>
+<span id="cb22-17"><a href="#cb22-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-18"><a href="#cb22-18" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Compute op instance count for the src loop nest.</span></span>
+<span id="cb22-19"><a href="#cb22-19" aria-hidden="true" tabindex="-1"></a>  <span class="dt">uint64_t</span> dstLoopNestCost <span class="op">=</span> getComputeCost<span class="op">(</span>dstForOp<span class="op">,</span> dstLoopNestStats<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>然后开始固定每一种循环合并方式并计算fusion之后的cost</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb23"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> <span class="op">(</span><span class="dt">unsigned</span> i <span class="op">=</span> maxLegalFusionDepth<span class="op">;</span> i <span class="op">&gt;=</span> <span class="dv">1</span><span class="op">;</span> <span class="op">--</span>i<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">const</span> ComputationSliceState <span class="op">&amp;</span>slice <span class="op">=</span> depthSliceUnions<span class="op">[</span>i <span class="op">-</span> <span class="dv">1</span><span class="op">];</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Skip slice union if it wasn't computed for this depth.</span></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>slice<span class="op">.</span>isEmpty<span class="op">())</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>      <span class="cf">continue</span><span class="op">;</span></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int64_t</span> fusedLoopNestComputeCost<span class="op">;</span></span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(!</span>getFusionComputeCost<span class="op">(</span>srcLoopIVs<span class="op">[</span><span class="dv">0</span><span class="op">],</span> srcLoopNestStats<span class="op">,</span> dstForOp<span class="op">,</span></span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>                              dstLoopNestStats<span class="op">,</span> slice<span class="op">,</span></span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>                              <span class="op">&amp;</span>fusedLoopNestComputeCost<span class="op">))</span> <span class="op">{</span></span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>      LLVM_DEBUG<span class="op">(</span>llvm<span class="op">::</span>dbgs<span class="op">()</span> <span class="op">&lt;&lt;</span> <span class="st">"Unable to compute fusion compute cost</span><span class="sc">\n</span><span class="st">"</span><span class="op">);</span></span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>      <span class="cf">continue</span><span class="op">;</span></span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span></span>
+<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span></span>
+<span id="cb23-16"><a href="#cb23-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span></span>
+<span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="getfusioncomputecost" class="level1">
+<h1>4.1 getFusionComputeCost</h1>
+<p>进入基于当前的slice state计算循环次数, 这里<code>slice.ivs</code>包含了src的四个循环迭代变量, 将他们对应的for op作为key, 循环次数作为value.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb24"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>  <span class="dt">bool</span> mlir<span class="op">::</span>affine<span class="op">::</span>buildSliceTripCountMap<span class="op">(</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">const</span> ComputationSliceState <span class="op">&amp;</span>slice<span class="op">,</span></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>    llvm<span class="op">::</span>SmallDenseMap<span class="op">&lt;</span>Operation <span class="op">*,</span> <span class="dt">uint64_t</span><span class="op">,</span> <span class="dv">8</span><span class="op">&gt;</span> <span class="op">*</span>tripCountMap<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">unsigned</span> numSrcLoopIVs <span class="op">=</span> slice<span class="op">.</span>ivs<span class="op">.</span>size<span class="op">();</span></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Populate map from AffineForOp -&gt; trip count</span></span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> <span class="op">(</span><span class="dt">unsigned</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> numSrcLoopIVs<span class="op">;</span> <span class="op">++</span>i<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>    AffineForOp forOp <span class="op">=</span> getForInductionVarOwner<span class="op">(</span>slice<span class="op">.</span>ivs<span class="op">[</span>i<span class="op">]);</span></span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">auto</span> <span class="op">*</span>op <span class="op">=</span> forOp<span class="op">.</span>getOperation<span class="op">();</span></span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>    AffineMap lbMap <span class="op">=</span> slice<span class="op">.</span>lbs<span class="op">[</span>i<span class="op">];</span></span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>    AffineMap ubMap <span class="op">=</span> slice<span class="op">.</span>ubs<span class="op">[</span>i<span class="op">];</span></span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>    <span class="bu">std::</span>optional<span class="op">&lt;</span><span class="dt">uint64_t</span><span class="op">&gt;</span> tripCount <span class="op">=</span> getConstDifference<span class="op">(</span>lbMap<span class="op">,</span> ubMap<span class="op">);</span></span>
+<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Slice bounds are created with a constant ub - lb difference.</span></span>
+<span id="cb24-13"><a href="#cb24-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(!</span>tripCount<span class="op">.</span>has_value<span class="op">())</span></span>
+<span id="cb24-14"><a href="#cb24-14" aria-hidden="true" tabindex="-1"></a>      <span class="cf">return</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb24-15"><a href="#cb24-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">(*</span>tripCountMap<span class="op">)[</span>op<span class="op">]</span> <span class="op">=</span> <span class="op">*</span>tripCount<span class="op">;</span></span>
+<span id="cb24-16"><a href="#cb24-16" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb24-17"><a href="#cb24-17" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb24-18"><a href="#cb24-18" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>当前的loop depth为4, 对应ComputationSliceState的lbs和ubs分别为:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>lbs[<span class="dv">0</span>] : (d0, d1, d2, d3) <span class="op">-&gt;</span> (d0)</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>ubs[<span class="dv">0</span>] : (d0, d1, d2, d3) <span class="op">-&gt;</span> (d0 <span class="op">+</span> <span class="dv">1</span>)</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>lbs[<span class="dv">1</span>] : (d0, d1, d2, d3) <span class="op">-&gt;</span> (d1)</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>ubs[<span class="dv">1</span>] : (d0, d1, d2, d3) <span class="op">-&gt;</span> (d1 <span class="op">+</span> <span class="dv">1</span>)</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>lbs[<span class="dv">2</span>] : (d0, d1, d2, d3) <span class="op">-&gt;</span> (d3)</span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>ubs[<span class="dv">2</span>] : (d0, d1, d2, d3) <span class="op">-&gt;</span> (d3 <span class="op">+</span> <span class="dv">1</span>)</span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>lbs[<span class="dv">3</span>] : (d0, d1, d2, d3) <span class="op">-&gt;</span> (<span class="dv">0</span>)</span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>ubs[<span class="dv">3</span>] : (d0, d1, d2, d3) <span class="op">-&gt;</span> (<span class="dv">384</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>最终得到tripCountMap中的trip count则分别为<code>1,1,1,384</code>.</p>
+<p>使用tripCountMap累乘得到所依赖的slice的循环次数, 当前为<code>384</code>.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb26"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>  <span class="dt">int64_t</span> sliceIterationCount <span class="op">=</span> getSliceIterationCount<span class="op">(</span>sliceTripCountMap<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>最后, 计算当前slice的ComputeCost, 计算好后将cost添加到dst的insert point, 再重新计算dst的compute cost.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb27"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Compute op instance count for the src loop nest with iteration slicing.</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">int64_t</span> sliceComputeCost <span class="op">=</span> getComputeCostHelper<span class="op">(</span></span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>      srcForOp<span class="op">,</span> srcStats<span class="op">,</span> <span class="op">&amp;</span>sliceTripCountMap<span class="op">,</span> <span class="op">&amp;</span>computeCostMap<span class="op">);</span></span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Compute cost of fusion for this depth.</span></span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>  computeCostMap<span class="op">[</span>insertPointParent<span class="op">]</span> <span class="op">=</span> sliceComputeCost<span class="op">;</span></span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>  <span class="op">*</span>computeCost <span class="op">=</span></span>
+<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a>      getComputeCostHelper<span class="op">(</span>dstForOp<span class="op">,</span> dstStats<span class="op">,</span></span>
+<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a>                           <span class="co">/*tripCountOverrideMap=*/</span><span class="kw">nullptr</span><span class="op">,</span> <span class="op">&amp;</span>computeCostMap<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>getComputeCostHelper是一个递归+回溯的过程, 首先逐渐递归到最内层循环, 获得当前计算的statement的cost. 假设上一步中<code>computeCostMap[insertPointParent] = 2364</code>, 那么在最内存循环原本的opCount为<code>6</code>, 检测到<code>computeCostMap</code>存在值, 那么累加opCount得到<code>2372</code>, 接下来在逐步累乘tirp count.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb28"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="at">static</span> <span class="dt">int64_t</span> getComputeCostHelper<span class="op">(</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>    Operation <span class="op">*</span>forOp<span class="op">,</span> LoopNestStats <span class="op">&amp;</span>stats<span class="op">,</span></span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>    llvm<span class="op">::</span>SmallDenseMap<span class="op">&lt;</span>Operation <span class="op">*,</span> <span class="dt">uint64_t</span><span class="op">,</span> <span class="dv">8</span><span class="op">&gt;</span> <span class="op">*</span>tripCountOverrideMap<span class="op">,</span></span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>    DenseMap<span class="op">&lt;</span>Operation <span class="op">*,</span> <span class="dt">int64_t</span><span class="op">&gt;</span> <span class="op">*</span>computeCostMap<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">// 'opCount' is the total number operations in one iteration of 'forOp' body,</span></span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>  <span class="co">// minus terminator op which is a no-op.</span></span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">int64_t</span> opCount <span class="op">=</span> stats<span class="op">.</span>opCountMap<span class="op">[</span>forOp<span class="op">]</span> <span class="op">-</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="op">(</span>stats<span class="op">.</span>loopMap<span class="op">.</span>count<span class="op">(</span>forOp<span class="op">)</span> <span class="op">&gt;</span> <span class="dv">0</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb28-9"><a href="#cb28-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span><span class="kw">auto</span> childForOp <span class="op">:</span> stats<span class="op">.</span>loopMap<span class="op">[</span>forOp<span class="op">])</span> <span class="op">{</span></span>
+<span id="cb28-10"><a href="#cb28-10" aria-hidden="true" tabindex="-1"></a>      opCount <span class="op">+=</span> getComputeCostHelper<span class="op">(</span>childForOp<span class="op">,</span> stats<span class="op">,</span> tripCountOverrideMap<span class="op">,</span></span>
+<span id="cb28-11"><a href="#cb28-11" aria-hidden="true" tabindex="-1"></a>                                      computeCostMap<span class="op">);</span></span>
+<span id="cb28-12"><a href="#cb28-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb28-13"><a href="#cb28-13" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb28-14"><a href="#cb28-14" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Add in additional op instances from slice (if specified in map).</span></span>
+<span id="cb28-15"><a href="#cb28-15" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="op">(</span>computeCostMap <span class="op">!=</span> <span class="kw">nullptr</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb28-16"><a href="#cb28-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">auto</span> it <span class="op">=</span> computeCostMap<span class="op">-&gt;</span>find<span class="op">(</span>forOp<span class="op">);</span></span>
+<span id="cb28-17"><a href="#cb28-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>it <span class="op">!=</span> computeCostMap<span class="op">-&gt;</span>end<span class="op">())</span> <span class="op">{</span></span>
+<span id="cb28-18"><a href="#cb28-18" aria-hidden="true" tabindex="-1"></a>      opCount <span class="op">+=</span> it<span class="op">-&gt;</span>second<span class="op">;</span></span>
+<span id="cb28-19"><a href="#cb28-19" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb28-20"><a href="#cb28-20" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb28-21"><a href="#cb28-21" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Override trip count (if specified in map).</span></span>
+<span id="cb28-22"><a href="#cb28-22" aria-hidden="true" tabindex="-1"></a>  <span class="dt">int64_t</span> tripCount <span class="op">=</span> stats<span class="op">.</span>tripCountMap<span class="op">[</span>forOp<span class="op">];</span></span>
+<span id="cb28-23"><a href="#cb28-23" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="op">(</span>tripCountOverrideMap <span class="op">!=</span> <span class="kw">nullptr</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb28-24"><a href="#cb28-24" aria-hidden="true" tabindex="-1"></a>    <span class="kw">auto</span> it <span class="op">=</span> tripCountOverrideMap<span class="op">-&gt;</span>find<span class="op">(</span>forOp<span class="op">);</span></span>
+<span id="cb28-25"><a href="#cb28-25" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>it <span class="op">!=</span> tripCountOverrideMap<span class="op">-&gt;</span>end<span class="op">())</span> <span class="op">{</span></span>
+<span id="cb28-26"><a href="#cb28-26" aria-hidden="true" tabindex="-1"></a>      tripCount <span class="op">=</span> it<span class="op">-&gt;</span>second<span class="op">;</span></span>
+<span id="cb28-27"><a href="#cb28-27" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb28-28"><a href="#cb28-28" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb28-29"><a href="#cb28-29" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Returns the total number of dynamic instances of operations in loop body.</span></span>
+<span id="cb28-30"><a href="#cb28-30" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> tripCount <span class="op">*</span> opCount<span class="op">;</span></span>
+<span id="cb28-31"><a href="#cb28-31" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="update-bestdstloopdepth" class="level1">
+<h1>4.2 Update bestDstLoopDepth</h1>
+<p>计算到fuse loop的cost之后, 计算得到fusion后增加的计算比例系数:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb29"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>    <span class="dt">double</span> additionalComputeFraction <span class="op">=</span></span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>        fusedLoopNestComputeCost <span class="op">/</span></span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>            <span class="op">(</span><span class="kw">static_cast</span><span class="op">&lt;</span><span class="dt">double</span><span class="op">&gt;(</span>srcLoopNestCost<span class="op">)</span> <span class="op">+</span> dstLoopNestCost<span class="op">)</span> <span class="op">-</span></span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>        <span class="dv">1</span><span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>最终打印在每一个层的fuse之后的结果:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb30"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>  evaluating fusion profitability at depth <span class="op">:</span> <span class="dv">4</span></span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>   additional compute fraction<span class="op">:</span> <span class="fl">5400.00</span><span class="op">%</span></span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>   storage reduction factor<span class="op">:</span> <span class="fl">1.00</span><span class="er">x</span></span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>   fused nest cost<span class="op">:</span> <span class="dv">77510737920</span></span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>   src write region size<span class="op">:</span> <span class="dv">2097152</span></span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>   slice write region size<span class="op">:</span> <span class="dv">2097152</span></span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>  evaluating fusion profitability at depth <span class="op">:</span> <span class="dv">3</span></span>
+<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a>   additional compute fraction<span class="op">:</span> <span class="fl">5400.00</span><span class="op">%</span></span>
+<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a>   storage reduction factor<span class="op">:</span> <span class="fl">1.00</span><span class="er">x</span></span>
+<span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a>   fused nest cost<span class="op">:</span> <span class="dv">77510737920</span></span>
+<span id="cb30-12"><a href="#cb30-12" aria-hidden="true" tabindex="-1"></a>   src write region size<span class="op">:</span> <span class="dv">2097152</span></span>
+<span id="cb30-13"><a href="#cb30-13" aria-hidden="true" tabindex="-1"></a>   slice write region size<span class="op">:</span> <span class="dv">2097152</span></span>
+<span id="cb30-14"><a href="#cb30-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-15"><a href="#cb30-15" aria-hidden="true" tabindex="-1"></a>  evaluating fusion profitability at depth <span class="op">:</span> <span class="dv">2</span></span>
+<span id="cb30-16"><a href="#cb30-16" aria-hidden="true" tabindex="-1"></a>   additional compute fraction<span class="op">:</span> <span class="fl">0.00</span><span class="op">%</span></span>
+<span id="cb30-17"><a href="#cb30-17" aria-hidden="true" tabindex="-1"></a>   storage reduction factor<span class="op">:</span> <span class="fl">1.00</span><span class="er">x</span></span>
+<span id="cb30-18"><a href="#cb30-18" aria-hidden="true" tabindex="-1"></a>   fused nest cost<span class="op">:</span> <span class="dv">1409286144</span></span>
+<span id="cb30-19"><a href="#cb30-19" aria-hidden="true" tabindex="-1"></a>   src write region size<span class="op">:</span> <span class="dv">2097152</span></span>
+<span id="cb30-20"><a href="#cb30-20" aria-hidden="true" tabindex="-1"></a>   slice write region size<span class="op">:</span> <span class="dv">2097152</span></span>
+<span id="cb30-21"><a href="#cb30-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-22"><a href="#cb30-22" aria-hidden="true" tabindex="-1"></a>  evaluating fusion profitability at depth <span class="op">:</span> <span class="dv">1</span></span>
+<span id="cb30-23"><a href="#cb30-23" aria-hidden="true" tabindex="-1"></a>   additional compute fraction<span class="op">:</span> <span class="fl">0.00</span><span class="op">%</span></span>
+<span id="cb30-24"><a href="#cb30-24" aria-hidden="true" tabindex="-1"></a>   storage reduction factor<span class="op">:</span> <span class="fl">1.00</span><span class="er">x</span></span>
+<span id="cb30-25"><a href="#cb30-25" aria-hidden="true" tabindex="-1"></a>   fused nest cost<span class="op">:</span> <span class="dv">1409286144</span></span>
+<span id="cb30-26"><a href="#cb30-26" aria-hidden="true" tabindex="-1"></a>   src write region size<span class="op">:</span> <span class="dv">2097152</span></span>
+<span id="cb30-27"><a href="#cb30-27" aria-hidden="true" tabindex="-1"></a>   slice write region size<span class="op">:</span> <span class="dv">2097152</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>最终他默认选择在更内层fusion:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb31"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>LoopFusion fusion stats<span class="op">:</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>  best loop depth<span class="op">:</span> <span class="dv">2</span></span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>  src loop nest compute cost<span class="op">:</span> <span class="dv">1207959552</span></span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>  dst loop nest compute cost<span class="op">:</span> <span class="dv">201326592</span></span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>  fused loop nest compute cost<span class="op">:</span> <span class="dv">1409286144</span></span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>   src mem<span class="op">:</span> <span class="dv">9961472</span></span>
+<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a>   dst mem<span class="op">:</span> <span class="dv">3407872</span></span>
+<span id="cb31-8"><a href="#cb31-8" aria-hidden="true" tabindex="-1"></a>   fused mem<span class="op">:</span> <span class="dv">5505024</span></span>
+<span id="cb31-9"><a href="#cb31-9" aria-hidden="true" tabindex="-1"></a>   slice mem<span class="op">:</span> <span class="dv">2097152</span></span>
+<span id="cb31-10"><a href="#cb31-10" aria-hidden="true" tabindex="-1"></a> fusion is most profitable at depth <span class="dv">2</span> with <span class="dv">0</span><span class="op">%</span> redundant computation <span class="kw">and</span> a <span class="fl">58.823529</span><span class="op">%</span> storage reduction<span class="op">.</span></span>
+<span id="cb31-11"><a href="#cb31-11" aria-hidden="true" tabindex="-1"></a>Fused src loop <span class="dv">0</span> into dst loop <span class="dv">1</span> at depth <span class="dv">2</span><span class="op">:</span></span>
+<span id="cb31-12"><a href="#cb31-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-13"><a href="#cb31-13" aria-hidden="true" tabindex="-1"></a>affine<span class="op">.</span><span class="cf">for</span> <span class="op">%</span>arg5 <span class="op">=</span> <span class="dv">0</span> to <span class="dv">8</span> <span class="op">{</span></span>
+<span id="cb31-14"><a href="#cb31-14" aria-hidden="true" tabindex="-1"></a>  affine<span class="op">.</span><span class="cf">for</span> <span class="op">%</span>arg6 <span class="op">=</span> <span class="dv">0</span> to <span class="dv">128</span> <span class="op">{</span></span>
+<span id="cb31-15"><a href="#cb31-15" aria-hidden="true" tabindex="-1"></a>    affine<span class="op">.</span><span class="cf">for</span> <span class="op">%</span>arg7 <span class="op">=</span> <span class="dv">0</span> to <span class="dv">512</span> <span class="op">{</span></span>
+<span id="cb31-16"><a href="#cb31-16" aria-hidden="true" tabindex="-1"></a>      affine<span class="op">.</span><span class="cf">for</span> <span class="op">%</span>arg8 <span class="op">=</span> <span class="dv">0</span> to <span class="dv">384</span> <span class="op">{</span></span>
+<span id="cb31-17"><a href="#cb31-17" aria-hidden="true" tabindex="-1"></a>        <span class="op">%</span><span class="dv">0</span> <span class="op">=</span> affine<span class="op">.</span>load <span class="op">%</span>arg0<span class="op">[%</span>arg5<span class="op">,</span> <span class="op">%</span>arg6<span class="op">,</span> <span class="op">%</span>arg8<span class="op">]</span> <span class="op">:</span> memref<span class="op">&lt;</span><span class="dv">8</span><span class="er">x128x384xf32</span><span class="op">&gt;</span></span>
+<span id="cb31-18"><a href="#cb31-18" aria-hidden="true" tabindex="-1"></a>        <span class="op">%</span><span class="dv">1</span> <span class="op">=</span> affine<span class="op">.</span>load <span class="op">%</span>arg1<span class="op">[%</span>arg5<span class="op">,</span> <span class="op">%</span>arg8<span class="op">,</span> <span class="op">%</span>arg7<span class="op">]</span> <span class="op">:</span> memref<span class="op">&lt;</span><span class="dv">8</span><span class="er">x384x512xf32</span><span class="op">&gt;</span></span>
+<span id="cb31-19"><a href="#cb31-19" aria-hidden="true" tabindex="-1"></a>        <span class="op">%</span><span class="dv">2</span> <span class="op">=</span> affine<span class="op">.</span>load <span class="op">%</span>arg2<span class="op">[%</span>arg5<span class="op">,</span> <span class="op">%</span>arg6<span class="op">,</span> <span class="op">%</span>arg7<span class="op">]</span> <span class="op">:</span> memref<span class="op">&lt;</span><span class="dv">8</span><span class="er">x128x512xf32</span><span class="op">&gt;</span></span>
+<span id="cb31-20"><a href="#cb31-20" aria-hidden="true" tabindex="-1"></a>        <span class="op">%</span><span class="dv">3</span> <span class="op">=</span> arith<span class="op">.</span>mulf <span class="op">%</span><span class="dv">0</span><span class="op">,</span> <span class="op">%</span><span class="dv">1</span> <span class="op">:</span> f32</span>
+<span id="cb31-21"><a href="#cb31-21" aria-hidden="true" tabindex="-1"></a>        <span class="op">%</span><span class="dv">4</span> <span class="op">=</span> arith<span class="op">.</span>addf <span class="op">%</span><span class="dv">2</span><span class="op">,</span> <span class="op">%</span><span class="dv">3</span> <span class="op">:</span> f32</span>
+<span id="cb31-22"><a href="#cb31-22" aria-hidden="true" tabindex="-1"></a>        affine<span class="op">.</span>store <span class="op">%</span><span class="dv">4</span><span class="op">,</span> <span class="op">%</span>arg2<span class="op">[%</span>arg5<span class="op">,</span> <span class="op">%</span>arg6<span class="op">,</span> <span class="op">%</span>arg7<span class="op">]</span> <span class="op">:</span> memref<span class="op">&lt;</span><span class="dv">8</span><span class="er">x128x512xf32</span><span class="op">&gt;</span></span>
+<span id="cb31-23"><a href="#cb31-23" aria-hidden="true" tabindex="-1"></a>      <span class="op">}</span></span>
+<span id="cb31-24"><a href="#cb31-24" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb31-25"><a href="#cb31-25" aria-hidden="true" tabindex="-1"></a>    affine<span class="op">.</span><span class="cf">for</span> <span class="op">%</span>arg7 <span class="op">=</span> <span class="dv">0</span> to <span class="dv">64</span> <span class="op">{</span></span>
+<span id="cb31-26"><a href="#cb31-26" aria-hidden="true" tabindex="-1"></a>      affine<span class="op">.</span><span class="cf">for</span> <span class="op">%</span>arg8 <span class="op">=</span> <span class="dv">0</span> to <span class="dv">512</span> <span class="op">{</span></span>
+<span id="cb31-27"><a href="#cb31-27" aria-hidden="true" tabindex="-1"></a>        <span class="op">%</span><span class="dv">0</span> <span class="op">=</span> affine<span class="op">.</span>load <span class="op">%</span>arg2<span class="op">[%</span>arg5<span class="op">,</span> <span class="op">%</span>arg6<span class="op">,</span> <span class="op">%</span>arg8<span class="op">]</span> <span class="op">:</span> memref<span class="op">&lt;</span><span class="dv">8</span><span class="er">x128x512xf32</span><span class="op">&gt;</span></span>
+<span id="cb31-28"><a href="#cb31-28" aria-hidden="true" tabindex="-1"></a>        <span class="op">%</span><span class="dv">1</span> <span class="op">=</span> affine<span class="op">.</span>load <span class="op">%</span>arg3<span class="op">[%</span>arg5<span class="op">,</span> <span class="op">%</span>arg8<span class="op">,</span> <span class="op">%</span>arg7<span class="op">]</span> <span class="op">:</span> memref<span class="op">&lt;</span><span class="dv">8</span><span class="er">x512x64xf32</span><span class="op">&gt;</span></span>
+<span id="cb31-29"><a href="#cb31-29" aria-hidden="true" tabindex="-1"></a>        <span class="op">%</span><span class="dv">2</span> <span class="op">=</span> affine<span class="op">.</span>load <span class="op">%</span>arg4<span class="op">[%</span>arg5<span class="op">,</span> <span class="op">%</span>arg6<span class="op">,</span> <span class="op">%</span>arg7<span class="op">]</span> <span class="op">:</span> memref<span class="op">&lt;</span><span class="dv">8</span><span class="er">x128x64xf32</span><span class="op">&gt;</span></span>
+<span id="cb31-30"><a href="#cb31-30" aria-hidden="true" tabindex="-1"></a>        <span class="op">%</span><span class="dv">3</span> <span class="op">=</span> arith<span class="op">.</span>mulf <span class="op">%</span><span class="dv">0</span><span class="op">,</span> <span class="op">%</span><span class="dv">1</span> <span class="op">:</span> f32</span>
+<span id="cb31-31"><a href="#cb31-31" aria-hidden="true" tabindex="-1"></a>        <span class="op">%</span><span class="dv">4</span> <span class="op">=</span> arith<span class="op">.</span>addf <span class="op">%</span><span class="dv">2</span><span class="op">,</span> <span class="op">%</span><span class="dv">3</span> <span class="op">:</span> f32</span>
+<span id="cb31-32"><a href="#cb31-32" aria-hidden="true" tabindex="-1"></a>        affine<span class="op">.</span>store <span class="op">%</span><span class="dv">4</span><span class="op">,</span> <span class="op">%</span>arg4<span class="op">[%</span>arg5<span class="op">,</span> <span class="op">%</span>arg6<span class="op">,</span> <span class="op">%</span>arg7<span class="op">]</span> <span class="op">:</span> memref<span class="op">&lt;</span><span class="dv">8</span><span class="er">x128x64xf32</span><span class="op">&gt;</span></span>
+<span id="cb31-33"><a href="#cb31-33" aria-hidden="true" tabindex="-1"></a>      <span class="op">}</span></span>
+<span id="cb31-34"><a href="#cb31-34" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb31-35"><a href="#cb31-35" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb31-36"><a href="#cb31-36" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>affine loop fusion虽然最终的结果并不一定是好的, 因为他这里没有考虑内存层级以及数据复用等因素, 不过把这些内容作为约束多面体最佳使用实践来学习帮助非常大.</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/zhen8838\.github\.io");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script src="https://utteranc.es/client.js" repo="zhen8838/zhen8838.github.io" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

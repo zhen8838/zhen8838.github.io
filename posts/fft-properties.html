@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2019-03-27">
+
+<title>声音信号处理-FFT性质 – Zheng’s Notes</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../assets/favicon.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-7072389654d23eff08f359f9aa0d1ee7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">Zheng’s Notes</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#傅里叶属性" id="toc-傅里叶属性" class="nav-link active" data-scroll-target="#傅里叶属性">傅里叶属性</a></li>
+  <li><a href="#平移" id="toc-平移" class="nav-link" data-scroll-target="#平移">平移</a></li>
+  <li><a href="#对称性" id="toc-对称性" class="nav-link" data-scroll-target="#对称性">对称性</a></li>
+  <li><a href="#卷积" id="toc-卷积" class="nav-link" data-scroll-target="#卷积">卷积</a></li>
+  <li><a href="#能量卷积" id="toc-能量卷积" class="nav-link" data-scroll-target="#能量卷积">能量卷积</a></li>
+  <li><a href="#分贝" id="toc-分贝" class="nav-link" data-scroll-target="#分贝">分贝</a></li>
+  <li><a href="#fft变换" id="toc-fft变换" class="nav-link" data-scroll-target="#fft变换">FFT变换</a></li>
+  <li><a href="#fft-编程" id="toc-fft-编程" class="nav-link" data-scroll-target="#fft-编程">FFT 编程</a>
+  <ul class="collapse">
+  <li><a href="#对三角波进行fft" id="toc-对三角波进行fft" class="nav-link" data-scroll-target="#对三角波进行fft">对三角波进行fft</a></li>
+  <li><a href="#位移三角波再进行fft" id="toc-位移三角波再进行fft" class="nav-link" data-scroll-target="#位移三角波再进行fft">位移三角波再进行fft</a></li>
+  <li><a href="#读取真实信号进行fft" id="toc-读取真实信号进行fft" class="nav-link" data-scroll-target="#读取真实信号进行fft">读取真实信号进行fft</a></li>
+  <li><a href="#读取真实信号进行fft-1" id="toc-读取真实信号进行fft-1" class="nav-link" data-scroll-target="#读取真实信号进行fft-1">读取真实信号进行fft</a></li>
+  </ul></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">声音信号处理-FFT性质</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">机器学习</div>
+  </div>
+  </div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">March 27, 2019</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>今天实践FFT的各种性质。</p>
+<!--more-->
+<section id="傅里叶属性" class="level1">
+<h1>傅里叶属性</h1>
+<p>首先从<span class="math inline">\(x_1\)</span>,<span class="math inline">\(x_2\)</span>两个信号的线性组合开始:</p>
+<p>线性:$ &nbsp;&nbsp;&nbsp;&nbsp;ax_1[n]+bx_2[n]aX_1[n]+bX_2[n] $</p>
+<p><span class="math display">\[
+\begin{align}
+\because DFT&amp;(ax_1[n]+bx_2[n]) \\
+&amp;=\sum^{N-1}_{n=0}(ax_1[n]+bx_2[n])e^{-j2\pi kn/N}\\
+&amp;=\sum^{N-1}_{n=0}ax_1[n]e^{-j2\pi kn/N}+\sum^{N-1}_{n=0}bx_2[n]e^{-j2\pi kn/N}\\
+&amp;=a\sum^{N-1}_{n=0}x_1[n]e^{-j2\pi kn/N}+b\sum^{N-1}_{n=0}x_2[n]e^{-j2\pi kn/N}\\
+&amp;=aX_1[k]+bX_2[k]
+\end{align}
+\]</span> 说明两个信号相加,在幅度谱上也是进行相同的相加.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.io.wavfile <span class="im">import</span> read</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.fftpack <span class="im">import</span> fft, ifft</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>a <span class="op">=</span> <span class="fl">0.5</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>b <span class="op">=</span> <span class="fl">1.0</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>k1 <span class="op">=</span> <span class="dv">20</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>k2 <span class="op">=</span> <span class="dv">25</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">128</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>x1 <span class="op">=</span> a<span class="op">*</span>np.exp(<span class="ot">1j</span><span class="op">*</span><span class="dv">2</span><span class="op">*</span>np.pi<span class="op">*</span>k1<span class="op">/</span>N<span class="op">*</span>np.arange(N))</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>x2 <span class="op">=</span> b<span class="op">*</span>np.exp(<span class="ot">1j</span><span class="op">*</span><span class="dv">2</span><span class="op">*</span>np.pi<span class="op">*</span>k2<span class="op">/</span>N<span class="op">*</span>np.arange(N))</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>plt.figure(<span class="dv">1</span>, figsize<span class="op">=</span>(<span class="fl">9.5</span>, <span class="dv">7</span>))</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">321</span>)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'x1 (amp=.5, freq=20)'</span>)</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="dv">0</span>, N, <span class="fl">1.0</span>), np.real(x1), lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="dv">0</span>, N, <span class="op">-</span><span class="dv">1</span>, <span class="dv">1</span>])</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">322</span>)</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'x2 (amp=1, freq=25)'</span>)</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="dv">0</span>, N, <span class="fl">1.0</span>), np.real(x2), lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="dv">0</span>, N, <span class="op">-</span><span class="dv">1</span>, <span class="dv">1</span>])</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>X1 <span class="op">=</span> fft(x1)</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>mX1 <span class="op">=</span> <span class="bu">abs</span>(X1)<span class="op">/</span>N        </span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">323</span>)</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'mX1 (amp=.5, freq=20)'</span>)</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="dv">0</span>, N, <span class="fl">1.0</span>), mX1, <span class="st">'r'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="dv">0</span>,N,<span class="dv">0</span>,<span class="dv">1</span>])</span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>X2 <span class="op">=</span> fft(x2)</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>mX2 <span class="op">=</span> <span class="bu">abs</span>(X2)<span class="op">/</span>N        </span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">324</span>)</span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'mX2 (amp=1, freq=25)'</span>)</span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="dv">0</span>, N, <span class="fl">1.0</span>), mX2, <span class="st">'r'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="dv">0</span>,N,<span class="dv">0</span>,<span class="dv">1</span>])</span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> x1 <span class="op">+</span> x2</span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">325</span>)</span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'mX1+mX2'</span>)</span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="dv">0</span>, N, <span class="fl">1.0</span>), mX1<span class="op">+</span>mX2, <span class="st">'r'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="dv">0</span>, N, <span class="dv">0</span>, <span class="dv">1</span>])</span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>X <span class="op">=</span> fft(x)</span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a>mX<span class="op">=</span> <span class="bu">abs</span>(X)<span class="op">/</span>N        </span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">326</span>)</span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'DFT(x1+x2)'</span>)</span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="dv">0</span>, N, <span class="fl">1.0</span>), mX, <span class="st">'r'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="dv">0</span>,N,<span class="dv">0</span>,<span class="dv">1</span>])</span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><img src="fft-properties/FFT-properties_1_0.png" class="img-fluid"></p>
+</section>
+<section id="平移" class="level1">
+<h1>平移</h1>
+<p><span class="math display">\[x[n-n_0]\Leftrightarrow e^{-j2\pi kn_0/N}X[k]\]</span> 证明: <span class="math display">\[
+\begin{align}
+DFT&amp;(x[n-n_0])\\
+&amp;=\sum^{N-1}_{n=0}x[n-n_0]e^{-j2\pi kn/N}\\
+&amp;=\sum^{N-1}_{n=0}x[m]e^{-j2\pi k(m+n_0)/N}\ \ \ \ (m=n-n_0)\\
+&amp;=\sum^{N-1}_{n=0}x[m]e^{-j2\pi km/N}e^{-j2\pi kn_0/N}\\
+&amp;=e^{-j2\pi kn_0/N}\sum^{N-1}_{n=0}x[m]e^{-j2\pi km/N} \\
+&amp;=e^{-j2\pi kn_0/N}X[k]
+\end{align}
+\]</span> 时域中平移,在DFT之后就相当于乘上特定的sin波形,两个信号的频谱与幅度谱都相同,但是相位谱是不同的.(因为这个是复指数,乘上不会改变幅度)</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sys</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.signal <span class="im">import</span> sawtooth</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>sys.path.append(<span class="st">'../software/models/'</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> dftModel <span class="im">as</span> DF</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">128</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>x1 <span class="op">=</span> sawtooth(<span class="dv">2</span><span class="op">*</span>np.pi<span class="op">*</span>np.arange(<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>,N<span class="op">/</span><span class="dv">2</span>)<span class="op">/</span><span class="bu">float</span>(N))</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>x2 <span class="op">=</span> sawtooth(<span class="dv">2</span><span class="op">*</span>np.pi<span class="op">*</span>np.arange(<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span><span class="op">-</span><span class="dv">2</span>,N<span class="op">/</span><span class="dv">2</span><span class="op">-</span><span class="dv">2</span>)<span class="op">/</span><span class="bu">float</span>(N))</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>mX1, pX1 <span class="op">=</span> DF.dftAnal(x1, np.ones(N), N)</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>mX2, pX2 <span class="op">=</span> DF.dftAnal(x2, np.ones(N), N)</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>plt.figure(<span class="dv">1</span>, figsize<span class="op">=</span>(<span class="fl">9.5</span>, <span class="dv">7</span>))</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">321</span>)</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'x1=x[n]'</span>)</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>, N<span class="op">/</span><span class="dv">2</span>, <span class="fl">1.0</span>), x1, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>, N<span class="op">/</span><span class="dv">2</span>, <span class="op">-</span><span class="dv">1</span>, <span class="dv">1</span>])</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">322</span>)</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'x2=x[n-2]'</span>)</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>, N<span class="op">/</span><span class="dv">2</span>, <span class="fl">1.0</span>), x2, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>, N<span class="op">/</span><span class="dv">2</span>, <span class="op">-</span><span class="dv">1</span>, <span class="dv">1</span>])</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">323</span>)</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'mX1'</span>)</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="dv">0</span>, mX1.size, <span class="fl">1.0</span>), mX1, <span class="st">'r'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="dv">0</span>,mX1.size,<span class="bu">min</span>(mX1),<span class="bu">max</span>(mX1)])      </span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">324</span>)</span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'mX2'</span>)</span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="dv">0</span>, mX2.size, <span class="fl">1.0</span>), mX2, <span class="st">'r'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="dv">0</span>,mX2.size,<span class="bu">min</span>(mX2),<span class="bu">max</span>(mX2)])  </span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">325</span>)</span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'pX1'</span>)</span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="dv">0</span>, pX1.size, <span class="fl">1.0</span>), pX1, <span class="st">'c'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="dv">0</span>,pX1.size,<span class="bu">min</span>(pX1),<span class="bu">max</span>(pX2)])  </span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">326</span>)</span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'pX2'</span>)</span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="dv">0</span>, pX2.size, <span class="fl">1.0</span>), pX2, <span class="st">'c'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="dv">0</span>,pX2.size,<span class="bu">min</span>(pX2),<span class="bu">max</span>(pX2)]) </span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><img src="fft-properties/FFT-properties_3_0.png" class="img-fluid"></p>
+</section>
+<section id="对称性" class="level1">
+<h1>对称性</h1>
+<p>如果一个偶对称的实信号做DFT,那么他的复数谱也是偶对称的,复数谱的虚部是奇对称的. 幅度谱为偶对称,相位谱为奇对称.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sys</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.fftpack <span class="im">import</span> fft, ifft, fftshift</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> math</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>sys.path.append(<span class="st">'../software/models/'</span>)</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> utilFunctions <span class="im">as</span> UF</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> dftModel <span class="im">as</span> DF</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>(fs, x) <span class="op">=</span> UF.wavread(<span class="st">'../sounds/soprano-E4.wav'</span>)</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>w <span class="op">=</span> np.hamming(<span class="dv">511</span>)</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">512</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>pin <span class="op">=</span> <span class="dv">5000</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>hM1 <span class="op">=</span> <span class="bu">int</span>(math.floor((w.size<span class="op">+</span><span class="dv">1</span>)<span class="op">/</span><span class="dv">2</span>)) </span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>hM2 <span class="op">=</span> <span class="bu">int</span>(math.floor(w.size<span class="op">/</span><span class="dv">2</span>)) </span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>fftbuffer <span class="op">=</span> np.zeros(N)  </span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>x1 <span class="op">=</span> x[pin<span class="op">-</span>hM1:pin<span class="op">+</span>hM2]</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>xw <span class="op">=</span> x1<span class="op">*</span>w</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>fftbuffer[:hM1] <span class="op">=</span> xw[hM2:]</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>fftbuffer[N<span class="op">-</span>hM2:] <span class="op">=</span> xw[:hM2]        </span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>X <span class="op">=</span> fftshift(fft(fftbuffer))</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>mX <span class="op">=</span> <span class="dv">20</span> <span class="op">*</span> np.log10(<span class="bu">abs</span>(X))       </span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>pX <span class="op">=</span> np.unwrap(np.angle(X))</span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>plt.figure(<span class="dv">1</span>, figsize<span class="op">=</span>(<span class="fl">9.5</span>, <span class="dv">7</span>))</span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">311</span>)</span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="op">-</span>hM1, hM2), x1, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="op">-</span>hM1, hM2, <span class="bu">min</span>(x1), <span class="bu">max</span>(x1)])</span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">'amplitude'</span>)</span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'x (soprano-E4.wav)'</span>)</span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">3</span>,<span class="dv">1</span>,<span class="dv">2</span>)</span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>,N<span class="op">/</span><span class="dv">2</span>), mX, <span class="st">'r'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>,N<span class="op">/</span><span class="dv">2</span>,<span class="op">-</span><span class="dv">48</span>,<span class="bu">max</span>(mX)])</span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a>plt.title (<span class="st">'mX = 20*log10(abs(X))'</span>)</span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">'amplitude (dB)'</span>)</span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">3</span>,<span class="dv">1</span>,<span class="dv">3</span>)</span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>,N<span class="op">/</span><span class="dv">2</span>), pX, <span class="st">'c'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>,N<span class="op">/</span><span class="dv">2</span>,<span class="bu">min</span>(pX),<span class="bu">max</span>(pX)])</span>
+<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a>plt.title (<span class="st">'pX = unwrap(angle(X))'</span>)</span>
+<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">'phase (radians)'</span>)</span>
+<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><img src="fft-properties/FFT-properties_5_0.png" class="img-fluid"></p>
+</section>
+<section id="卷积" class="level1">
+<h1>卷积</h1>
+<p><span class="math display">\[x_1[n] \ast x_2[n]\Leftrightarrow X_1[n] \times X_2[n]\]</span> 证明: <span class="math display">\[
+\begin{align}
+DFT&amp;(x_1[n] \ast x_2[n]) \\
+&amp;=\sum^{N-1}_{n=0}(x_1[n] \ast x_2[n])e^{-j2\pi kn/N}\\
+&amp;=\sum^{N-1}_{n=0}\sum^{N-1}_{m=0}x_1[m]x_2[n-m])e^{-j2\pi kn/N}\\
+&amp;=\sum^{N-1}_{m=0}x_1[m]\sum^{N-1}_{n=0}x_2[n-m])e^{-j2\pi kn/N}\\
+&amp;=(\sum^{N-1}_{m=0}x_1[m]e^{-j2\pi km/N})X_2[k] \\
+&amp;=X_1[k]X_2[k]
+\end{align}
+\]</span> 时域的卷积相当于频域的乘法.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.fftpack <span class="im">import</span> fft, fftshift</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>plt.figure(<span class="dv">1</span>, figsize<span class="op">=</span>(<span class="fl">9.5</span>, <span class="dv">7</span>))</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>M <span class="op">=</span> <span class="dv">64</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">64</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>x1 <span class="op">=</span> np.hanning(M)</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>x2 <span class="op">=</span> np.cos(<span class="dv">2</span><span class="op">*</span>np.pi<span class="op">*</span><span class="dv">2</span><span class="op">/</span>M<span class="op">*</span>np.arange(M))</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>y1 <span class="op">=</span> x1<span class="op">*</span>x2</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>mY1 <span class="op">=</span> <span class="dv">20</span> <span class="op">*</span> np.log10(np.<span class="bu">abs</span>(fftshift(fft(y1, N))))</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">3</span>,<span class="dv">2</span>,<span class="dv">1</span>)</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'x1 (hanning)'</span>)</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="op">-</span>M<span class="op">/</span><span class="dv">2</span>, M<span class="op">/</span><span class="dv">2</span>), x1, <span class="st">'b'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="op">-</span>M<span class="op">/</span><span class="dv">2</span>,M<span class="op">/</span><span class="dv">2</span>,<span class="dv">0</span>,<span class="dv">1</span>])</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">3</span>,<span class="dv">2</span>,<span class="dv">2</span>)</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'x2 (cosine)'</span>)</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="op">-</span>M<span class="op">/</span><span class="dv">2</span>, M<span class="op">/</span><span class="dv">2</span>),x2, <span class="st">'b'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="op">-</span>M<span class="op">/</span><span class="dv">2</span>,M<span class="op">/</span><span class="dv">2</span>,<span class="op">-</span><span class="dv">1</span>,<span class="dv">1</span>])</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>mX1 <span class="op">=</span> <span class="dv">20</span> <span class="op">*</span> np.log10(np.<span class="bu">abs</span>(fftshift(fft(x1, M)))<span class="op">/</span>M)</span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">3</span>,<span class="dv">2</span>,<span class="dv">3</span>)</span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'X1'</span>)</span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>, N<span class="op">/</span><span class="dv">2</span>),mX1, <span class="st">'r'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>,N<span class="op">/</span><span class="dv">2</span>,<span class="op">-</span><span class="dv">80</span>,<span class="bu">max</span>(mX1)])</span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>mX2 <span class="op">=</span> <span class="dv">20</span> <span class="op">*</span> np.log10(np.<span class="bu">abs</span>(fftshift(fft(x2, M)))<span class="op">/</span>M)</span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">3</span>,<span class="dv">2</span>,<span class="dv">4</span>)</span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'X2'</span>)</span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>, N<span class="op">/</span><span class="dv">2</span>),mX2, <span class="st">'r'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>,N<span class="op">/</span><span class="dv">2</span>,<span class="op">-</span><span class="dv">80</span>,<span class="bu">max</span>(mX2)])</span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">3</span>,<span class="dv">2</span>,<span class="dv">5</span>)</span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'DFT(x1 x x2)'</span>)</span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>, N<span class="op">/</span><span class="dv">2</span>),mY1, <span class="st">'r'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>,N<span class="op">/</span><span class="dv">2</span>,<span class="op">-</span><span class="dv">80</span>,<span class="bu">max</span>(mY1)])</span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>Y2 <span class="op">=</span> np.convolve(fftshift(fft(x1, M)), fftshift(fft(x2, M)))</span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a>mY2 <span class="op">=</span> <span class="dv">20</span> <span class="op">*</span> np.log10(np.<span class="bu">abs</span>(Y2)) <span class="op">-</span> <span class="dv">40</span></span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">3</span>,<span class="dv">2</span>,<span class="dv">6</span>)</span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'X1 * X2'</span>)</span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="op">-</span>N<span class="op">//</span><span class="dv">2</span>, N<span class="op">//</span><span class="dv">2</span>),mY2[M<span class="op">//</span><span class="dv">2</span>:M<span class="op">+</span>M<span class="op">//</span><span class="dv">2</span>], <span class="st">'r'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>,N<span class="op">/</span><span class="dv">2</span>,<span class="op">-</span><span class="dv">80</span>,<span class="bu">max</span>(mY2)])</span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><img src="fft-properties/FFT-properties_7_0.png" class="img-fluid"></p>
+<p>我们可以利用卷积来进行滤波~</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> time, os, sys</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.fftpack <span class="im">import</span> fft, ifft, fftshift</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> math</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> utilFunctions <span class="im">as</span> UF</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> dftModel <span class="im">as</span> DF</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>(fs, x) <span class="op">=</span> UF.wavread(<span class="st">'../sounds/ocean.wav'</span>)</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>(fs, x2) <span class="op">=</span> UF.wavread(<span class="st">'../sounds/impulse-response.wav'</span>)</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>x1 <span class="op">=</span> x[<span class="dv">40000</span>:<span class="dv">44096</span>]</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">4096</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>plt.figure(<span class="dv">1</span>, figsize<span class="op">=</span>(<span class="fl">9.5</span>, <span class="dv">7</span>))</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">3</span>,<span class="dv">2</span>,<span class="dv">1</span>)</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'x1 (ocean.wav)'</span>)</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>plt.plot(x1, <span class="st">'b'</span>)</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="dv">0</span>,N,<span class="bu">min</span>(x1),<span class="bu">max</span>(x1)])</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">3</span>,<span class="dv">2</span>,<span class="dv">2</span>)</span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'x2 (impulse-response.wav)'</span>)</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>plt.plot(x2, <span class="st">'b'</span>)</span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="dv">0</span>,N,<span class="bu">min</span>(x2),<span class="bu">max</span>(x2)])</span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>mX1, pX1 <span class="op">=</span> DF.dftAnal(x1, np.ones(N), N)</span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>mX1 <span class="op">=</span> mX1 <span class="op">-</span> <span class="bu">max</span>(mX1)</span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">3</span>,<span class="dv">2</span>,<span class="dv">3</span>)</span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'X1'</span>)</span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>plt.plot(mX1, <span class="st">'r'</span>)</span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="dv">0</span>,N<span class="op">/</span><span class="dv">2</span>,<span class="op">-</span><span class="dv">70</span>,<span class="dv">0</span>])</span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>mX2, pX2 <span class="op">=</span> DF.dftAnal(x2, np.ones(N), N)</span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a>mX2 <span class="op">=</span> mX2 <span class="op">-</span> <span class="bu">max</span>(mX2)</span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">3</span>,<span class="dv">2</span>,<span class="dv">4</span>)</span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'X2'</span>)</span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a>plt.plot(mX2, <span class="st">'r'</span>)</span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="dv">0</span>,N<span class="op">/</span><span class="dv">2</span>,<span class="op">-</span><span class="dv">70</span>,<span class="dv">0</span>])</span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> np.convolve(x1, x2)</span>
+<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a>mY, pY <span class="op">=</span> DF.dftAnal(y[<span class="dv">0</span>:N], np.ones(N), N)</span>
+<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a>mY <span class="op">=</span> mY <span class="op">-</span> <span class="bu">max</span>(mY)</span>
+<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">3</span>,<span class="dv">2</span>,<span class="dv">5</span>)</span>
+<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'DFT(x1 * x2)'</span>)</span>
+<span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a>plt.plot(mY, <span class="st">'r'</span>)</span>
+<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="dv">0</span>,N<span class="op">/</span><span class="dv">2</span>,<span class="op">-</span><span class="dv">70</span>,<span class="dv">0</span>])</span>
+<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-47"><a href="#cb5-47" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">3</span>,<span class="dv">2</span>,<span class="dv">6</span>)</span>
+<span id="cb5-48"><a href="#cb5-48" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'X1 x X2'</span>)</span>
+<span id="cb5-49"><a href="#cb5-49" aria-hidden="true" tabindex="-1"></a>mY1 <span class="op">=</span> <span class="dv">20</span><span class="op">*</span>np.log10(np.<span class="bu">abs</span>(fft(x1) <span class="op">*</span> fft(x2)))</span>
+<span id="cb5-50"><a href="#cb5-50" aria-hidden="true" tabindex="-1"></a>mY1 <span class="op">=</span> mY1 <span class="op">-</span> <span class="bu">max</span>(mY1)</span>
+<span id="cb5-51"><a href="#cb5-51" aria-hidden="true" tabindex="-1"></a>plt.plot(mY1[<span class="dv">0</span>:N<span class="op">//</span><span class="dv">2</span>], <span class="st">'r'</span>)</span>
+<span id="cb5-52"><a href="#cb5-52" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="dv">0</span>,N<span class="op">//</span><span class="dv">2</span>,<span class="op">-</span><span class="dv">84</span>,<span class="dv">0</span>])</span>
+<span id="cb5-53"><a href="#cb5-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-54"><a href="#cb5-54" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb5-55"><a href="#cb5-55" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><img src="fft-properties/FFT-properties_9_0.png" class="img-fluid"></p>
+</section>
+<section id="能量卷积" class="level1">
+<h1>能量卷积</h1>
+<p>能量被定义为信号的绝对平方根之和,在频域中需要除以N. <span class="math display">\[\sum^{N/2-1}_{n=-N/2}|x[n]|^2=\frac{1}{N}\sum^{N/2-1}_{n=-N/2}|X[k]|^2\]</span> 例如: <span class="math display">\[\sum^{N/2-1}_{n=-N/2}|x[n]|^2=11.81182\]</span> <span class="math display">\[\frac{1}{N}\sum^{N/2-1}_{n=-N/2}|X[k]|^2=11.81182\]</span></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.signal <span class="im">import</span> hamming</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.fftpack <span class="im">import</span> fft, fftshift</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>plt.figure(<span class="dv">1</span>, figsize<span class="op">=</span>(<span class="dv">6</span>, <span class="dv">5</span>))</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>M<span class="op">=</span> <span class="dv">64</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">64</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> np.cos(<span class="dv">2</span><span class="op">*</span>np.pi<span class="op">*</span><span class="dv">3</span><span class="op">/</span>M<span class="op">*</span>np.arange(M)) <span class="op">*</span> np.hanning(M)</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">2</span>,<span class="dv">1</span>,<span class="dv">1</span>)</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'x'</span>)</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="op">-</span>M<span class="op">/</span><span class="fl">2.0</span>,M<span class="op">/</span><span class="dv">2</span>), x, <span class="st">'b'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="op">-</span>M<span class="op">/</span><span class="dv">2</span>,M<span class="op">/</span><span class="dv">2</span><span class="op">-</span><span class="dv">1</span>,<span class="op">-</span><span class="dv">1</span>,<span class="dv">1</span>])</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>powerx <span class="op">=</span> <span class="bu">sum</span>(np.<span class="bu">abs</span>(x)<span class="op">**</span><span class="dv">2</span>)</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span> (powerx)</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>mX <span class="op">=</span> np.<span class="bu">abs</span>(fftshift(fft(x, N)))</span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">2</span>,<span class="dv">1</span>,<span class="dv">2</span>)</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'abs(X)'</span>)</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="op">-</span>N<span class="op">/</span><span class="fl">2.0</span>,N<span class="op">/</span><span class="dv">2</span>), mX, <span class="st">'r'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>,N<span class="op">/</span><span class="dv">2</span><span class="op">-</span><span class="dv">1</span>,<span class="dv">0</span>,<span class="bu">max</span>(mX)])</span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>powerX <span class="op">=</span> <span class="bu">sum</span>(mX<span class="op">**</span><span class="dv">2</span>) <span class="op">/</span> N</span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span> (powerX)</span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<pre><code>11.811824035647202
+11.811824035647192</code></pre>
+<p><img src="fft-properties/FFT-properties_11_1.png" class="img-fluid"></p>
+</section>
+<section id="分贝" class="level1">
+<h1>分贝</h1>
+<p>与能量相关的概念是振幅,所以定义分贝为信号绝对值的20倍log10.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.signal <span class="im">import</span> hamming</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.fftpack <span class="im">import</span> fft, fftshift</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>plt.figure(<span class="dv">1</span>, figsize<span class="op">=</span>(<span class="fl">9.5</span>, <span class="dv">6</span>))</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>M<span class="op">=</span> <span class="dv">64</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">256</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> np.cos(<span class="dv">2</span><span class="op">*</span>np.pi<span class="op">*</span><span class="dv">3</span><span class="op">/</span>M<span class="op">*</span>np.arange(M)) <span class="op">*</span> np.hanning(M)</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">3</span>,<span class="dv">1</span>,<span class="dv">1</span>)</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="op">-</span>M<span class="op">/</span><span class="fl">2.0</span>,M<span class="op">/</span><span class="dv">2</span>), x, <span class="st">'b'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="op">-</span>M<span class="op">/</span><span class="dv">2</span>,M<span class="op">/</span><span class="dv">2</span><span class="op">-</span><span class="dv">1</span>,<span class="op">-</span><span class="dv">1</span>,<span class="dv">1</span>])</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'x'</span>)</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>mX <span class="op">=</span> np.<span class="bu">abs</span>(fftshift(fft(x, N)))</span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">3</span>,<span class="dv">1</span>,<span class="dv">2</span>)</span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="op">-</span>N<span class="op">/</span><span class="fl">2.0</span>,N<span class="op">/</span><span class="dv">2</span>), mX, <span class="st">'r'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>,N<span class="op">/</span><span class="dv">2</span><span class="op">-</span><span class="dv">1</span>,<span class="dv">0</span>,<span class="bu">max</span>(mX)])</span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'abs(X)'</span>)</span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>mX <span class="op">=</span> <span class="dv">20</span> <span class="op">*</span> np.log10(mX)</span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">3</span>,<span class="dv">1</span>,<span class="dv">3</span>)</span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="op">-</span>N<span class="op">/</span><span class="fl">2.0</span>,N<span class="op">/</span><span class="dv">2</span>), mX, <span class="st">'r'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="op">-</span>N<span class="op">/</span><span class="dv">2</span>,N<span class="op">/</span><span class="dv">2</span><span class="op">-</span><span class="dv">1</span>,<span class="op">-</span><span class="dv">50</span>,<span class="bu">max</span>(mX)])</span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'20*log10(abs(X))'</span>)</span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><img src="fft-properties/FFT-properties_13_0.png" class="img-fluid"></p>
+</section>
+<section id="fft变换" class="level1">
+<h1>FFT变换</h1>
+<p>因为DFT计算量较大,FFT则是利用DFT的对称性来达到加速计算的效果.</p>
+<p>首先我们看看时间对比:</p>
+<p>DFT运算会达到2分钟,成指数级增长.</p>
+<p>FFT则快多了,是<span class="math inline">\(nlogn\)</span>的增长</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.fftpack <span class="im">import</span> fft</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> time</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>timeDFT <span class="op">=</span> np.array([])</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>timeFFT <span class="op">=</span> np.array([])</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>Ns <span class="op">=</span> <span class="dv">2</span><span class="op">**</span>np.arange(<span class="dv">7</span>,<span class="dv">15</span>)</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> N <span class="kw">in</span> Ns:</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    x <span class="op">=</span> np.random.rand(N)</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>    X <span class="op">=</span> np.array([])</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>    str_time <span class="op">=</span> time.time()</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> k <span class="kw">in</span> <span class="bu">range</span>(N):</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>        s <span class="op">=</span> np.exp(<span class="ot">1j</span><span class="op">*</span><span class="dv">2</span><span class="op">*</span>np.pi<span class="op">*</span>k<span class="op">/</span>N<span class="op">*</span>np.arange(N))</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>        X <span class="op">=</span> np.append(X, <span class="bu">sum</span>(x<span class="op">*</span>np.conjugate(s)))</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>    timeDFT <span class="op">=</span> np.append(timeDFT, time.time()<span class="op">-</span>str_time)</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> np.random.rand(<span class="dv">120</span>)</span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>X <span class="op">=</span> fft(x)</span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> N <span class="kw">in</span> Ns:</span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>    x <span class="op">=</span> np.random.rand(N)</span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>    str_time <span class="op">=</span> time.time()</span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>    X <span class="op">=</span> fft(x)</span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>    timeFFT <span class="op">=</span> np.append(timeFFT, time.time()<span class="op">-</span>str_time)</span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>plt.figure(<span class="dv">1</span>, figsize<span class="op">=</span>(<span class="fl">9.5</span>, <span class="dv">7</span>))</span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">2</span>,<span class="dv">1</span>,<span class="dv">1</span>)</span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>plt.plot(timeDFT, <span class="st">'b'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'DFT compute time'</span>)</span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">'N'</span>)</span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">'seconds'</span>)</span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a>plt.xticks(np.arange(<span class="bu">len</span>(Ns)), Ns)</span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">2</span>,<span class="dv">1</span>,<span class="dv">2</span>)</span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a>plt.plot(timeFFT, <span class="st">'b'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'FFT compute time'</span>)</span>
+<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">'N'</span>)</span>
+<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">'seconds'</span>)</span>
+<span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a>plt.xticks(np.arange(<span class="bu">len</span>(Ns)), Ns)</span>
+<span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb9-41"><a href="#cb9-41" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><img src="fft-properties/FFT-properties_15_0.png" class="img-fluid"></p>
+<p>为了使用FFT,我们需要让输入信号具有两个长度的功率.但是我们想要计算任何长度信号的频谱.所以我们需要先做零填充然后使用零相位窗口的方法.看看下面这个例子:</p>
+<p>一个401个样本的声音片段.我们需要使用2的幂次,正好下一个2的幂次是512,所以fftbuffer为512,接着给fftbuffer零填充,然后把正样本放到左侧,中间空出,负样本放到右侧.接下来做fft变化</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.fftpack <span class="im">import</span> fft, fftshift</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sys</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>sys.path.append(<span class="st">'../software/models/'</span>)</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> utilFunctions <span class="im">as</span> UF</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>(fs, x) <span class="op">=</span> UF.wavread(<span class="st">'../sounds/oboe-A4.wav'</span>)</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">512</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>M <span class="op">=</span> <span class="dv">401</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>hN <span class="op">=</span> N<span class="op">//</span><span class="dv">2</span> </span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>hM <span class="op">=</span> (M<span class="op">+</span><span class="dv">1</span>)<span class="op">//</span><span class="dv">2</span>     </span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>start <span class="op">=</span> <span class="bu">int</span>(<span class="fl">.8</span><span class="op">*</span>fs)</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>xw <span class="op">=</span> x[start<span class="op">-</span>hM:start<span class="op">+</span>hM<span class="op">-</span><span class="dv">1</span>] <span class="op">*</span> np.hamming(M)</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>plt.figure(<span class="dv">1</span>, figsize<span class="op">=</span>(<span class="fl">9.5</span>, <span class="fl">6.5</span>))</span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">411</span>)</span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="op">-</span>hM, hM<span class="op">-</span><span class="dv">1</span>), xw, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="op">-</span>hN, hN<span class="op">-</span><span class="dv">1</span>, <span class="bu">min</span>(xw), <span class="bu">max</span>(xw)])</span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'x (oboe-A4.wav), M = 401'</span>)</span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>fftbuffer <span class="op">=</span> np.zeros(N)                         </span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>fftbuffer[:hM] <span class="op">=</span> xw[hM<span class="op">-</span><span class="dv">1</span>:] </span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>fftbuffer[N<span class="op">-</span>hM<span class="op">+</span><span class="dv">1</span>:] <span class="op">=</span> xw[:hM<span class="op">-</span><span class="dv">1</span>]        </span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">412</span>)</span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="dv">0</span>, N), fftbuffer, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="dv">0</span>, N, <span class="bu">min</span>(xw), <span class="bu">max</span>(xw)])</span>
+<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'fftbuffer: N = 512'</span>)</span>
+<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-31"><a href="#cb10-31" aria-hidden="true" tabindex="-1"></a>X <span class="op">=</span> fftshift(fft(fftbuffer))</span>
+<span id="cb10-32"><a href="#cb10-32" aria-hidden="true" tabindex="-1"></a>mX <span class="op">=</span> <span class="dv">20</span> <span class="op">*</span> np.log10(<span class="bu">abs</span>(X)<span class="op">/</span>N)        </span>
+<span id="cb10-33"><a href="#cb10-33" aria-hidden="true" tabindex="-1"></a>pX <span class="op">=</span> np.unwrap(np.angle(X)) </span>
+<span id="cb10-34"><a href="#cb10-34" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">413</span>)</span>
+<span id="cb10-35"><a href="#cb10-35" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="op">-</span>hN, hN), mX, <span class="st">'r'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb10-36"><a href="#cb10-36" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="op">-</span>hN,hN<span class="op">-</span><span class="dv">1</span>,<span class="op">-</span><span class="dv">100</span>,<span class="bu">max</span>(mX)])</span>
+<span id="cb10-37"><a href="#cb10-37" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'mX'</span>)</span>
+<span id="cb10-38"><a href="#cb10-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-39"><a href="#cb10-39" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">414</span>)</span>
+<span id="cb10-40"><a href="#cb10-40" aria-hidden="true" tabindex="-1"></a>plt.plot(np.arange(<span class="op">-</span>hN, hN), pX, <span class="st">'c'</span>, lw<span class="op">=</span><span class="fl">1.5</span>)</span>
+<span id="cb10-41"><a href="#cb10-41" aria-hidden="true" tabindex="-1"></a>plt.axis([<span class="op">-</span>hN,hN<span class="op">-</span><span class="dv">1</span>,<span class="bu">min</span>(pX),<span class="bu">max</span>(pX)])</span>
+<span id="cb10-42"><a href="#cb10-42" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'pX'</span>)</span>
+<span id="cb10-43"><a href="#cb10-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-44"><a href="#cb10-44" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb10-45"><a href="#cb10-45" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><img src="fft-properties/FFT-properties_17_0.png" class="img-fluid"></p>
+</section>
+<section id="fft-编程" class="level1">
+<h1>FFT 编程</h1>
+<section id="对三角波进行fft" class="level2">
+<h2 class="anchored" data-anchor-id="对三角波进行fft">对三角波进行fft</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.signal <span class="im">import</span> triang</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.fftpack <span class="im">import</span> fft</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>x<span class="op">=</span>triang(<span class="dv">15</span>) <span class="co"># 生成一个15点三角波</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>plt.figure(<span class="dv">1</span>, figsize<span class="op">=</span>(<span class="fl">9.5</span>, <span class="fl">6.5</span>))</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">4</span>,<span class="dv">1</span>,<span class="dv">1</span>)</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>plt.plot(x)</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'triang'</span>)</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>x<span class="op">=</span>fft(x)</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>mX<span class="op">=</span>np.<span class="bu">abs</span>(x)</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>pX<span class="op">=</span>np.angle(x)</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">4</span>,<span class="dv">1</span>,<span class="dv">2</span>)</span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>plt.plot(x)</span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'triang after fft'</span>)</span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">4</span>,<span class="dv">1</span>,<span class="dv">3</span>)</span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>plt.plot(mX)</span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'triang after fft abs'</span>)</span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">4</span>,<span class="dv">1</span>,<span class="dv">4</span>)</span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>plt.plot(pX)</span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'triang after fft angle'</span>)</span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><img src="fft-properties/FFT-properties_20_0.png" class="img-fluid"></p>
+</section>
+<section id="位移三角波再进行fft" class="level2">
+<h2 class="anchored" data-anchor-id="位移三角波再进行fft">位移三角波再进行fft</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>x<span class="op">=</span>triang(<span class="dv">15</span>) <span class="co"># 生成一个15点三角波</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>fftbuffer<span class="op">=</span>np.zeros(<span class="dv">15</span>)</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>fftbuffer[:<span class="dv">8</span>]<span class="op">=</span>x[<span class="dv">7</span>:]</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>fftbuffer[<span class="dv">8</span>:]<span class="op">=</span>x[:<span class="dv">7</span>]</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>plt.figure(<span class="dv">1</span>, figsize<span class="op">=</span>(<span class="fl">9.5</span>, <span class="fl">6.5</span>))</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">4</span>,<span class="dv">1</span>,<span class="dv">1</span>)</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>plt.plot(fftbuffer)</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'fftbuffer'</span>)</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>x<span class="op">=</span>fft(fftbuffer)</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>mX<span class="op">=</span>np.<span class="bu">abs</span>(x)</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>pX<span class="op">=</span>np.angle(x)</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">4</span>,<span class="dv">1</span>,<span class="dv">2</span>)</span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>plt.plot(x)</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'triang after fft'</span>)</span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">4</span>,<span class="dv">1</span>,<span class="dv">3</span>)</span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>plt.plot(mX)</span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'triang after fft abs'</span>)</span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">4</span>,<span class="dv">1</span>,<span class="dv">4</span>)</span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>plt.plot(pX)</span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'triang after fft angle'</span>)</span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><img src="fft-properties/FFT-properties_22_0.png" class="img-fluid"></p>
+</section>
+<section id="读取真实信号进行fft" class="level2">
+<h2 class="anchored" data-anchor-id="读取真实信号进行fft">读取真实信号进行fft</h2>
+<p>取fftbuffer N=511</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> utilFunctions <span class="im">as</span> UF</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>M<span class="op">=</span><span class="dv">501</span> <span class="co"># 输入信号长度</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>hM1<span class="op">=</span><span class="bu">int</span>(math.floor((M<span class="op">+</span><span class="dv">1</span>)<span class="op">/</span><span class="dv">2</span>)) <span class="co"># 计算窗宽</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>hM2<span class="op">=</span><span class="bu">int</span>(math.floor(M<span class="op">/</span><span class="dv">2</span>))</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>fs,x<span class="op">=</span>UF.wavread(<span class="st">'../sounds/soprano-E4.wav'</span>) </span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>x1<span class="op">=</span>x[<span class="dv">5000</span>:<span class="dv">5000</span><span class="op">+</span>M]<span class="op">*</span>np.hamming(M) <span class="co"># 加窗</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>N<span class="op">=</span><span class="dv">511</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>fftbuffer<span class="op">=</span>np.zeros(N) <span class="co"># 零填充</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>fftbuffer[:hM1]<span class="op">=</span>x1[hM2:] <span class="co"># </span></span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>fftbuffer[N<span class="op">-</span>hM2:]<span class="op">=</span>x1[:hM2]</span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>plt.figure(<span class="dv">1</span>, figsize<span class="op">=</span>(<span class="fl">9.5</span>, <span class="fl">6.5</span>))</span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">4</span>,<span class="dv">1</span>,<span class="dv">1</span>)</span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>plt.plot(fftbuffer)</span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'fftbuffer'</span>)</span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>x<span class="op">=</span>fft(fftbuffer)</span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>mX<span class="op">=</span>np.<span class="bu">abs</span>(x)</span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>pX<span class="op">=</span>np.angle(x)</span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">4</span>,<span class="dv">1</span>,<span class="dv">2</span>)</span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a>plt.plot(x)</span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'after fft'</span>)</span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">4</span>,<span class="dv">1</span>,<span class="dv">3</span>)</span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a>plt.plot(mX)</span>
+<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'after fft abs'</span>)</span>
+<span id="cb13-27"><a href="#cb13-27" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">4</span>,<span class="dv">1</span>,<span class="dv">4</span>)</span>
+<span id="cb13-28"><a href="#cb13-28" aria-hidden="true" tabindex="-1"></a>plt.plot(pX)</span>
+<span id="cb13-29"><a href="#cb13-29" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'after fft angle'</span>)</span>
+<span id="cb13-30"><a href="#cb13-30" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb13-31"><a href="#cb13-31" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><img src="fft-properties/FFT-properties_24_0.png" class="img-fluid"></p>
+</section>
+<section id="读取真实信号进行fft-1" class="level2">
+<h2 class="anchored" data-anchor-id="读取真实信号进行fft-1">读取真实信号进行fft</h2>
+<p>取fftbuffer N=1024</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> utilFunctions <span class="im">as</span> UF</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>M<span class="op">=</span><span class="dv">501</span> <span class="co"># 输入信号长度</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>hM1<span class="op">=</span><span class="bu">int</span>(math.floor((M<span class="op">+</span><span class="dv">1</span>)<span class="op">/</span><span class="dv">2</span>)) <span class="co"># 计算窗宽</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>hM2<span class="op">=</span><span class="bu">int</span>(math.floor(M<span class="op">/</span><span class="dv">2</span>))</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>fs,x<span class="op">=</span>UF.wavread(<span class="st">'../sounds/soprano-E4.wav'</span>) </span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>x1<span class="op">=</span>x[<span class="dv">5000</span>:<span class="dv">5000</span><span class="op">+</span>M]<span class="op">*</span>np.hamming(M) <span class="co"># 加窗</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>N<span class="op">=</span><span class="dv">1024</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>fftbuffer<span class="op">=</span>np.zeros(N) <span class="co"># 零填充</span></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>fftbuffer[:hM1]<span class="op">=</span>x1[hM2:] <span class="co"># </span></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>fftbuffer[N<span class="op">-</span>hM2:]<span class="op">=</span>x1[:hM2]</span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>plt.figure(<span class="dv">1</span>, figsize<span class="op">=</span>(<span class="fl">9.5</span>, <span class="fl">6.5</span>))</span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">4</span>,<span class="dv">1</span>,<span class="dv">1</span>)</span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>plt.plot(fftbuffer)</span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'fftbuffer'</span>)</span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>x<span class="op">=</span>fft(fftbuffer)</span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>mX<span class="op">=</span><span class="dv">20</span><span class="op">*</span>np.log10(np.<span class="bu">abs</span>(x))</span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>pX<span class="op">=</span>np.unwrap(np.angle(x))</span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">4</span>,<span class="dv">1</span>,<span class="dv">2</span>)</span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a>plt.plot(x)</span>
+<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'after fft'</span>)</span>
+<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">4</span>,<span class="dv">1</span>,<span class="dv">3</span>)</span>
+<span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a>plt.plot(mX)</span>
+<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'after fft abs (db)'</span>)</span>
+<span id="cb14-27"><a href="#cb14-27" aria-hidden="true" tabindex="-1"></a>plt.subplot(<span class="dv">4</span>,<span class="dv">1</span>,<span class="dv">4</span>)</span>
+<span id="cb14-28"><a href="#cb14-28" aria-hidden="true" tabindex="-1"></a>plt.plot(pX)</span>
+<span id="cb14-29"><a href="#cb14-29" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'after fft angle (unwrap)'</span>)</span>
+<span id="cb14-30"><a href="#cb14-30" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb14-31"><a href="#cb14-31" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><img src="fft-properties/FFT-properties_26_0.png" class="img-fluid"></p>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/zhen8838\.github\.io");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script src="https://utteranc.es/client.js" repo="zhen8838/zhen8838.github.io" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2019-07-31">
+
+<title>互信息：无监督提取特征 – Zheng’s Notes</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../assets/favicon.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-7072389654d23eff08f359f9aa0d1ee7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">Zheng’s Notes</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#互信息" id="toc-互信息" class="nav-link active" data-scroll-target="#互信息">互信息</a></li>
+  <li><a href="#自编码器" id="toc-自编码器" class="nav-link" data-scroll-target="#自编码器">自编码器</a>
+  <ul class="collapse">
+  <li><a href="#关于重构" id="toc-关于重构" class="nav-link" data-scroll-target="#关于重构">关于重构</a></li>
+  </ul></li>
+  <li><a href="#最大化互信息" id="toc-最大化互信息" class="nav-link" data-scroll-target="#最大化互信息">最大化互信息</a>
+  <ul class="collapse">
+  <li><a href="#互信息引出" id="toc-互信息引出" class="nav-link" data-scroll-target="#互信息引出">互信息引出</a></li>
+  <li><a href="#先验分布" id="toc-先验分布" class="nav-link" data-scroll-target="#先验分布">先验分布</a></li>
+  <li><a href="#化简先验分布" id="toc-化简先验分布" class="nav-link" data-scroll-target="#化简先验分布">化简先验分布</a></li>
+  <li><a href="#互信息转化" id="toc-互信息转化" class="nav-link" data-scroll-target="#互信息转化">互信息转化</a></li>
+  <li><a href="#变分推断" id="toc-变分推断" class="nav-link" data-scroll-target="#变分推断">变分推断</a></li>
+  </ul></li>
+  <li><a href="#从全局到局部" id="toc-从全局到局部" class="nav-link" data-scroll-target="#从全局到局部">从全局到局部</a>
+  <ul class="collapse">
+  <li><a href="#batch内负采样" id="toc-batch内负采样" class="nav-link" data-scroll-target="#batch内负采样">batch内负采样</a></li>
+  <li><a href="#局部负采样" id="toc-局部负采样" class="nav-link" data-scroll-target="#局部负采样">局部负采样</a></li>
+  </ul></li>
+  <li><a href="#代码实现" id="toc-代码实现" class="nav-link" data-scroll-target="#代码实现">代码实现</a></li>
+  <li><a href="#效果" id="toc-效果" class="nav-link" data-scroll-target="#效果">效果</a>
+  <ul class="collapse">
+  <li><a href="#余弦距离knn采样" id="toc-余弦距离knn采样" class="nav-link" data-scroll-target="#余弦距离knn采样">余弦距离KNN采样</a></li>
+  <li><a href="#欧式距离knn采样" id="toc-欧式距离knn采样" class="nav-link" data-scroll-target="#欧式距离knn采样">欧式距离KNN采样</a></li>
+  </ul></li>
+  <li><a href="#思考" id="toc-思考" class="nav-link" data-scroll-target="#思考">思考</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">互信息：无监督提取特征</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">深度学习</div>
+  </div>
+  </div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">July 31, 2019</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>本文是对苏剑林的<a href="https://kexue.fm/archives/6024">深度学习的互信息：无监督提取特征</a>的学习总结,主要是关于<code>Deep INFOMAX</code>的论文复现.</p>
+<!--more-->
+<section id="互信息" class="level1">
+<h1>互信息</h1>
+<p>大概是需要有一个标准来衡量<strong>两个值统一出现的概率</strong>,如果这个概率很大,说明两个值倾向于<strong>共同出现</strong>,如果这个概率很小,就代表他们<strong>刻意回避对方</strong>。这个值定义为点互信息(Pointwise Mutual Information，PMI): <span class="math display">\[
+\begin{aligned}
+    PMI(x,z)&amp;=p(x,z)\log\frac{p(x,z)}{p(x)p(z)}
+\end{aligned}
+\]</span></p>
+<p>因为<span class="math inline">\(\log\)</span>的原因，所以两个多元变量的相关度可以被累加：</p>
+<p><span class="math display">\[
+\begin{aligned}
+    I(X,Z)&amp;=\sum^k_{i=1}\sum^l_{j=1}p(x_i,z_j) \log\frac{p(x_i,z_j)}{p(x_i)p(z_j)} \ \ \ \ \text{离散型}\\
+    &amp;=\int_Z\int_X p(x,z)\log\frac{p(x,z)}{p(x)p(z)}\ dx\ dz\ \ \ \ \text{连续型}
+\end{aligned}
+\]</span></p>
+<p>细心的小伙伴可以看出，这个不就是<code>KL散度</code>么,如下： <span class="math display">\[
+\begin{aligned}
+    I(X,Z)&amp;=KL(p(x,z)\|p(x)p(z))
+\end{aligned}
+\]</span> 且假设<span class="math inline">\(p(x)\)</span>和<span class="math inline">\(p(z)\)</span>相互独立时，则： <span class="math display">\[
+\begin{aligned}
+    \because p(x|z)&amp;=\frac{p(x,z)}{p(z)}\\
+    \therefore I(X,Z)&amp;=\int_Z\int_X\ p(z) p(x|z)\log\frac{p(x|z)}{p(x)}\ dx\ dz\\
+    &amp;=\mathbb{E}[KL(\ p(x|z)\ \| \ p(z)\ )]\\
+    \text{或}\\
+    \because p(z|x)&amp;=\frac{p(x,z)}{p(x)}\\
+    \therefore I(X,Z)&amp;=\int_Z\int_X\ p(x) p(z|x)\log\frac{p(z|x)}{p(z)}\ dx\ dz\\
+    &amp;=\mathbb{E}[KL(\ p(z|x)\ \| \ p(x)\ )]
+\end{aligned}
+\]</span></p>
+</section>
+<section id="自编码器" class="level1">
+<h1>自编码器</h1>
+<p>通常自编码器都配有一个解码器，使用自编码对原始数据进行解析并<strong>保留尽可能多的重要特征</strong>，那么如何验证自编码器所解析的特征是<strong>最有效</strong>的呢？</p>
+<section id="关于重构" class="level2">
+<h2 class="anchored" data-anchor-id="关于重构">关于重构</h2>
+<p>传统思想是使用解码器将去重构原始图像，但使用低维编码重构原图的结果通常是很模糊的。比如我们都能轻松辨认一个物体是什么，但是让我们将他完整地画出来是很难的，这就说明对于任务来说，<strong>最合理的特征并不能一定能完成图像重构。</strong></p>
+</section>
+</section>
+<section id="最大化互信息" class="level1">
+<h1>最大化互信息</h1>
+<section id="互信息引出" class="level2">
+<h2 class="anchored" data-anchor-id="互信息引出">互信息引出</h2>
+<p>既然重构不是好特征的必要条件。那好特征的基本原则应当是<code>能够从整个数据集中辨别出该样本出来</code>，也就是说，提取出该样本（最）独特的信息。如何衡量提取出来的信息是该样本独特的呢？我们用<code>互信息</code>来衡量。</p>
+<p>用<span class="math inline">\(X\)</span>表示原始图像的集合，<span class="math inline">\(x\in X\)</span>表示其中一图像，<span class="math inline">\(\tilde{p}(x)\)</span>表示采样所得<span class="math inline">\(x\)</span>的分布，<span class="math inline">\(Z\)</span>为编码向量集合，<span class="math inline">\(z\in Z\)</span>表示其中一编码向量，<span class="math inline">\(p(z|x)\)</span>表示<span class="math inline">\(x\)</span>所产生的编码向量<span class="math inline">\(z\)</span>的分布，我们假设它为正态分布且<span class="math inline">\(\tilde{p}(x)\)</span>和<span class="math inline">\(p(z)\)</span><strong>相互独立</strong>，即 <span class="math display">\[
+\begin{aligned}
+    p(z) = \int p(z|x)\tilde{p}(x)\ dx
+\end{aligned}
+\]</span></p>
+<p>接下来使用互信息来表示<span class="math inline">\(X，Z\)</span>的相关性： <span class="math display">\[
+\begin{aligned}
+I(X,Z) &amp;= \iint p(z,x)\log \frac{p(z,x)}{\tilde{p}(x)p(z)}\ dx\ dz \\
+&amp;= \iint p(z,x)\log \frac{p(z|x)}{p(z)}\ dx\ dz\\
+&amp;= \iint p(z|x)\tilde{p}(x)\log \frac{p(z|x)}{p(z)}\ dx\ dz
+\end{aligned}
+\]</span></p>
+<p>那么接下来我们就要使互信息尽可能的大，来得到一个好的特征编码器： <span class="math display">\[
+\begin{aligned}
+p(z|x) = -\min_{p(z|x)} I(X,Z)
+\end{aligned}
+\]</span></p>
+<p>互信息越大就代表<span class="math inline">\(\log \frac{p(z|x)}{p(z)}\)</span>越大，说明<span class="math inline">\(p(z|x)\gg p(x)\)</span>,则此时的解码出向量<span class="math inline">\(p(z|x)\)</span>和<span class="math inline">\(p(x)\)</span><strong>同时出现</strong>的概率越大，那就代表编码器找到了专属于<span class="math inline">\(x\)</span>的那个<span class="math inline">\(z\)</span>，这不就是我们所需要的独特信息么。</p>
+</section>
+<section id="先验分布" class="level2">
+<h2 class="anchored" data-anchor-id="先验分布">先验分布</h2>
+<p>前面提到，相对于自编码器，变分自编码器同时还希望隐变量服从标准正态分布的先验分布，<strong>这有利于使得编码空间更加规整，甚至有利于解耦特征，便于后续学习</strong>。因此，在这里我们同样希望加上这个约束。</p>
+<pre><code>关于服从于标准正态就可以有利于解耦特征，我暂时没有找到相关的资料，这里是摘录的原文。</code></pre>
+<p>利用在<code>VAE</code>中思路(<a href="https://zhen8838.github.io/2019/07/29/vae2/">参考VAE直观推导</a>)添加<code>KL散度</code>约束来实现，假设<span class="math inline">\(q(z)\sim N(0,1)\)</span>,则： <span class="math display">\[
+    KL(q(z)\|p(z))=\int p(z)\log\frac{p(z)}{q(z)}\ dz
+\]</span></p>
+</section>
+<section id="化简先验分布" class="level2">
+<h2 class="anchored" data-anchor-id="化简先验分布">化简先验分布</h2>
+<p>将<code>KL散度</code>约束加权并与互信息约束混合得： <span class="math display">\[
+\begin{aligned}
+    p(z|x) &amp;= \min_{p(z|x)}\left\{- I(X,Z) + \lambda KL(p(z)\Vert q(z))\right\}\\
+    =\min_{p(z|x)}&amp;\left\{- I(X,Z)+ \lambda\int p(z)\log \frac{p(z)}{q(z)}\ dz\right\} \\
+    =\min_{p(z|x)}&amp;\left\{- I(X,Z)+ \lambda\left(\int p(z)\log \left(\frac{p(z|x)}{q(z)}\times\frac{p(z)}{p(z|x)}\right)\ dz\right)\right\} \\
+    =\min_{p(z|x)}&amp;\left\{- I(X,Z)+ \lambda\left(\int p(z)\log\frac{p(z|x)}{q(z)} \ dz-\int p(z)\log\frac{p(z|x)}{p(z)} \ dz\right)\right\} \\
+    =\min_{p(z|x)}&amp;\left\{- \iint p(z)\log \frac{p(z|x)}{p(z)}\ dx\ dz+ \lambda\left(\int p(z)\log\frac{p(z|x)}{q(z)} \ dz-\int p(z)\log\frac{p(z|x)}{p(z)} \ dz\right)\right\} \\
+    =\min_{p(z|x)}&amp;\left\{- (1+\lambda)\iint p(z)\log \frac{p(z|x)}{p(z)}\ dx\ dz+ \lambda\int p(z)\log\frac{p(z|x)}{q(z)} \ dz\right\} \\
+    =\min_{p(z|x)}&amp;\left\{\iint p(z|x)\tilde{p}(x) \left[- (1+\lambda)\log\frac{p(z|x)}{p(z)}+\lambda\log\frac{p(z|x)}{q(x)}\right]\ dx\ dz \right\} \\
+    =\min_{p(z|x)}&amp;\left\{-(1+\lambda)\cdot I(X,Z)+\lambda\cdot \mathbb{E}_{x\sim\tilde{p}(x)}\left[KL(p(z|x)||q(z))\right] \right\} \\
+    =\min_{p(z|x)}&amp;\left\{-(1+\lambda)\cdot KL(p(z|x)\tilde{p}(x)\| p(z)\tilde{p}(x)) +\lambda\cdot \mathbb{E}_{x\sim\tilde{p}(x)}\left[KL(p(z|x)||q(z))\right] \right\}
+\end{aligned}
+\]</span></p>
+<p>现在发现先验分布在化简后被去除了，并且约束函数中后面一部分就是<code>VAE</code>中的约束，比较容易实现，接下来考虑如何构建<code>互信息约束</code>。</p>
+</section>
+<section id="互信息转化" class="level2">
+<h2 class="anchored" data-anchor-id="互信息转化">互信息转化</h2>
+<p>在第一部分提到了互信息可以化为<code>KL散度</code>的形式：</p>
+<p><span class="math display">\[
+\begin{aligned}
+    I(X,Z) =&amp; \iint p(z|x)\tilde{p}(x)\log \frac{p(z|x)\tilde{p}(x)}{p(z)\tilde{p}(x)}dxdz\\
+    =&amp; KL(p(z|x)\tilde{p}(x)\Vert p(z)\tilde{p}(x))
+\end{aligned}
+\]</span></p>
+<p>这个形式展示了互信息的本质含义：<span class="math inline">\(p(z|x)\tilde{p}(x)\)</span>表示变量<span class="math inline">\(x,z\)</span>的联合分布，<span class="math inline">\(p(z)\tilde{p}(x)\)</span>表示随机抽取一个<span class="math inline">\(x\)</span>和一个<span class="math inline">\(z\)</span>时的分布(假设不相关)，而互信息则是这两个分布的<code>KL散度</code>，那么最大化互信息意思就是拉大这两个分布间的距离。</p>
+<p><strong>一个严重问题是<code>KL散度</code>理论上是无上界的，我们不能去最大化一个无上界的量</strong>。为了有效优化，抓住</p>
+<blockquote class="blockquote">
+<p>最大化互信息就是拉大<span class="math inline">\(p(z|x)\tilde{p}{x}\)</span>和<span class="math inline">\(p(z)\tilde{p}(x)\)</span>之间的距离</p>
+</blockquote>
+<p>这个核心要点，我们可以选择其他的度量函数来进行约束，可以选择<code>JS散度</code>和<code>Hellinger距离</code>。这里使用<code>JS散度</code>：</p>
+<p><span class="math display">\[
+\begin{aligned}
+    JS(P,Q) = \frac{1}{2}KL\left(P\left\Vert\frac{P+Q}{2}\right.\right)+\frac{1}{2}KL\left(Q\left\Vert\frac{P+Q}{2}\right.\right)
+\end{aligned}   
+\]</span></p>
+<p><code>JS散度</code>同样衡量了两个分布的距离，但他具备上界<span class="math inline">\(\frac{1}{2}\log2\)</span>，我们最大化他的时候，也可以起到最大化互信息的效果，下面将<code>JS散度</code>代入约束函数。</p>
+<p><span class="math display">\[
+\begin{aligned}
+    p(z|x) =\min_{p(z|x)}&amp;\left\{-(1+\lambda)\cdot JS(p(z|x)\tilde{p}(x)\| p(z)\tilde{p}(x)) +\lambda\cdot \mathbb{E}_{x\sim\tilde{p}(x)}\left[KL(p(z|x)||q(z))\right] \right\}
+\end{aligned}
+\]</span></p>
+<p>但是还是存在一个<span class="math inline">\(p(z)\)</span>让我们无法解决，下面就要把他解决：</p>
+</section>
+<section id="变分推断" class="level2">
+<h2 class="anchored" data-anchor-id="变分推断">变分推断</h2>
+<p>参考<a href="https://kexue.fm/archives/6016">f-GAN简介：GAN模型的生产车间</a>中的<code>f散度局部变分推断</code>中的距离定义为：</p>
+<p><span class="math display">\[
+\begin{aligned}\mathcal{D}_f(P\Vert Q) =&amp; \max_{T}\int q(x) \left[\frac{p(x)}{q(x)}T\left(\frac{p(x)}{q(x)}\right)-g\left(T\left(\frac{p(x)}{q(x)}\right)\right)\right]\ dx\\
+=&amp; \max_{T}\int\left[p(x)\cdot T\left(\frac{p(x)}{q(x)}\right)-q(x)\cdot g\left(T\left(\frac{p(x)}{q(x)}\right)\right)\right]\ dx \\
+\text{记}T\left(\frac{p(x)}{q(x)}\right)\text{为}&amp;T(x)\text{得}\\
+\mathcal{D}_f(P\Vert Q) =&amp; \max_{T}\Big(\mathbb{E}_{x\sim p(x)}[T(x)]-\mathbb{E}_{x\sim q(x)}[g(T(x))]\Big)
+\end{aligned}
+\]</span></p>
+<p>利用上面这个公式，我们可以进行<code>f散度估计</code>，意思是：分别从两个分布中采样，然后分别计算<span class="math inline">\(T(x)\)</span>和<span class="math inline">\(g(T(x))\)</span>的均值，优化函数<span class="math inline">\(T(x)\)</span>使得他们的差值尽可能的大，最终的结果即为<code>f散度</code>的近似值了。显然<span class="math inline">\(T(x)\)</span>可以用神经网络进行拟合，我们优化此函数就是优化神经网络参数。</p>
+<p>将上述公式代入<code>JS散度</code>中得： <span class="math display">\[
+\begin{aligned}
+    &amp;JS(P,Q) \\
+    =&amp; \max_{T}\Big(\mathbb{E}_{x\sim p(x)}[\log \sigma(T(x))] + \mathbb{E}_{x\sim q(x)}[\log(1-\sigma(T(x))]\Big) \\
+    \\
+    &amp;JS\big(p(z|x)\tilde{p}(x), p(z)\tilde{p}(x)\big)\\
+    =&amp; \max_{T}\Big(\mathbb{E}_{(x,z)\sim p(z|x)\tilde{p}(x)}[\log \sigma(T(x,z))] + \mathbb{E}_{(x,z)\sim p(z)\tilde{p}(x)}[\log(1-\sigma(T(x,z))]\Big)
+\end{aligned}
+\]</span></p>
+<p><strong>注意</strong>:这里的<span class="math inline">\(1-\sigma(T(x))\)</span>是根据此前文章中的变分推断所计算的激活函数<span class="math inline">\(g\)</span>，具体请参考<a href="https://kexue.fm/archives/6016">文章</a></p>
+<p>并且现在这个约束函数可以看成<code>负采样估计</code>：引入一个判别网络<span class="math inline">\(\sigma(T(x,z))\)</span>，<span class="math inline">\(x\)</span>和对应的<span class="math inline">\(z\)</span>看成一个正样本对，<span class="math inline">\(x\)</span>与其他一个随机抽取的<span class="math inline">\(z\)</span>作为负样本对，然后最大化似然函数，等价于最小化交叉熵。终于通过负采样的方式，得到了一种估计<code>JS散度</code>的方案，从而解决了互信息的最大化问题，得到具体的<code>loss</code>为：</p>
+<p><span class="math display">\[
+\begin{aligned}
+p(z|x),T(x,z)=\\
+\min_{p(z|x),T(x,z)}\Big\{-&amp;(1+\lambda)\cdot\Big(\mathbb{E}_{(x,z)\sim p(z|x)\tilde{p}(x)}[\log \sigma(T(x,z))] + \mathbb{E}_{(x,z)\sim p(z)\tilde{p}(x)}[\log(1-\sigma(T(x,z))]\Big)\\
++&amp;\lambda\cdot \mathbb{E}_{x\sim\tilde{p}(x)}[KL(p(z|x)\Vert q(z))]\Big\}
+\end{aligned}
+\]</span></p>
+<p>下面开始实际实验。</p>
+</section>
+</section>
+<section id="从全局到局部" class="level1">
+<h1>从全局到局部</h1>
+<p>在实际实验中，如何去践行<code>负采样</code>呢？</p>
+<section id="batch内负采样" class="level2">
+<h2 class="anchored" data-anchor-id="batch内负采样">batch内负采样</h2>
+<p>我们可以对这个<code>batch</code>中样本对顺序进行<code>shuffle</code>，<code>shuffle</code>前的样本对为正样本，<code>shuffle</code>之后的样本对为负样本。</p>
+</section>
+<section id="局部负采样" class="level2">
+<h2 class="anchored" data-anchor-id="局部负采样">局部负采样</h2>
+<p>上面的做法，实际上就是考虑了整张图片之间的关联，但是我们知道，图片的相关性更多体现在局部中（也就是因为这样所以我们才可以对图片使用CNN）。换言之，图片的识别、分类等应该是一个从局部到整体的过程。因此，有必要把“局部互信息”也考虑进来。</p>
+<p>一般的CNN编码过程： <span class="math display">\[
+\text{原始图片}x\xrightarrow{\text{多个卷积层}} h\times w\times c\text{的特征} \xrightarrow{\text{卷积和全局池化}} \text{固定长度的向量}z
+\]</span></p>
+<p>我们已经考虑到了<span class="math inline">\(x\)</span>和<span class="math inline">\(z\)</span>的关联，那么中间层特征(feature map)和<span class="math inline">\(z\)</span>的关联呢？把中间层向量记为<span class="math inline">\(\{C_{ij}(x)|i=1,2,\dots,h;j=1,2,\dots,w\}\)</span>,一共<span class="math inline">\(h\times w\)</span>个向量与<span class="math inline">\(z_x\)</span>的互信息，称为<code>局部互信息</code>。</p>
+<p>那么我们要构建出一个局部的互信息估算网络，首先把每个通道的向量与<span class="math inline">\(z_x\)</span>拼接得到<span class="math inline">\([C_{ij}(x),z_x]\)</span>,相当于得到了一个更大的feature map，然后对这个feature map用多个1x1的卷积层来作为局部互信息的估算网络<span class="math inline">\(T_{local}\)</span>。负样本的选取方法也是用在batch内随机打算的方案。</p>
+<p>加入局部互信息的总<code>loss</code>为： <span class="math display">\[
+\begin{aligned}
+&amp;p(z|x),T_1(x,z),T_2(C_{ij}, z) \\
+=&amp;\min_{p(z|x),T_1,T_2}\Big\{-\alpha\cdot\Big(\mathbb{E}_{(x,z)\sim p(z|x)\tilde{p}(x)}[\log \sigma(T_1(x,z))] + \mathbb{E}_{(x,z)\sim p(z)\tilde{p}(x)}[\log(1-\sigma(T_1(x,z))]\Big)\\
+&amp;\qquad-\frac{\beta}{hw}\sum_{i,j}\Big(\mathbb{E}_{(x,z)\sim p(z|x)\tilde{p}(x)}[\log \sigma(T_2(C_{ij},z))] + \mathbb{E}_{(x,z)\sim p(z)\tilde{p}(x)}[\log(1-\sigma(T_2(C_{ij},z))]\Big)\\
+&amp;\qquad+\gamma\cdot \mathbb{E}_{x\sim\tilde{p}(x)}[KL(p(z|x)\Vert q(z))]\Big\}
+\end{aligned}
+\]</span></p>
+<p><strong>注意</strong>：上面的几部分的损失权重分别设置为<span class="math inline">\(\alpha,\beta,\gamma\)</span>。</p>
+</section>
+</section>
+<section id="代码实现" class="level1">
+<h1>代码实现</h1>
+<p>在<code>Tensorflow 1.14</code>下运行：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> glob</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> imageio</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tensorflow.python.keras.models <span class="im">import</span> Model</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tensorflow.python.keras.layers <span class="im">import</span> <span class="op">*</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> tensorflow.python <span class="im">as</span> tf</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tensorflow.python.keras <span class="im">import</span> backend <span class="im">as</span> K</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tensorflow.python.keras.optimizers <span class="im">import</span> Adam</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tensorflow.python.keras.datasets <span class="im">import</span> cifar10</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tensorflow.python.keras.utils <span class="im">import</span> plot_model</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> termcolor <span class="im">import</span> colored</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>config <span class="op">=</span> tf.ConfigProto()</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>config.gpu_options.allow_growth <span class="op">=</span> <span class="va">True</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>K.set_session(tf.Session(config<span class="op">=</span>config))</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>(x_train, y_train), (x_test, y_test) <span class="op">=</span> cifar10.load_data()</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>x_train <span class="op">=</span> x_train.astype(<span class="st">'float32'</span>) <span class="op">/</span> <span class="dv">255</span> <span class="op">-</span> <span class="fl">0.5</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>x_test <span class="op">=</span> x_test.astype(<span class="st">'float32'</span>) <span class="op">/</span> <span class="dv">255</span> <span class="op">-</span> <span class="fl">0.5</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>y_train <span class="op">=</span> y_train.reshape(<span class="op">-</span><span class="dv">1</span>)</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>y_test <span class="op">=</span> y_test.reshape(<span class="op">-</span><span class="dv">1</span>)</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>img_dim <span class="op">=</span> x_train.shape[<span class="dv">1</span>]</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>z_dim <span class="op">=</span> <span class="dv">256</span>  <span class="co"># 隐变量维度</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>α <span class="op">=</span> <span class="fl">0.5</span>  <span class="co"># 全局互信息的loss比重</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>β <span class="op">=</span> <span class="fl">1.5</span>  <span class="co"># 局部互信息的loss比重</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>γ <span class="op">=</span> <span class="fl">0.01</span>  <span class="co"># 先验分布的loss比重</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a><span class="co"># 编码器（卷积与最大池化）</span></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>x_in <span class="op">=</span> Input(shape<span class="op">=</span>(img_dim, img_dim, <span class="dv">3</span>))</span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> x_in</span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">3</span>):</span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>    x <span class="op">=</span> Conv2D(z_dim <span class="op">//</span> <span class="dv">2</span><span class="op">**</span><span class="bu">int</span>(<span class="dv">2</span> <span class="op">-</span> i), kernel_size<span class="op">=</span>(<span class="dv">3</span>, <span class="dv">3</span>), padding<span class="op">=</span><span class="st">'SAME'</span>)(x)</span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>    x <span class="op">=</span> BatchNormalization()(x)</span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a>    x <span class="op">=</span> LeakyReLU(<span class="fl">0.2</span>)(x)</span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>    x <span class="op">=</span> MaxPooling2D((<span class="dv">2</span>, <span class="dv">2</span>))(x)</span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a>feature_map <span class="op">=</span> x  <span class="co"># 截断到这里，认为到这里是feature_map（局部特征）</span></span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a>feature_map_encoder <span class="op">=</span> Model(x_in, x)</span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a>plot_model(feature_map_encoder, to_file<span class="op">=</span><span class="st">'feature_map_encoder.png'</span>)</span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">2</span>):</span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a>    x <span class="op">=</span> Conv2D(z_dim,</span>
+<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a>               kernel_size<span class="op">=</span>(<span class="dv">3</span>, <span class="dv">3</span>),</span>
+<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a>               padding<span class="op">=</span><span class="st">'SAME'</span>)(x)</span>
+<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a>    x <span class="op">=</span> BatchNormalization()(x)</span>
+<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a>    x <span class="op">=</span> LeakyReLU(<span class="fl">0.2</span>)(x)</span>
+<span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> GlobalMaxPooling2D()(x)  <span class="co"># 全局特征</span></span>
+<span id="cb2-55"><a href="#cb2-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-57"><a href="#cb2-57" aria-hidden="true" tabindex="-1"></a>z_μ <span class="op">=</span> Dense(z_dim)(x)  <span class="co"># 均值，也就是最终输出的编码</span></span>
+<span id="cb2-58"><a href="#cb2-58" aria-hidden="true" tabindex="-1"></a>z_log_σ <span class="op">=</span> Dense(z_dim)(x)  <span class="co"># 方差，这里都是模仿VAE的</span></span>
+<span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-60"><a href="#cb2-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-61"><a href="#cb2-61" aria-hidden="true" tabindex="-1"></a>encoder <span class="op">=</span> Model(x_in, z_μ)  <span class="co"># 总的编码器就是输出z_μ</span></span>
+<span id="cb2-62"><a href="#cb2-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a>plot_model(encoder, to_file<span class="op">=</span><span class="st">'encoder.png'</span>)</span>
+<span id="cb2-64"><a href="#cb2-64" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-66"><a href="#cb2-66" aria-hidden="true" tabindex="-1"></a><span class="co"># 重参数技巧</span></span>
+<span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> sampling(args):</span>
+<span id="cb2-68"><a href="#cb2-68" aria-hidden="true" tabindex="-1"></a>    z_μ, z_log_σ <span class="op">=</span> args</span>
+<span id="cb2-69"><a href="#cb2-69" aria-hidden="true" tabindex="-1"></a>    u <span class="op">=</span> K.random_normal(shape<span class="op">=</span>K.shape(z_μ))</span>
+<span id="cb2-70"><a href="#cb2-70" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> z_μ <span class="op">+</span> K.exp(z_log_σ <span class="op">/</span> <span class="dv">2</span>) <span class="op">*</span> u</span>
+<span id="cb2-71"><a href="#cb2-71" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-72"><a href="#cb2-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-73"><a href="#cb2-73" aria-hidden="true" tabindex="-1"></a><span class="co"># 重参数层，相当于给输入加入噪声</span></span>
+<span id="cb2-74"><a href="#cb2-74" aria-hidden="true" tabindex="-1"></a>z_samples <span class="op">=</span> Lambda(sampling)([z_μ, z_log_σ])</span>
+<span id="cb2-75"><a href="#cb2-75" aria-hidden="true" tabindex="-1"></a>prior_kl_loss <span class="op">=</span> <span class="op">-</span> <span class="fl">0.5</span> <span class="op">*</span> K.mean(<span class="dv">1</span> <span class="op">+</span> z_log_σ <span class="op">-</span> K.square(z_μ) <span class="op">-</span> K.exp(z_log_σ))</span>
+<span id="cb2-76"><a href="#cb2-76" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-77"><a href="#cb2-77" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-78"><a href="#cb2-78" aria-hidden="true" tabindex="-1"></a><span class="co"># shuffle层，打乱第一个轴</span></span>
+<span id="cb2-79"><a href="#cb2-79" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> shuffling(x):</span>
+<span id="cb2-80"><a href="#cb2-80" aria-hidden="true" tabindex="-1"></a>    idxs <span class="op">=</span> K.arange(<span class="dv">0</span>, K.shape(x)[<span class="dv">0</span>])</span>
+<span id="cb2-81"><a href="#cb2-81" aria-hidden="true" tabindex="-1"></a>    idxs <span class="op">=</span> tf.random_shuffle(idxs)</span>
+<span id="cb2-82"><a href="#cb2-82" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> K.gather(x, idxs)</span>
+<span id="cb2-83"><a href="#cb2-83" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-84"><a href="#cb2-84" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-85"><a href="#cb2-85" aria-hidden="true" tabindex="-1"></a><span class="co">""" 构建正负样本对 """</span></span>
+<span id="cb2-86"><a href="#cb2-86" aria-hidden="true" tabindex="-1"></a><span class="co"># 与随机采样的特征拼接（全局）</span></span>
+<span id="cb2-87"><a href="#cb2-87" aria-hidden="true" tabindex="-1"></a>z_shuffle <span class="op">=</span> Lambda(shuffling)(z_samples)</span>
+<span id="cb2-88"><a href="#cb2-88" aria-hidden="true" tabindex="-1"></a>z_z_true <span class="op">=</span> Concatenate()([z_samples, z_samples])  <span class="co"># 这就是正样本对</span></span>
+<span id="cb2-89"><a href="#cb2-89" aria-hidden="true" tabindex="-1"></a>z_z_false <span class="op">=</span> Concatenate()([z_samples, z_shuffle])  <span class="co"># 这就是负样本对</span></span>
+<span id="cb2-90"><a href="#cb2-90" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-91"><a href="#cb2-91" aria-hidden="true" tabindex="-1"></a><span class="co"># 与随机采样的特征拼接（局部）</span></span>
+<span id="cb2-92"><a href="#cb2-92" aria-hidden="true" tabindex="-1"></a>feature_map_shuffle <span class="op">=</span> Lambda(shuffling)(feature_map)</span>
+<span id="cb2-93"><a href="#cb2-93" aria-hidden="true" tabindex="-1"></a>z_samples_map <span class="op">=</span> Reshape((<span class="dv">4</span>, <span class="dv">4</span>, z_dim))(RepeatVector(<span class="dv">4</span> <span class="op">*</span> <span class="dv">4</span>)(z_samples))  <span class="co"># 重复z样本到H×W次并reshape</span></span>
+<span id="cb2-94"><a href="#cb2-94" aria-hidden="true" tabindex="-1"></a>z_f_true <span class="op">=</span> Concatenate()([z_samples_map, feature_map])  <span class="co"># 拼接出局部正样本</span></span>
+<span id="cb2-95"><a href="#cb2-95" aria-hidden="true" tabindex="-1"></a>z_f_false <span class="op">=</span> Concatenate()([z_samples_map, feature_map_shuffle])  <span class="co"># 拼接出局部负样本</span></span>
+<span id="cb2-96"><a href="#cb2-96" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-97"><a href="#cb2-97" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-98"><a href="#cb2-98" aria-hidden="true" tabindex="-1"></a><span class="co"># 全局互信息判别器</span></span>
+<span id="cb2-99"><a href="#cb2-99" aria-hidden="true" tabindex="-1"></a>z_in <span class="op">=</span> Input(shape<span class="op">=</span>(z_dim <span class="op">*</span> <span class="dv">2</span>,))</span>
+<span id="cb2-100"><a href="#cb2-100" aria-hidden="true" tabindex="-1"></a>z <span class="op">=</span> z_in</span>
+<span id="cb2-101"><a href="#cb2-101" aria-hidden="true" tabindex="-1"></a>z <span class="op">=</span> Dense(z_dim, activation<span class="op">=</span><span class="st">'relu'</span>)(z)</span>
+<span id="cb2-102"><a href="#cb2-102" aria-hidden="true" tabindex="-1"></a>z <span class="op">=</span> Dense(z_dim, activation<span class="op">=</span><span class="st">'relu'</span>)(z)</span>
+<span id="cb2-103"><a href="#cb2-103" aria-hidden="true" tabindex="-1"></a>z <span class="op">=</span> Dense(z_dim, activation<span class="op">=</span><span class="st">'relu'</span>)(z)</span>
+<span id="cb2-104"><a href="#cb2-104" aria-hidden="true" tabindex="-1"></a>z <span class="op">=</span> Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">'sigmoid'</span>)(z)</span>
+<span id="cb2-105"><a href="#cb2-105" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-106"><a href="#cb2-106" aria-hidden="true" tabindex="-1"></a>GlobalDiscriminator <span class="op">=</span> Model(z_in, z)</span>
+<span id="cb2-107"><a href="#cb2-107" aria-hidden="true" tabindex="-1"></a>plot_model(GlobalDiscriminator, to_file<span class="op">=</span><span class="st">'GlobalDiscriminator.png'</span>)</span>
+<span id="cb2-108"><a href="#cb2-108" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-109"><a href="#cb2-109" aria-hidden="true" tabindex="-1"></a>z_z_true_scores <span class="op">=</span> GlobalDiscriminator(z_z_true)  <span class="co"># 使用判别器判别正样本对</span></span>
+<span id="cb2-110"><a href="#cb2-110" aria-hidden="true" tabindex="-1"></a>z_z_flase_scores <span class="op">=</span> GlobalDiscriminator(z_z_false)  <span class="co"># 使用判别器判别负样本对</span></span>
+<span id="cb2-111"><a href="#cb2-111" aria-hidden="true" tabindex="-1"></a>global_info_loss <span class="op">=</span> <span class="op">-</span> K.mean(K.log(z_z_true_scores <span class="op">+</span> <span class="fl">1e-6</span>) <span class="op">+</span> K.log(<span class="dv">1</span> <span class="op">-</span> z_z_flase_scores <span class="op">+</span> <span class="fl">1e-6</span>))</span>
+<span id="cb2-112"><a href="#cb2-112" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-113"><a href="#cb2-113" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-114"><a href="#cb2-114" aria-hidden="true" tabindex="-1"></a><span class="co"># 局部互信息判别器</span></span>
+<span id="cb2-115"><a href="#cb2-115" aria-hidden="true" tabindex="-1"></a>z_in <span class="op">=</span> Input(shape<span class="op">=</span>(<span class="va">None</span>, <span class="va">None</span>, z_dim <span class="op">*</span> <span class="dv">2</span>))</span>
+<span id="cb2-116"><a href="#cb2-116" aria-hidden="true" tabindex="-1"></a>z <span class="op">=</span> z_in</span>
+<span id="cb2-117"><a href="#cb2-117" aria-hidden="true" tabindex="-1"></a>z <span class="op">=</span> Dense(z_dim, activation<span class="op">=</span><span class="st">'relu'</span>)(z)</span>
+<span id="cb2-118"><a href="#cb2-118" aria-hidden="true" tabindex="-1"></a>z <span class="op">=</span> Dense(z_dim, activation<span class="op">=</span><span class="st">'relu'</span>)(z)</span>
+<span id="cb2-119"><a href="#cb2-119" aria-hidden="true" tabindex="-1"></a>z <span class="op">=</span> Dense(z_dim, activation<span class="op">=</span><span class="st">'relu'</span>)(z)</span>
+<span id="cb2-120"><a href="#cb2-120" aria-hidden="true" tabindex="-1"></a>z <span class="op">=</span> Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">'sigmoid'</span>)(z)</span>
+<span id="cb2-121"><a href="#cb2-121" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-122"><a href="#cb2-122" aria-hidden="true" tabindex="-1"></a>LocalDiscriminator <span class="op">=</span> Model(z_in, z)</span>
+<span id="cb2-123"><a href="#cb2-123" aria-hidden="true" tabindex="-1"></a>plot_model(LocalDiscriminator, to_file<span class="op">=</span><span class="st">'LocalDiscriminator.png'</span>)</span>
+<span id="cb2-124"><a href="#cb2-124" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-125"><a href="#cb2-125" aria-hidden="true" tabindex="-1"></a>z_f_true_scores <span class="op">=</span> LocalDiscriminator(z_f_true)  <span class="co"># 使用判别器判别正样本对</span></span>
+<span id="cb2-126"><a href="#cb2-126" aria-hidden="true" tabindex="-1"></a>z_f_false_scores <span class="op">=</span> LocalDiscriminator(z_f_false)  <span class="co"># 使用判别器判别负样本对</span></span>
+<span id="cb2-127"><a href="#cb2-127" aria-hidden="true" tabindex="-1"></a>local_info_loss <span class="op">=</span> <span class="op">-</span> K.mean(K.log(z_f_true_scores <span class="op">+</span> <span class="fl">1e-6</span>) <span class="op">+</span> K.log(<span class="dv">1</span> <span class="op">-</span> z_f_false_scores <span class="op">+</span> <span class="fl">1e-6</span>))</span>
+<span id="cb2-128"><a href="#cb2-128" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-129"><a href="#cb2-129" aria-hidden="true" tabindex="-1"></a><span class="co"># 用来训练的模型</span></span>
+<span id="cb2-130"><a href="#cb2-130" aria-hidden="true" tabindex="-1"></a>model_train <span class="op">=</span> Model(x_in, [z_z_true_scores, z_z_flase_scores, z_f_true_scores, z_f_false_scores])</span>
+<span id="cb2-131"><a href="#cb2-131" aria-hidden="true" tabindex="-1"></a>model_train.add_loss(α <span class="op">*</span> global_info_loss <span class="op">+</span> β <span class="op">*</span> local_info_loss <span class="op">+</span> γ <span class="op">*</span> prior_kl_loss)</span>
+<span id="cb2-132"><a href="#cb2-132" aria-hidden="true" tabindex="-1"></a>model_train.<span class="bu">compile</span>(optimizer<span class="op">=</span>Adam(<span class="fl">1e-3</span>))</span>
+<span id="cb2-133"><a href="#cb2-133" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-134"><a href="#cb2-134" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> Path(<span class="st">'cifar10.h5'</span>).exists():</span>
+<span id="cb2-135"><a href="#cb2-135" aria-hidden="true" tabindex="-1"></a>    model_train.fit(x_train, epochs<span class="op">=</span><span class="dv">50</span>, batch_size<span class="op">=</span><span class="dv">64</span>)</span>
+<span id="cb2-136"><a href="#cb2-136" aria-hidden="true" tabindex="-1"></a>    model_train.save_weights(<span class="st">'cifar10.h5'</span>)</span>
+<span id="cb2-137"><a href="#cb2-137" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb2-138"><a href="#cb2-138" aria-hidden="true" tabindex="-1"></a>    model_train.load_weights(<span class="st">'cifar10.h5'</span>)</span>
+<span id="cb2-139"><a href="#cb2-139" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-140"><a href="#cb2-140" aria-hidden="true" tabindex="-1"></a><span class="co"># 输出编码器的特征</span></span>
+<span id="cb2-141"><a href="#cb2-141" aria-hidden="true" tabindex="-1"></a>zs <span class="op">=</span> encoder.predict(x_train, verbose<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-142"><a href="#cb2-142" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(colored(<span class="st">'z mean'</span>, <span class="st">'green'</span>), zs.mean())  <span class="co"># 查看均值（简单观察先验分布有没有达到效果）</span></span>
+<span id="cb2-143"><a href="#cb2-143" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(colored(<span class="st">'z std'</span>, <span class="st">'green'</span>), zs.std())  <span class="co"># 查看方差（简单观察先验分布有没有达到效果）</span></span>
+<span id="cb2-144"><a href="#cb2-144" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-145"><a href="#cb2-145" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-146"><a href="#cb2-146" aria-hidden="true" tabindex="-1"></a><span class="co"># 随机选一张图片，输出最相近的图片</span></span>
+<span id="cb2-147"><a href="#cb2-147" aria-hidden="true" tabindex="-1"></a><span class="co"># 可以选用欧氏距离或者cos值</span></span>
+<span id="cb2-148"><a href="#cb2-148" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> sample_knn(path):</span>
+<span id="cb2-149"><a href="#cb2-149" aria-hidden="true" tabindex="-1"></a>    n <span class="op">=</span> <span class="dv">10</span></span>
+<span id="cb2-150"><a href="#cb2-150" aria-hidden="true" tabindex="-1"></a>    topn <span class="op">=</span> <span class="dv">10</span></span>
+<span id="cb2-151"><a href="#cb2-151" aria-hidden="true" tabindex="-1"></a>    figure1 <span class="op">=</span> np.zeros((img_dim <span class="op">*</span> n, img_dim <span class="op">*</span> topn, <span class="dv">3</span>))</span>
+<span id="cb2-152"><a href="#cb2-152" aria-hidden="true" tabindex="-1"></a>    figure2 <span class="op">=</span> np.zeros((img_dim <span class="op">*</span> n, img_dim <span class="op">*</span> topn, <span class="dv">3</span>))</span>
+<span id="cb2-153"><a href="#cb2-153" aria-hidden="true" tabindex="-1"></a>    zs_ <span class="op">=</span> zs <span class="op">/</span> (zs<span class="op">**</span><span class="dv">2</span>).<span class="bu">sum</span>(<span class="dv">1</span>, keepdims<span class="op">=</span><span class="va">True</span>)<span class="op">**</span><span class="fl">0.5</span></span>
+<span id="cb2-154"><a href="#cb2-154" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n):</span>
+<span id="cb2-155"><a href="#cb2-155" aria-hidden="true" tabindex="-1"></a>        one <span class="op">=</span> np.random.choice(<span class="bu">len</span>(x_train))</span>
+<span id="cb2-156"><a href="#cb2-156" aria-hidden="true" tabindex="-1"></a>        idxs <span class="op">=</span> ((zs<span class="op">**</span><span class="dv">2</span>).<span class="bu">sum</span>(<span class="dv">1</span>) <span class="op">+</span> (zs[one]<span class="op">**</span><span class="dv">2</span>).<span class="bu">sum</span>() <span class="op">-</span> <span class="dv">2</span> <span class="op">*</span> np.dot(zs, zs[one])).argsort()[:topn]</span>
+<span id="cb2-157"><a href="#cb2-157" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> j, k <span class="kw">in</span> <span class="bu">enumerate</span>(idxs):</span>
+<span id="cb2-158"><a href="#cb2-158" aria-hidden="true" tabindex="-1"></a>            digit <span class="op">=</span> x_train[k]</span>
+<span id="cb2-159"><a href="#cb2-159" aria-hidden="true" tabindex="-1"></a>            figure1[i <span class="op">*</span> img_dim: (i <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> img_dim,</span>
+<span id="cb2-160"><a href="#cb2-160" aria-hidden="true" tabindex="-1"></a>                    j <span class="op">*</span> img_dim: (j <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> img_dim] <span class="op">=</span> digit</span>
+<span id="cb2-161"><a href="#cb2-161" aria-hidden="true" tabindex="-1"></a>        idxs <span class="op">=</span> np.dot(zs_, zs_[one]).argsort()[<span class="op">-</span>n:][::<span class="op">-</span><span class="dv">1</span>]</span>
+<span id="cb2-162"><a href="#cb2-162" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> j, k <span class="kw">in</span> <span class="bu">enumerate</span>(idxs):</span>
+<span id="cb2-163"><a href="#cb2-163" aria-hidden="true" tabindex="-1"></a>            digit <span class="op">=</span> x_train[k]</span>
+<span id="cb2-164"><a href="#cb2-164" aria-hidden="true" tabindex="-1"></a>            figure2[i <span class="op">*</span> img_dim: (i <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> img_dim,</span>
+<span id="cb2-165"><a href="#cb2-165" aria-hidden="true" tabindex="-1"></a>                    j <span class="op">*</span> img_dim: (j <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> img_dim] <span class="op">=</span> digit</span>
+<span id="cb2-166"><a href="#cb2-166" aria-hidden="true" tabindex="-1"></a>    figure1 <span class="op">=</span> (figure1 <span class="op">+</span> <span class="dv">1</span>) <span class="op">/</span> <span class="dv">2</span> <span class="op">*</span> <span class="dv">255</span></span>
+<span id="cb2-167"><a href="#cb2-167" aria-hidden="true" tabindex="-1"></a>    figure1 <span class="op">=</span> np.clip(figure1, <span class="dv">0</span>, <span class="dv">255</span>)</span>
+<span id="cb2-168"><a href="#cb2-168" aria-hidden="true" tabindex="-1"></a>    figure2 <span class="op">=</span> (figure2 <span class="op">+</span> <span class="dv">1</span>) <span class="op">/</span> <span class="dv">2</span> <span class="op">*</span> <span class="dv">255</span></span>
+<span id="cb2-169"><a href="#cb2-169" aria-hidden="true" tabindex="-1"></a>    figure2 <span class="op">=</span> np.clip(figure2, <span class="dv">0</span>, <span class="dv">255</span>)</span>
+<span id="cb2-170"><a href="#cb2-170" aria-hidden="true" tabindex="-1"></a>    imageio.imwrite(path <span class="op">+</span> <span class="st">'_l2.png'</span>, figure1)</span>
+<span id="cb2-171"><a href="#cb2-171" aria-hidden="true" tabindex="-1"></a>    imageio.imwrite(path <span class="op">+</span> <span class="st">'_cos.png'</span>, figure2)</span>
+<span id="cb2-172"><a href="#cb2-172" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-173"><a href="#cb2-173" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-174"><a href="#cb2-174" aria-hidden="true" tabindex="-1"></a>sample_knn(<span class="st">'test'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="效果" class="level1">
+<h1>效果</h1>
+<section id="余弦距离knn采样" class="level2">
+<h2 class="anchored" data-anchor-id="余弦距离knn采样">余弦距离KNN采样</h2>
+<p><img src="infor-max/test_cos.png" class="img-fluid"></p>
+</section>
+<section id="欧式距离knn采样" class="level2">
+<h2 class="anchored" data-anchor-id="欧式距离knn采样">欧式距离KNN采样</h2>
+<p><img src="infor-max/test_l2.png" class="img-fluid"></p>
+</section>
+</section>
+<section id="思考" class="level1">
+<h1>思考</h1>
+<p>我个人是想把这个使用在监督学习中，但是转念一想，其实在监督学习中不是已经在优化<span class="math inline">\(y\)</span>与对应<span class="math inline">\(x\)</span>之间的最大互信息了么？可以看到这里的这里构建正负样本对后所使用的损失函数，其实际就是交叉熵。</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/zhen8838\.github\.io");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script src="https://utteranc.es/client.js" repo="zhen8838/zhen8838.github.io" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

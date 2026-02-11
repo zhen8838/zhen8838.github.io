@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2024-04-23">
+
+<title>Explore AMX instructions: Unlock the performance of Apple Silicon – Zheng’s Notes</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../assets/favicon.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-7072389654d23eff08f359f9aa0d1ee7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">Zheng’s Notes</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">1. Overview</a></li>
+  <li><a href="#minimum-workflow" id="toc-minimum-workflow" class="nav-link" data-scroll-target="#minimum-workflow">2. Minimum Workflow</a></li>
+  <li><a href="#theoretical-performance-metrics" id="toc-theoretical-performance-metrics" class="nav-link" data-scroll-target="#theoretical-performance-metrics">3. Theoretical Performance Metrics</a>
+  <ul class="collapse">
+  <li><a href="#computation-performance" id="toc-computation-performance" class="nav-link" data-scroll-target="#computation-performance">3.1 Computation Performance</a></li>
+  <li><a href="#load-performance" id="toc-load-performance" class="nav-link" data-scroll-target="#load-performance">3.2 Load Performance</a></li>
+  <li><a href="#store-performance" id="toc-store-performance" class="nav-link" data-scroll-target="#store-performance">3.3 Store Performance</a></li>
+  </ul></li>
+  <li><a href="#design-micro-kernel" id="toc-design-micro-kernel" class="nav-link" data-scroll-target="#design-micro-kernel">4. Design Micro Kernel</a>
+  <ul class="collapse">
+  <li><a href="#strategy-1-load-1m-and-4n" id="toc-strategy-1-load-1m-and-4n" class="nav-link" data-scroll-target="#strategy-1-load-1m-and-4n">4.1 Strategy 1: Load 1M and 4N</a></li>
+  <li><a href="#strategy-2-load-4m-and-1n" id="toc-strategy-2-load-4m-and-1n" class="nav-link" data-scroll-target="#strategy-2-load-4m-and-1n">4.2 Strategy 2: Load 4M and 1N</a></li>
+  <li><a href="#strategy-3-load-2m-and-2n" id="toc-strategy-3-load-2m-and-2n" class="nav-link" data-scroll-target="#strategy-3-load-2m-and-2n">4.3 Strategy 3: Load 2M and 2N</a></li>
+  <li><a href="#verify-strategy-3" id="toc-verify-strategy-3" class="nav-link" data-scroll-target="#verify-strategy-3">4.4 Verify Strategy 3</a></li>
+  </ul></li>
+  <li><a href="#design-online-packing-scheme" id="toc-design-online-packing-scheme" class="nav-link" data-scroll-target="#design-online-packing-scheme">5. Design Online Packing Scheme</a></li>
+  <li><a href="#further-questions" id="toc-further-questions" class="nav-link" data-scroll-target="#further-questions">5. Further Questions</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Explore AMX instructions: Unlock the performance of Apple Silicon</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">体系结构</div>
+  </div>
+  </div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">April 23, 2024</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>Since 2020, Apple has published M1/M2/M3. They have at least four different ways to perform high-intensity computing tasks.</p>
+<ol type="1">
+<li><p>Standard arm NEON instructions.</p></li>
+<li><p>Undocumented AMX (Apple Matrix Co-processor) instructions. Issued by the CPU and performed on the co-processor.</p></li>
+<li><p>Apple Neural Engine</p></li>
+<li><p>Metal GPU</p></li>
+</ol>
+<p>If we use ARM NEON instructions to accelerate the sgemm kernel on the single core of the M1 Max, It can achieve a <a href="https://github.com/pigirons/conv3x3_m1">performance of around 102 GFLOPS</a>. But if use AMX instructions it can <a href="https://github.com/corsix/amx/blob/main/fma.md#performance-m1-max">achieve 1475 GFLOPS</a>!</p>
+<p>In this article, I will introduce how you can leverage the AMX instructions to unlock the potential performance of Apple Silicon. And the all code I used in <a href="https://github.com/zhen8838/leetcode/blob/main/meta_program/test_amx.cpp">here</a> (Verified on M2 Pro). This article refers to the <a href="https://github.com/corsix/amx">work of Peter Cawley et al</a>, which contains more instructions and usage methods.</p>
+<!--more-->
+<section id="overview" class="level1">
+<h1>1. Overview</h1>
+<p>A good one-image summary of AMX is the following figure from abandoned patent US20180074824A1. Consider a 32x32 grid of compute units, where each unit can perform 16-bit multiply-accumulate, or a 2x2 subgrid of units can perform 32-bit multiply-accumulate, or a 4x4 subgrid can perform 64-bit multiply-accumulate. To feed this grid, there is a pool of X registers each containing 32 16-bit elements (or 16 32-bit elements, or 8 64-bit elements) and a pool of Y registers similarly containing 32 16-bit elements (or 16 32-bit elements, or 8 64-bit elements). A single instruction can perform a full outer product: multiply every element of an X register with every element of a Y register, and accumulate with the Z element in the corresponding position.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="mac-amx_en/fig2.png" class="img-fluid figure-img"></p>
+<figcaption>abandoned patent US20180074824A1</figcaption>
+</figure>
+</div>
+<p>AMX provides LDX/LDY, FMA, LDZ/SDZ instructions. Where FMA has Matrix Mode and Vector Mode corresponding to outer product and inner product computation methods. The following two diagrams illustrate how the inner and outer products are calculated:</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="mac-amx_en/inner product.png" class="img-fluid figure-img"></p>
+<figcaption>inner product</figcaption>
+</figure>
+</div>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="mac-amx_en/outer product.png" class="img-fluid figure-img"></p>
+<figcaption>outer product</figcaption>
+</figure>
+</div>
+<p>According to the diagrams, we know that the outer product has more hardware parallelism than the inner product.</p>
+</section>
+<section id="minimum-workflow" class="level1">
+<h1>2. Minimum Workflow</h1>
+<p>We also use one-image to explain the minimum calculation process and register specifications in AMX.</p>
+<p>First, the X/Y register pool, each of them has 8 registers with a width of 64 bytes, can store data of type fp16/32/64 or i8/16/32, u8/16/32. Then there is the Z register pool, which has 64 registers with a width of 64 bytes, used to store the result of the outer product or inner product of the X/Y registers.</p>
+<p>According to the description in the first section, the 2x2 cell subgrid performs 32-bit product, so 16 registers are required to perform the outer product, so the 64 registers are divided into 16 groups, and the interval of each group is 4 (64/16), that is, the outer product results are not stored continuously by register. (⚠️ AMX only supports loading and storage from main memory, and cannot be loaded and stored through general purpose registers/vector registers)</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="mac-amx_en/workflow.png" class="img-fluid figure-img"></p>
+<figcaption>minimum workflow</figcaption>
+</figure>
+</div>
+<p>We can obtain a partial sum stored in the Z register pool through the outer product execution, and then we can switch the K dimension(matmul’s reduction dimension) to accumulate the partial sum to get the complete result.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="mac-amx_en/workflow switch k.png" class="img-fluid figure-img"></p>
+<figcaption>switch reduction dimension</figcaption>
+</figure>
+</div>
+<p>Reload the tile from A/B matrices of different K dimensions and then accumulate results to the same Z register group.</p>
+<p>Or iterate the M/N dimension. In this example, we keep M unchanged and iterate to the next N. Meanwhile, we need to choose another group in the Z register pool to store the partial sum of the current M/N.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="mac-amx_en/workflow switch n.png" class="img-fluid figure-img"></p>
+<figcaption>switch n dimension</figcaption>
+</figure>
+</div>
+</section>
+<section id="theoretical-performance-metrics" class="level1">
+<h1>3. Theoretical Performance Metrics</h1>
+<p>In order to make good use of AMX, we must first understand the relevant metrics of AMX. So I have designed several tests to verify the theoretical performance metrics.</p>
+<section id="computation-performance" class="level2">
+<h2 class="anchored" data-anchor-id="computation-performance">3.1 Computation Performance</h2>
+<p>From the previous section, we clearly know that the Z register group is divided into 16 groups in float32 datatype, and a computation results in a column in each group, so the ALU is actually divided into 4 groups. Here is to verify the peak performance of different ALU number enabled:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>perf_func <span class="op">=</span> <span class="op">[&amp;</span>z_nums<span class="op">]()</span> <span class="op">{</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">constexpr</span> <span class="dt">uint64_t</span> a <span class="op">=</span> matfp<span class="op">().</span>dtype_mode<span class="op">(</span><span class="dt">matfp_dtype_t</span><span class="op">::</span>f32f32<span class="op">).</span>z_row<span class="op">(</span><span class="dv">0</span><span class="op">);</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">constexpr</span> <span class="dt">uint64_t</span> b <span class="op">=</span> matfp<span class="op">().</span>dtype_mode<span class="op">(</span><span class="dt">matfp_dtype_t</span><span class="op">::</span>f32f32<span class="op">).</span>z_row<span class="op">(</span><span class="dv">1</span><span class="op">);</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">constexpr</span> <span class="dt">uint64_t</span> c <span class="op">=</span> matfp<span class="op">().</span>dtype_mode<span class="op">(</span><span class="dt">matfp_dtype_t</span><span class="op">::</span>f32f32<span class="op">).</span>z_row<span class="op">(</span><span class="dv">2</span><span class="op">);</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">constexpr</span> <span class="dt">uint64_t</span> d <span class="op">=</span> matfp<span class="op">().</span>dtype_mode<span class="op">(</span><span class="dt">matfp_dtype_t</span><span class="op">::</span>f32f32<span class="op">).</span>z_row<span class="op">(</span><span class="dv">3</span><span class="op">);</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  AMX_MATFP<span class="op">(</span>a<span class="op">);</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="op">(</span>z_nums <span class="op">&gt;</span> <span class="dv">1</span><span class="op">)</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    AMX_MATFP<span class="op">(</span>b<span class="op">);</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="op">(</span>z_nums <span class="op">&gt;</span> <span class="dv">2</span><span class="op">)</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    AMX_MATFP<span class="op">(</span>c<span class="op">);</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="op">(</span>z_nums <span class="op">&gt;</span> <span class="dv">3</span><span class="op">)</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    AMX_MATFP<span class="op">(</span>d<span class="op">);</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The results as following:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>ALU Nums</th>
+<th>Gflop/s</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>405.530</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>826.912</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>1244.570</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td>1666.952</td>
+</tr>
+</tbody>
+</table>
+<p>This shows that although each group of ALUs is individually configured and emitted, but they can be executed in parallel.</p>
+</section>
+<section id="load-performance" class="level2">
+<h2 class="anchored" data-anchor-id="load-performance">3.2 Load Performance</h2>
+<p>Here is the load performance test case I designed, where <code>reg nums</code> represents the whether to load data into the X and Y register at the same time. <code>near</code> indicates whether to read consecutive addresses in memory. In M2 Pro, the l1 Dcache size is <code>65536</code>, so <code>K</code> is designed larger than the l1 Dcache size. When <code>near == 0</code>, it needs to cross double cache size to load data. <code>width</code> indicates the number of registers used to read at once, The maximum number is 4 in M2.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">constexpr</span> <span class="dt">size_t</span> K <span class="op">=</span> <span class="op">(</span><span class="dv">65536</span> <span class="op">/</span> <span class="dv">4</span> <span class="op">/</span> <span class="op">(</span><span class="dv">16</span> <span class="op">*</span> <span class="dv">4</span><span class="op">))</span> <span class="op">*</span> <span class="dv">4</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="dt">float</span> M<span class="op">[</span>K <span class="op">*</span> <span class="dv">2</span><span class="op">][</span><span class="dv">16</span> <span class="op">*</span> <span class="dv">4</span><span class="op">]{};</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="dt">float</span> N<span class="op">[</span>K <span class="op">*</span> <span class="dv">2</span><span class="op">][</span><span class="dv">16</span> <span class="op">*</span> <span class="dv">4</span><span class="op">]{};</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>perf_func <span class="op">=</span> <span class="op">[&amp;</span>M<span class="op">,</span> <span class="op">&amp;</span>N<span class="op">,</span> <span class="op">&amp;</span>near<span class="op">,</span> <span class="op">&amp;</span>reg_num<span class="op">,</span> <span class="op">&amp;</span>x_width<span class="op">,</span> <span class="op">&amp;</span>y_width<span class="op">]()</span> <span class="op">{</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">auto</span> ldx <span class="op">=</span> ldxy<span class="op">().</span>register_index<span class="op">(</span><span class="dv">0</span><span class="op">);</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">auto</span> ldy <span class="op">=</span> ldxy<span class="op">().</span>register_index<span class="op">(</span><span class="dv">0</span><span class="op">);</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="op">(</span>x_width <span class="op">&gt;=</span> <span class="dv">2</span><span class="op">)</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    ldx <span class="op">=</span> ldx<span class="op">.</span>multiple<span class="op">();</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="op">(</span>x_width <span class="op">&gt;=</span> <span class="dv">4</span><span class="op">)</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    ldx <span class="op">=</span> ldx<span class="op">.</span>multiple_four<span class="op">();</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="op">(</span>reg_num <span class="op">&gt;</span> <span class="dv">1</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>y_width <span class="op">&gt;=</span> <span class="dv">2</span><span class="op">)</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>      ldy <span class="op">=</span> ldy<span class="op">.</span>multiple<span class="op">();</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>y_width <span class="op">&gt;=</span> <span class="dv">4</span><span class="op">)</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>      ldy <span class="op">=</span> ldy<span class="op">.</span>multiple_four<span class="op">();</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="op">(</span>near<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span><span class="dt">size_t</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> K<span class="op">;</span> i<span class="op">++)</span> <span class="op">{</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>      AMX_LDX<span class="op">(</span>ldx<span class="op">.</span>bind<span class="op">(</span>M<span class="op">[</span>i<span class="op">]));</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> <span class="op">(</span>reg_num <span class="op">&gt;</span> <span class="dv">1</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>        AMX_LDY<span class="op">(</span>ldy<span class="op">.</span>bind<span class="op">(</span>N<span class="op">[</span>i<span class="op">]));</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>      <span class="op">}</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span><span class="dt">size_t</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> K <span class="op">/</span> <span class="dv">2</span><span class="op">;</span> i<span class="op">++)</span> <span class="op">{</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> <span class="op">(</span><span class="dt">size_t</span> j <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> j <span class="op">&lt;</span> <span class="dv">2</span><span class="op">;</span> j<span class="op">++)</span> <span class="op">{</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>        AMX_LDX<span class="op">(</span>ldx<span class="op">.</span>bind<span class="op">(</span>M<span class="op">[</span>j <span class="op">*</span> K <span class="op">+</span> i<span class="op">]));</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>reg_num <span class="op">&gt;</span> <span class="dv">1</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>          AMX_LDY<span class="op">(</span>ldy<span class="op">.</span>bind<span class="op">(</span>N<span class="op">[</span>j <span class="op">*</span> K <span class="op">+</span> i<span class="op">]));</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>      <span class="op">}</span></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>After running this test, we have collected load performance metrics table:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Reg Nums</th>
+<th>Near</th>
+<th>X Width</th>
+<th>Y Width</th>
+<th>GB/s</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td>0</td>
+<td>87.1489</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td>1</td>
+<td>2</td>
+<td>0</td>
+<td>213.164</td>
+</tr>
+<tr class="odd">
+<td>1</td>
+<td>1</td>
+<td>4</td>
+<td>0</td>
+<td>456.332</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td>0</td>
+<td>1</td>
+<td>0</td>
+<td>120.796</td>
+</tr>
+<tr class="odd">
+<td>1</td>
+<td>0</td>
+<td>2</td>
+<td>0</td>
+<td>260.115</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td>0</td>
+<td>4</td>
+<td>0</td>
+<td>483.285</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td>134.33</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>1</td>
+<td>1</td>
+<td>2</td>
+<td>162.084</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>1</td>
+<td>1</td>
+<td>4</td>
+<td>297.15</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>1</td>
+<td>2</td>
+<td>1</td>
+<td>201.658</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>1</td>
+<td>2</td>
+<td>2</td>
+<td>214.772</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>1</td>
+<td>2</td>
+<td>4</td>
+<td>350.554</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>1</td>
+<td>4</td>
+<td>1</td>
+<td>384.614</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>1</td>
+<td>4</td>
+<td>2</td>
+<td>349.528</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>1</td>
+<td>4</td>
+<td>4</td>
+<td>476.722</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>0</td>
+<td>1</td>
+<td>1</td>
+<td>130.604</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>0</td>
+<td>1</td>
+<td>2</td>
+<td>163.91</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>0</td>
+<td>1</td>
+<td>4</td>
+<td>254.922</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>0</td>
+<td>2</td>
+<td>1</td>
+<td>195.612</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>0</td>
+<td>2</td>
+<td>2</td>
+<td>213.61</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>0</td>
+<td>2</td>
+<td>4</td>
+<td>298.603</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>0</td>
+<td>4</td>
+<td>1</td>
+<td>310.308</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>0</td>
+<td>4</td>
+<td>2</td>
+<td>302.767</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>0</td>
+<td>4</td>
+<td>4</td>
+<td>325.193</td>
+</tr>
+</tbody>
+</table>
+<p>We can get some analysis from the table above. 1. increasing the <code>width</code> can double the bandwidth, so this is a free lunch. 2. consecutive reads is fast than non-consecutive reads, indicating we should optimize the data layout. 3. loading two registers and loading two groups in same register pool at the same time also not result in bandwidth reduction, indicating that the A/B matrix can be loaded at the same time.</p>
+</section>
+<section id="store-performance" class="level2">
+<h2 class="anchored" data-anchor-id="store-performance">3.3 Store Performance</h2>
+<p>Same like above, in store performance test also has <code>reg_num</code>,<code>near</code>,<code>width</code> options. But notice that the <code>STZ</code> instruction will store 16 groups from the Z register pool at the same time.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">constexpr</span> <span class="dt">size_t</span> K <span class="op">=</span> <span class="op">(</span><span class="dv">65536</span> <span class="op">/</span> <span class="dv">4</span> <span class="op">/</span> <span class="op">(</span><span class="dv">16</span> <span class="op">*</span> <span class="dv">4</span><span class="op">))</span> <span class="op">*</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="dt">float</span> CNear<span class="op">[</span><span class="dv">16</span><span class="op">][</span><span class="dv">16</span> <span class="op">*</span> <span class="dv">4</span><span class="op">]{};</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="dt">float</span> C<span class="op">[</span><span class="dv">16</span><span class="op">][</span>K<span class="op">]{};</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>perf_func <span class="op">=</span> <span class="op">[&amp;</span>C<span class="op">,</span> <span class="op">&amp;</span>CNear<span class="op">,</span> <span class="op">&amp;</span>near<span class="op">,</span> <span class="op">&amp;</span>z_num<span class="op">,</span> <span class="op">&amp;</span>width<span class="op">]()</span> <span class="op">{</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">auto</span> ldst <span class="op">=</span> width <span class="op">==</span> <span class="dv">2</span> <span class="op">?</span> ldstz<span class="op">().</span>multiple<span class="op">()</span> <span class="op">:</span> ldstz<span class="op">();</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> <span class="op">(</span><span class="dt">size_t</span> z <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> z <span class="op">&lt;</span> z_num<span class="op">;</span> z<span class="op">++)</span> <span class="op">{</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span><span class="dt">size_t</span> m <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> m <span class="op">&lt;</span> <span class="dv">16</span><span class="op">;</span> m<span class="op">++)</span> <span class="op">{</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>      AMX_STZ<span class="op">(</span>ldst<span class="op">.</span>row_index<span class="op">(</span>m <span class="op">*</span> <span class="dv">4</span> <span class="op">+</span> z <span class="op">*</span> width<span class="op">)</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>                  <span class="op">.</span>bind<span class="op">(</span>near <span class="op">?</span> CNear<span class="op">[</span>m<span class="op">]</span> <span class="op">+</span> <span class="dv">16</span> <span class="op">*</span> z <span class="op">*</span> width</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>                              <span class="op">:</span> C<span class="op">[</span>m<span class="op">]</span> <span class="op">+</span> <span class="dv">16</span> <span class="op">*</span> z <span class="op">*</span> width<span class="op">));</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Result:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Reg Nums</th>
+<th>Near</th>
+<th>Width</th>
+<th>GB/s</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td>10.3769</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td>1</td>
+<td>2</td>
+<td>8.93052</td>
+</tr>
+<tr class="odd">
+<td>1</td>
+<td>0</td>
+<td>1</td>
+<td>12.9423</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td>0</td>
+<td>2</td>
+<td>12.3377</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>1</td>
+<td>1</td>
+<td>5.69731</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>1</td>
+<td>2</td>
+<td>12.3658</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>0</td>
+<td>1</td>
+<td>7.55092</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>0</td>
+<td>2</td>
+<td>13.0133</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>1</td>
+<td>1</td>
+<td>6.58085</td>
+</tr>
+<tr class="even">
+<td>3</td>
+<td>0</td>
+<td>1</td>
+<td>11.4118</td>
+</tr>
+<tr class="odd">
+<td>4</td>
+<td>1</td>
+<td>1</td>
+<td>8.8847</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td>0</td>
+<td>1</td>
+<td>9.85956</td>
+</tr>
+</tbody>
+</table>
+<p>It can be found that using multiple registers does not increase bandwidth, indicating that it is basically a serial store, but twice the width can still effectively increase bandwidth. However, the overall speed is several times slower than computing and loading, indicating that we cannot load and store Z frequently.</p>
+</section>
+</section>
+<section id="design-micro-kernel" class="level1">
+<h1>4. Design Micro Kernel</h1>
+<p>Based on the previous section’s observation, we can trying to build the sgemm kernel. For efficiency, we design it according to the bottom-up principle. First we need to design a micro kernel that makes full use of the hardware’s computing performance, then call the micro kernel in blocks to ensure the overall performance.</p>
+<p>Review the most basic calculation process, load a column of M, load a row of N, and calculate a piece of MxN. it is obvious that the X/Y/Z register pool is not fully filled, especially the Z register pool, which means that only <span class="math inline">\(\frac{1}{4}\)</span> is used, so the first goal is to use it up.</p>
+<p><img src="mac-amx_en/micro kernel 0.png" class="img-fluid"></p>
+<p>From the previous section, we know the maximum theoretical computational performance and bandwidth, so according to the formula we can calculate how many nanoseconds are needed for computation and loading.: <span class="math display">\[
+\begin{aligned}
+Compute Time  &amp;= \frac{FLOPs}{GFLOPS}\ ~NanoSeconds\\
+Load Time  &amp;= \frac{Bytes}{GBS}\ ~NanoSeconds
+\end{aligned}
+\]</span></p>
+<p>Next we design different calculation strategies based on the performance data and formulas.</p>
+<section id="strategy-1-load-1m-and-4n" class="level2">
+<h2 class="anchored" data-anchor-id="strategy-1-load-1m-and-4n">4.1 Strategy 1: Load 1M and 4N</h2>
+<p>In my M2 Pro, AMX can load up to <code>4 * 64</code> bytes at a time, so it can load <code>1</code> group of M and <code>4</code> groups of N, and use the full 4 ALU for to get <code>M * 4N</code>, and then switch different K in the next loop. In total, it is loaded once and calculated 4 times, and can only be cached once more due to the size limit of the X register pool.</p>
+<p><img src="mac-amx_en/micro kernel 1.png" class="img-fluid"></p>
+<p>Looking up the table, we can see that the loading bandwidth is 297.15 GB/s, and the compute time and load time are respectively: <span class="math display">\[
+\begin{aligned}
+FLOPs &amp;= 2 * M * N * ALU = 2 * 16 * 16 * 4 = 2048 \\
+Compute Time &amp;= FLOPs / 1666  = 1.229~NanoSeconds \\
+Bytes &amp;= (1 * M + 4 * N) * 4 = 320 \\
+Load Time &amp;= Bytes / 297.15 = 1.076~NanoSeconds
+\end{aligned}
+\]</span></p>
+<p>The difference between they times is only <code>0.15</code>ns, which is not enough to load the data required for the next loop, causing the ALU to fail to working continuously.</p>
+</section>
+<section id="strategy-2-load-4m-and-1n" class="level2">
+<h2 class="anchored" data-anchor-id="strategy-2-load-4m-and-1n">4.2 Strategy 2: Load 4M and 1N</h2>
+<p>Similar to the previous strategy, but there is an additional problem here that the column direction of the A matrix is non-contiguous, and it needs to be transposed <code>4</code> times M by the CPU before loading, so it is not considered.</p>
+<p><img src="mac-amx_en/micro kernel 2.png" class="img-fluid"></p>
+</section>
+<section id="strategy-3-load-2m-and-2n" class="level2">
+<h2 class="anchored" data-anchor-id="strategy-3-load-2m-and-2n">4.3 Strategy 3: Load 2M and 2N</h2>
+<p>In order to balance the storage usage of X/Y registers, we consider loading M/N of the same size, that is, loading 2 groups. We can calculate <code>4</code> times to get the <code>2M * 2N</code> output.</p>
+<p>In my M2 Pro, the maximum loaded data is <code>4 * 64</code> bytesat a time, so if load 2M and 2N of two different K, it means that can actually be calculated <code>8</code> times, maximizing the utilization of ALU. And we can prepare the next loop’s input data in a free space of the X/Y register pools.</p>
+<p><img src="mac-amx_en/micro kernel 3.png" class="img-fluid"></p>
+<p>Look up the table and get a bandwidth of 476.722 GB/s, which is taken into the formula to calculate: <span class="math display">\[
+\begin{aligned}
+FLOPs &amp;= 2 * M * N * 4 * 2 = 4096 \\
+Compute Time &amp;= FLOPs / 1666  = 2.458~NanoSeconds \\
+Bytes &amp;= (4 * M + 4 * N) * 4 \\
+Load Time &amp;= Bytes / 476.722 = 1.074~NanoSeconds
+\end{aligned}
+\]</span></p>
+<p>The compute time minus the load time is <code>1.384</code> ns, which is greater than the next load time of <code>1.074</code> ns, indicating that we can perfectly stream the computation, thus exerting the maximum computing performance.</p>
+</section>
+<section id="verify-strategy-3" class="level2">
+<h2 class="anchored" data-anchor-id="verify-strategy-3">4.4 Verify Strategy 3</h2>
+<p>In order to achieve peak data loading performance, we need to optimize the layout of the matrix, that is, pack the A/B matrix with a width of 32, so that the loading is satisfied with contiguous memory reading, and the result of <code>2 * M * N</code> can be calculated at one time. The specific iteration flowchart is as follows:</p>
+<p><img src="mac-amx_en/micro kernel 3 detail.png" class="img-fluid"></p>
+<p>For the simplicity, I assume that M/K/N are multiples of the smallest computing unit, and the input A/B matrix is required to be optimized for layout. Here is the code:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span> <span class="op">&lt;</span><span class="dt">bool</span> LoadC<span class="op">,</span> <span class="dt">bool</span> StoreC<span class="op">,</span> <span class="dt">size_t</span> KTile<span class="op">,</span> <span class="dt">size_t</span> M<span class="op">,</span> <span class="dt">size_t</span> N<span class="op">&gt;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> gepdot<span class="op">(</span><span class="dt">size_t</span> curM<span class="op">,</span> <span class="dt">size_t</span> curK<span class="op">,</span> <span class="dt">size_t</span> curN<span class="op">,</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>            <span class="at">const</span> <span class="dt">float</span> packedA<span class="op">[</span>KTile<span class="op">][</span><span class="dv">32</span><span class="op">],</span> <span class="at">const</span> <span class="dt">float</span> packedB<span class="op">[</span>KTile<span class="op">][</span><span class="dv">32</span><span class="op">],</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>            <span class="dt">float</span> C<span class="op">[</span>M<span class="op">][</span>N<span class="op">])</span> <span class="op">{</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">static_assert</span><span class="op">(</span>KTile <span class="op">%</span> <span class="dv">4</span> <span class="op">==</span> <span class="dv">0</span><span class="op">,</span> <span class="st">"not support k%4!=0"</span><span class="op">);</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="kw">constexpr</span> <span class="op">(</span>LoadC<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">// load acc value.</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span><span class="dt">size_t</span> om <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> om <span class="op">&lt;</span> <span class="dv">2</span><span class="op">;</span> om<span class="op">++)</span> <span class="op">{</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> <span class="op">(</span><span class="dt">size_t</span> m <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> m <span class="op">&lt;</span> <span class="dv">16</span><span class="op">;</span> m<span class="op">++)</span> <span class="op">{</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>        AMX_STZ<span class="op">(</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>            ldstz<span class="op">().</span>row_index<span class="op">(</span>m <span class="op">*</span> <span class="dv">4</span> <span class="op">+</span> om <span class="op">*</span> <span class="dv">2</span><span class="op">).</span>multiple<span class="op">().</span>bind<span class="op">(</span>C<span class="op">[</span>om <span class="op">*</span> <span class="dv">16</span> <span class="op">+</span> m<span class="op">]));</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>      <span class="op">}</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> <span class="op">(</span><span class="dt">size_t</span> k <span class="op">=</span> curK<span class="op">;</span> k <span class="op">&lt;</span> curK <span class="op">+</span> KTile<span class="op">;</span> k <span class="op">+=</span> <span class="dv">4</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span><span class="dt">size_t</span> ok <span class="op">=</span> k<span class="op">;</span> ok <span class="op">&lt;</span> k <span class="op">+</span> <span class="dv">4</span><span class="op">;</span> ok <span class="op">+=</span> <span class="dv">2</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>      <span class="co">// load [m0,k0], [m1,k0], [m0,k1], [m1,k1]</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>      AMX_LDY<span class="op">(</span>ldxy<span class="op">().</span>register_index<span class="op">(</span><span class="dv">0</span><span class="op">).</span>multiple<span class="op">().</span>multiple_four<span class="op">().</span>bind<span class="op">(</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>          <span class="op">(</span><span class="dt">void</span> <span class="op">*)</span>packedA<span class="op">[</span>ok<span class="op">]));</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>      <span class="co">// load [n0,k0], [n1,k0], [n0,k1], [n1,k1]</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>      AMX_LDX<span class="op">(</span>ldxy<span class="op">().</span>register_index<span class="op">(</span><span class="dv">0</span><span class="op">).</span>multiple<span class="op">().</span>multiple_four<span class="op">().</span>bind<span class="op">(</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>          <span class="op">(</span><span class="dt">void</span> <span class="op">*)</span>packedB<span class="op">[</span>ok<span class="op">]));</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>      <span class="co">// compute 8 times.</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>      <span class="co">// [[m0,n0],[m0,n1],</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>      <span class="co">//  [m1,n0],[m1,n1]]</span></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> <span class="op">(</span><span class="dt">size_t</span> ik <span class="op">=</span> ok<span class="op">;</span> ik <span class="op">&lt;</span> ok <span class="op">+</span> <span class="dv">2</span><span class="op">;</span> ik<span class="op">++)</span> <span class="op">{</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>        <span class="kw">auto</span> fma <span class="op">=</span> ik <span class="op">==</span> <span class="dv">0</span> <span class="op">?</span> fma32<span class="op">().</span>skip_z<span class="op">()</span> <span class="op">:</span> fma32<span class="op">();</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> <span class="op">(</span><span class="dt">size_t</span> m <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> m <span class="op">&lt;</span> <span class="dv">2</span><span class="op">;</span> m<span class="op">++)</span> <span class="op">{</span></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>          <span class="cf">for</span> <span class="op">(</span><span class="dt">size_t</span> n <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> n <span class="op">&lt;</span> <span class="dv">2</span><span class="op">;</span> n<span class="op">++)</span> <span class="op">{</span></span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>            AMX_FMA32<span class="op">(</span>fma<span class="op">.</span>z_row<span class="op">(</span>m <span class="op">*</span> <span class="dv">2</span> <span class="op">+</span> n<span class="op">)</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>                          <span class="op">.</span>y_offset<span class="op">((</span>ik <span class="op">-</span> ok<span class="op">)</span> <span class="op">*</span> <span class="dv">2</span> <span class="op">*</span> <span class="dv">16</span> <span class="op">*</span> <span class="dv">4</span> <span class="op">+</span> m <span class="op">*</span> <span class="dv">16</span> <span class="op">*</span> <span class="dv">4</span><span class="op">)</span></span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>                          <span class="op">.</span>x_offset<span class="op">((</span>ik <span class="op">-</span> ok<span class="op">)</span> <span class="op">*</span> <span class="dv">2</span> <span class="op">*</span> <span class="dv">16</span> <span class="op">*</span> <span class="dv">4</span> <span class="op">+</span> n <span class="op">*</span> <span class="dv">16</span> <span class="op">*</span> <span class="dv">4</span><span class="op">));</span></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a>          <span class="op">}</span></span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a>      <span class="op">}</span></span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a>  <span class="co">// last time need store C.</span></span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="kw">constexpr</span> <span class="op">(</span>StoreC<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span><span class="dt">size_t</span> om <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> om <span class="op">&lt;</span> <span class="dv">2</span><span class="op">;</span> om<span class="op">++)</span> <span class="op">{</span></span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> <span class="op">(</span><span class="dt">size_t</span> m <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> m <span class="op">&lt;</span> <span class="dv">16</span><span class="op">;</span> m<span class="op">++)</span> <span class="op">{</span></span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a>        AMX_STZ<span class="op">(</span></span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a>            ldstz<span class="op">().</span>row_index<span class="op">(</span>m <span class="op">*</span> <span class="dv">4</span> <span class="op">+</span> om <span class="op">*</span> <span class="dv">2</span><span class="op">).</span>multiple<span class="op">().</span>bind<span class="op">(</span>C<span class="op">[</span>om <span class="op">*</span> <span class="dv">16</span> <span class="op">+</span> m<span class="op">]));</span></span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a>      <span class="op">}</span></span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Tested under the conditions of <code>M = 16 * 2, K = 8192, N = 16 * 2</code>, we obtained <code>1632.13 Gflop/s</code> performance, reaching <code>97.9%</code> of the peak performance.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">[----------]</span> 1 test from test_amx</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="bu">[</span> RUN      <span class="bu">]</span> <span class="ex">test_amx.test_gepdot</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>             <span class="ex">Gflop/s:</span> 1632.13</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="bu">[</span>       OK <span class="bu">]</span> <span class="ex">test_amx.test_gepdot</span> <span class="er">(</span><span class="ex">1032</span> ms<span class="kw">)</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="ex">[----------]</span> 1 test from test_amx <span class="er">(</span><span class="ex">1032</span> ms total<span class="kw">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+</section>
+<section id="design-online-packing-scheme" class="level1">
+<h1>5. Design Online Packing Scheme</h1>
+<p>If the layout of the input data is not optimized, then it is necessary to perform packing while considering the calculation. And in the example in the previous section, I did not set a large M and N, but in reality, I need to switch M and N, which brings another tiling size problem.</p>
+<p>If we are using SIMD instructions for calculation, then a good online packing solution has been proposed in the paper <a href="https://dl.acm.org/doi/10.1145/1356052.1356053">Anatomy of High-Performance Matrix Multiplication</a>:</p>
+<p><img src="mac-amx_en/goto blas.png" class="img-fluid"></p>
+<p>this paper choose the <code>GEBP</code> as micro kernel, However, <code>GEBP</code> requires repeated load and store of the C matrix. For CPU general purpose registers, its bandwidth is large enough. As long as <code>Nr</code> is much larger than <code>Kc</code>, the memory overhead of accessing the C matrix can be averaged.</p>
+<p>But for AMX instructions, the bandwidth of the Z registers is only a few tenths of the bandwidth of the X/Y register, which obviously cannot be averaged. Therefore, we have to design a new method.</p>
+<p><img src="mac-amx_en/gebp.png" class="img-fluid"></p>
+<p>So I have implemented a simple two-level tiling strategy here. The loop <code>N</code> in <code>M</code> is used to reuse the A matrix, and the <code>K</code> dimension is placed in the innermost layer of the loop to fit the <code>gepdot</code> kernel.</p>
+<p>At the same time, a small piece of <code>A</code> is packed in each <code>KTile</code> and cached, so that recompute can be avoided when looping <code>N</code>:</p>
+<p><img src="mac-amx_en/gepdot general.png" class="img-fluid"></p>
+<p>final code:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">auto</span> matmul <span class="op">=</span> <span class="op">[&amp;]()</span> <span class="op">-&gt;</span> <span class="dt">void</span> <span class="op">{</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">constexpr</span> <span class="dt">size_t</span> KTile <span class="op">=</span> <span class="dv">32</span><span class="op">,</span> MTile <span class="op">=</span> <span class="dv">32</span><span class="op">,</span> NTile <span class="op">=</span> <span class="dv">32</span><span class="op">;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> <span class="op">(</span><span class="dt">size_t</span> mo <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> mo <span class="op">&lt;</span> M<span class="op">;</span> mo <span class="op">+=</span> MTile<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">float</span> PackedA<span class="op">[</span>K<span class="op">][</span>MTile<span class="op">];</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span><span class="dt">size_t</span> no <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> no <span class="op">&lt;</span> N<span class="op">;</span> no <span class="op">+=</span> NTile<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> <span class="op">(</span><span class="dt">size_t</span> ko <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> ko <span class="op">&lt;</span> K<span class="op">;</span> ko <span class="op">+=</span> KTile<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>        <span class="co">// each time pack local innertile.</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>no <span class="op">==</span> <span class="dv">0</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>          <span class="cf">for</span> <span class="op">(</span><span class="dt">size_t</span> mi <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> mi <span class="op">&lt;</span> MTile<span class="op">;</span> mi<span class="op">++)</span> <span class="op">{</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> <span class="op">(</span><span class="dt">size_t</span> i <span class="op">=</span> ko<span class="op">;</span> i <span class="op">&lt;</span> ko <span class="op">+</span> KTile<span class="op">;</span> i<span class="op">++)</span> <span class="op">{</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>              PackedA<span class="op">[</span>i<span class="op">][</span>mi<span class="op">]</span> <span class="op">=</span> A<span class="op">[</span>mo <span class="op">+</span> mi<span class="op">][</span>i<span class="op">];</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>          <span class="op">}</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>        gepdot_general<span class="op">&lt;</span>KTile<span class="op">,</span> M<span class="op">,</span> K<span class="op">,</span> N<span class="op">&gt;(</span><span class="kw">false</span><span class="op">,</span> <span class="op">(</span>ko <span class="op">+</span> KTile <span class="op">==</span> K<span class="op">),</span> mo<span class="op">,</span> ko<span class="op">,</span> no<span class="op">,</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>                                        PackedA <span class="op">+</span> ko<span class="op">,</span> B<span class="op">,</span> C<span class="op">);</span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>      <span class="op">}</span></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The test performance achieved 70% of the performance of the libraries provided by Apple CBlas:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="bu">[</span> RUN      <span class="bu">]</span> <span class="ex">test_amx.test_gepdot_general</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ex">gepdot</span> general   Gflop/s: 998.291</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="ex">cblas_sgemm</span>      Gflop/s: 1398.95</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="bu">[</span>       OK <span class="bu">]</span> <span class="ex">test_amx.test_gepdot_general</span> <span class="er">(</span><span class="ex">582</span> ms<span class="kw">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>In fact, the strategy 3 is the bottleneck of the calculation, according to the theoretical performance value of the calculation of the pipeline after the actual remaining about “0.3ns” time can be assigned to the data load. Theoretically it can hidden the A matrix packing overhead, so as to reach the peak performance. So Beyond the Apple closed source library this challenging task to the readers 👻.</p>
+</section>
+<section id="further-questions" class="level1">
+<h1>5. Further Questions</h1>
+<p>I have designed a test case to check whether AMX loading data updates the cache:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">constexpr</span> <span class="dt">size_t</span> K <span class="op">=</span> <span class="op">(</span><span class="dv">65536</span> <span class="op">/</span> <span class="dv">4</span> <span class="op">/</span> <span class="op">(</span><span class="dv">16</span> <span class="op">*</span> <span class="dv">2</span><span class="op">))</span> <span class="op">*</span> <span class="dv">8</span><span class="op">;</span> <span class="co">/* 65536 是cache size */</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="dt">float</span> N<span class="op">[</span><span class="dv">1</span><span class="op">][</span><span class="dv">16</span> <span class="op">*</span> <span class="dv">2</span><span class="op">]{};</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="dt">float</span> M<span class="op">[</span>K<span class="op">][</span><span class="dv">16</span> <span class="op">*</span> <span class="dv">2</span><span class="op">]{};</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="dt">float</span> <span class="op">*</span>C <span class="op">=</span> <span class="op">(</span><span class="dt">float</span> <span class="op">*)</span>malloc<span class="op">(</span>K <span class="op">*</span> <span class="dv">65536</span><span class="op">);</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="kw">auto</span> func1 <span class="op">=</span> <span class="op">[&amp;</span>N<span class="op">]()</span> <span class="op">{</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> <span class="op">(</span><span class="dt">size_t</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> K<span class="op">;</span> i<span class="op">++)</span> <span class="op">{</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    AMX_LDX<span class="op">(</span>ldxy<span class="op">().</span>multiple<span class="op">().</span>register_index<span class="op">(</span><span class="dv">0</span><span class="op">).</span>bind<span class="op">((</span><span class="dt">void</span> <span class="op">*)</span>N<span class="op">[</span><span class="dv">0</span><span class="op">]));</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="kw">auto</span> func2 <span class="op">=</span> <span class="op">[&amp;</span>M<span class="op">]()</span> <span class="op">{</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> <span class="op">(</span><span class="dt">size_t</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> K<span class="op">;</span> i<span class="op">++)</span> <span class="op">{</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>    AMX_LDX<span class="op">(</span>ldxy<span class="op">().</span>multiple<span class="op">().</span>register_index<span class="op">(</span><span class="dv">0</span><span class="op">).</span>bind<span class="op">((</span><span class="dt">void</span> <span class="op">*)</span>M<span class="op">[</span>i<span class="op">]));</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a><span class="kw">auto</span> func3 <span class="op">=</span> <span class="op">[&amp;</span>C<span class="op">]()</span> <span class="op">{</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> <span class="op">(</span><span class="dt">size_t</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> K<span class="op">;</span> i<span class="op">++)</span> <span class="op">{</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>    AMX_LDX<span class="op">(</span></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>        ldxy<span class="op">().</span>multiple<span class="op">().</span>register_index<span class="op">(</span><span class="dv">0</span><span class="op">).</span>bind<span class="op">((</span><span class="dt">void</span> <span class="op">*)(</span>C <span class="op">+</span> i <span class="op">*</span> K<span class="op">)));</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Where <code>func1</code> always loads data at the same location, <code>func2</code> loads consecutive data in sequence, and <code>func3</code> loads data with a stride greater than l1 Dcache size each time. The final result is as follows:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">func1:</span> 29.9743 GB/s</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">func2:</span> 219.201 GB/s</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="ex">func3:</span> 9.74711 GB/s</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The results of <code>func2</code> and <code>func3</code> indicate that the l1 Dcache is also important for AMX, but I can’t understand the difference between <code>func1</code> and <code>func2</code>. Theoretically, the accessed data should be cached in the cache, but from the results, it seems that the cached data is the data behind the current loading address. This question may require readers who know more about the architecture to answer.</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/zhen8838\.github\.io");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script src="https://utteranc.es/client.js" repo="zhen8838/zhen8838.github.io" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

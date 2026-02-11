@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2023-02-23">
+
+<title>带宽受限下的DSA后端Compute Schedule – Zheng’s Notes</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../assets/favicon.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-7072389654d23eff08f359f9aa0d1ee7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">Zheng’s Notes</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#准备工作" id="toc-准备工作" class="nav-link active" data-scroll-target="#准备工作">0. 准备工作</a></li>
+  <li><a href="#最简单的卷积实现" id="toc-最简单的卷积实现" class="nav-link" data-scroll-target="#最简单的卷积实现">1. 最简单的卷积实现</a></li>
+  <li><a href="#尝试进行硬件加速" id="toc-尝试进行硬件加速" class="nav-link" data-scroll-target="#尝试进行硬件加速">2. 尝试进行硬件加速</a></li>
+  <li><a href="#尝试减少重复的数据加载" id="toc-尝试减少重复的数据加载" class="nav-link" data-scroll-target="#尝试减少重复的数据加载">3. 尝试减少重复的数据加载</a>
+  <ul class="collapse">
+  <li><a href="#尝试将weights-stage到oc循环外" id="toc-尝试将weights-stage到oc循环外" class="nav-link" data-scroll-target="#尝试将weights-stage到oc循环外">3.1 尝试将Weights Stage到OC循环外</a></li>
+  <li><a href="#尝试将weights-stage到oc循环内" id="toc-尝试将weights-stage到oc循环内" class="nav-link" data-scroll-target="#尝试将weights-stage到oc循环内">3.2 尝试将Weights Stage到OC循环内</a></li>
+  <li><a href="#尝试新的切分维度" id="toc-尝试新的切分维度" class="nav-link" data-scroll-target="#尝试新的切分维度">3.3 尝试新的切分维度</a></li>
+  </ul></li>
+  <li><a href="#尝试stream-input" id="toc-尝试stream-input" class="nav-link" data-scroll-target="#尝试stream-input">4. 尝试stream input</a></li>
+  <li><a href="#尝试进行elemwise算子的layer-fusion." id="toc-尝试进行elemwise算子的layer-fusion." class="nav-link" data-scroll-target="#尝试进行elemwise算子的layer-fusion.">5. 尝试进行Elemwise算子的Layer Fusion.</a>
+  <ul class="collapse">
+  <li><a href="#单独执行每个算子" id="toc-单独执行每个算子" class="nav-link" data-scroll-target="#单独执行每个算子">5.1 单独执行每个算子</a></li>
+  <li><a href="#执行fusion后的算子" id="toc-执行fusion后的算子" class="nav-link" data-scroll-target="#执行fusion后的算子">5.2 执行Fusion后的算子</a></li>
+  </ul></li>
+  <li><a href="#尝试进行非elemwise算子的layer-fusion." id="toc-尝试进行非elemwise算子的layer-fusion." class="nav-link" data-scroll-target="#尝试进行非elemwise算子的layer-fusion.">6. 尝试进行非Elemwise算子的Layer Fusion.</a>
+  <ul class="collapse">
+  <li><a href="#单独执行每个算子-1" id="toc-单独执行每个算子-1" class="nav-link" data-scroll-target="#单独执行每个算子-1">6.1 单独执行每个算子</a></li>
+  <li><a href="#执行fusion后的算子-1" id="toc-执行fusion后的算子-1" class="nav-link" data-scroll-target="#执行fusion后的算子-1">6.2 执行Fusion后的算子</a></li>
+  </ul></li>
+  <li><a href="#总结" id="toc-总结" class="nav-link" data-scroll-target="#总结">总结</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">带宽受限下的DSA后端Compute Schedule</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">编译器</div>
+  </div>
+  </div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">February 23, 2023</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>之前写过一篇带宽受限下的DSA后端优化, 不过主要是针对已经构建好Compute Schedule之后的优化, 今天准备展开讲讲. 从单层卷积到优化计算,再到Layer Fusion,以及后续各种优化,下面将通过一系列的例子来介绍:</p>
+<!--more-->
+<section id="准备工作" class="level1">
+<h1>0. 准备工作</h1>
+<p>首先需要实现高层IR的Index Mapping进行Infer Bounds, 这里我导入一个已经实现好的卷积的BoundsInfer.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> TracedArray <span class="im">import</span> TarcedArray, GlobalHierarchy</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> Conv2dBoundsInfer <span class="im">import</span> Conv2dBoundsInfer, Segments</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> torch</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>Infer <span class="op">=</span> Conv2dBoundsInfer(in_channels<span class="op">=</span><span class="dv">2048</span>, out_channels<span class="op">=</span><span class="dv">512</span>,</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    kernel_size<span class="op">=</span><span class="dv">1</span>, groups<span class="op">=</span><span class="dv">1</span>, bias<span class="op">=</span><span class="va">True</span>, padding<span class="op">=</span>(<span class="dv">0</span>, <span class="dv">0</span>),</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    stride<span class="op">=</span>(<span class="dv">1</span>, <span class="dv">1</span>), dilation<span class="op">=</span>(<span class="dv">1</span>, <span class="dv">1</span>), intput_shape<span class="op">=</span>(<span class="dv">1</span>, <span class="dv">2048</span>, <span class="dv">56</span>, <span class="dv">56</span>),</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    test<span class="op">=</span><span class="va">False</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="最简单的卷积实现" class="level1">
+<h1>1. 最简单的卷积实现</h1>
+<p>假设我们的DSA有一个比较大的SRAM, 并且可以在这个SRAM上执行Tensor级别的操作, 约定好SRAM大小为<code>L2SIZE</code>. 这里引入GlobalHierarchy作为多级内存存储抽象,用于计算数据加载次数, 检查存储是否溢出. 那么考虑在上面编写一个最Navie的卷积. 为了匹配Tensor级别的计算操作, 我们将原本按1进行for循环执行的逻辑看作为按tile大小为1取tensor进行计算.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>L2SIZE <span class="op">=</span> <span class="dv">1536</span> <span class="op">*</span> <span class="dv">1024</span> <span class="co">#</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> demo1(imageArr: np.ndarray, weightArr: np.ndarray, outputArr: np.ndarray, targetOutput: np.ndarray):</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  image <span class="op">=</span> TarcedArray(imageArr)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  weight <span class="op">=</span> TarcedArray(weightArr)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  output <span class="op">=</span> TarcedArray(outputArr)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  (B, OC, OH, OW) <span class="op">=</span> outputArr.shape</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  (tileB, tileOC, tileOH, tileOW) <span class="op">=</span> (<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> b <span class="kw">in</span> Segments(<span class="dv">0</span>, B, tileB):</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> oc <span class="kw">in</span> Segments(<span class="dv">0</span>, OC, tileOC):</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> oh <span class="kw">in</span> Segments(<span class="dv">0</span>, OH, tileOH):</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> ow <span class="kw">in</span> Segments(<span class="dv">0</span>, OW, tileOW):</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>          <span class="cf">with</span> GlobalHierarchy(L2SIZE):</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>            <span class="co"># 进入SRAM之后 从DDR中加在数据并计算.</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>            outputTile <span class="op">=</span> output[b, oc, oh, ow]</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>            imageTile <span class="op">=</span> image[Infer.get_input_segment(b, oc, oh, ow)]</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>            weightTile <span class="op">=</span> weight[Infer.get_w_segment(oc)]</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>            outputTile <span class="op">+=</span> np.<span class="bu">sum</span>((imageTile <span class="op">*</span> weightTile), keepdims<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>  <span class="cf">assert</span> (np.allclose(output._array, targetOutput, atol<span class="op">=</span><span class="fl">1e-5</span>))</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(<span class="st">"demo1 total loaded :"</span>, GlobalHierarchy.TotalLoaded)</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>  GlobalHierarchy.Reset()</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>demo1 total loaded : <span class="dv">6578274304</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="尝试进行硬件加速" class="level1">
+<h1>2. 尝试进行硬件加速</h1>
+<p>可以发现我们重复加载了许多数据,也并没有加速计算, 但是实际上芯片中存在加速计算的硬件, 所以用以下方法来加速计算.</p>
+<ol type="1">
+<li><p>SRAM有足够空间的情况下, 可以尝试一次计算更大的tensor,也就是选择更大的tile size. 比如把W上的tile size设置为最大, 把H上tile size加大.</p></li>
+<li><p>假设我们有一个并行计算卷积部分输出的TensorCore, 一次最大并行输入16个input channel, 并行输出24个output channel.</p></li>
+</ol>
+<p>接下来就可以来改造compute schedule:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>CORE_OC <span class="op">=</span> <span class="dv">24</span> <span class="co"># TensorCore并行限制</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>CORE_IC <span class="op">=</span> <span class="dv">16</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> TensorCore(image: np.ndarray, weight: np.ndarray) <span class="op">-&gt;</span> np.ndarray:</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 这里假设硬件可以自动循环</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> torch.conv2d(torch.tensor(image), torch.tensor(weight)).numpy()</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> demo2(imageArr: np.ndarray, weightArr: np.ndarray, outputArr: np.ndarray, targetOutput: np.ndarray):</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  image <span class="op">=</span> TarcedArray(imageArr)</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  weight <span class="op">=</span> TarcedArray(weightArr)</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  output <span class="op">=</span> TarcedArray(outputArr)</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  (B, OC, OH, OW) <span class="op">=</span> outputArr.shape</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> b <span class="kw">in</span> Segments(<span class="dv">0</span>, B, <span class="dv">1</span>):</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> oc <span class="kw">in</span> Segments(<span class="dv">0</span>, OC, CORE_OC):</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> oh <span class="kw">in</span> Segments(<span class="dv">0</span>, OH, <span class="dv">2</span>):</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> ow <span class="kw">in</span> Segments(<span class="dv">0</span>, OW, OW):</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>          <span class="cf">with</span> GlobalHierarchy(L2SIZE):</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>            outputTile <span class="op">=</span> output[b, oc, oh, ow]</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>            imageTile <span class="op">=</span> image[Infer.get_input_segment(b, oc, oh, ow)]</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>            weightTile <span class="op">=</span> weight[Infer.get_w_segment(oc)]</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>            outputTile <span class="op">+=</span> TensorCore(imageTile, weightTile)</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>  <span class="cf">assert</span> (np.allclose(output._array, targetOutput, atol<span class="op">=</span><span class="fl">1e-5</span>))</span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(<span class="st">"demo2 total loaded :"</span>, GlobalHierarchy.TotalLoaded)</span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>  GlobalHierarchy.Reset()</span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>demo2 total loaded : <span class="dv">179651584</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="尝试减少重复的数据加载" class="level1">
+<h1>3. 尝试减少重复的数据加载</h1>
+<p>可以发现demo2减少了许多数据加载, 但从事高性能计算的朋友们应该可以发现对weight来说, 如果在OH/OW有切分, 那么在OH/OW循环内都是每次加载相同的weights[ic,kh,kw]. 那么我们就有两个选择来解决这个问题:</p>
+<ol type="1">
+<li><p>把weights加载的时机移动到OC循环内部或OC循环外部去加载, 这样在OH/OW的循环中可以不用load重复的weights了.</p></li>
+<li><p>我们还可以增加OH/OW的tile size,然后再添加一个IC的切分维度, 这样每个循环也不会重复加载weights了, 但是值得注意的是此时output tile需要移动到oc循环内.</p></li>
+</ol>
+<section id="尝试将weights-stage到oc循环外" class="level2">
+<h2 class="anchored" data-anchor-id="尝试将weights-stage到oc循环外">3.1 尝试将Weights Stage到OC循环外</h2>
+<p>这里就是在SRAM中保存所有的weights, 实际上在stage到OC循环外之后, 我们还可以选择在OC循环内逐步的加载weights以进行流水.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> demo3_1(imageArr: np.ndarray, weightArr: np.ndarray, outputArr: np.ndarray, targetOutput: np.ndarray):</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  image <span class="op">=</span> TarcedArray(imageArr)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  weight <span class="op">=</span> TarcedArray(weightArr)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  output <span class="op">=</span> TarcedArray(outputArr)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  (B, OC, OH, OW) <span class="op">=</span> outputArr.shape</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> b <span class="kw">in</span> Segments(<span class="dv">0</span>, B, <span class="dv">1</span>):</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> GlobalHierarchy(L2SIZE):</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>      reuse <span class="op">=</span> <span class="va">False</span> <span class="co"># 为了简单起见, 添加reuse的参数来避免重复统计load的数据, 其实应该把allocate buffer和load/store的逻辑分离出来.</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>      weightTile <span class="op">=</span> weight[Infer.get_w_segment(<span class="bu">slice</span>(<span class="dv">0</span>, OC))]  <span class="co"># 将weights加载移动到OC循环外 也就是一次加载所有的权重</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> oc <span class="kw">in</span> Segments(<span class="dv">0</span>, OC, CORE_OC):</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> oh <span class="kw">in</span> Segments(<span class="dv">0</span>, OH, <span class="dv">2</span>):</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>          <span class="cf">for</span> ow <span class="kw">in</span> Segments(<span class="dv">0</span>, OW, OW):</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>            outputTile <span class="op">=</span> output[b, oc, oh, ow]</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>            imageTile <span class="op">=</span> image[Infer.get_input_segment(b, oc, oh, ow), reuse]  <span class="co"># 重用同一份SRAM</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="kw">not</span> reuse:</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>              reuse <span class="op">=</span> <span class="va">True</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>            weightSubTile <span class="op">=</span> weightTile[oc]</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>            outputTile <span class="op">+=</span> TensorCore(imageTile, weightSubTile)</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>  <span class="cf">assert</span> (np.allclose(output._array, targetOutput, atol<span class="op">=</span><span class="fl">1e-5</span>))</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(<span class="st">"demo3-1 total loaded :"</span>, GlobalHierarchy.TotalLoaded)</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>  GlobalHierarchy.Reset()</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>demo3<span class="op">-</span><span class="dv">1</span> We can<span class="st">'t move load weights statement out of OC!</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>不过实际情况会发现因SRAM空间不够而出错. 这就是SRAM大小影响compute schedule.</p>
+</section>
+<section id="尝试将weights-stage到oc循环内" class="level2">
+<h2 class="anchored" data-anchor-id="尝试将weights-stage到oc循环内">3.2 尝试将Weights Stage到OC循环内</h2>
+<p>把weights stage在OC循环内部, 这样可以在OH/OW循环中复用.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> demo3_2(imageArr: np.ndarray, weightArr: np.ndarray, outputArr: np.ndarray, targetOutput: np.ndarray):</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  image <span class="op">=</span> TarcedArray(imageArr)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  weight <span class="op">=</span> TarcedArray(weightArr)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  output <span class="op">=</span> TarcedArray(outputArr)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  (B, OC, OH, OW) <span class="op">=</span> outputArr.shape</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> b <span class="kw">in</span> Segments(<span class="dv">0</span>, B, <span class="dv">1</span>):</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> oc <span class="kw">in</span> Segments(<span class="dv">0</span>, OC, CORE_OC):</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>      <span class="cf">with</span> GlobalHierarchy(L2SIZE):</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>        reuse <span class="op">=</span> <span class="va">False</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>        weightTile <span class="op">=</span> weight[Infer.get_w_segment(oc)]</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> oh <span class="kw">in</span> Segments(<span class="dv">0</span>, OH, <span class="dv">2</span>):</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>          <span class="cf">for</span> ow <span class="kw">in</span> Segments(<span class="dv">0</span>, OW, OW):</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>            outputTile <span class="op">=</span> output[b, oc, oh, ow]</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>            imageTile <span class="op">=</span> image[Infer.get_input_segment(b, oc, oh, ow), reuse]  <span class="co"># 重用同一份SRAM</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="kw">not</span> reuse:</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>              reuse <span class="op">=</span> <span class="va">True</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>            outputTile <span class="op">+=</span> TensorCore(imageTile, weightTile)</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>  <span class="cf">assert</span> (np.allclose(output._array, targetOutput, atol<span class="op">=</span><span class="fl">1e-5</span>))</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(<span class="st">"demo3-2 total loaded :"</span>, GlobalHierarchy.TotalLoaded)</span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>  GlobalHierarchy.Reset()</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>demo3<span class="op">-</span><span class="dv">2</span> total loaded : <span class="dv">9586432</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>虽然这个例子和<code>demo3-1</code>实际上差别不大, 但是主要是用于说明SRAM对于不同的Compute Schedule的限制.</p>
+</section>
+<section id="尝试新的切分维度" class="level2">
+<h2 class="anchored" data-anchor-id="尝试新的切分维度">3.3 尝试新的切分维度</h2>
+<p>注意这里我们添加一个IC的切分维度, 这样每次内部循环加载的就是不同的weights[oc,ic,:,:]的tile了.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> demo3_3(imageArr: np.ndarray, weightArr: np.ndarray, outputArr: np.ndarray, targetOutput: np.ndarray, prefix<span class="op">=</span><span class="st">"demo3-3"</span>):</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  image <span class="op">=</span> TarcedArray(imageArr)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  weight <span class="op">=</span> TarcedArray(weightArr)</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  output <span class="op">=</span> TarcedArray(outputArr)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  (B, OC, OH, OW) <span class="op">=</span> outputArr.shape</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  IC <span class="op">=</span> imageArr.shape[<span class="dv">1</span>]</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> b <span class="kw">in</span> Segments(<span class="dv">0</span>, B, <span class="dv">1</span>):</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> oc <span class="kw">in</span> Segments(<span class="dv">0</span>, OC, <span class="dv">8</span>):</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> oh <span class="kw">in</span> Segments(<span class="dv">0</span>, OH, OH):</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> ow <span class="kw">in</span> Segments(<span class="dv">0</span>, OW, OW):</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>          <span class="cf">with</span> GlobalHierarchy(L2SIZE):</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>            reuse <span class="op">=</span> <span class="va">False</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>            outputTile <span class="op">=</span> output[b, oc, oh, ow]</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> ic <span class="kw">in</span> Segments(<span class="dv">0</span>, IC, CORE_IC):</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>              wSeg <span class="op">=</span> Infer.get_w_segment(oc)</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>              wSeg[<span class="dv">1</span>] <span class="op">=</span> ic  <span class="co"># add slice in ic</span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>              weightTile <span class="op">=</span> weight[wSeg, reuse]</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>              imageSeg <span class="op">=</span> Infer.get_input_segment(b, oc, oh, ow)</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>              imageSeg[<span class="dv">1</span>] <span class="op">=</span> ic  <span class="co"># add slice in ic</span></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>              imageTile <span class="op">=</span> image[imageSeg, reuse]</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>              outputTile <span class="op">+=</span> TensorCore(imageTile, weightTile)</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>              <span class="cf">if</span> reuse <span class="kw">is</span> <span class="va">False</span>:</span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>                reuse <span class="op">=</span> <span class="va">True</span>  <span class="co"># reuse same buffer.</span></span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>  <span class="cf">assert</span> (np.allclose(output._array, targetOutput, atol<span class="op">=</span><span class="fl">1e-5</span>))</span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(prefix, <span class="st">"total loaded :"</span>, GlobalHierarchy.TotalLoaded)</span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>  GlobalHierarchy.Reset()</span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a>demo3<span class="op">-</span><span class="dv">3</span> total loaded : <span class="dv">4825088</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>此时对于weights的加载比之前减少了一倍, 但是如果此时OH/OW有切分, 那么同一份ic的weights也会被多次加载. 而需要注意的是SRAM的大小有限, 所以必须缩小OC上的tile size, 来保证当前策略较优. 这就是tile size与SRAM大小共同影响compute schedule.</p>
+</section>
+</section>
+<section id="尝试stream-input" class="level1">
+<h1>4. 尝试stream input</h1>
+<p>我们还可以尝试移动image stage到外层的循环, 因为每个oc内都加载了全部的input image, 那么将image移动到外层循环就可以减少许多重复的数据加载.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> demo4(imageArr: np.ndarray, weightArr: np.ndarray, outputArr: np.ndarray, targetOutput: np.ndarray):</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  image <span class="op">=</span> TarcedArray(imageArr)</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  weight <span class="op">=</span> TarcedArray(weightArr)</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  output <span class="op">=</span> TarcedArray(outputArr)</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  (B, OC, OH, OW) <span class="op">=</span> outputArr.shape</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  IC <span class="op">=</span> imageArr.shape[<span class="dv">1</span>]</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> b <span class="kw">in</span> Segments(<span class="dv">0</span>, B, <span class="dv">1</span>):</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> GlobalHierarchy(L2SIZE):</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>      reuse <span class="op">=</span> <span class="va">False</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>      imageTile <span class="op">=</span> image[Infer.get_input_segment(b, <span class="bu">slice</span>(<span class="dv">0</span>, OC), <span class="bu">slice</span>(<span class="dv">0</span>, OH), <span class="bu">slice</span>(<span class="dv">0</span>, OW))]</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> oc <span class="kw">in</span> Segments(<span class="dv">0</span>, OC, <span class="dv">8</span>):</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> oh <span class="kw">in</span> Segments(<span class="dv">0</span>, OH, OH):</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>          <span class="cf">for</span> ow <span class="kw">in</span> Segments(<span class="dv">0</span>, OW, OW):</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>            outputTile <span class="op">=</span> output[(b, oc, oh, ow), reuse]</span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> ic <span class="kw">in</span> Segments(<span class="dv">0</span>, IC, CORE_IC):</span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>              wSeg <span class="op">=</span> Infer.get_w_segment(oc)</span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>              wSeg[<span class="dv">1</span>] <span class="op">=</span> ic  <span class="co"># add slice in ic</span></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>              weightTile <span class="op">=</span> weight[wSeg, reuse]</span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>              outputTile <span class="op">+=</span> TensorCore(imageTile[:, ic, :, :], weightTile)</span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>              <span class="cf">if</span> reuse <span class="kw">is</span> <span class="va">False</span>:</span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>                reuse <span class="op">=</span> <span class="va">True</span>  <span class="co"># reuse same buffer.</span></span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>  <span class="cf">assert</span> (np.allclose(output._array, targetOutput, atol<span class="op">=</span><span class="fl">1e-5</span>))</span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(<span class="st">"demo4 total loaded :"</span>, GlobalHierarchy.TotalLoaded)</span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a>  GlobalHierarchy.Reset()</span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a>demo4 We can<span class="st">'t move load image statement out of OC!</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>但是很可惜这个卷积的image比较大, 如果所以移动到外循环会因为SRAM存不下而报错. 这就是compute schedule与不同的tile size可以相互影响的情况.</p>
+</section>
+<section id="尝试进行elemwise算子的layer-fusion." class="level1">
+<h1>5. 尝试进行Elemwise算子的Layer Fusion.</h1>
+<section id="单独执行每个算子" class="level2">
+<h2 class="anchored" data-anchor-id="单独执行每个算子">5.1 单独执行每个算子</h2>
+<p>以上实验了单层卷积的情况, 我们尝试了调整tile size/调整buffer stage的位置来减少总的数据加载次数. 接下来我们需要考虑多个算子fusion的情况, 假设卷积前面不是一个带有reduction的算子, 比如binary add, 首先单独执行两个算子.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> demo5_1(imageArr: np.ndarray, biasArr: np.ndarray, weightArr: np.ndarray, outputArr: np.ndarray, targetOutput: np.ndarray):</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  image <span class="op">=</span> TarcedArray(imageArr)</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  bias <span class="op">=</span> TarcedArray(biasArr)</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  mid <span class="op">=</span> TarcedArray(np.zeros_like(imageArr))</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="co"># binary add</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  (B, C, H, W) <span class="op">=</span> imageArr.shape</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> b <span class="kw">in</span> Segments(<span class="dv">0</span>, B, <span class="dv">1</span>):</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> c <span class="kw">in</span> Segments(<span class="dv">0</span>, C, <span class="dv">8</span>):</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> h <span class="kw">in</span> Segments(<span class="dv">0</span>, H, H):</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> w <span class="kw">in</span> Segments(<span class="dv">0</span>, W, W):</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>          <span class="cf">with</span> GlobalHierarchy(L2SIZE):</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>            imageTile <span class="op">=</span> image[b, c, h, w]</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>            biasTile <span class="op">=</span> bias[b, c, h, w]</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>            midTile <span class="op">=</span> mid[b, c, h, w]</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>            midTile <span class="op">+=</span> imageTile <span class="op">+</span> biasTile</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>  demo3_3(mid._array, weightArr, outputArr, targetOutput, <span class="st">"demo5-1"</span>)</span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>demo5<span class="op">-</span><span class="dv">1</span> total loaded : <span class="dv">30515200</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>那么每次算子执行结束后, 数据需要出DDR再回到SRAM, 这样就消耗了许多带宽.</p>
+</section>
+<section id="执行fusion后的算子" class="level2">
+<h2 class="anchored" data-anchor-id="执行fusion后的算子">5.2 执行Fusion后的算子</h2>
+<p>我们可以发现,后面卷积的循环[B,OH,OW,IC]分别可以对应前面binary的[B,H,W,C], 其实即前面binary的H与W是可以依据卷积的tile size来确定, 他的C维度依据卷积的IC维度确定, 并且因为这个binary计算时没有元素依赖关系, 所以简单调整他的循环顺序我们就可以进行算子Fusion了, 也就是在IC的循环中计算elemwise的计算操作.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> demo5_2(imageArr: np.ndarray, biasArr: np.ndarray, weightArr: np.ndarray, outputArr: np.ndarray, targetOutput: np.ndarray):</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  image <span class="op">=</span> TarcedArray(imageArr)</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  bias <span class="op">=</span> TarcedArray(biasArr)</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  weight <span class="op">=</span> TarcedArray(weightArr)</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  output <span class="op">=</span> TarcedArray(outputArr)</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  (B, OC, OH, OW) <span class="op">=</span> outputArr.shape</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  IC <span class="op">=</span> imageArr.shape[<span class="dv">1</span>]</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> b <span class="kw">in</span> Segments(<span class="dv">0</span>, B, <span class="dv">1</span>):</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> oc <span class="kw">in</span> Segments(<span class="dv">0</span>, OC, <span class="dv">8</span>):</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> oh <span class="kw">in</span> Segments(<span class="dv">0</span>, OH, OH):</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> ow <span class="kw">in</span> Segments(<span class="dv">0</span>, OW, OW):</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>          <span class="cf">with</span> GlobalHierarchy(L2SIZE):</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>            reuse <span class="op">=</span> <span class="va">False</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>            outputTile <span class="op">=</span> output[b, oc, oh, ow]</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> ic <span class="kw">in</span> Segments(<span class="dv">0</span>, IC, CORE_IC):</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>              wSeg <span class="op">=</span> Infer.get_w_segment(oc)</span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>              wSeg[<span class="dv">1</span>] <span class="op">=</span> ic  <span class="co"># add slice in ic</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>              weightTile <span class="op">=</span> weight[wSeg, reuse]</span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>              imageSeg <span class="op">=</span> Infer.get_input_segment(b, oc, oh, ow)</span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>              imageSeg[<span class="dv">1</span>] <span class="op">=</span> ic  <span class="co"># add slice in ic</span></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>              imageTile <span class="op">=</span> image[imageSeg, reuse]</span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>              biasTile <span class="op">=</span> bias[imageSeg, reuse]</span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>              outputTile <span class="op">+=</span> TensorCore(imageTile <span class="op">+</span> biasTile, weightTile)</span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>              <span class="cf">if</span> reuse <span class="kw">is</span> <span class="va">False</span>:</span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>                reuse <span class="op">=</span> <span class="va">True</span>  <span class="co"># reuse same buffer.</span></span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>  <span class="cf">assert</span> (np.allclose(output._array, targetOutput, atol<span class="op">=</span><span class="fl">1e-5</span>))</span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(<span class="st">"demo5-2 total loaded :"</span>, GlobalHierarchy.TotalLoaded)</span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>  GlobalHierarchy.Reset()</span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a>demo5<span class="op">-</span><span class="dv">2</span> total loaded : <span class="dv">8036352</span></span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>可以发现减少了两倍的数据搬运.</p>
+</section>
+</section>
+<section id="尝试进行非elemwise算子的layer-fusion." class="level1">
+<h1>6. 尝试进行非Elemwise算子的Layer Fusion.</h1>
+<section id="单独执行每个算子-1" class="level2">
+<h2 class="anchored" data-anchor-id="单独执行每个算子-1">6.1 单独执行每个算子</h2>
+<p>首先测试两层卷积单独执行的数据加载.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> demo6(Infer1: Conv2dBoundsInfer, Infer2: Conv2dBoundsInfer, imageArr: np.ndarray, weightArr1: np.ndarray, weightArr2: np.ndarray, outputArr: np.ndarray, targetOutput: np.ndarray):</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  image <span class="op">=</span> TarcedArray(imageArr)</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  weight1 <span class="op">=</span> TarcedArray(weightArr1)</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  tempOutput <span class="op">=</span> TarcedArray(np.zeros(Infer2.in_shape).astype(np.float32))</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  (B, OC, OH, OW) <span class="op">=</span> Infer2.in_shape</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">with</span> GlobalHierarchy(L2SIZE):</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>    reuse <span class="op">=</span> <span class="va">False</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>    weight1Tile <span class="op">=</span> weight1[:, :, :, :]</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> b <span class="kw">in</span> Segments(<span class="dv">0</span>, B, <span class="dv">1</span>):</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> oc <span class="kw">in</span> Segments(<span class="dv">0</span>, OC, <span class="dv">16</span>):</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> oh <span class="kw">in</span> Segments(<span class="dv">0</span>, OH, <span class="dv">48</span>):</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>          <span class="cf">for</span> ow <span class="kw">in</span> Segments(<span class="dv">0</span>, OW, OW):</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>            outputTile <span class="op">=</span> tempOutput[(b, oc, oh, ow), reuse]</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>            imageSeg <span class="op">=</span> Infer1.get_input_segment(b, oc, oh, ow)</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>            imageTile <span class="op">=</span> image[imageSeg, reuse]</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>            outputTile <span class="op">+=</span> TensorCore(imageTile, weight1Tile[oc])</span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> reuse <span class="kw">is</span> <span class="va">False</span>:</span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>              reuse <span class="op">=</span> <span class="va">True</span>  <span class="co"># reuse same buffer.</span></span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>  weight2 <span class="op">=</span> TarcedArray(weightArr2)</span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>  output <span class="op">=</span> TarcedArray(outputArr)</span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>  (B, OC, OH, OW) <span class="op">=</span> outputArr.shape</span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>  <span class="cf">with</span> GlobalHierarchy(L2SIZE):</span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>    reuse <span class="op">=</span> <span class="va">False</span></span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a>    weight2Tile <span class="op">=</span> weight2[:, :, :, :]</span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> b <span class="kw">in</span> Segments(<span class="dv">0</span>, B, <span class="dv">1</span>):</span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> oc <span class="kw">in</span> Segments(<span class="dv">0</span>, OC, <span class="dv">16</span>):</span>
+<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> oh <span class="kw">in</span> Segments(<span class="dv">0</span>, OH, <span class="dv">48</span>):</span>
+<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a>          <span class="cf">for</span> ow <span class="kw">in</span> Segments(<span class="dv">0</span>, OW, OW):</span>
+<span id="cb10-31"><a href="#cb10-31" aria-hidden="true" tabindex="-1"></a>            outputTile <span class="op">=</span> output[(b, oc, oh, ow), reuse]</span>
+<span id="cb10-32"><a href="#cb10-32" aria-hidden="true" tabindex="-1"></a>            imageSeg <span class="op">=</span> Infer2.get_input_segment(b, oc, oh, ow)</span>
+<span id="cb10-33"><a href="#cb10-33" aria-hidden="true" tabindex="-1"></a>            imageTile <span class="op">=</span> tempOutput[imageSeg, reuse]</span>
+<span id="cb10-34"><a href="#cb10-34" aria-hidden="true" tabindex="-1"></a>            outputTile <span class="op">+=</span> TensorCore(imageTile, weight2Tile[oc])</span>
+<span id="cb10-35"><a href="#cb10-35" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> reuse <span class="kw">is</span> <span class="va">False</span>:</span>
+<span id="cb10-36"><a href="#cb10-36" aria-hidden="true" tabindex="-1"></a>              reuse <span class="op">=</span> <span class="va">True</span>  <span class="co"># reuse same buffer.</span></span>
+<span id="cb10-37"><a href="#cb10-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-38"><a href="#cb10-38" aria-hidden="true" tabindex="-1"></a>  <span class="cf">assert</span> (np.allclose(output._array, targetOutput, atol<span class="op">=</span><span class="fl">1e-5</span>))</span>
+<span id="cb10-39"><a href="#cb10-39" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(<span class="st">"demo6 total loaded :"</span>, GlobalHierarchy.TotalLoaded)</span>
+<span id="cb10-40"><a href="#cb10-40" aria-hidden="true" tabindex="-1"></a>  GlobalHierarchy.Reset()</span>
+<span id="cb10-41"><a href="#cb10-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-42"><a href="#cb10-42" aria-hidden="true" tabindex="-1"></a>demo6 total loaded : <span class="dv">722528</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="执行fusion后的算子-1" class="level2">
+<h2 class="anchored" data-anchor-id="执行fusion后的算子-1">6.2 执行Fusion后的算子</h2>
+<p>假设我们遇到前面一个算子是带有reduction的情况, 比如卷积+卷积. 那么只需要考虑将两层卷积的循环直接合并即可, 同时现在的compute schedule就不能和单层卷积时相同了, 在两层卷积的循环直接合并时, 我们无法在最后一层卷积的input channel上切分, 因为后一个卷积的每一份input channel都依赖前面一个卷积的所有input channel, 这样切分会导致前面的卷积的weights反复加载, 目前我实现的多层卷积的合并必须要在SRAM中可以存下所有的weights才可以.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> demo6_1(Infer1: Conv2dBoundsInfer, Infer2: Conv2dBoundsInfer, imageArr: np.ndarray, weightArr1: np.ndarray, weightArr2: np.ndarray, outputArr: np.ndarray, targetOutput: np.ndarray):</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  image <span class="op">=</span> TarcedArray(imageArr)</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  weight1 <span class="op">=</span> TarcedArray(weightArr1)</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  weight2 <span class="op">=</span> TarcedArray(weightArr2)</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  output <span class="op">=</span> TarcedArray(outputArr)</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  (B, OC, OH, OW) <span class="op">=</span> outputArr.shape</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>  IC <span class="op">=</span> imageArr.shape[<span class="dv">1</span>]</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">with</span> GlobalHierarchy(L2SIZE):</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>    reuse <span class="op">=</span> <span class="va">False</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>    weight1Tile <span class="op">=</span> weight1[:, :, :, :]</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>    weight2Tile <span class="op">=</span> weight2[:, :, :, :]</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> b <span class="kw">in</span> Segments(<span class="dv">0</span>, B, <span class="dv">1</span>):</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> oc <span class="kw">in</span> Segments(<span class="dv">0</span>, OC, <span class="dv">16</span>):</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> oh <span class="kw">in</span> Segments(<span class="dv">0</span>, OH, <span class="dv">48</span>):</span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>          <span class="cf">for</span> ow <span class="kw">in</span> Segments(<span class="dv">0</span>, OW, OW):</span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>            outputTile <span class="op">=</span> output[(b, oc, oh, ow), reuse]</span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>            imageSeg2 <span class="op">=</span> Infer2.get_input_segment(b, oc, oh, ow)</span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>            imageSeg1 <span class="op">=</span> Infer1.get_input_segment(</span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>                imageSeg2[<span class="dv">0</span>], imageSeg2[<span class="dv">1</span>], imageSeg2[<span class="dv">2</span>], imageSeg2[<span class="dv">3</span>])</span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>            imageTile1 <span class="op">=</span> image[imageSeg1, reuse]</span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>            imageTile2 <span class="op">=</span> TensorCore(imageTile1, weight1Tile)</span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>            outputTile <span class="op">+=</span> TensorCore(imageTile2, weight2Tile[oc])</span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> reuse <span class="kw">is</span> <span class="va">False</span>:</span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a>              reuse <span class="op">=</span> <span class="va">True</span>  <span class="co"># reuse same buffer.</span></span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a>  <span class="cf">assert</span> (np.allclose(output._array, targetOutput, atol<span class="op">=</span><span class="fl">1e-5</span>))</span>
+<span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(<span class="st">"demo6-1 total loaded :"</span>, GlobalHierarchy.TotalLoaded)</span>
+<span id="cb11-28"><a href="#cb11-28" aria-hidden="true" tabindex="-1"></a>  GlobalHierarchy.Reset()</span>
+<span id="cb11-29"><a href="#cb11-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-30"><a href="#cb11-30" aria-hidden="true" tabindex="-1"></a>demo6<span class="op">-</span><span class="dv">1</span> total loaded : <span class="dv">206432</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+</section>
+<section id="总结" class="level1">
+<h1>总结</h1>
+<p>宏观上, 我把一个Fused Layer内部计算(循环切分与buffer stage等)优化称为<code>Compute Schedule</code>, 而我之前的一篇<a href="https://zhuanlan.zhihu.com/p/585176512">文章</a>在Fused Layer外部流水(buffer size search/ping pong buffer)优化称为<code>Buffer Schedule</code>. 我的理解是硬件架构决定了目前的<code>Compute Schedule</code>可能性, 接下来由软件来实现各种<code>Compute Schedule Pattern</code>, 后续再根据这些计算模式进行<code>Buffer Schedule</code>, 此时根据<code>Buffer Schedule</code>的结果来选择最优的<code>Compute Schedule</code>, 如此迭代才能尽量发挥硬件性能. 当然如果硬件架构给出的执行方式少, 那么对应的软件也简单, 否则硬件的灵活性大, 软件优化的难度也高. 整个系统的能力也就是软硬件协调程度的体现.</p>
+<pre><code>    ┌───────────────────────────────────────────────────────────────────────┐
+    │                                                                       │
+    │                                                                       │
+    │                    ┌──────────────────────────────┐                   │
+    │                    │                              │                   │
+    │                    │                              │                   │
+┌───┴────┐       ┌───────┴────────┐             ┌───────▼───────┐      ┌────▼───┐
+│Hardware├───────►Compute Schedule│             │Buffer Schedule├──────►Software│
+└───▲────┘       └───────▲────────┘             └───────┬───────┘      └────┬───┘
+    │                    │                              │                   │
+    │                    │                              │                   │
+    │                    └╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┘                   │
+    │                                                                       │
+    └╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┘</code></pre>
+<p>微观上, 对于一个算子来说, 根据循环顺序/变量分配时机/切分方式的不同会导致显著的性能差距. 比如卷积, 为了尽量减少重复load weights可以在OC/IC进行切分. 同时如果考虑存储足够大还可以在不同循环维度去stage local buffer, 在内层循环里进行复用. 然后还有tile size search的优化, 上面的例子可能描述的不多, 但其实每种不同的计算模式还需要与之配套的tile search逻辑. 比如多层卷积fusion时需要尽量同时增大H和W来减少overlap还是先增大W保持连续的load; 单层卷积时先增大IC维度的tile还是OC维度的tile来满足内部TensorCore的利用率; 单层卷积是选择多占用一些SRAM来stream input还是增大一些OC/IC的tile来减少循环次数, 总之这套search tile size逻辑都需要和compute schedule以及硬件特性相匹配的. 接下来还有buffer schedule优化, 也就是多个tiled block之间, 开多少块buffer进行并行流水比较合适, 不同buffer数量时需要自动安排好每块buffer的生命周期, 内外循环都有ping pong时对于buffer正确访问, 硬件对于buffer的stride/shape限制, 代码展开的时候需要考虑软件流水, 最后还需要分析buffer读写依赖自动插入同步指令等. 最后假设如果search出来的tile size不合适, 比如切分的OC/IC太小硬件利用率不高, 那么可能还需要调整到别的compute schedule来重新走一遍上述流程.</p>
+<p>关于手写算子与自动Fusion. 如果是对于我上文描述的那样, 有很多种不同的计算方式可供选择, 那么对于手写算子来说就需要消耗许多的精力维护很多看似相同但是无法复用的逻辑, 所以需要有一种简单的DSL描述这些过程从而加速开发的迭代过程. 比如<a href="https://zhuanlan.zhihu.com/p/451854416">TVM TensorIR</a>或<a href="https://exo-lang.dev">exo-lang</a>. 但感觉目前已有的技术还没法做到更自动化的Fusion, 因为多层Fusion的时候, 需要处理各种Index的变化, 比如DDR上的Tensor加载到SRAM之后不均匀切分, 每个循环所占据的SRAM Buffer大小并不一样, 并且对于卷积来说还有Padding的问题需要在SRAM中的Tile上处理好. DSL本身最好是可以将中间依赖关系以及index变换隐藏在其背后, 降低编写算子时需要记忆的内容, 并且对于多个手写的代码块可以做到自动的分析循环的依赖来进行Fusion.</p>
+<p>我在实现自动Fusion的过程中也发现了不少问题:</p>
+<ol type="1">
+<li>缺乏分析循环间的依赖性的技术</li>
+</ol>
+<blockquote class="blockquote">
+<p>我首先是构建了Tensor维度与循环依赖的表达式, 发现无法去分析循环间的依赖性, 比如DW卷积的OC维度就等于IC维度, Weights的IC维度此时依赖了OC维度, 而普通卷积的OC维度并不影响weights的IC维度, 因此就需要手动额外引入在IC维度上的TileVar.</p>
+</blockquote>
+<ol start="2" type="1">
+<li>缺乏分析空间局部性的技术</li>
+</ol>
+<blockquote class="blockquote">
+<p>如果可以直接从当前的Compute Schedule中发现如何移动循环或stage buffer可以减少数据重复加载, 那么可以指导Compute Schedule, 目前以上的优化方案还都是靠观察得到的.</p>
+</blockquote>
+<ol start="3" type="1">
+<li>如何将硬件限制更好的描述到Fusion中</li>
+</ol>
+<blockquote class="blockquote">
+<p>因为不同的case下总是需要为了兼容硬件bug/执行效率做出奇奇怪怪的修改. 比如我设计的规则是所有的L2上的Buffer按使用大小来申请, 但是由于硬件对于数据加载的速度问题, 有时候还需要申请更大的空间. 或者是硬件存在某种bug, 特定算子Fuse在一起时不能开启某些功能. 但是这些约束很难用一种通用的接口描述到自动生成的规则中. 只能在自动化的过程中hard code.</p>
+</blockquote>
+<ol start="4" type="1">
+<li>如何更好将自动Fusion与手写算子结合</li>
+</ol>
+<blockquote class="blockquote">
+<p>比如上面<code>demo4</code>的情况, 在SRAM有空余的时候, 我想在合适的地方stage image buffer, 对于手写算子来说可能就是移动几行代码的事情, 坐标变换就按当前的情况手写一个公式即可. 而自动优化为了通用还需要写许多的判断/转换.</p>
+</blockquote>
+<p>最终就是各种硬件规则限制/性能优化trick的问题把原本规整的自动Fusion代码切分的支离破碎, 因为整套逻辑都通用, 每次都需要这一处改动还需要考虑是不是会对其他应用的地方产生额外的影响, 导致我花费了更多的精力, 算是让我体会到了<code>worse is better</code>. 不过也有可能是我实现的自动Fusion的功能太弱, 后续再学习一些多面体的知识看一下能否有帮助.</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/zhen8838\.github\.io");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script src="https://utteranc.es/client.js" repo="zhen8838/zhen8838.github.io" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
