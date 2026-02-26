@@ -10,7 +10,376 @@
 <atom:link href="https://zhen8838.github.io/index.xml" rel="self" type="application/rss+xml"/>
 <description>A blog built with Quarto</description>
 <generator>quarto-1.8.27</generator>
-<lastBuildDate>Sun, 08 Feb 2026 10:49:45 GMT</lastBuildDate>
+<lastBuildDate>Wed, 25 Feb 2026 08:52:30 GMT</lastBuildDate>
+<item>
+  <title>Vibe Coding 使用经验</title>
+  <link>https://zhen8838.github.io/posts/claude-code-tricks.html</link>
+  <description><![CDATA[ 
+
+
+
+
+<p><code>Vibe Coding</code>绝对是未来必不可少的工具。所以现在还是应该花时间去掌握工具，所以最近在使用<code>Claude Code</code>以及<code>Copilot</code>过程中，做一些总结。</p>
+<!--more-->
+<section id="claude-code通知提醒" class="level1">
+<h1><code>Claude Code</code>通知提醒</h1>
+<p>我比较喜欢在vscode中使用<code>Claude Code</code>，然后让多个session自己运行，我可以节省时间干别的事情，但是如何在需要交互的时候提醒我呢？这里还是需要一番配置。</p>
+<ol type="1">
+<li>首先安装<code>Terminal Notification</code>插件，然后开启vscode的OSC通知功能，在<code>settings.json</code>中添加：</li>
+</ol>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode json code-with-copy"><code class="sourceCode json"><span id="cb1-1"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb1-2">  <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">"terminal.integrated.enableVisualBell"</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">:</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">true</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb1-3">  <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">"terminal.integrated.focusAfterRun"</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">:</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"terminal"</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb1-4"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">}</span></span></code></pre></div></div>
+<ol start="2" type="1">
+<li>添加一个监听脚本到<code>~/notify_osc_listener.sh</code></li>
+</ol>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2" style="background: #f1f3f5;"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">#!/bin/bash</span></span>
+<span id="cb2-2"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 在普通 VSCode 终端中运行此脚本，接收 Claude Code 的通知并输出 OSC 777</span></span>
+<span id="cb2-3"><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">PIPE</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"/tmp/claude-notify-pipe"</span></span>
+<span id="cb2-4"></span>
+<span id="cb2-5"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 创建命名管道</span></span>
+<span id="cb2-6"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">rm</span> <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">-f</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">$PIPE</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span></span>
+<span id="cb2-7"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">mkfifo</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">$PIPE</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span></span>
+<span id="cb2-8"></span>
+<span id="cb2-9"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">cleanup()</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">{</span></span>
+<span id="cb2-10">    <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">rm</span> <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">-f</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">$PIPE</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span></span>
+<span id="cb2-11">    <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">echo</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"监听已停止"</span></span>
+<span id="cb2-12">    <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">exit</span> 0</span>
+<span id="cb2-13"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">}</span></span>
+<span id="cb2-14"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">trap</span> cleanup EXIT INT TERM</span>
+<span id="cb2-15"></span>
+<span id="cb2-16"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">echo</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"正在监听 Claude Code 通知... (Ctrl+C 停止)"</span></span>
+<span id="cb2-17"></span>
+<span id="cb2-18"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">while</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">true</span><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">;</span> <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">do</span></span>
+<span id="cb2-19">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">if</span> <span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">IFS</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'|'</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">read</span> <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">-r</span> <span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">event</span> <span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">message</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">$PIPE</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">;</span> <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">then</span></span>
+<span id="cb2-20">        <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">printf</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"\e]777;notify;%s;%s\a"</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">$event</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">$message</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span></span>
+<span id="cb2-21">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">fi</span></span>
+<span id="cb2-22"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">done</span></span></code></pre></div></div>
+<p>并执行他</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3" style="background: #f1f3f5;"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">bash</span> ~/notify_osc_listener.sh</span></code></pre></div></div>
+<ol start="3" type="1">
+<li>添加一个hook脚本到<code>~/.claude/hooks/notify_osc.sh</code></li>
+</ol>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4" style="background: #f1f3f5;"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">#!/bin/bash</span></span>
+<span id="cb4-2"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Claude Code hook: 将通知写入命名管道，由监听脚本输出 OSC 777</span></span>
+<span id="cb4-3"><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">EVENT</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">$1</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span></span>
+<span id="cb4-4"><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">MESSAGE</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">$2</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span></span>
+<span id="cb4-5"><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">PIPE</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"/tmp/claude-notify-pipe"</span></span>
+<span id="cb4-6"></span>
+<span id="cb4-7"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">if</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">[</span> <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">-p</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">$PIPE</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">]</span><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">;</span> <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">then</span></span>
+<span id="cb4-8">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 用 timeout 避免没有监听者时阻塞</span></span>
+<span id="cb4-9">    <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">timeout</span> 1 bash <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">-c</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"echo '</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">${EVENT}</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">|</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">${MESSAGE}</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">' &gt; '</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">${PIPE}</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'"</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span>/dev/null <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">&amp;</span></span>
+<span id="cb4-10"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">fi</span></span></code></pre></div></div>
+<ol start="4" type="1">
+<li>在<code>~/.claude/settings.json</code> 设置hooks</li>
+</ol>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5" style="background: #f1f3f5;"><pre class="sourceCode json code-with-copy"><code class="sourceCode json"><span id="cb5-1"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb5-2"><span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">"hooks"</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">:</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb5-3">    <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">"Stop"</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">:</span> <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">[</span></span>
+<span id="cb5-4">      <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb5-5">        <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">"hooks"</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">:</span> <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">[</span></span>
+<span id="cb5-6">          <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb5-7">            <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">"type"</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">:</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"command"</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb5-8">            <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">"command"</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">:</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"~/.claude/hooks/notify_osc.sh 'Stop' 'Claude 响应完成，等待输入'"</span></span>
+<span id="cb5-9">          <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">}</span></span>
+<span id="cb5-10">        <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">]</span></span>
+<span id="cb5-11">      <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">}</span></span>
+<span id="cb5-12">    <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">]</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb5-13">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">}</span></span>
+<span id="cb5-14"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">}</span></span></code></pre></div></div>
+<ol start="5" type="1">
+<li>再使用<code>Claude Code</code>，当他完成响应时，你就会收到vscode的通知了。</li>
+</ol>
+
+
+</section>
+
+ ]]></description>
+  <category>Vibe Coding</category>
+  <guid>https://zhen8838.github.io/posts/claude-code-tricks.html</guid>
+  <pubDate>Wed, 25 Feb 2026 08:52:30 GMT</pubDate>
+</item>
 <item>
   <title>Axe: A Simple Unified Layout Abstraction for Machine Learning Compilers</title>
   <link>https://zhen8838.github.io/posts/Axe-0.html</link>
@@ -50812,156 +51181,6 @@ font-style: inherit;">---------------</span></span></code></pre></div></div>
   <category>编译器</category>
   <guid>https://zhen8838.github.io/posts/tile-flow.html</guid>
   <pubDate>Fri, 29 Dec 2023 09:41:46 GMT</pubDate>
-</item>
-<item>
-  <title>hugging face llama使用</title>
-  <link>https://zhen8838.github.io/posts/hf-llama.html</link>
-  <description><![CDATA[ 
-
-
-
-
-<p>记录一下使用hugging face llama推理时遇到的问题.</p>
-<!--more-->
-<p>首先使用如下代码进行推理:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><span class="im" style="color: #00769E;
-background-color: null;
-font-style: inherit;">from</span> transformers <span class="im" style="color: #00769E;
-background-color: null;
-font-style: inherit;">import</span> AutoConfig, AutoModel</span>
-<span id="cb1-2"><span class="im" style="color: #00769E;
-background-color: null;
-font-style: inherit;">from</span> transformers <span class="im" style="color: #00769E;
-background-color: null;
-font-style: inherit;">import</span> LlamaModel, LlamaConfig, LlamaTokenizerFast, LlamaForCausalLM</span>
-<span id="cb1-3"><span class="im" style="color: #00769E;
-background-color: null;
-font-style: inherit;">from</span> transformers <span class="im" style="color: #00769E;
-background-color: null;
-font-style: inherit;">import</span> AutoTokenizer</span>
-<span id="cb1-4"><span class="im" style="color: #00769E;
-background-color: null;
-font-style: inherit;">from</span> torchsummary <span class="im" style="color: #00769E;
-background-color: null;
-font-style: inherit;">import</span> summary</span>
-<span id="cb1-5"><span class="im" style="color: #00769E;
-background-color: null;
-font-style: inherit;">import</span> logging</span>
-<span id="cb1-6">logging.basicConfig(<span class="bu" style="color: null;
-background-color: null;
-font-style: inherit;">format</span><span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">=</span><span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">'</span><span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">%(levelname)s</span><span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">:</span><span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">%(message)s</span><span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">'</span>, level<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">=</span>logging.DEBUG)</span>
-<span id="cb1-7">logger <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">=</span> logging.getLogger(<span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">'transformers'</span>)</span>
-<span id="cb1-8">logger.setLevel(logging.DEBUG)</span>
-<span id="cb1-9"></span>
-<span id="cb1-10">tokenizer <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">=</span> LlamaTokenizerFast.from_pretrained(<span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"/root/workspace/llama_test/llama-tokenizer"</span>)</span>
-<span id="cb1-11">prompt <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">=</span> <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"My name is Mariama, my favorite"</span></span>
-<span id="cb1-12">inputs <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">=</span> tokenizer(prompt, return_tensors<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">=</span><span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"pt"</span>)</span>
-<span id="cb1-13"><span class="bu" style="color: null;
-background-color: null;
-font-style: inherit;">print</span>(inputs)</span>
-<span id="cb1-14"></span>
-<span id="cb1-15">config <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">=</span> AutoConfig.from_pretrained(<span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"/data/llama-65b-hf/"</span>) <span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># </span></span>
-<span id="cb1-16">config.torch_dtype <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">=</span> <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"float32"</span></span>
-<span id="cb1-17">config.use_cache <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">=</span> <span class="va" style="color: #111111;
-background-color: null;
-font-style: inherit;">False</span></span>
-<span id="cb1-18"><span class="bu" style="color: null;
-background-color: null;
-font-style: inherit;">print</span>(config)</span>
-<span id="cb1-19"></span>
-<span id="cb1-20">model <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">=</span> LlamaForCausalLM.from_pretrained(<span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"/data/llama-65b-hf/"</span>, config<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">=</span>config)</span>
-<span id="cb1-21"></span>
-<span id="cb1-22"><span class="bu" style="color: null;
-background-color: null;
-font-style: inherit;">print</span>(<span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"model init!"</span>)</span>
-<span id="cb1-23">generate_ids <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">=</span> model.generate(inputs.input_ids, max_new_tokens<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">32</span>)</span>
-<span id="cb1-24"><span class="bu" style="color: null;
-background-color: null;
-font-style: inherit;">print</span>(generate_ids)</span></code></pre></div></div>
-<p>这里得到的输入为<code>tensor([[    1,  1619,  1024,   338,  1085,  2829, 29874, 29892,   590, 25448]])</code>, attention_mask为<code>tensor([[1, 1, 1, 1, 1, 1, 1, 1, 1, 1]])</code></p>
-<section id="generate过程" class="level1">
-<h1>generate过程</h1>
-<ol type="1">
-<li><p>加载模型的<code>generation.json</code> <code>GenerationConfig {       "bos_token_id": 0,       "eos_token_id": 1,       "max_new_tokens": 32,       "pad_token_id": -1,       "use_cache": false     }</code></p></li>
-<li><p>配置最大长度</p>
-<p><code>generation_config.max_length = generation_config.max_new_tokens + input_ids_length</code>目前是32+10 = 42</p></li>
-<li><p>greedy_search</p>
-<p>根据输出策略, 进入<code>greedy_search</code>进行推理.</p>
-<ol type="1">
-<li>循环推理</li>
-<li>准备输入 <code>'input_ids':      tensor([[    1,  1619,  1024,   338,  1085,  2829, 29874, 29892,   590, 25448]])      'position_ids':      tensor([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]])      'past_key_values':      None      'use_cache':      False      'attention_mask':      tensor([[1, 1, 1, 1, 1, 1, 1, 1, 1, 1]])</code></li>
-<li>进入forward</li>
-<li>decode layers. 输出hidden_states为<code>torch.Size([1, 10, 8192])</code></li>
-<li>执行lm head, 得到logits为<code>torch.Size([1, 10, 32000])</code></li>
-<li>取logits最后一个<code>torch.Size([1, 32000])</code>求最大概率 这里我得到的是<code>color</code>. 而整个输出得到是<code># name is Ktha and and I friends color</code>. 本来以为是输入<code>&lt;s&gt; xxx</code> 会得到<code>xxxy</code>这样, 然后取<code>y</code>作为一个输出. 现在看来其实前面部分也会被脑补一些.</li>
-</ol></li>
-</ol>
-
-
-</section>
-
- ]]></description>
-  <category>深度学习</category>
-  <guid>https://zhen8838.github.io/posts/hf-llama.html</guid>
-  <pubDate>Tue, 26 Dec 2023 05:48:12 GMT</pubDate>
 </item>
 </channel>
 </rss>
