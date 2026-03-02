@@ -29,56 +29,39 @@ tags:
 }
 ```
 
-2. 添加一个监听脚本到`~/notify_osc_listener.sh`
+2. 添加一个脚本到`~/.claude/hooks/ghostty-notify.sh`
 
 ```bash
 #!/bin/bash
-# 在普通 VSCode 终端中运行此脚本，接收 Claude Code 的通知并输出 OSC 777
-PIPE="/tmp/claude-notify-pipe"
+# Sends a bell + OSC 777 notification to the parent Ghostty terminal.
+# Walks up the process tree to find the TTY since hooks have no controlling terminal.
 
-# 创建命名管道
-rm -f "$PIPE"
-mkfifo "$PIPE"
+MSG="${1:-Notification}"
 
-cleanup() {
-    rm -f "$PIPE"
-    echo "监听已停止"
-    exit 0
-}
-trap cleanup EXIT INT TERM
-
-echo "正在监听 Claude Code 通知... (Ctrl+C 停止)"
-
-while true; do
-    if IFS='|' read -r event message < "$PIPE"; then
-        printf "\e]777;notify;%s;%s\a" "$event" "$message"
-    fi
+# Walk up process tree to find an ancestor with a real TTY
+PID=$$
+TTY=""
+while [ "$PID" != "1" ] && [ -n "$PID" ]; do
+  T=$(ps -o tty= -p "$PID" 2>/dev/null | tr -d ' ')
+  if [ -n "$T" ] && [ "$T" != "??" ] && [ -e "/dev/$T" ]; then
+    TTY="/dev/$T"
+    break
+  fi
+  PID=$(ps -o ppid= -p "$PID" 2>/dev/null | tr -d ' ')
 done
-```
 
-并执行他
-
-```bash
-bash ~/notify_osc_listener.sh
-```
-
-
-3. 添加一个hook脚本到`~/.claude/hooks/notify_osc.sh`
-
-```bash
-#!/bin/bash
-# Claude Code hook: 将通知写入命名管道，由监听脚本输出 OSC 777
-EVENT="$1"
-MESSAGE="$2"
-PIPE="/tmp/claude-notify-pipe"
-
-if [ -p "$PIPE" ]; then
-    # 用 timeout 避免没有监听者时阻塞
-    timeout 1 bash -c "echo '${EVENT}|${MESSAGE}' > '${PIPE}'" 2>/dev/null &
+if [ -z "$TTY" ]; then
+  exit 0
 fi
+
+# Send OSC 777 desktop notification + bell to the Ghostty terminal
+printf '\033]777;notify;Claude Code;%s\007' "$MSG" > "$TTY"
+printf '\a' > "$TTY"
+
+exit 0
 ```
 
-4. 在`~/.claude/settings.json` 设置hooks 
+3. 在`~/.claude/settings.json` 设置hooks 
 
 ```json
 {
@@ -88,7 +71,7 @@ fi
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/notify_osc.sh 'Stop' 'Claude 响应完成，等待输入'"
+            "command": "~/.claude/hooks/ghostty-notify.sh 'Stop' 'Claude 响应完成，等待输入'"
           }
         ]
       }
@@ -97,4 +80,8 @@ fi
 }
 ```
 
-5. 再使用`Claude Code`，当他完成响应时，你就会收到vscode的通知了。
+4. 再使用`Claude Code`，当他完成响应时，你就会收到vscode的通知了。
+
+# 多任务分配监控
+
+使用[vibekanban](https://www.vibekanban.com)，用看板的形式来管理多个`Claude Code`的session，非常简单。
