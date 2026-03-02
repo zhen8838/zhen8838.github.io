@@ -71,7 +71,7 @@ exit 0
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/ghostty-notify.sh 'Stop' 'Claude 响应完成，等待输入'"
+            "command": "~/.claude/hooks/ghostty-notify.**sh** 'Stop' 'Claude 响应完成，等待输入'"
           }
         ]
       }
