@@ -53,209 +53,168 @@ font-style: inherit;">,</span></span>
 background-color: null;
 font-style: inherit;">}</span></span></code></pre></div></div>
 <ol start="2" type="1">
-<li>添加一个监听脚本到<code>~/notify_osc_listener.sh</code></li>
+<li>添加一个脚本到<code>~/.claude/hooks/ghostty-notify.sh</code></li>
 </ol>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2" style="background: #f1f3f5;"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">#!/bin/bash</span></span>
 <span id="cb2-2"><span class="co" style="color: #5E5E5E;
 background-color: null;
-font-style: inherit;"># 在普通 VSCode 终端中运行此脚本，接收 Claude Code 的通知并输出 OSC 777</span></span>
-<span id="cb2-3"><span class="va" style="color: #111111;
+font-style: inherit;"># Sends a bell + OSC 777 notification to the parent Ghostty terminal.</span></span>
+<span id="cb2-3"><span class="co" style="color: #5E5E5E;
 background-color: null;
-font-style: inherit;">PIPE</span><span class="op" style="color: #5E5E5E;
+font-style: inherit;"># Walks up the process tree to find the TTY since hooks have no controlling terminal.</span></span>
+<span id="cb2-4"></span>
+<span id="cb2-5"><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">MSG</span><span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span><span class="st" style="color: #20794D;
 background-color: null;
-font-style: inherit;">"/tmp/claude-notify-pipe"</span></span>
-<span id="cb2-4"></span>
-<span id="cb2-5"><span class="co" style="color: #5E5E5E;
+font-style: inherit;">"</span><span class="va" style="color: #111111;
 background-color: null;
-font-style: inherit;"># 创建命名管道</span></span>
-<span id="cb2-6"><span class="fu" style="color: #4758AB;
+font-style: inherit;">${1</span><span class="op" style="color: #5E5E5E;
 background-color: null;
-font-style: inherit;">rm</span> <span class="at" style="color: #657422;
+font-style: inherit;">:-</span>Notification<span class="va" style="color: #111111;
 background-color: null;
-font-style: inherit;">-f</span> <span class="st" style="color: #20794D;
+font-style: inherit;">}</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span></span>
+<span id="cb2-6"></span>
+<span id="cb2-7"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Walk up process tree to find an ancestor with a real TTY</span></span>
+<span id="cb2-8"><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">PID</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">$$</span></span>
+<span id="cb2-9"><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">TTY</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">""</span></span>
+<span id="cb2-10"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">while</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">[</span> <span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"</span><span class="va" style="color: #111111;
 background-color: null;
-font-style: inherit;">$PIPE</span><span class="st" style="color: #20794D;
+font-style: inherit;">$PID</span><span class="st" style="color: #20794D;
 background-color: null;
-font-style: inherit;">"</span></span>
-<span id="cb2-7"><span class="fu" style="color: #4758AB;
+font-style: inherit;">"</span> <span class="ot" style="color: #003B4F;
 background-color: null;
-font-style: inherit;">mkfifo</span> <span class="st" style="color: #20794D;
+font-style: inherit;">!=</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"1"</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">]</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">&amp;&amp;</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">[</span> <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">-n</span> <span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"</span><span class="va" style="color: #111111;
 background-color: null;
-font-style: inherit;">$PIPE</span><span class="st" style="color: #20794D;
+font-style: inherit;">$PID</span><span class="st" style="color: #20794D;
 background-color: null;
-font-style: inherit;">"</span></span>
-<span id="cb2-8"></span>
-<span id="cb2-9"><span class="fu" style="color: #4758AB;
+font-style: inherit;">"</span> <span class="bu" style="color: null;
 background-color: null;
-font-style: inherit;">cleanup()</span> <span class="kw" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">{</span></span>
-<span id="cb2-10">    <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">rm</span> <span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">-f</span> <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"</span><span class="va" style="color: #111111;
-background-color: null;
-font-style: inherit;">$PIPE</span><span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"</span></span>
-<span id="cb2-11">    <span class="bu" style="color: null;
-background-color: null;
-font-style: inherit;">echo</span> <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"监听已停止"</span></span>
-<span id="cb2-12">    <span class="bu" style="color: null;
-background-color: null;
-font-style: inherit;">exit</span> 0</span>
-<span id="cb2-13"><span class="kw" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">}</span></span>
-<span id="cb2-14"><span class="bu" style="color: null;
-background-color: null;
-font-style: inherit;">trap</span> cleanup EXIT INT TERM</span>
-<span id="cb2-15"></span>
-<span id="cb2-16"><span class="bu" style="color: null;
-background-color: null;
-font-style: inherit;">echo</span> <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"正在监听 Claude Code 通知... (Ctrl+C 停止)"</span></span>
-<span id="cb2-17"></span>
-<span id="cb2-18"><span class="cf" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">while</span> <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">true</span><span class="kw" style="color: #003B4F;
+font-style: inherit;">]</span><span class="kw" style="color: #003B4F;
 background-color: null;
 font-weight: bold;
 font-style: inherit;">;</span> <span class="cf" style="color: #003B4F;
 background-color: null;
 font-weight: bold;
 font-style: inherit;">do</span></span>
-<span id="cb2-19">    <span class="cf" style="color: #003B4F;
+<span id="cb2-11">  <span class="va" style="color: #111111;
 background-color: null;
-font-weight: bold;
-font-style: inherit;">if</span> <span class="va" style="color: #111111;
+font-style: inherit;">T</span><span class="op" style="color: #5E5E5E;
 background-color: null;
-font-style: inherit;">IFS</span><span class="op" style="color: #5E5E5E;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
 background-color: null;
-font-style: inherit;">=</span><span class="st" style="color: #20794D;
+font-style: inherit;">$(</span><span class="fu" style="color: #4758AB;
 background-color: null;
-font-style: inherit;">'|'</span> <span class="bu" style="color: null;
+font-style: inherit;">ps</span> <span class="at" style="color: #657422;
 background-color: null;
-font-style: inherit;">read</span> <span class="at" style="color: #657422;
+font-style: inherit;">-o</span> tty= <span class="at" style="color: #657422;
 background-color: null;
-font-style: inherit;">-r</span> <span class="va" style="color: #111111;
-background-color: null;
-font-style: inherit;">event</span> <span class="va" style="color: #111111;
-background-color: null;
-font-style: inherit;">message</span> <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">&lt;</span> <span class="st" style="color: #20794D;
+font-style: inherit;">-p</span> <span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"</span><span class="va" style="color: #111111;
 background-color: null;
-font-style: inherit;">$PIPE</span><span class="st" style="color: #20794D;
+font-style: inherit;">$PID</span><span class="st" style="color: #20794D;
 background-color: null;
-font-style: inherit;">"</span><span class="kw" style="color: #003B4F;
+font-style: inherit;">"</span> <span class="dv" style="color: #AD0000;
 background-color: null;
-font-weight: bold;
-font-style: inherit;">;</span> <span class="cf" style="color: #003B4F;
+font-style: inherit;">2</span><span class="op" style="color: #5E5E5E;
 background-color: null;
-font-weight: bold;
-font-style: inherit;">then</span></span>
-<span id="cb2-20">        <span class="bu" style="color: null;
-background-color: null;
-font-style: inherit;">printf</span> <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"\e]777;notify;%s;%s\a"</span> <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"</span><span class="va" style="color: #111111;
-background-color: null;
-font-style: inherit;">$event</span><span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"</span> <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"</span><span class="va" style="color: #111111;
-background-color: null;
-font-style: inherit;">$message</span><span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"</span></span>
-<span id="cb2-21">    <span class="cf" style="color: #003B4F;
+font-style: inherit;">&gt;</span>/dev/null <span class="kw" style="color: #003B4F;
 background-color: null;
 font-weight: bold;
-font-style: inherit;">fi</span></span>
-<span id="cb2-22"><span class="cf" style="color: #003B4F;
+font-style: inherit;">|</span> <span class="fu" style="color: #4758AB;
 background-color: null;
-font-weight: bold;
-font-style: inherit;">done</span></span></code></pre></div></div>
-<p>并执行他</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3" style="background: #f1f3f5;"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><span class="fu" style="color: #4758AB;
+font-style: inherit;">tr</span> <span class="at" style="color: #657422;
 background-color: null;
-font-style: inherit;">bash</span> ~/notify_osc_listener.sh</span></code></pre></div></div>
-<ol start="3" type="1">
-<li>添加一个hook脚本到<code>~/.claude/hooks/notify_osc.sh</code></li>
-</ol>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4" style="background: #f1f3f5;"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><span class="co" style="color: #5E5E5E;
+font-style: inherit;">-d</span> <span class="st" style="color: #20794D;
 background-color: null;
-font-style: inherit;">#!/bin/bash</span></span>
-<span id="cb4-2"><span class="co" style="color: #5E5E5E;
+font-style: inherit;">' '</span><span class="va" style="color: #111111;
 background-color: null;
-font-style: inherit;"># Claude Code hook: 将通知写入命名管道，由监听脚本输出 OSC 777</span></span>
-<span id="cb4-3"><span class="va" style="color: #111111;
-background-color: null;
-font-style: inherit;">EVENT</span><span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">=</span><span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"</span><span class="va" style="color: #111111;
-background-color: null;
-font-style: inherit;">$1</span><span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"</span></span>
-<span id="cb4-4"><span class="va" style="color: #111111;
-background-color: null;
-font-style: inherit;">MESSAGE</span><span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">=</span><span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"</span><span class="va" style="color: #111111;
-background-color: null;
-font-style: inherit;">$2</span><span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"</span></span>
-<span id="cb4-5"><span class="va" style="color: #111111;
-background-color: null;
-font-style: inherit;">PIPE</span><span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">=</span><span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"/tmp/claude-notify-pipe"</span></span>
-<span id="cb4-6"></span>
-<span id="cb4-7"><span class="cf" style="color: #003B4F;
+font-style: inherit;">)</span></span>
+<span id="cb2-12">  <span class="cf" style="color: #003B4F;
 background-color: null;
 font-weight: bold;
 font-style: inherit;">if</span> <span class="bu" style="color: null;
 background-color: null;
 font-style: inherit;">[</span> <span class="ot" style="color: #003B4F;
 background-color: null;
-font-style: inherit;">-p</span> <span class="st" style="color: #20794D;
+font-style: inherit;">-n</span> <span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"</span><span class="va" style="color: #111111;
 background-color: null;
-font-style: inherit;">$PIPE</span><span class="st" style="color: #20794D;
+font-style: inherit;">$T</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">]</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">&amp;&amp;</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">[</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">$T</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span> <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">!=</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"??"</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">]</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">&amp;&amp;</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">[</span> <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">-e</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"/dev/</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">$T</span><span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"</span> <span class="bu" style="color: null;
 background-color: null;
@@ -266,73 +225,167 @@ font-style: inherit;">;</span> <span class="cf" style="color: #003B4F;
 background-color: null;
 font-weight: bold;
 font-style: inherit;">then</span></span>
-<span id="cb4-8">    <span class="co" style="color: #5E5E5E;
+<span id="cb2-13">    <span class="va" style="color: #111111;
 background-color: null;
-font-style: inherit;"># 用 timeout 避免没有监听者时阻塞</span></span>
-<span id="cb4-9">    <span class="fu" style="color: #4758AB;
+font-style: inherit;">TTY</span><span class="op" style="color: #5E5E5E;
 background-color: null;
-font-style: inherit;">timeout</span> 1 bash <span class="at" style="color: #657422;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
 background-color: null;
-font-style: inherit;">-c</span> <span class="st" style="color: #20794D;
+font-style: inherit;">"/dev/</span><span class="va" style="color: #111111;
 background-color: null;
-font-style: inherit;">"echo '</span><span class="va" style="color: #111111;
+font-style: inherit;">$T</span><span class="st" style="color: #20794D;
 background-color: null;
-font-style: inherit;">${EVENT}</span><span class="st" style="color: #20794D;
+font-style: inherit;">"</span></span>
+<span id="cb2-14">    <span class="cf" style="color: #003B4F;
 background-color: null;
-font-style: inherit;">|</span><span class="va" style="color: #111111;
+font-weight: bold;
+font-style: inherit;">break</span></span>
+<span id="cb2-15">  <span class="cf" style="color: #003B4F;
 background-color: null;
-font-style: inherit;">${MESSAGE}</span><span class="st" style="color: #20794D;
+font-weight: bold;
+font-style: inherit;">fi</span></span>
+<span id="cb2-16">  <span class="va" style="color: #111111;
 background-color: null;
-font-style: inherit;">' &gt; '</span><span class="va" style="color: #111111;
+font-style: inherit;">PID</span><span class="op" style="color: #5E5E5E;
 background-color: null;
-font-style: inherit;">${PIPE}</span><span class="st" style="color: #20794D;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
 background-color: null;
-font-style: inherit;">'"</span> <span class="dv" style="color: #AD0000;
+font-style: inherit;">$(</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">ps</span> <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">-o</span> ppid= <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">-p</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">$PID</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span> <span class="dv" style="color: #AD0000;
 background-color: null;
 font-style: inherit;">2</span><span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">&gt;</span>/dev/null <span class="kw" style="color: #003B4F;
 background-color: null;
 font-weight: bold;
-font-style: inherit;">&amp;</span></span>
-<span id="cb4-10"><span class="cf" style="color: #003B4F;
+font-style: inherit;">|</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">tr</span> <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">-d</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">' '</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">)</span></span>
+<span id="cb2-17"><span class="cf" style="color: #003B4F;
 background-color: null;
 font-weight: bold;
-font-style: inherit;">fi</span></span></code></pre></div></div>
-<ol start="4" type="1">
+font-style: inherit;">done</span></span>
+<span id="cb2-18"></span>
+<span id="cb2-19"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">if</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">[</span> <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">-z</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">$TTY</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">]</span><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">;</span> <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">then</span></span>
+<span id="cb2-20">  <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">exit</span> 0</span>
+<span id="cb2-21"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">fi</span></span>
+<span id="cb2-22"></span>
+<span id="cb2-23"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Send OSC 777 desktop notification + bell to the Ghostty terminal</span></span>
+<span id="cb2-24"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">printf</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'\033]777;notify;Claude Code;%s\007'</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">$MSG</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">$TTY</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span></span>
+<span id="cb2-25"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">printf</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'\a'</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">$TTY</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span></span>
+<span id="cb2-26"></span>
+<span id="cb2-27"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">exit</span> 0</span></code></pre></div></div>
+<ol start="3" type="1">
 <li>在<code>~/.claude/settings.json</code> 设置hooks</li>
 </ol>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5" style="background: #f1f3f5;"><pre class="sourceCode json code-with-copy"><code class="sourceCode json"><span id="cb5-1"><span class="fu" style="color: #4758AB;
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3" style="background: #f1f3f5;"><pre class="sourceCode json code-with-copy"><code class="sourceCode json"><span id="cb3-1"><span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">{</span></span>
-<span id="cb5-2"><span class="dt" style="color: #AD0000;
+<span id="cb3-2"><span class="dt" style="color: #AD0000;
 background-color: null;
 font-style: inherit;">"hooks"</span><span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">:</span> <span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">{</span></span>
-<span id="cb5-3">    <span class="dt" style="color: #AD0000;
+<span id="cb3-3">    <span class="dt" style="color: #AD0000;
 background-color: null;
 font-style: inherit;">"Stop"</span><span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">:</span> <span class="ot" style="color: #003B4F;
 background-color: null;
 font-style: inherit;">[</span></span>
-<span id="cb5-4">      <span class="fu" style="color: #4758AB;
+<span id="cb3-4">      <span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">{</span></span>
-<span id="cb5-5">        <span class="dt" style="color: #AD0000;
+<span id="cb3-5">        <span class="dt" style="color: #AD0000;
 background-color: null;
 font-style: inherit;">"hooks"</span><span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">:</span> <span class="ot" style="color: #003B4F;
 background-color: null;
 font-style: inherit;">[</span></span>
-<span id="cb5-6">          <span class="fu" style="color: #4758AB;
+<span id="cb3-6">          <span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">{</span></span>
-<span id="cb5-7">            <span class="dt" style="color: #AD0000;
+<span id="cb3-7">            <span class="dt" style="color: #AD0000;
 background-color: null;
 font-style: inherit;">"type"</span><span class="fu" style="color: #4758AB;
 background-color: null;
@@ -341,36 +394,48 @@ background-color: null;
 font-style: inherit;">"command"</span><span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">,</span></span>
-<span id="cb5-8">            <span class="dt" style="color: #AD0000;
+<span id="cb3-8">            <span class="dt" style="color: #AD0000;
 background-color: null;
 font-style: inherit;">"command"</span><span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">:</span> <span class="st" style="color: #20794D;
 background-color: null;
-font-style: inherit;">"~/.claude/hooks/notify_osc.sh 'Stop' 'Claude 响应完成，等待输入'"</span></span>
-<span id="cb5-9">          <span class="fu" style="color: #4758AB;
+font-style: inherit;">"~/.claude/hooks/ghostty-notify.**sh** 'Stop' 'Claude 响应完成，等待输入'"</span></span>
+<span id="cb3-9">          <span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">}</span></span>
-<span id="cb5-10">        <span class="ot" style="color: #003B4F;
+<span id="cb3-10">        <span class="ot" style="color: #003B4F;
 background-color: null;
 font-style: inherit;">]</span></span>
-<span id="cb5-11">      <span class="fu" style="color: #4758AB;
+<span id="cb3-11">      <span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">}</span></span>
-<span id="cb5-12">    <span class="ot" style="color: #003B4F;
+<span id="cb3-12">    <span class="ot" style="color: #003B4F;
 background-color: null;
 font-style: inherit;">]</span><span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">,</span></span>
-<span id="cb5-13">  <span class="fu" style="color: #4758AB;
+<span id="cb3-13">  <span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">}</span></span>
-<span id="cb5-14"><span class="fu" style="color: #4758AB;
+<span id="cb3-14"><span class="fu" style="color: #4758AB;
 background-color: null;
 font-style: inherit;">}</span></span></code></pre></div></div>
-<ol start="5" type="1">
+<ol start="4" type="1">
 <li>再使用<code>Claude Code</code>，当他完成响应时，你就会收到vscode的通知了。</li>
 </ol>
+</section>
+<section id="多任务分配监控" class="level1">
+<h1>多任务分配监控</h1>
+<p>使用<a href="https://www.vibekanban.com">vibekanban</a>，用看板的形式来管理多个<code>Claude Code</code>的session，非常简单。</p>
+</section>
+<section id="agent-teams" class="level1">
+<h1>Agent Teams</h1>
+<p>最近也是使用多Agent来完成一些任务，借助了<a href="https://slock.ai">slock.ai</a>平台，但是实践下来发现，虽然多Agent可以分工合作，但是在一些需要连续交互的任务中，会存在噪音(Chaos)，并且Agent的Context也会有耗尽的问题，所以想要长期稳定运转是一个比较大的挑战。</p>
+</section>
+<section id="rlcr工作流" class="level1">
+<h1>RLCR工作流</h1>
+<p>目前两周尝试下来，最稳定的工作流还是RLCR (Ralph Loop with Code Review)，最简化的方案就是分Developer和Reviewer两个角色，给定一个spec明确的任务，Developer负责实现，Reviewer负责代码审查和反馈，直到满足需求为止。这个流程虽然简单，但是在实践中非常有效，可以保证代码质量和任务完成度。然后需要定期的复盘一些问题和经验，来不断打磨和优化这个流程。</p>
 
 
 </section>

@@ -136,6 +136,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
    
   <ul>
   <li><a href="#claude-code通知提醒" id="toc-claude-code通知提醒" class="nav-link active" data-scroll-target="#claude-code通知提醒"><code>Claude Code</code>通知提醒</a></li>
+  <li><a href="#多任务分配监控" id="toc-多任务分配监控" class="nav-link" data-scroll-target="#多任务分配监控">多任务分配监控</a></li>
+  <li><a href="#agent-teams" id="toc-agent-teams" class="nav-link" data-scroll-target="#agent-teams">Agent Teams</a></li>
+  <li><a href="#rlcr工作流" id="toc-rlcr工作流" class="nav-link" data-scroll-target="#rlcr工作流">RLCR工作流</a></li>
   </ul>
 </nav>
 </nav>
@@ -187,65 +190,67 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">"terminal.integrated.focusAfterRun"</span><span class="fu">:</span> <span class="st">"terminal"</span><span class="fu">,</span></span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <ol start="2" type="1">
-<li>添加一个监听脚本到<code>~/notify_osc_listener.sh</code></li>
+<li>添加一个脚本到<code>~/.claude/hooks/ghostty-notify.sh</code></li>
 </ol>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">#!/bin/bash</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co"># 在普通 VSCode 终端中运行此脚本，接收 Claude Code 的通知并输出 OSC 777</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="va">PIPE</span><span class="op">=</span><span class="st">"/tmp/claude-notify-pipe"</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Sends a bell + OSC 777 notification to the parent Ghostty terminal.</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Walks up the process tree to find the TTY since hooks have no controlling terminal.</span></span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co"># 创建命名管道</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span> <span class="at">-f</span> <span class="st">"</span><span class="va">$PIPE</span><span class="st">"</span></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="fu">mkfifo</span> <span class="st">"</span><span class="va">$PIPE</span><span class="st">"</span></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="fu">cleanup()</span> <span class="kw">{</span></span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rm</span> <span class="at">-f</span> <span class="st">"</span><span class="va">$PIPE</span><span class="st">"</span></span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="bu">echo</span> <span class="st">"监听已停止"</span></span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="bu">exit</span> 0</span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="bu">trap</span> cleanup EXIT INT TERM</span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"正在监听 Claude Code 通知... (Ctrl+C 停止)"</span></span>
-<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="cf">while</span> <span class="fu">true</span><span class="kw">;</span> <span class="cf">do</span></span>
-<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="va">IFS</span><span class="op">=</span><span class="st">'|'</span> <span class="bu">read</span> <span class="at">-r</span> <span class="va">event</span> <span class="va">message</span> <span class="op">&lt;</span> <span class="st">"</span><span class="va">$PIPE</span><span class="st">"</span><span class="kw">;</span> <span class="cf">then</span></span>
-<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>        <span class="bu">printf</span> <span class="st">"\e]777;notify;%s;%s\a"</span> <span class="st">"</span><span class="va">$event</span><span class="st">"</span> <span class="st">"</span><span class="va">$message</span><span class="st">"</span></span>
-<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>    <span class="cf">fi</span></span>
-<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>并执行他</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">bash</span> ~/notify_osc_listener.sh</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="va">MSG</span><span class="op">=</span><span class="st">"</span><span class="va">${1</span><span class="op">:-</span>Notification<span class="va">}</span><span class="st">"</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Walk up process tree to find an ancestor with a real TTY</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="va">PID</span><span class="op">=</span><span class="va">$$</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="va">TTY</span><span class="op">=</span><span class="st">""</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="cf">while</span> <span class="bu">[</span> <span class="st">"</span><span class="va">$PID</span><span class="st">"</span> <span class="ot">!=</span> <span class="st">"1"</span> <span class="bu">]</span> <span class="kw">&amp;&amp;</span> <span class="bu">[</span> <span class="ot">-n</span> <span class="st">"</span><span class="va">$PID</span><span class="st">"</span> <span class="bu">]</span><span class="kw">;</span> <span class="cf">do</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  <span class="va">T</span><span class="op">=</span><span class="va">$(</span><span class="fu">ps</span> <span class="at">-o</span> tty= <span class="at">-p</span> <span class="st">"</span><span class="va">$PID</span><span class="st">"</span> <span class="dv">2</span><span class="op">&gt;</span>/dev/null <span class="kw">|</span> <span class="fu">tr</span> <span class="at">-d</span> <span class="st">' '</span><span class="va">)</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">[</span> <span class="ot">-n</span> <span class="st">"</span><span class="va">$T</span><span class="st">"</span> <span class="bu">]</span> <span class="kw">&amp;&amp;</span> <span class="bu">[</span> <span class="st">"</span><span class="va">$T</span><span class="st">"</span> <span class="ot">!=</span> <span class="st">"??"</span> <span class="bu">]</span> <span class="kw">&amp;&amp;</span> <span class="bu">[</span> <span class="ot">-e</span> <span class="st">"/dev/</span><span class="va">$T</span><span class="st">"</span> <span class="bu">]</span><span class="kw">;</span> <span class="cf">then</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="va">TTY</span><span class="op">=</span><span class="st">"/dev/</span><span class="va">$T</span><span class="st">"</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">break</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>  <span class="cf">fi</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>  <span class="va">PID</span><span class="op">=</span><span class="va">$(</span><span class="fu">ps</span> <span class="at">-o</span> ppid= <span class="at">-p</span> <span class="st">"</span><span class="va">$PID</span><span class="st">"</span> <span class="dv">2</span><span class="op">&gt;</span>/dev/null <span class="kw">|</span> <span class="fu">tr</span> <span class="at">-d</span> <span class="st">' '</span><span class="va">)</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">[</span> <span class="ot">-z</span> <span class="st">"</span><span class="va">$TTY</span><span class="st">"</span> <span class="bu">]</span><span class="kw">;</span> <span class="cf">then</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>  <span class="bu">exit</span> 0</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="cf">fi</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Send OSC 777 desktop notification + bell to the Ghostty terminal</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="bu">printf</span> <span class="st">'\033]777;notify;Claude Code;%s\007'</span> <span class="st">"</span><span class="va">$MSG</span><span class="st">"</span> <span class="op">&gt;</span> <span class="st">"</span><span class="va">$TTY</span><span class="st">"</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="bu">printf</span> <span class="st">'\a'</span> <span class="op">&gt;</span> <span class="st">"</span><span class="va">$TTY</span><span class="st">"</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a><span class="bu">exit</span> 0</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <ol start="3" type="1">
-<li>添加一个hook脚本到<code>~/.claude/hooks/notify_osc.sh</code></li>
-</ol>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">#!/bin/bash</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Claude Code hook: 将通知写入命名管道，由监听脚本输出 OSC 777</span></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="va">EVENT</span><span class="op">=</span><span class="st">"</span><span class="va">$1</span><span class="st">"</span></span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="va">MESSAGE</span><span class="op">=</span><span class="st">"</span><span class="va">$2</span><span class="st">"</span></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="va">PIPE</span><span class="op">=</span><span class="st">"/tmp/claude-notify-pipe"</span></span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">[</span> <span class="ot">-p</span> <span class="st">"</span><span class="va">$PIPE</span><span class="st">"</span> <span class="bu">]</span><span class="kw">;</span> <span class="cf">then</span></span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 用 timeout 避免没有监听者时阻塞</span></span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">timeout</span> 1 bash <span class="at">-c</span> <span class="st">"echo '</span><span class="va">${EVENT}</span><span class="st">|</span><span class="va">${MESSAGE}</span><span class="st">' &gt; '</span><span class="va">${PIPE}</span><span class="st">'"</span> <span class="dv">2</span><span class="op">&gt;</span>/dev/null <span class="kw">&amp;</span></span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="cf">fi</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<ol start="4" type="1">
 <li>在<code>~/.claude/settings.json</code> 设置hooks</li>
 </ol>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode json code-with-copy"><code class="sourceCode json"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="dt">"hooks"</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">"Stop"</span><span class="fu">:</span> <span class="ot">[</span></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>      <span class="fu">{</span></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        <span class="dt">"hooks"</span><span class="fu">:</span> <span class="ot">[</span></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>          <span class="fu">{</span></span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>            <span class="dt">"type"</span><span class="fu">:</span> <span class="st">"command"</span><span class="fu">,</span></span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>            <span class="dt">"command"</span><span class="fu">:</span> <span class="st">"~/.claude/hooks/notify_osc.sh 'Stop' 'Claude 响应完成，等待输入'"</span></span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>          <span class="fu">}</span></span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>        <span class="ot">]</span></span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>      <span class="fu">}</span></span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    <span class="ot">]</span><span class="fu">,</span></span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">}</span></span>
-<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<ol start="5" type="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode json code-with-copy"><code class="sourceCode json"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="dt">"hooks"</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">"Stop"</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>      <span class="fu">{</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        <span class="dt">"hooks"</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>          <span class="fu">{</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>            <span class="dt">"type"</span><span class="fu">:</span> <span class="st">"command"</span><span class="fu">,</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>            <span class="dt">"command"</span><span class="fu">:</span> <span class="st">"~/.claude/hooks/ghostty-notify.**sh** 'Stop' 'Claude 响应完成，等待输入'"</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>          <span class="fu">}</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        <span class="ot">]</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>      <span class="fu">}</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">}</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<ol start="4" type="1">
 <li>再使用<code>Claude Code</code>，当他完成响应时，你就会收到vscode的通知了。</li>
 </ol>
+</section>
+<section id="多任务分配监控" class="level1">
+<h1>多任务分配监控</h1>
+<p>使用<a href="https://www.vibekanban.com">vibekanban</a>，用看板的形式来管理多个<code>Claude Code</code>的session，非常简单。</p>
+</section>
+<section id="agent-teams" class="level1">
+<h1>Agent Teams</h1>
+<p>最近也是使用多Agent来完成一些任务，借助了<a href="https://slock.ai">slock.ai</a>平台，但是实践下来发现，虽然多Agent可以分工合作，但是在一些需要连续交互的任务中，会存在噪音(Chaos)，并且Agent的Context也会有耗尽的问题，所以想要长期稳定运转是一个比较大的挑战。</p>
+</section>
+<section id="rlcr工作流" class="level1">
+<h1>RLCR工作流</h1>
+<p>目前两周尝试下来，最稳定的工作流还是RLCR (Ralph Loop with Code Review)，最简化的方案就是分Developer和Reviewer两个角色，给定一个spec明确的任务，Developer负责实现，Reviewer负责代码审查和反馈，直到满足需求为止。这个流程虽然简单，但是在实践中非常有效，可以保证代码质量和任务完成度。然后需要定期的复盘一些问题和经验，来不断打磨和优化这个流程。</p>
 
 
 </section>
