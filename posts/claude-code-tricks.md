@@ -85,3 +85,11 @@ exit 0
 # 多任务分配监控
 
 使用[vibekanban](https://www.vibekanban.com)，用看板的形式来管理多个`Claude Code`的session，非常简单。
+
+# Agent Teams
+
+最近也是使用多Agent来完成一些任务，借助了[slock.ai](https://slock.ai)平台，但是实践下来发现，虽然多Agent可以分工合作，但是在一些需要连续交互的任务中，会存在噪音(Chaos)，并且Agent的Context也会有耗尽的问题，所以想要长期稳定运转是一个比较大的挑战。
+
+# RLCR工作流
+
+目前两周尝试下来，最稳定的工作流还是RLCR (Ralph Loop with Code Review)，最简化的方案就是分Developer和Reviewer两个角色，给定一个spec明确的任务，Developer负责实现，Reviewer负责代码审查和反馈，直到满足需求为止。这个流程虽然简单，但是在实践中非常有效，可以保证代码质量和任务完成度。然后需要定期的复盘一些问题和经验，来不断打磨和优化这个流程。
