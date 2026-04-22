@@ -1,0 +1,22 @@
+flowchart TD
+    X["x_t"] --> N["RMSNorm"]
+    N --> P["in_proj"]
+
+    P --> Q0["q0: [Hk, Dk]"]
+    P --> K0["k0: [Hk, Dk]"]
+    P --> V0["v0: [Hv, Dv]"]
+    P --> Z["z: [Hv, Dv]"]
+    P --> BA["a_raw, b_raw: [Hv]"]
+
+    Q0 --> C["depthwise conv1d + SiLU over concat(Q,K,V)"]
+    K0 --> C
+    V0 --> C
+
+    C --> Q1["q, k after repeat_interleave: [Hv, Dk]"]
+    BA --> G["alpha, beta after repeat: [Hv]"]
+
+    Q1 --> D["Gated Delta Rule over S"]
+    G --> D
+    Z --> R["RMSNormGated * silu(z)"]
+    D --> R
+    R --> O["out_proj"]
