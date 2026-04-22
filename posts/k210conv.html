@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.8.27">
+<meta name="generator" content="quarto-1.9.37">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -10,6 +10,9 @@
 
 <title>使k210支持Tensorflow卷积 – Zheng’s Notes</title>
 <style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
 div.columns{display: flex; gap: min(4vw, 1.5em);}
@@ -69,15 +72,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="../assets/favicon.ico" rel="icon">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
-<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
 <script src="../site_libs/quarto-html/popper.min.js"></script>
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-acf12a64177840b8d86f2d4f01b2e9fb.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-7072389654d23eff08f359f9aa0d1ee7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-31a427dc48afc7db3acc204fa89d36ad.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -107,7 +109,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 }</script>
 
   <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
 
 <script type="text/javascript">
 const typesetMath = (el) => {
@@ -235,8 +237,27 @@ window.Quarto = {
 <section id="解决方案" class="level1">
 <h1>4. 解决方案</h1>
 <ol type="1">
-<li><p>首先尝试padding之后用<code>same</code>卷积. 因为这里的使用的是<code>depthwise_conv2d_native</code>卷积.所以不知道<code>k210</code>中是否支持这个卷积的<code>same</code>操作.所以先试试. 我使用类似于下面的操作进行padding: <code>python     a = tf.constant(np.zeros((1, 15, 20, 256)), dtype=tf.float32)     b = tf.space_to_batch(a, [[1, 0], [0, 0]], block_size=1)     c = tf.nn.depthwise_conv2d_native(b, tf.ones((3, 3, 256, 1)), strides=[1, 2, 2, 1], padding='SAME')     print(a)     print(b)     print(c)     """     Tensor("Const_3:0", shape=(1, 15, 20, 256), dtype=float32)     Tensor("SpaceToBatchND_7:0", shape=(1, 16, 20, 256), dtype=float32)     Tensor("DepthwiseConv2dNative_6:0", shape=(1, 8, 10, 256), dtype=float32)     """</code> 经过尝试之后,我发现在<code>k210 model-compiler</code>报错: <code>sh     [layer 23]: MobilenetV1/Conv2d_12_depthwise/Relu6:0            shape(HWC): 14x18x256 ==&gt; 8x10x256            scale,bias: (0.023529411764705882,0.0) ==&gt; (0.023529411764705882,0.0)     [5, 14, 18, 256] [5, 8, 10, 256]</code> 他居然把我的输入识别成了[14,18].问了群里的人,他们说<code>space to batch nd就是为了做padding的 后面的卷积当然不需要再次padding，所以要用valid</code> 我还是不太理解为什么维度会和<code>Tensorflow board</code>里面不相同.</p></li>
-<li><p>现在尝试<code>valid</code>卷积 那么我给<code>height</code>和<code>width</code>padding<code>[3,2]</code>. <span class="math display">\[ \lceil\frac{15+3-3+1}{2}\rceil=8 \]</span> <span class="math display">\[ \lceil\frac{20+2-3+1}{2}\rceil=10 \]</span> 对应代码为: <code>python     tf.space_to_batch(a, [[2, 1], [1, 1]], block_size=1)</code> 现在来尝试一下编译.就显示编译成功了.</p></li>
+<li><p>首先尝试padding之后用<code>same</code>卷积. 因为这里的使用的是<code>depthwise_conv2d_native</code>卷积.所以不知道<code>k210</code>中是否支持这个卷积的<code>same</code>操作.所以先试试. 我使用类似于下面的操作进行padding:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>a <span class="op">=</span> tf.constant(np.zeros((<span class="dv">1</span>, <span class="dv">15</span>, <span class="dv">20</span>, <span class="dv">256</span>)), dtype<span class="op">=</span>tf.float32)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>b <span class="op">=</span> tf.space_to_batch(a, [[<span class="dv">1</span>, <span class="dv">0</span>], [<span class="dv">0</span>, <span class="dv">0</span>]], block_size<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>c <span class="op">=</span> tf.nn.depthwise_conv2d_native(b, tf.ones((<span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">256</span>, <span class="dv">1</span>)), strides<span class="op">=</span>[<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">1</span>], padding<span class="op">=</span><span class="st">'SAME'</span>)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(a)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(b)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(c)</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co">"""</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="co">Tensor("Const_3:0", shape=(1, 15, 20, 256), dtype=float32)</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="co">Tensor("SpaceToBatchND_7:0", shape=(1, 16, 20, 256), dtype=float32)</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co">Tensor("DepthwiseConv2dNative_6:0", shape=(1, 8, 10, 256), dtype=float32)</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="co">"""</span> </span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>经过尝试之后,我发现在<code>k210 model-compiler</code>报错:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">[layer</span> 23]: MobilenetV1/Conv2d_12_depthwise/Relu6:0</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>       <span class="ex">shape</span><span class="er">(</span><span class="ex">HWC</span><span class="kw">)</span><span class="bu">:</span> 14x18x256 ==<span class="op">&gt;</span> 8x10x256</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>       <span class="ex">scale,bias:</span> <span class="er">(</span><span class="ex">0.023529411764705882,0.0</span><span class="kw">)</span> <span class="ex">==</span><span class="op">&gt;</span> <span class="er">(</span><span class="ex">0.023529411764705882,0.0</span><span class="kw">)</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="ex">[5,</span> 14, 18, 256] [5, 8, 10, 256]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>他居然把我的输入识别成了[14,18].问了群里的人,他们说<code>space to batch nd就是为了做padding的 后面的卷积当然不需要再次padding，所以要用valid</code> 我还是不太理解为什么维度会和<code>Tensorflow board</code>里面不相同.</p></li>
+<li><p>现在尝试<code>valid</code>卷积 那么我给<code>height</code>和<code>width</code>padding<code>[3,2]</code>. <span class="math display">\[ \lceil\frac{15+3-3+1}{2}\rceil=8 \]</span> <span class="math display">\[ \lceil\frac{20+2-3+1}{2}\rceil=10 \]</span> 对应代码为:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>tf.space_to_batch(a, [[<span class="dv">2</span>, <span class="dv">1</span>], [<span class="dv">1</span>, <span class="dv">1</span>]], block_size<span class="op">=</span><span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>现在来尝试一下编译.就显示编译成功了.</p></li>
 </ol>
 
 
