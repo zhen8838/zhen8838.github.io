@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.37">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2026-04-20">
+
+<title>Luminal 编译流：HLIR，egg 搜索与 Runtime – Zheng’s Notes</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../assets/favicon.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-acf12a64177840b8d86f2d4f01b2e9fb.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-a68d55a7457d6c578309d53405216ea2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">Zheng’s Notes</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
+  <li><a href="#hlir" id="toc-hlir" class="nav-link" data-scroll-target="#hlir">HLIR</a>
+  <ul class="collapse">
+  <li><a href="#shapetracker" id="toc-shapetracker" class="nav-link" data-scroll-target="#shapetracker">ShapeTracker</a></li>
+  </ul></li>
+  <li><a href="#partition-group" id="toc-partition-group" class="nav-link" data-scroll-target="#partition-group">Partition / Group</a></li>
+  <li><a href="#egglog-saturation" id="toc-egglog-saturation" class="nav-link" data-scroll-target="#egglog-saturation">Egglog saturation</a>
+  <ul class="collapse">
+  <li><a href="#saturation" id="toc-saturation" class="nav-link" data-scroll-target="#saturation">Saturation</a></li>
+  </ul></li>
+  <li><a href="#extraction" id="toc-extraction" class="nav-link" data-scroll-target="#extraction">Extraction</a></li>
+  <li><a href="#llir" id="toc-llir" class="nav-link" data-scroll-target="#llir">LLIR</a>
+  <ul class="collapse">
+  <li><a href="#gemma-3-4b-的-llir" id="toc-gemma-3-4b-的-llir" class="nav-link" data-scroll-target="#gemma-3-4b-的-llir">Gemma 3 4B 的 LLIR</a></li>
+  </ul></li>
+  <li><a href="#code-generation" id="toc-code-generation" class="nav-link" data-scroll-target="#code-generation">Code Generation</a>
+  <ul class="collapse">
+  <li><a href="#模板-参数" id="toc-模板-参数" class="nav-link" data-scroll-target="#模板-参数">模板 + 参数</a></li>
+  <li><a href="#库调用" id="toc-库调用" class="nav-link" data-scroll-target="#库调用">库调用</a></li>
+  </ul></li>
+  <li><a href="#runtime" id="toc-runtime" class="nav-link" data-scroll-target="#runtime">Runtime</a>
+  <ul class="collapse">
+  <li><a href="#load-阶段" id="toc-load-阶段" class="nav-link" data-scroll-target="#load-阶段">Load 阶段</a></li>
+  <li><a href="#execute-阶段" id="toc-execute-阶段" class="nav-link" data-scroll-target="#execute-阶段">Execute 阶段</a></li>
+  </ul></li>
+  <li><a href="#总结" id="toc-总结" class="nav-link" data-scroll-target="#总结">总结</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Luminal 编译流：HLIR，egg 搜索与 Runtime</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">编译器</div>
+  </div>
+  </div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">April 20, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>最近跑了一下 Luminal 的 <code>gemma-3-4b</code> 例子， 顺便把它的 IR 设计和搜索机制梳理了一遍。</p>
+<!--more-->
+<section id="overview" class="level1">
+<h1>Overview</h1>
+<p><a href="https://github.com/luminal-ai/luminal">Luminal</a> 的编译流程大致分六步：</p>
+<ol type="1">
+<li><strong>Frontend</strong> ： 用户用 <code>GraphTensor</code> API 写算子 (<code>matmul</code>， <code>softmax</code> 之类)。 前端里 <code>expand_dim</code> / <code>permute</code> 这些只动张量挂的 <code>ShapeTracker</code> 元数据， 不会产生新 op， 所以最后 HLIR 上的 op 数比用户写的表达式节点少得多。</li>
+<li><strong>HLIR</strong> ： 前端操作最终凝成一张由 20 个 primop 组成的张量 DAG， 这就是 Luminal 自己的高层 IR。</li>
+<li><strong>Partition / Group</strong> ： 按前端插入的 <code>graph_break</code> 把整张 HLIR 切成若干 chunk， 再把结构相同的 chunk 合并成 unique group。 后面几步都以 group 为单位推进。</li>
+<li><strong>Egglog saturation</strong> ： 每个 group 序列化成 egglog 程序， 跑等价关系 saturation 。 4B 模型单核 CPU 大约要 30 分钟， 这是编译代价的大头。</li>
+<li><strong>Extraction / LLIR</strong> ： 从saturation 后的 egraph 里先抽 candidate， 然后lower 到 LLIR。</li>
+<li><strong>Codegen / Runtime</strong> ： 每个 LLIR 节点先 Codegen 成 CUDA kernel (或 cuBLAS 调用)， 再由 Runtime 把它们串进 CUDA Graph 跑推理。 整体更像 JIT： kernel 编译在 Codegen 阶段即时发生， buffer 分配在 Runtime 启动时完成， 不是提前全编好的 AOT。</li>
+</ol>
+</section>
+<section id="hlir" class="level1">
+<h1>HLIR</h1>
+<p>HLIR 是 Luminal 的高层张量 IR，只有 20 个 primop，代表最小的原子运算。一个 Gemma 3 4B 模型的 HLIR 大概包含 5000 个 primop。</p>
+<p>20 个 primop 分七类：</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th></th>
+<th>Ops</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>I/O</td>
+<td><code>Input</code>, <code>Output</code>, <code>Constant</code></td>
+</tr>
+<tr class="even">
+<td>DType / Range</td>
+<td><code>Cast</code>, <code>Iota</code></td>
+</tr>
+<tr class="odd">
+<td>Unary</td>
+<td><code>Exp2</code>, <code>Log2</code>, <code>Sin</code>, <code>Recip</code>, <code>Sqrt</code></td>
+</tr>
+<tr class="even">
+<td>Binary</td>
+<td><code>Add</code>, <code>Mul</code>, <code>Mod</code>, <code>LessThan</code></td>
+</tr>
+<tr class="odd">
+<td>Reduction</td>
+<td><code>SumReduce</code>, <code>MaxReduce</code>, <code>Softmax</code></td>
+</tr>
+<tr class="even">
+<td>Indexing</td>
+<td><code>Gather</code>, <code>Scatter</code></td>
+</tr>
+<tr class="odd">
+<td>Fallback</td>
+<td><code>CustomOpKind</code></td>
+</tr>
+</tbody>
+</table>
+<p>举一个matmul的例子，对 <code>a: [M, K] @ b: [K, N] -&gt; [M, N]</code>， HLIR 不写 <code>for k</code> 循环， 前端代码是这样：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// src/frontend/matmul.rs</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> mul <span class="op">=</span> <span class="kw">self</span><span class="op">.</span>expand_dim(<span class="dv">1</span><span class="op">,</span> n) <span class="op">*</span> rhs<span class="op">.</span>permute((<span class="dv">1</span><span class="op">,</span> <span class="dv">0</span>))<span class="op">.</span>expand_dim(<span class="dv">0</span><span class="op">,</span> m)<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> ret <span class="op">=</span> mul<span class="op">.</span>sum(<span class="dv">2</span>)<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>带入一个具体的shape，所构造出来的 HLIR 真的只有 5 个节点：</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="luminal/matmul-hlir.png" class="img-fluid figure-img"></p>
+<figcaption>最小 matmul 的 HLIR</figcaption>
+</figure>
+</div>
+<p>它的设计很类似 <code>Jittor</code>，通过扩展 layout 的方式表示循环区域。观察上面的 <code>Mul</code> 和 <code>SumReduce</code> 节点：input 节点的 rank 是 2 维，但是 <code>Mul</code> 使用 <code>dims=[2, 4, 3]</code>，两个输入的 <code>strides</code> 分别是 <code>[(z*3), 0, z]</code> 和 <code>[0, z, (z*4)]</code>（其中 <code>z</code> 是 <code>sizeof(dtype)</code>）。stride 里那个 <code>0</code> 就是 <code>expand_dim</code> 制造出来的 broadcast 维度。没有单独的 Shape 操作 op，基本都由 <code>ShapeTracker</code> 来表达。</p>
+<p>值得注意的是，<code>Softmax</code> 并没拆成 <code>Exp2 + SumReduce + Div</code>， 应该为了后面 rewrite 和 pattern match 所做的一个妥协。</p>
+<section id="shapetracker" class="level2">
+<h2 class="anchored" data-anchor-id="shapetracker">ShapeTracker</h2>
+<p><code>ShapeTracker</code> 的工作主要是为了取代没有 <code>Expand</code> / <code>Reshape</code> / <code>Permute</code>等op的。可以直接理解成通过先记录Layout而后再处理的方式来表达这些操作。它的工作流程大致是：</p>
+<ol type="1">
+<li>每个 <code>GraphTensor</code> 都挂着一个 <code>ShapeTracker</code>， 里面记当前的 <code>dims</code>， <code>strides</code>， <code>offset</code>， <code>mask</code> 这些影响访问顺序的信息。</li>
+<li><code>expand_dim</code>， <code>permute</code>， <code>reshape</code>， <code>slice</code> 这类前端函数先只改这个 <code>ShapeTracker</code>， 不会往 HLIR 图里插一个新节点。</li>
+<li>等真正创建计算 op (<code>Mul</code>， <code>Add</code>， <code>SumReduce</code>) 时， 当前 <code>ShapeTracker</code> 会被读出来， 固化进这个 op 的输入签名。</li>
+</ol>
+<p>所以上面的例子中，HLIR 包含的是一个带着 <code>shape</code> / <code>stride</code> 信息的 <code>Mul</code>，不是 <code>Expand -&gt; Permute -&gt; Mul</code> 。</p>
+<p>具体到几种常见操作：</p>
+<ul>
+<li><code>expand_dim</code>： 往 <code>dims</code> 里插一维， 对应的 stride 置成 <code>0</code>， 表示广播。</li>
+<li><code>permute</code>： 重排 <code>dims</code> 和 <code>strides</code>， 表示只是换了观察顺序， 没有搬数据。</li>
+<li><code>reshape</code> / <code>slice</code>： 更新 <code>dims</code>， <code>offset</code>， <code>mask</code> 这些视图信息， 仍然不新建 HLIR op。</li>
+</ul>
+</section>
+</section>
+<section id="partition-group" class="level1">
+<h1>Partition / Group</h1>
+<p>HLIR 建完整张图后， 直接对整图跑 egg 搜索代价太贵， 特别是对于Transformer这种结构高度重复的模型， 也没必要。 所以 Luminal 这一步做两件事：</p>
+<ol type="1">
+<li><strong>Partition</strong>： 把整张 HLIR 切成若干 <strong>chunk</strong>， 也就是 “一整块子图， 内部一起搜索 / 编译”。 切分点由前端显式决定 (<code>graph_break</code>)， 典型放在 transformer 每层边界或 KV cache 更新处这种天然的分界。</li>
+<li><strong>Group</strong>： 再把结构完全一致的 chunk 合并成同一个 <strong>group</strong>。 每个 group 只做一次 egraph 搜索， 结果给所有 member chunk 共用。</li>
+</ol>
+<p>规模参考 (Gemma 3 4B on H200)：</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>层级</th>
+<th>数量</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>chunk</td>
+<td>35</td>
+<td>整张图切出 35 块, 每块 ~140 个 HLIR op</td>
+</tr>
+<tr class="even">
+<td>group</td>
+<td>5</td>
+<td>35 块按结构去重剩 5 类模板</td>
+</tr>
+</tbody>
+</table>
+<p>把这 5 个 group 对应回模型结构，分别是：</p>
+<ul>
+<li><strong>1 个 decoder layer group</strong>： 34 层 decoder layer 全部共享这一套模板， 这是去重收益的主要来源。</li>
+<li><strong>1 个 embedding group</strong>： 处理 token lookup 这一块。</li>
+<li><strong>1 个 final norm + logits group</strong>： 处理模型最后的输出头。</li>
+<li><strong>2 个辅助 group</strong>： 对应 prefill / decode 入口， RoPE / mask 这类不属于主干 decoder layer 的块。</li>
+</ul>
+</section>
+<section id="egglog-saturation" class="level1">
+<h1>Egglog saturation</h1>
+<p>这里采用egraph的saturation技术，对HLIR进行等价变换/优化，生成大量等价的候选实现。搜索做四件事：</p>
+<p><strong>1. 单个 HLIR primop 匹配 kernel op</strong></p>
+<p>每个 HLIR op (<code>Add</code>， <code>Mul</code>， <code>SumReduce</code>， <code>Exp2</code>。。。) 都有对应的 <code>kernel_rewrite&lt;HLIR, Kernel&gt;</code> 规则， 把它扩成 dialect 级 <code>KernelOp</code> (CUDA <code>KernelAdd</code>， Metal 对应 op 等)。 17 个 HLIR 计算 op 都有一条这样的 rewrite (<code>crates/luminal_cuda_lite/src/kernel/hlir.rs</code>)。 这一步把纯 HLIR op 变成 “可以真执行的候选”。</p>
+<p>最小的那类 rewrite， 在代码里其实就是一个通用 helper：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">pub</span> <span class="kw">fn</span> kernel_rewrite<span class="op">&lt;</span>H<span class="op">:</span> <span class="bu">Default</span> <span class="op">+</span> EgglogOp<span class="op">,</span> L<span class="op">:</span> <span class="bu">Default</span> <span class="op">+</span> EgglogOp<span class="op">&gt;</span>() <span class="op">-&gt;</span> Rule <span class="op">{</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">...</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    rule(<span class="kw">union</span>(hlir_op<span class="op">.</span>clone()<span class="op">,</span> llir_op))<span class="op">.</span>fact(eq(dt<span class="op">,</span> dtype(hlir_op)))</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>它的做法很直接： 看到一个 HLIR op， 就把它和对应的 <code>KernelOp</code> union 到同一个 eclass 里。 例如 <code>Mul</code> 可以 rewrite 成 <code>KernelMul</code>， <code>Add</code> 可以 rewrite 成 <code>KernelAdd</code>。</p>
+<p><strong>2. 多个 HLIR primop 对应高效库调用</strong></p>
+<p>类似<code>Mul + SumReduce</code> 这个 pattern (也就是 matmul) 被单独识别， lower 到 cuBLAS / cuBLASLt 的 sgemm 变体。 规则名例： <code>cublas sgemm row-major x column-major</code>， <code>cublaslt batched column-major x row-major</code> (<code>crates/luminal_cuda_lite/src/host/cublas/</code> + <code>cublaslt/</code>)。 同一个 pattern 根据 shape / stride 可以匹配到不同的库变体。</p>
+<p>这类高阶 pattern 的 rewrite 大致长这样：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="op">(</span>rewrite</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="op">(</span>Op <span class="op">(</span>SumReduce <span class="op">...)</span> <span class="op">(</span>ICons <span class="op">(</span>Op <span class="op">(</span>Mul <span class="op">...)</span> <span class="op">...)</span> <span class="op">(</span>INil<span class="op">)))</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="op">(</span>Op <span class="op">(</span>CuBlasSGemm <span class="op">...)</span> <span class="op">...)</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="op">:</span>name <span class="st">"cublas sgemm row-major × column-major"</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>3. Batch 和 shape 展平</strong></p>
+<p>然后基于Layout做一些化简， <code>src/egglog_utils/matmul_flattening/*.egg</code> (三条规则)：</p>
+<ul>
+<li><code>batch_merge_a_contig.egg</code> / <code>batch_merge_b_contig.egg</code>：把 “batch x matmul，其中一侧 contiguous，另一侧 broadcast” 展平成 2D matmul。</li>
+<li><code>squeeze.egg</code>： 把无效维度压缩。</li>
+</ul>
+<p><strong>4. In-place 候选 + aliasing 检查</strong></p>
+<p><code>Scatter</code> 会被 rewrite 成 <code>ScatterNoCopy(ConsumedBuffer(dest), ...)</code>。这里的 <code>ConsumedBuffer</code> 并不对应具体操作， 他是一种搜索阶段的所有权标记。设计他的目的是因为，egraph中的节点可能会呈现环状依赖，并且很难收集user的个数， 所以 <code>ConsumedBuffer</code> 的作用其实就是把 usage analysis 这件事显式放进搜索空间里，如果这个 <code>dest</code> buffer 从这里开始就不再被别人读， 那我可以把它原地拿来写回去。</p>
+<p>后面的 <code>cleanup</code> / <code>base_cleanup</code> ruleset 就是在检查这件事：</p>
+<ul>
+<li>如果 <code>dest</code> 后面<strong>没有</strong>别的 reader， 就保留 <code>ConsumedBuffer(dest)</code>， 最终允许走 <code>ScatterNoCopy</code>， 也就是原地写。</li>
+<li>如果 <code>dest</code> 后面<strong>还有</strong>别的 reader， 就把这个候选删掉， 退回普通 <code>Scatter</code>。</li>
+</ul>
+<section id="saturation" class="level2">
+<h2 class="anchored" data-anchor-id="saturation">Saturation</h2>
+<p>Luminal 没有把所有 rewrite rules 放一起去执行， 他分成 4 个 ruleset 做分阶段搜索，这样可以缩小每轮 rewrite 的匹配空间，降低编译代价：</p>
+<ul>
+<li><code>expr</code>： 主 rewrite， HLIR 对应 kernel 候选， batch matmul 展平， ConsumedBuffer 注入之类全在这。</li>
+<li><code>dtype_prop</code>： 侧函数 <code>(function dtype (IR) DType :merge new)</code> 沿 dataflow 传 dtype 的规则。</li>
+<li><code>cleanup</code>： 如果 <code>dest</code> 被别的 op 读到， 删掉 <code>ConsumedBuffer</code>， 级联把 ScatterNoCopy 候选一起清掉。</li>
+<li><code>base_cleanup</code>： 独立 ruleset 放最后， 专做 <code>(union ?cb ?dest)</code> 这种不可逆操作， 必须等前面都saturation 才安全。 代码里有 admitted TODO 承认这是脆弱点。</li>
+</ul>
+<p>实际执行顺序长这样：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode lisp code-with-copy"><code class="sourceCode commonlisp"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>(repeat <span class="dv">10</span> (saturate expr) (saturate dtype_prop) (run))</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>(saturate expr) (saturate cleanup) (saturate base_cleanup)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>在我的实验中 (Gemma 3 4B on H200， 34 层 transformer)： 34 层切成 35 个 chunk， 压成 5 个结构等价的 group， 每个 group 的 egraph saturation 到 ~5076 enode / 3633 eclass， 单 CPU 核全程 30 min。</p>
+</section>
+</section>
+<section id="extraction" class="level1">
+<h1>Extraction</h1>
+<p>egglog saturation 后，Luminal 直接通过执行测时间来获得真正的cost：</p>
+<ol type="1">
+<li><strong>随机选择</strong>。 对每个 eclass 随机选一个 enode， 然后 lower 成 LLIR， NVRTC 编译， 真跑一次测 latency (默认跑 10 次取平均)， 顺便查一下结果有没有 NaN。 编不过或者算出 NaN 就换一套重来， 最多试 100 次， 全挂就直接 panic (<code>src/graph.rs:653</code>)。</li>
+<li><strong>变异</strong>。 拿当前跑得最快的一套做种子 (默认只留 1 套)， 每代生成 30 个变异： 在 <code>有多个 enode 可选</code> 的 eclass 里随机挑几个换成别的选择， hash 去重避免重复测。</li>
+<li><strong>评估</strong>。 每个变异同样 lower + 编译 + 执行 + 测量。 跑得比种子快就顶替种子。</li>
+<li><strong>预算</strong>。 <strong>每个 group</strong> 最多评估 <code>options.limit</code> 个候选 (Gemma 3 4B 有 5 group， <code>GEMMA_SEARCH_GRAPHS=3</code> 就对应每 group 3 个 candidate， 全模型一共 5 × 3 = 15 次 NVRTC + profile)。 官方默认 500， 搜的时间会比较久。</li>
+</ol>
+<p>这一步就是代替了传统的分析建模没办法准确预测的 cost model，但也只能在稳定的硬件上能这么玩，设计阶段就不行了。</p>
+</section>
+<section id="llir" class="level1">
+<h1>LLIR</h1>
+<p>代码里把 LLIR 定义成：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode rust code-with-copy"><code class="sourceCode rust"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">pub</span> <span class="kw">type</span> LLIRGraph <span class="op">=</span> StableGraph<span class="op">&lt;</span>LLIROp<span class="op">,</span> ()<span class="op">&gt;;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>这里的 <code>StableGraph</code> 不用想太复杂， 就把它理解成一个“节点编号稳定的图容器”就行。 <code>LLIROp</code> 是节点内容， 边表示依赖关系。 真正 dump 出来会长成这样：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>LLIROp<span class="op">(</span>DialectOp<span class="op">(</span>KernelMul <span class="op">{</span> out_shape<span class="op">:</span> <span class="op">[</span><span class="dv">4</span><span class="op">,</span> s<span class="op">,</span> <span class="dv">256</span><span class="op">],</span> <span class="op">...</span> <span class="op">}))</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>LLIROp<span class="op">(</span>DialectOp<span class="op">(</span>KernelSumReduce <span class="op">{</span> out_shape<span class="op">:</span> <span class="op">[</span>s<span class="op">],</span> <span class="op">...</span> <span class="op">}))</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>LLIROp<span class="op">(</span>DialectOp<span class="op">(</span>CuBlasLt <span class="op">{</span> m<span class="op">:</span> <span class="dv">1024</span><span class="op">,</span> n<span class="op">:</span> s<span class="op">,</span> k<span class="op">:</span> <span class="dv">2560</span><span class="op">,</span> <span class="op">...</span> <span class="op">}))</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>其中每个节点直接对应一个具体的执行单元，比如：</p>
+<ul>
+<li>CUDA kernel 源码 (之后由 NVRTC 实时编译成 GPU 可执行码)</li>
+<li>Metal kernel (Apple backend)</li>
+<li>host 上的库调用 (cuBLAS， cuBLASLt 这种现成的 sgemm)</li>
+</ul>
+<p>同时还带一些给 Runtime 用的元信息：</p>
+<ul>
+<li>输出 buffer 多大 (符号表达式， 支持动态 shape)，</li>
+<li>读写多少 bytes， 算多少 FLOPs</li>
+<li>输出是否复用某个输入 buffer (in-place 写) 等等</li>
+</ul>
+<p>在 LLIR 这层， 可以理解成节点之间都是通过 <strong>global memory</strong> 传递数据的， 至于<code>shared memory</code>， <code>register</code> 这些更细的层级不会体现在 LLIR 的上。</p>
+<section id="gemma-3-4b-的-llir" class="level2">
+<h2 class="anchored" data-anchor-id="gemma-3-4b-的-llir">Gemma 3 4B 的 LLIR</h2>
+<p>Gemma 3 4B 编译生成的 LLIR 约 7250 个节点，其中：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>KernelMul          <span class="dv">2043</span>        KernelGather        <span class="dv">205</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>KernelAdd           <span class="dv">810</span>        KernelSin            <span class="dv">68</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>KernelIota          <span class="dv">648</span>        KernelScatter        <span class="dv">66</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>KernelCast          <span class="dv">438</span>        KernelLessThan       <span class="dv">63</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>KernelConstant      <span class="dv">409</span>        KernelExp2           <span class="dv">35</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>KernelRecip         <span class="dv">378</span>        KernelExp            <span class="dv">35</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>KernelSumReduce     <span class="dv">375</span>        KernelMaxReduce      <span class="dv">34</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>KernelSqrt          <span class="dv">205</span>        KernelSigmoid        <span class="dv">32</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>                               KernelScatterNoCopy   <span class="dv">2</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>其中 elementwise 占绝对多数。 这里只有 2 个 <code>KernelScatterNoCopy</code>， 其实全都是 KV cache 的原地写。 这就是之前 <code>ConsumedBuffer</code> 所做的事情，在buffer没有多user地情况下， egglog 才会把普通 <code>Scatter</code> 留成 <code>ScatterNoCopy</code>。</p>
+</section>
+</section>
+<section id="code-generation" class="level1">
+<h1>Code Generation</h1>
+<p>上一节 LLIR 本身只是一段数据， GPU 没法直接执行。 Luminal 做法是：</p>
+<section id="模板-参数" class="level2">
+<h2 class="anchored" data-anchor-id="模板-参数">模板 + 参数</h2>
+<p>每种 kernel op 自己维护一份 C++ kernel 模板， Codegen 时把节点里的 shape， stride， dtype 这些参数填进去， 生成一段具体的 CUDA 源码， 然后把这段源码交给 NVRTC 做 JIT 编译， 得到 GPU 真正能执行的 kernel。 没有 loop-level IR/schedule pass/tiling， 模板长什么样， kernel 就长什么样。</p>
+<p>比如一个 <code>KernelAdd</code> 节点， codegen实际做的就是模板替换， 最后拼成一整段源码：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>LLIROp<span class="op">(</span>DialectOp<span class="op">(</span>KernelAdd <span class="op">{</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  out_shape<span class="op">:</span> <span class="op">[</span>s<span class="op">,</span> <span class="dv">4</span><span class="op">],</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  a_stride<span class="op">:</span> <span class="op">[(</span>z<span class="op">*</span><span class="dv">4</span><span class="op">),</span> z<span class="op">],</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  b_stride<span class="op">:</span> <span class="op">[</span><span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">],</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  out_stride<span class="op">:</span> <span class="op">[(</span>z<span class="op">*</span><span class="dv">4</span><span class="op">),</span> z<span class="op">],</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  dtype<span class="op">:</span> F32</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="op">}))</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="at">extern</span> <span class="st">"C"</span> <span class="op">{</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    __global__ <span class="dt">void</span> add_k<span class="op">(</span><span class="dt">float</span> <span class="op">*</span>C<span class="op">,</span> <span class="at">const</span> <span class="dt">float</span> <span class="op">*</span>A<span class="op">,</span> <span class="at">const</span> <span class="dt">float</span> <span class="op">*</span>B<span class="op">,</span> <span class="at">const</span> <span class="dt">int</span><span class="op">*</span> dyn_dims<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>        <span class="dt">long</span> <span class="dt">long</span> const_z <span class="op">=</span> <span class="op">(</span><span class="dt">long</span> <span class="dt">long</span><span class="op">)</span>blockIdx<span class="op">.</span>x <span class="op">*</span> blockDim<span class="op">.</span>x <span class="op">+</span> threadIdx<span class="op">.</span>x<span class="op">;</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>const_z <span class="op">&gt;=</span> <span class="co">/* n_elements */</span><span class="op">)</span> <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>        C<span class="op">[</span><span class="co">/* out_idx */</span><span class="op">]</span> <span class="op">=</span> A<span class="op">[</span><span class="co">/* a_idx */</span><span class="op">]</span> <span class="op">+</span> B<span class="op">[</span><span class="co">/* b_idx */</span><span class="op">];</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>为避免同样的 kernel 反复编译， Luminal 会按生成出来的源码做进程内缓存，当两个节点最后拼出的源码完全相同， 就直接复用已编好的 function。</p>
+<ol start="2" type="1">
+<li>库调用</li>
+</ol>
+<p>当然也不是所有 LLIR 节点都要生成源码。前面搜索那节提到 <code>Mul + SumReduce</code> 被 rewrite 为 <code>matmul</code>，最后对应的其实是 cuBLAS / cuBLASLt 入口的 wrapper。这类节点 Codegen 只是选一个合适的库入口，把 stride / leading dimension 填成 cuBLAS 可以支持的格式，执行时直接调 <code>cublasSgemm</code> 这种 host 函数。</p>
+</section>
+<section id="库调用" class="level2">
+<h2 class="anchored" data-anchor-id="库调用">库调用</h2>
+</section>
+</section>
+<section id="runtime" class="level1">
+<h1>Runtime</h1>
+<p>因为代码在上一个阶段就已经编译好了， 给到 Runtime 的是一堆互相独立的 kernel / 库调用。 Runtime 做的事其实就两阶段：</p>
+<ul>
+<li><code>load_llir</code>：先把每个 group 的 LLIR 装配好，设 input / output 指针，分配中间 buffer，捕获成 CUDA Graph。</li>
+<li><code>execute</code>： 每步推理按 chunk 顺序 replay 对应的那张图， 取输出。</li>
+</ul>
+<section id="load-阶段" class="level2">
+<h2 class="anchored" data-anchor-id="load-阶段">Load 阶段</h2>
+<p>是先读取每个 group 的 LLIR，然后</p>
+<p><strong>1. 分配 buffer</strong>：</p>
+<p>Runtime 遍历 LLIR 每个节点， 读出它计算输出大小的表达式， 得代入当前 <code>dyn_map</code> (比如 <code>M=1024, N=4096</code>) 算出实际字节数。 然后对比已有 buffer： 够大就复用， 不够就 <code>cudaMalloc</code>。</p>
+<p>同时节点还可以带一个关于buffer 地址复用的信息。 这时 Runtime 直接把可复用的 output pointer 指向 input pointer， 不再分配。 比如前面讲过的 <code>KernelScatterNoCopy</code> (KV cache 原地写) 就是这样处理。</p>
+<p><strong>2. 打包 CUDA Graph</strong>：</p>
+<p>每个 group 单独处理，Runtime 按 LLIR 顺序排好这个 group 里的 kernel， 调 CUDA Graph API 把整段 launch 序列捕获成一张图。 我在 Gemma 3 4B 上总共构建了 <strong>5 张 CUDA Graph</strong> (每个 group 一张)， 每张图内部封装 12-180 个 kernel。 执行时一次 <code>cuGraphLaunch</code> 就把一段序列发出去， 减少 launch overhead。</p>
+</section>
+<section id="execute-阶段" class="level2">
+<h2 class="anchored" data-anchor-id="execute-阶段">Execute 阶段</h2>
+<p>到这一步只需要：</p>
+<ol type="1">
+<li>给定输入数据指针。</li>
+<li>按 chunk 顺序发射每个 chunk 所属 group 的 CUDA Graph。</li>
+<li>读 output buffer 回 host (如果有必要)。</li>
+</ol>
+</section>
+</section>
+<section id="总结" class="level1">
+<h1>总结</h1>
+<p>先把我最后跑出来的数据放在一起：</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>框架</th>
+<th>dtype</th>
+<th style="text-align: right;">TTFT</th>
+<th style="text-align: right;">TPOT</th>
+<th style="text-align: right;">TPS</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>vLLM</td>
+<td>bf16</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">3.71 ms</td>
+<td style="text-align: right;">269</td>
+</tr>
+<tr class="even">
+<td>vLLM</td>
+<td>fp32</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">5.81 ms</td>
+<td style="text-align: right;">172</td>
+</tr>
+<tr class="odd">
+<td>Luminal main</td>
+<td>fp32</td>
+<td style="text-align: right;">202 ms</td>
+<td style="text-align: right;">37.42 ms</td>
+<td style="text-align: right;">26.7</td>
+</tr>
+<tr class="even">
+<td>Luminal fusion</td>
+<td>fp32</td>
+<td style="text-align: right;">250 ms</td>
+<td style="text-align: right;">48.13 ms</td>
+<td style="text-align: right;">20.8</td>
+</tr>
+</tbody>
+</table>
+<p>再对照一下 Luminal 官方自己在 <code>README.md</code> 里的宣传：</p>
+<ul>
+<li>性能上， 它写的是 <strong>Q8 Llama 3 8B 在 H100 上能到 ~80% theoretical max performance</strong></li>
+<li>技术上， 它写的是这套搜索 <strong>可以自动导出 FlashAttention</strong></li>
+</ul>
+<p>但至少从我这次 Gemma 3 4B fp32 在 H200 上的实测看，这两句都很难成立：</p>
+<ul>
+<li>实际的 TPS 和 vLLM 差距还很大</li>
+<li>当前代码里也没有真正把 attention 融成 FlashAttention 的路径，他的egraph saturation中并没有任何 rule 能跨过 <code>Softmax</code> Op 然后 rewrite 得到 FlashAttention。</li>
+</ul>
+<p>我想评的几点是：</p>
+<ol type="1">
+<li>缺少 Bufferization / Memory Hierarchy 的描述</li>
+<li>缺少 fusion / tiling / scheduling 的优化</li>
+<li>早期宣传自动生成 FlashAttention，但实际上 <a href="https://github.com/luminal-ai/luminal/blob/0ccd344a69226205f1992f43f0dc3ef590bd56b2/flash_attention_demo/src/code.lisp">输入与规则</a> 都是精心设计好的。 并且之前的IR设计也和目前的大相径庭，之前带有<code>LoopOut, Let</code>等，可以表示复杂的程序但问题在于rule难写/搜索空间更大。现在他又退回到类似linalg的纯算子IR， 这就很难支持之前宣传的自动生成 FlashAttention 了。</li>
+</ol>
+<p>至少截止我写这篇文章，他最新的 PR 还是 <a href="https://github.com/luminal-ai/luminal/pull/274">elementwise fusion</a>。以这种程度的开发进度，显然是很难匹配他自己的宣传目标和<a href="https://techcrunch.com/2025/11/17/luminal-raises-5-3-million-to-build-a-better-gpu-code-framework/">投资</a>，我怀疑挂编译器的羊头做手动优化的狗肉。</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/zhen8838\.github\.io");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script src="https://utteranc.es/client.js" repo="zhen8838/zhen8838.github.io" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
