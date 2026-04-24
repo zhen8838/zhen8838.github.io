@@ -1,5 +1,5 @@
 ---
-title: Luminal 编译流：HLIR，egg 搜索与 Runtime
+title: Luminal 编译器浅析
 mathjax: true
 toc: true
 categories:
