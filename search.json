@@ -1897,13 +1897,6 @@
     "text": "模板 + 参数\n每种 kernel op 自己维护一份 C++ kernel 模板， Codegen 时把节点里的 shape， stride， dtype 这些参数填进去， 生成一段具体的 CUDA 源码， 然后把这段源码交给 NVRTC 做 JIT 编译， 得到 GPU 真正能执行的 kernel。 没有 loop-level IR/schedule pass/tiling， 模板长什么样， kernel 就长什么样。\n比如一个 KernelAdd 节点， codegen实际做的就是模板替换， 最后拼成一整段源码：\nLLIROp(DialectOp(KernelAdd {\n  out_shape: [s, 4],\n  a_stride: [(z*4), z],\n  b_stride: [0, 0],\n  out_stride: [(z*4), z],\n  dtype: F32\n}))\nextern \"C\" {\n    __global__ void add_k(float *C, const float *A, const float *B, const int* dyn_dims) {\n        long long const_z = (long long)blockIdx.x * blockDim.x + threadIdx.x;\n        if (const_z &gt;= /* n_elements */) return;\n        C[/* out_idx */] = A[/* a_idx */] + B[/* b_idx */];\n    }\n}\n为避免同样的 kernel 反复编译， Luminal 会按生成出来的源码做进程内缓存，当两个节点最后拼出的源码完全相同， 就直接复用已编好的 function。\n\n库调用\n\n当然也不是所有 LLIR 节点都要生成源码。前面搜索那节提到 Mul + SumReduce 被 rewrite 为 matmul，最后对应的其实是 cuBLAS / cuBLASLt 入口的 wrapper。这类节点 Codegen 只是选一个合适的库入口，把 stride / leading dimension 填成 cuBLAS 可以支持的格式，执行时直接调 cublasSgemm 这种 host 函数。"
   },
   {
-    "objectID": "posts/luminal.html#库调用",
-    "href": "posts/luminal.html#库调用",
-    "title": "Luminal 编译器浅析",
-    "section": "库调用",
-    "text": "库调用"
-  },
-  {
     "objectID": "posts/luminal.html#load-阶段",
     "href": "posts/luminal.html#load-阶段",
     "title": "Luminal 编译器浅析",

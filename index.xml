@@ -2599,9 +2599,6 @@ font-style: inherit;">}</span></span></code></pre></div></div>
 </ol>
 <p>当然也不是所有 LLIR 节点都要生成源码。前面搜索那节提到 <code>Mul + SumReduce</code> 被 rewrite 为 <code>matmul</code>，最后对应的其实是 cuBLAS / cuBLASLt 入口的 wrapper。这类节点 Codegen 只是选一个合适的库入口，把 stride / leading dimension 填成 cuBLAS 可以支持的格式，执行时直接调 <code>cublasSgemm</code> 这种 host 函数。</p>
 </section>
-<section id="库调用" class="level2">
-<h2 class="anchored" data-anchor-id="库调用">库调用</h2>
-</section>
 </section>
 <section id="runtime" class="level1">
 <h1>Runtime</h1>
@@ -2689,7 +2686,7 @@ font-style: inherit;">}</span></span></code></pre></div></div>
 <li>缺少 fusion / tiling / scheduling 的优化</li>
 <li>早期宣传自动生成 FlashAttention，但实际上 <a href="https://github.com/luminal-ai/luminal/blob/0ccd344a69226205f1992f43f0dc3ef590bd56b2/flash_attention_demo/src/code.lisp">输入与规则</a> 都是精心设计好的。 并且之前的IR设计也和目前的大相径庭，之前带有<code>LoopOut, Let</code>等，可以表示复杂的程序但问题在于rule难写/搜索空间更大。现在他又退回到类似linalg的纯算子IR， 这就很难支持之前宣传的自动生成 FlashAttention 了。</li>
 </ol>
-<p>至少截止我写这篇文章，他最新的 PR 还是 <a href="https://github.com/luminal-ai/luminal/pull/274">elementwise fusion</a>。以这种程度的开发进度，显然是很难匹配他自己的宣传目标和<a href="https://techcrunch.com/2025/11/17/luminal-raises-5-3-million-to-build-a-better-gpu-code-framework/">投资</a>，我怀疑挂编译器的羊头做手动优化的狗肉。</p>
+<p>至少截止我写这篇文章，他最新的 PR 还是 <a href="https://github.com/luminal-ai/luminal/pull/274">elementwise fusion</a>。以这种程度的开发进展，显然是很难匹配他自己的宣传目标和<a href="https://techcrunch.com/2025/11/17/luminal-raises-5-3-million-to-build-a-better-gpu-code-framework/">投资</a>，我怀疑挂编译器的羊头卖手动优化的狗肉。</p>
 
 
 </section>
