@@ -9,8 +9,111 @@
 <link>https://zhen8838.github.io/</link>
 <atom:link href="https://zhen8838.github.io/index.xml" rel="self" type="application/rss+xml"/>
 <description>A blog built with Quarto</description>
-<generator>quarto-1.9.37</generator>
-<lastBuildDate>Tue, 21 Apr 2026 05:06:20 GMT</lastBuildDate>
+<generator>quarto-1.8.27</generator>
+<lastBuildDate>Mon, 18 May 2026 13:30:00 GMT</lastBuildDate>
+<item>
+  <title>MTP 推测解码浅析</title>
+  <link>https://zhen8838.github.io/posts/mtp-speculative-decoding-deep-dive.html</link>
+  <description><![CDATA[ 
+
+
+
+
+<p>把 MTP（Multi-Token Prediction）推测解码的大致实现逻辑过一遍，主要覆盖整体思路与工作流程，以及一些遇到的坑。</p>
+<!--more-->
+<section id="原理" class="level1">
+<h1>原理</h1>
+<p>由于传统的单 token 预测解码在每一步都要等模型前向完成才能知道下一个 token 是什么，这导致了推理的串行瓶颈。MTP-style speculative decoding 的核心思想是<strong>先大胆地预测多步 token，然后再一次性验证这些预测是否正确</strong>，从而减少每一步的等待时间。那么整个事情现在分两个部分：</p>
+<ol type="1">
+<li><p>如何「大胆地预测多步 token」，因为原来的预测是需要进行一次完整的前向过程的，如果还是这样预测，那么肯定没有加速效果，需要有一个更轻量级的预测过程，这就是 MTP 中的 draft 端。</p></li>
+<li><p>如何「一次性验证这些预测是否正确」，这就是 MTP 中的 verify 端。</p></li>
+</ol>
+<p>在实现方案上对于上面两部分是这样做：</p>
+<ol type="1">
+<li><p>采取少量的、和原模型相同结构的 decode layer 作为一个新的 MTP model，它带有自己的 KV cache 以及 Head Sampling。MTP model <strong>连续串行</strong> forward <code>N</code> 次，每次产 1 个 draft token，把对应的 K/V 追加到 MTP 自己那一份 KV cache 里。</p></li>
+<li><p>输入 <code>token + N 个 draft token</code> 一段共 <code>N+1</code> 个 token 到 target model 做<strong>一次</strong> prefill-style 前向（<code>batch=1, seq=N+1</code>），逐位置 verify，找出「最长可接受前缀」，然后将 target model / MTP model 的 KV cache 相关状态都<strong>回退到「已接受前缀」的位置</strong>，避免影响下一轮 decode。</p></li>
+</ol>
+<p>下图展示他的核心思想：<strong>主模型给出 1 个 token，draft 端串行展开 N 个候选，target 端一次性 verify，按接受前缀进入下一轮</strong>：</p>
+<pre class="mermaid"><code>flowchart TB
+    A([历史 token x1 ... xt])
+
+    A --&gt; M["主模型 decode&lt;br/&gt;得到 token t+1"]
+
+    M --&gt; Draft["Draft 端: MTP block 串行 forward N 次&lt;br/&gt;每次产 1 个 draft token&lt;br/&gt;得到 N 个 draft tokens"]
+
+    M --&gt; Verify
+    Draft --&gt; Verify["Verify 端: 把 主模型 token &lt;br/&gt; 加 N 个 draft tokens&lt;br/&gt;一次性送回主模型 &lt;br/&gt; batch=1 seq=N+1&lt;br/&gt;找最长可接受前缀"]
+
+    Verify --&gt; Accept["接受 k 个 token&lt;br/&gt;0 ≤ k ≤ N+1"]
+    Accept --&gt; Next([进入下一轮 decode])
+    Next --&gt; A</code></pre>
+<p>在上图中，verify 端的输入至少有主模型的 1 个 token，最多有 <code>N+1</code> 个 token（draft 端的 N 个），因此 MTP 的加速比取决于对于 draft token 的接受率（accept rate）。并且由于第一个 token 一定是主模型的输出，所以最坏状态下，模型输出的正确性不会被破坏，只是会有反加速效果（多执行了 MTP 层）。</p>
+</section>
+<section id="工程实现" class="level1">
+<h1>工程实现</h1>
+<p>工程上 prefill 和 decode 两个阶段的数据流并不对称。</p>
+<section id="prefill-阶段" class="level2">
+<h2 class="anchored" data-anchor-id="prefill-阶段">Prefill 阶段</h2>
+<p>prefill 阶段需要让 MTP 层把它自己的 KV 填上，否则进入 decode 第一步时 MTP KV 是空的，draft 出来全是噪声，加速效果归零。prompt 被切成多个 chunk，每个 chunk 都同时过主模型和 MTP 层，<strong>两边各自把自己那段 KV 填上</strong>。这一阶段 verifier 不参与（没有上一轮 draft 可以对照）。</p>
+<pre class="mermaid"><code>flowchart TB
+    Start([输入 prompt: x1 ... xN])
+
+    Start --&gt; Loop{"还有未处理的 chunk?"}
+    Loop -- 是 --&gt; Chunk["取下一段 chunk&lt;br/&gt;不足长度就用&lt;br/&gt;最后 token padding"]
+
+    Chunk --&gt; Main["主模型对 chunk 做 prefill&lt;br/&gt;填主模型 KV cache"]
+    Main --&gt; MTP["MTP 层对 chunk 做 prefill&lt;br/&gt; 填 MTP KV cache"]
+
+    Loop -- 否 --&gt; Done([prefill 完成&lt;br/&gt;主 KV / MTP KV 已就绪])</code></pre>
+</section>
+<section id="decode-阶段" class="level2">
+<h2 class="anchored" data-anchor-id="decode-阶段">Decode 阶段</h2>
+<p>进入 decode 后，<strong>每一轮的输入永远是 <code>N+1</code> 个 token</strong>，并且注意一个细节：</p>
+<ul>
+<li><strong>第一轮</strong>：之前还位于 prefill 阶段，MTP 层还未产生 draft tokens，因此用 <code>prompt 最后一个 token</code> 重复 <code>N+1</code> 次作为输入（相当于 padding）；</li>
+<li><strong>后续每一轮</strong>：输入 = <code>上一轮主模型预测的下一个 token</code> + <code>上一轮 MTP 串行预测的 N 个 draft token</code>。</li>
+</ul>
+<p>加上我们的 <code>N = 3</code>，那么工作数据流图如下所示：</p>
+<pre class="mermaid"><code>flowchart TB
+    Init([prefill 完成&lt;br/&gt;cur_pos = prompt_len - 1])
+
+    Init --&gt; Forward["输入 N+1 个 token &lt;br/&gt; 第一轮 draft token 是重复的&lt;br/&gt;后续 draft token 来自上一轮"]
+
+    subgraph Round[" "]
+        direction TB
+        Forward --&gt; Predicted["主模型 predicted tokens"]
+        Predicted --&gt; MTPDraft1["MTP 产出第 1 个 draft "]
+        MTPDraft1 --&gt; MTPDraft2["MTP 产出第 2 个 draft "]
+        MTPDraft2 --&gt; MTPDraft3["MTP 产出第 3 个 draft "]
+        Predicted --&gt; Verify["Sampler verify: &lt;br/&gt;本轮输入 draft tokens &lt;br/&gt; 本轮输出 predicted&lt;br/&gt;得到 num_accepted"]
+        Verify --&gt; NextDraft["组装下一轮输入:&lt;br/&gt; verify 最末 1 个 &lt;br/&gt; MTP 新产 N 个"]
+        MTPDraft1 --&gt; NextDraft
+        MTPDraft2 --&gt; NextDraft
+        MTPDraft3 --&gt; NextDraft
+    end
+
+    NextDraft --&gt; Stop{"达到停止条件?"}
+    Stop -- 否 --&gt; Forward
+    Stop -- 是 --&gt; End([输出生成序列])</code></pre>
+<p>可以看到 decode 阶段并没有分化出两个分支，输入都是「主模型预测 + MTP 预测」，这一次 decode 的 sampler 所 verify 的是上一轮「MTP 预测」的 draft tokens。</p>
+</section>
+</section>
+<section id="实现细节" class="level1">
+<h1>实现细节</h1>
+<ul>
+<li><strong>MTP 的权重</strong>。不同的模型有区别，比如 DSv3.2 <code>MTP = 3</code> 对应 3 套独立权重；而 Qwen3.5 只有 1 套，要做多次 draft 预测就得复用同一份权重多次。</li>
+<li><strong>MTP 的 KV cache</strong>：DSv3.2 的 3 个 MTP layer 是复用 KV cache 的。</li>
+<li><strong>MTP 的 Sampler</strong>：MTP 层的采样策略和主模型并不一定一致，至少在 DSv3.2 和 Qwen3.5 里面 sglang 的实现中，他的采样策略是固定 <code>Top 1</code> 的。</li>
+</ul>
+
+
+</section>
+
+ ]]></description>
+  <category>LLM 推理</category>
+  <guid>https://zhen8838.github.io/posts/mtp-speculative-decoding-deep-dive.html</guid>
+  <pubDate>Mon, 18 May 2026 13:30:00 GMT</pubDate>
+</item>
 <item>
   <title>Gated Delta Net 学习</title>
   <link>https://zhen8838.github.io/posts/qwen35-gdn.html</link>
@@ -45224,652 +45327,6 @@ font-style: inherit;">func3:</span> 9.74711 GB/s</span></code></pre></div></div>
   <category>体系结构</category>
   <guid>https://zhen8838.github.io/posts/mac-amx_en.html</guid>
   <pubDate>Tue, 23 Apr 2024 10:17:49 GMT</pubDate>
-</item>
-<item>
-  <title>macos中bundle的使用</title>
-  <link>https://zhen8838.github.io/posts/macos-bundle.html</link>
-  <description><![CDATA[ 
-
-
-
-
-<p>研究一下在macos中如何编译bundle文件并动态加载并运行.</p>
-<!--more-->
-<p>使用gcc编译macos程序的时候, 可以通过<code>-bundle</code>选项来指示, 编译出来就是一个包含资源和可执行代码的包. 使用 -bundle 选项时, 还需要指定一个入口点, 通常是 main 函数. 它的好处是使得开发者能够创建动态加载的代码模块, 这些模块可以包含可执行代码和资源, 并且可以被其他应用程序在运行时加载和使用.</p>
-<section id="简单例子" class="level2">
-<h2 class="anchored" data-anchor-id="简单例子">简单例子</h2>
-<p>来自苹果开源库的<a href="https://opensource.apple.com/source/dyld/dyld-852.2/unit-tests/test-cases/">dyld测试例子</a></p>
-<p>bundle.c</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb1-1"><span class="pp" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">#include </span><span class="im" style="color: #00769E;
-background-color: null;
-font-style: inherit;">&lt;stdbool.h&gt;</span></span>
-<span id="cb1-2"><span class="pp" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">#include </span><span class="im" style="color: #00769E;
-background-color: null;
-font-style: inherit;">&lt;stdio.h&gt;</span></span>
-<span id="cb1-3"></span>
-<span id="cb1-4"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">// test to see if bss section is properly expanded </span></span>
-<span id="cb1-5"></span>
-<span id="cb1-6"><span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">static</span> <span class="dt" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">int</span> mydata<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">[</span><span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">1000000</span><span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">];</span></span>
-<span id="cb1-7"></span>
-<span id="cb1-8"><span class="dt" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">bool</span> checkdata<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">()</span></span>
-<span id="cb1-9"><span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">{</span></span>
-<span id="cb1-10">  printf<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">(</span><span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"check data!</span><span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">\n</span><span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"</span><span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">);</span></span>
-<span id="cb1-11">    <span class="cf" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">return</span> <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">(</span> mydata<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">[</span><span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">500000</span><span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">]</span> <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">==</span> <span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">0</span> <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">);</span></span>
-<span id="cb1-12"><span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">}</span></span></code></pre></div></div>
-<p>main.c</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2" style="background: #f1f3f5;"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb2-1"><span class="pp" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">#include </span><span class="im" style="color: #00769E;
-background-color: null;
-font-style: inherit;">&lt;Availability.h&gt;</span></span>
-<span id="cb2-2"><span class="pp" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">#include </span><span class="im" style="color: #00769E;
-background-color: null;
-font-style: inherit;">&lt;mach-o/dyld.h&gt;</span></span>
-<span id="cb2-3"><span class="pp" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">#include </span><span class="im" style="color: #00769E;
-background-color: null;
-font-style: inherit;">&lt;stdbool.h&gt;</span></span>
-<span id="cb2-4"><span class="pp" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">#include </span><span class="im" style="color: #00769E;
-background-color: null;
-font-style: inherit;">&lt;stdio.h&gt;</span></span>
-<span id="cb2-5"></span>
-<span id="cb2-6"><span class="kw" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">typedef</span> <span class="dt" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">bool</span> <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">(*</span>CheckFunc<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">)();</span></span>
-<span id="cb2-7"></span>
-<span id="cb2-8"><span class="dt" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">int</span> main<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">()</span> <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">{</span></span>
-<span id="cb2-9"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">// these APIs are only available on Mac OS X - not iPhone OS</span></span>
-<span id="cb2-10"><span class="pp" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">#if __MAC_OS_X_VERSION_MIN_REQUIRED</span></span>
-<span id="cb2-11">    NSObjectFileImage ofi<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">;</span></span>
-<span id="cb2-12">    <span class="cf" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">if</span> <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">(</span>NSCreateObjectFileImageFromFile<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">(</span><span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"test.bundle"</span><span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">,</span> <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">&amp;</span>ofi<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">)</span> <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">!=</span></span>
-<span id="cb2-13">        NSObjectFileImageSuccess<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">)</span> <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">{</span></span>
-<span id="cb2-14">        <span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">// FAIL("NSCreateObjectFileImageFromFile failed");</span></span>
-<span id="cb2-15">        <span class="cf" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">return</span> <span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">1</span><span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">;</span></span>
-<span id="cb2-16">    <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">}</span></span>
-<span id="cb2-17"></span>
-<span id="cb2-18">    NSModule mod <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">=</span> NSLinkModule<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">(</span>ofi<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">,</span> <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"test.bundle"</span><span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">,</span> NSLINKMODULE_OPTION_NONE<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">);</span></span>
-<span id="cb2-19">    <span class="cf" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">if</span> <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">(</span>mod <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">==</span> NULL<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">)</span> <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">{</span></span>
-<span id="cb2-20">        <span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">// FAIL("NSLinkModule failed");</span></span>
-<span id="cb2-21">        <span class="cf" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">return</span> <span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">1</span><span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">;</span></span>
-<span id="cb2-22">    <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">}</span></span>
-<span id="cb2-23"></span>
-<span id="cb2-24">    NSSymbol sym <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">=</span> NSLookupSymbolInModule<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">(</span>mod<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">,</span> <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"_checkdata"</span><span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">);</span></span>
-<span id="cb2-25">    <span class="cf" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">if</span> <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">(</span>sym <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">==</span> NULL<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">)</span> <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">{</span></span>
-<span id="cb2-26">        <span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">// FAIL("NSLookupSymbolInModule failed");</span></span>
-<span id="cb2-27">        <span class="cf" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">return</span> <span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">1</span><span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">;</span></span>
-<span id="cb2-28">    <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">}</span></span>
-<span id="cb2-29"></span>
-<span id="cb2-30">    CheckFunc func <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">=</span> NSAddressOfSymbol<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">(</span>sym<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">);</span></span>
-<span id="cb2-31">    <span class="cf" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">if</span> <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">(!</span>func<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">())</span> <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">{</span></span>
-<span id="cb2-32">        <span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">// FAIL("NSAddressOfSymbol failed");</span></span>
-<span id="cb2-33">        <span class="cf" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">return</span> <span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">1</span><span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">;</span></span>
-<span id="cb2-34">    <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">}</span></span>
-<span id="cb2-35"></span>
-<span id="cb2-36">    <span class="cf" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">if</span> <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">(!</span>NSUnLinkModule<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">(</span>mod<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">,</span> NSUNLINKMODULE_OPTION_NONE<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">))</span> <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">{</span></span>
-<span id="cb2-37">        <span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">// FAIL("NSUnLinkModule failed");</span></span>
-<span id="cb2-38">        <span class="cf" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">return</span> <span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">1</span><span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">;</span></span>
-<span id="cb2-39">    <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">}</span></span>
-<span id="cb2-40"></span>
-<span id="cb2-41">    <span class="cf" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">if</span> <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">(!</span>NSDestroyObjectFileImage<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">(</span>ofi<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">))</span> <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">{</span></span>
-<span id="cb2-42">        <span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">// FAIL("NSDestroyObjectFileImage failed");</span></span>
-<span id="cb2-43">        <span class="cf" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">return</span> <span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">1</span><span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">;</span></span>
-<span id="cb2-44">    <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">}</span></span>
-<span id="cb2-45"><span class="pp" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">#endif</span></span>
-<span id="cb2-46">    printf<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">(</span><span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"funck</span><span class="sc" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">\n</span><span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"</span><span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">);</span></span>
-<span id="cb2-47">    <span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">// PASS("bundle-basic");</span></span>
-<span id="cb2-48">    <span class="cf" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">return</span> <span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">0</span><span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">;</span></span>
-<span id="cb2-49"><span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">}</span></span></code></pre></div></div>
-<p>执行</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3" style="background: #f1f3f5;"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">clang</span> bundle.c <span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">-bundle</span> <span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">-o</span> test.bundle</span>
-<span id="cb3-2"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">clang</span> main.c</span>
-<span id="cb3-3"><span class="ex" style="color: null;
-background-color: null;
-font-style: inherit;">./a.out</span></span></code></pre></div></div>
-</section>
-<section id="使用cmake" class="level2">
-<h2 class="anchored" data-anchor-id="使用cmake">使用cmake</h2>
-<p>注意cmake的<code>MACOS_BUNDLE</code>和链接选项的bundle并不是一个东西. 所以用那个选项是无法得到正确的结果的.</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4" style="background: #f1f3f5;"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><span class="ex" style="color: null;
-background-color: null;
-font-style: inherit;">cmake_minimum_required</span><span class="er" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">(</span><span class="ex" style="color: null;
-background-color: null;
-font-style: inherit;">VERSION</span> 3.0 FATAL_ERROR<span class="kw" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">)</span></span>
-<span id="cb4-2"></span>
-<span id="cb4-3"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># 设置项目名称和版本</span></span>
-<span id="cb4-4"><span class="ex" style="color: null;
-background-color: null;
-font-style: inherit;">project</span><span class="er" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">(</span><span class="ex" style="color: null;
-background-color: null;
-font-style: inherit;">test.bundle</span> VERSION 1.0<span class="kw" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">)</span></span>
-<span id="cb4-5"></span>
-<span id="cb4-6"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># 指定 C++ 标准</span></span>
-<span id="cb4-7"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># set(CMAKE_CXX_STANDARD 11)</span></span>
-<span id="cb4-8"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># set(CMAKE_CXX_STANDARD_REQUIRED True)</span></span>
-<span id="cb4-9"></span>
-<span id="cb4-10"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># 添加一个 macOS bundle 可执行文件</span></span>
-<span id="cb4-11"><span class="ex" style="color: null;
-background-color: null;
-font-style: inherit;">add_executable</span><span class="er" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">(</span><span class="ex" style="color: null;
-background-color: null;
-font-style: inherit;">test.bundle</span> bundle.c<span class="kw" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">)</span></span>
-<span id="cb4-12"><span class="ex" style="color: null;
-background-color: null;
-font-style: inherit;">target_link_options</span><span class="er" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">(</span><span class="ex" style="color: null;
-background-color: null;
-font-style: inherit;">test.bundle</span> PUBLIC <span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">-bundle</span><span class="kw" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">)</span></span>
-<span id="cb4-13"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># 如果有需要，可以链接库</span></span>
-<span id="cb4-14"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># target_link_libraries(test.bundle SomeLibrary)</span></span>
-<span id="cb4-15"></span>
-<span id="cb4-16"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># 包含 CMake 的 macOS 应用程序 bundle 模块</span></span>
-<span id="cb4-17"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># include(CMakeOSXBundleInfo)</span></span></code></pre></div></div>
-</section>
-<section id="一些问题" class="level2">
-<h2 class="anchored" data-anchor-id="一些问题">一些问题</h2>
-<section id="link问题" class="level3">
-<h3 class="anchored" data-anchor-id="link问题">1. link问题</h3>
-<p>我在正式的项目本来是使用<code>nostdlib static</code>来编译的, 然后现在链接选项添加了<code>-bundle</code>后就遇到这个问题:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5" style="background: #f1f3f5;"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><span class="ex" style="color: null;
-background-color: null;
-font-style: inherit;">ld:</span> warning: ignoring <span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">-e,</span> not used for output type</span>
-<span id="cb5-2"><span class="ex" style="color: null;
-background-color: null;
-font-style: inherit;">0</span>  0x1041d2f2c  __assert_rtn + 72</span>
-<span id="cb5-3"><span class="ex" style="color: null;
-background-color: null;
-font-style: inherit;">1</span>  0x1041a7984  ld::AtomFileConsolidator::addAtomFile<span class="er" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">(</span><span class="ex" style="color: null;
-background-color: null;
-font-style: inherit;">ld::AtomFile</span> const<span class="pp" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">*</span>, ld::AtomFile const<span class="pp" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">*</span>, bool<span class="kw" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">)</span> <span class="ex" style="color: null;
-background-color: null;
-font-style: inherit;">+</span> 4952</span>
-<span id="cb5-4"><span class="ex" style="color: null;
-background-color: null;
-font-style: inherit;">2</span>  0x1041b34e4  ld::AtomFileConsolidator::addAtomFile<span class="er" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">(</span><span class="ex" style="color: null;
-background-color: null;
-font-style: inherit;">ld::AtomFile</span> const<span class="pp" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">*</span><span class="kw" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">)</span> <span class="ex" style="color: null;
-background-color: null;
-font-style: inherit;">+</span> 148</span>
-<span id="cb5-5"><span class="ex" style="color: null;
-background-color: null;
-font-style: inherit;">3</span>  0x1041d1430  ld::pass::stubs<span class="er" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">(</span><span class="ex" style="color: null;
-background-color: null;
-font-style: inherit;">ld::Options</span> const<span class="kw" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">&amp;</span><span class="ex" style="color: null;
-background-color: null;
-font-style: inherit;">,</span> ld::AtomFileConsolidator<span class="kw" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">&amp;)</span> <span class="ex" style="color: null;
-background-color: null;
-font-style: inherit;">+</span> 1464</span>
-<span id="cb5-6"><span class="ex" style="color: null;
-background-color: null;
-font-style: inherit;">4</span>  0x1041bad60  ld::AtomFileConsolidator::resolve<span class="er" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">(</span><span class="kw" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">)</span> <span class="ex" style="color: null;
-background-color: null;
-font-style: inherit;">+</span> 12744</span>
-<span id="cb5-7"><span class="ex" style="color: null;
-background-color: null;
-font-style: inherit;">5</span>  0x104142b40  main + 9308</span>
-<span id="cb5-8"><span class="ex" style="color: null;
-background-color: null;
-font-style: inherit;">ld:</span> Assertion failed: <span class="er" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">(</span><span class="ex" style="color: null;
-background-color: null;
-font-style: inherit;">slot</span> <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">&lt;</span> _sideTableBuffer.size<span class="er" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">(</span><span class="kw" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">))</span><span class="ex" style="color: null;
-background-color: null;
-font-style: inherit;">,</span> function addAtom, file AtomFileConsolidator.cpp, line 2278.</span>
-<span id="cb5-9"><span class="ex" style="color: null;
-background-color: null;
-font-style: inherit;">clang:</span> error: linker command failed with exit code 1 <span class="er" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">(</span><span class="ex" style="color: null;
-background-color: null;
-font-style: inherit;">use</span> <span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">-v</span> to see invocation<span class="kw" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">)</span></span></code></pre></div></div>
-<p>搜索之后发现是linker升级的原因, 可以通过<code>-ld_classic</code>来避免.</p>
-</section>
-<section id="全局变量冲突的问题" class="level3">
-<h3 class="anchored" data-anchor-id="全局变量冲突的问题">2. 全局变量冲突的问题</h3>
-<p>我现在是同时添加多个bundle的模块, 然后调用每个模块中的函数, 目前不同的模板都是存在相同名字的全局变量, 这导致在执行的过程中同一个程序的不同的函数中取到的全局变量的地址是不同的, 从而出现问题. 我改成dylib的形式, 然后使用dlopen去加载函数, 也会出现同样的问题, 所以我怀疑这个问题就是和mac os的底层实现有关. 但是又不能一次只加载一个代码, 这样的话每个kernel启动前都需要load一次可执行文件, 性能就炸了.</p>
-<p>尝试使用类似下面这种静态函数的方式来规避全局变量, 发现也不行:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6" style="background: #f1f3f5;"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb6-1"><span class="dt" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">nncase_runtime_cpu_mt_t</span> <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">*</span><span class="va" style="color: #111111;
-background-color: null;
-font-style: inherit;">g_cpu_mt</span><span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">(</span><span class="dt" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">nncase_runtime_cpu_mt_t</span> <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">*</span>from<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">)</span> <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">{</span></span>
-<span id="cb6-2">    <span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">static</span> <span class="dt" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">nncase_runtime_cpu_mt_t</span> <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">*</span><span class="va" style="color: #111111;
-background-color: null;
-font-style: inherit;">g_mt</span><span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">;</span></span>
-<span id="cb6-3">    <span class="cf" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">if</span> <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">(</span>from <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">!=</span> NULL<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">)</span> <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">{</span></span>
-<span id="cb6-4">        <span class="va" style="color: #111111;
-background-color: null;
-font-style: inherit;">g_mt</span> <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">=</span> from<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">;</span></span>
-<span id="cb6-5">    <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">}</span></span>
-<span id="cb6-6">    <span class="cf" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">return</span> <span class="va" style="color: #111111;
-background-color: null;
-font-style: inherit;">g_mt</span><span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">;</span></span>
-<span id="cb6-7"><span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">}</span></span></code></pre></div></div>
-<p>目前的总结:</p>
-<ol type="1">
-<li>非extern
-<ol type="1">
-<li>加static, 两个cpp中的全局变量不是同一个.</li>
-<li>不加static, 两个cpp中的会自己定义两次全局变量, 然后编译的过程中报错多重定义.</li>
-</ol></li>
-<li>extern
-<ol type="1">
-<li>不论是在哪个cpp里面实现, 加载多个程序之后都会出现冲突.</li>
-</ol></li>
-<li>同名函数中静态变量, 同样他也会被优化成类似全局变量的形式然后出现混乱.</li>
-<li>给全局变量进行编号也无效, 实际上可能是因为实例化出来的c++函数在全局符号表中发生了冲突, 导致kernel0中执行了kernel7的tensor copy.</li>
-</ol>
-
-
-</section>
-</section>
-
- ]]></description>
-  <category>操作系统</category>
-  <guid>https://zhen8838.github.io/posts/macos-bundle.html</guid>
-  <pubDate>Wed, 13 Mar 2024 14:06:19 GMT</pubDate>
 </item>
 </channel>
 </rss>

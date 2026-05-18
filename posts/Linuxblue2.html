@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.9.37">
+<meta name="generator" content="quarto-1.8.27">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -10,9 +10,6 @@
 
 <title>OrangePI蓝牙：搜索设备 – Zheng’s Notes</title>
 <style>
-/* Default styles provided by pandoc.
-** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
-*/
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
 div.columns{display: flex; gap: min(4vw, 1.5em);}
@@ -72,14 +69,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="../assets/favicon.ico" rel="icon">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
 <script src="../site_libs/quarto-html/popper.min.js"></script>
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-acf12a64177840b8d86f2d4f01b2e9fb.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-a68d55a7457d6c578309d53405216ea2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-7072389654d23eff08f359f9aa0d1ee7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -112,7 +110,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link rel="stylesheet" href="../styles.css">
 </head>
 
-<body class="floating nav-fixed slimcontent quarto-light">
+<body class="floating nav-fixed quarto-light">
 
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
@@ -148,7 +146,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
     </div>
 <!-- main -->
-<main class="content page-columns page-full" id="quarto-document-content">
+<main class="content" id="quarto-document-content">
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
@@ -180,150 +178,135 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <p>上一篇<a href="https://zhen8838.github.io/2018/05/30/Linuxblue1/">文章</a>讲述了我在OrangePi中开启蓝牙的过程，这一章来讲述我如何对蓝牙进行编程操作。</p>
 <!--more-->
-<section id="开发板中使用bluez" class="level2 page-columns page-full">
+<section id="开发板中使用bluez" class="level2">
 <h2 class="anchored" data-anchor-id="开发板中使用bluez">开发板中使用bluez</h2>
 <ol type="1">
 <li><p>安装bluez 我的OrangePi的板子上是bluez5.43版本,为了开发bluez需要安装一些必要的头文件.</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt-get install libbluetooth-dev</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ls</span> /usr/include/bluetooth/</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">bluetooth.h</span>  bnep.h  cmtp.h  hci.h  hci_lib.h  hidp.h  l2cap.h  rfcomm.h  sco.h  sdp.h  sdp_lib.h</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>安装后,我们就可以在通过添加一些头文件去调用bluez的api做一些事情了.</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode c code-with-copy"><code class="sourceCode c"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;bluetooth/bluetooth.h&gt;</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="pp">#include</span><span class="im">&lt;Bluetooth/hci.h&gt;</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="pp">#include</span><span class="im">&lt;Bluetooth/hci_lib.h&gt;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div></li>
-<li><p>配置编译 首先我使用外国老哥曾经写的文档中的代码做测试<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a>^(这个文档非常nice),这个一个扫描周围蓝牙设备的小程序.</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode c code-with-copy"><code class="sourceCode c"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;stdio.h&gt;</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;stdlib.h&gt;</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;unistd.h&gt;</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;sys/socket.h&gt;</span></span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;bluetooth/bluetooth.h&gt;</span></span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;bluetooth/hci.h&gt;</span></span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;bluetooth/hci_lib.h&gt;</span></span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">(</span><span class="dt">int</span> argc<span class="op">,</span> <span class="dt">char</span> <span class="op">**</span>argv<span class="op">)</span></span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>inquiry_info <span class="op">*</span>ii <span class="op">=</span> NULL<span class="op">;</span></span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> max_rsp<span class="op">,</span> num_rsp<span class="op">;</span></span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> dev_id<span class="op">,</span> sock<span class="op">,</span> len<span class="op">,</span> flags<span class="op">;</span></span>
-<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> i<span class="op">;</span></span>
-<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="dt">char</span> addr<span class="op">[</span><span class="dv">19</span><span class="op">]</span> <span class="op">=</span> <span class="op">{</span> <span class="dv">0</span> <span class="op">};</span></span>
-<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="dt">char</span> name<span class="op">[</span><span class="dv">248</span><span class="op">]</span> <span class="op">=</span> <span class="op">{</span> <span class="dv">0</span> <span class="op">};</span></span>
-<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>dev_id <span class="op">=</span> hci_get_route<span class="op">(</span>NULL<span class="op">);</span></span>
-<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>sock <span class="op">=</span> hci_open_dev<span class="op">(</span> dev_id <span class="op">);</span></span>
-<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>dev_id <span class="op">&lt;</span> <span class="dv">0</span> <span class="op">||</span> sock <span class="op">&lt;</span> <span class="dv">0</span><span class="op">)</span> <span class="op">{</span></span>
-<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>    perror<span class="op">(</span><span class="st">"opening socket"</span><span class="op">);</span></span>
-<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>    exit<span class="op">(</span><span class="dv">1</span><span class="op">);</span></span>
-<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
-<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>len  <span class="op">=</span> <span class="dv">8</span><span class="op">;</span></span>
-<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>max_rsp <span class="op">=</span> <span class="dv">255</span><span class="op">;</span></span>
-<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>flags <span class="op">=</span> IREQ_CACHE_FLUSH<span class="op">;</span></span>
-<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>ii <span class="op">=</span> <span class="op">(</span>inquiry_info<span class="op">*)</span>malloc<span class="op">(</span>max_rsp <span class="op">*</span> <span class="kw">sizeof</span><span class="op">(</span>inquiry_info<span class="op">));</span></span>
-<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>num_rsp <span class="op">=</span> hci_inquiry<span class="op">(</span>dev_id<span class="op">,</span> len<span class="op">,</span> max_rsp<span class="op">,</span> NULL<span class="op">,</span> <span class="op">&amp;</span>ii<span class="op">,</span> flags<span class="op">);</span></span>
-<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span><span class="op">(</span> num_rsp <span class="op">&lt;</span> <span class="dv">0</span> <span class="op">)</span> perror<span class="op">(</span><span class="st">"hci_inquiry"</span><span class="op">);</span></span>
-<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="op">(</span>i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> num_rsp<span class="op">;</span> i<span class="op">++)</span> <span class="op">{</span></span>
-<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>    ba2str<span class="op">(&amp;(</span>ii<span class="op">+</span>i<span class="op">)-&gt;</span>bdaddr<span class="op">,</span> addr<span class="op">);</span></span>
-<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>    memset<span class="op">(</span>name<span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="kw">sizeof</span><span class="op">(</span>name<span class="op">));</span></span>
-<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>hci_read_remote_name<span class="op">(</span>sock<span class="op">,</span> <span class="op">&amp;(</span>ii<span class="op">+</span>i<span class="op">)-&gt;</span>bdaddr<span class="op">,</span> <span class="kw">sizeof</span><span class="op">(</span>name<span class="op">),</span> </span>
-<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a>        name<span class="op">,</span> <span class="dv">0</span><span class="op">)</span> <span class="op">&lt;</span> <span class="dv">0</span><span class="op">)</span></span>
-<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a>    strcpy<span class="op">(</span>name<span class="op">,</span> <span class="st">"[unknown]"</span><span class="op">);</span></span>
-<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a>    printf<span class="op">(</span><span class="st">"</span><span class="sc">%s</span><span class="st">  </span><span class="sc">%s\n</span><span class="st">"</span><span class="op">,</span> addr<span class="op">,</span> name<span class="op">);</span></span>
-<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
-<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a>free<span class="op">(</span> ii <span class="op">);</span></span>
-<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a>close<span class="op">(</span> sock <span class="op">);</span></span>
-<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> <span class="dv">0</span><span class="op">;</span></span>
-<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>    <span class="fu">sudo</span> apt-get install libbluetooth-dev</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ls</span> /usr/include/bluetooth/</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="ex">bluetooth.h</span>  bnep.h  cmtp.h  hci.h  hci_lib.h  hidp.h  l2cap.h  rfcomm.h  sco.h  sdp.h  sdp_lib.h</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">```</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="ex">安装后,我们就可以在通过添加一些头文件去调用bluez的api做一些事情了.</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">```</span>c</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co">#include &lt;bluetooth/bluetooth.h&gt;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">#include&lt;Bluetooth/hci.h&gt;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co">#include&lt;Bluetooth/hci_lib.h&gt;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div></li>
+<li><p>配置编译 首先我使用外国老哥曾经写的文档中的代码做测试<sup>[1]</sup>(这个文档非常nice),这个一个扫描周围蓝牙设备的小程序.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode c code-with-copy"><code class="sourceCode c"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;stdio.h&gt;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;stdlib.h&gt;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;unistd.h&gt;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;sys/socket.h&gt;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;bluetooth/bluetooth.h&gt;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;bluetooth/hci.h&gt;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;bluetooth/hci_lib.h&gt;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">(</span><span class="dt">int</span> argc<span class="op">,</span> <span class="dt">char</span> <span class="op">**</span>argv<span class="op">)</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>inquiry_info <span class="op">*</span>ii <span class="op">=</span> NULL<span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> max_rsp<span class="op">,</span> num_rsp<span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> dev_id<span class="op">,</span> sock<span class="op">,</span> len<span class="op">,</span> flags<span class="op">;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> i<span class="op">;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="dt">char</span> addr<span class="op">[</span><span class="dv">19</span><span class="op">]</span> <span class="op">=</span> <span class="op">{</span> <span class="dv">0</span> <span class="op">};</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="dt">char</span> name<span class="op">[</span><span class="dv">248</span><span class="op">]</span> <span class="op">=</span> <span class="op">{</span> <span class="dv">0</span> <span class="op">};</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>dev_id <span class="op">=</span> hci_get_route<span class="op">(</span>NULL<span class="op">);</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>sock <span class="op">=</span> hci_open_dev<span class="op">(</span> dev_id <span class="op">);</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>dev_id <span class="op">&lt;</span> <span class="dv">0</span> <span class="op">||</span> sock <span class="op">&lt;</span> <span class="dv">0</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>    perror<span class="op">(</span><span class="st">"opening socket"</span><span class="op">);</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>    exit<span class="op">(</span><span class="dv">1</span><span class="op">);</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>len  <span class="op">=</span> <span class="dv">8</span><span class="op">;</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>max_rsp <span class="op">=</span> <span class="dv">255</span><span class="op">;</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>flags <span class="op">=</span> IREQ_CACHE_FLUSH<span class="op">;</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>ii <span class="op">=</span> <span class="op">(</span>inquiry_info<span class="op">*)</span>malloc<span class="op">(</span>max_rsp <span class="op">*</span> <span class="kw">sizeof</span><span class="op">(</span>inquiry_info<span class="op">));</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>num_rsp <span class="op">=</span> hci_inquiry<span class="op">(</span>dev_id<span class="op">,</span> len<span class="op">,</span> max_rsp<span class="op">,</span> NULL<span class="op">,</span> <span class="op">&amp;</span>ii<span class="op">,</span> flags<span class="op">);</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span><span class="op">(</span> num_rsp <span class="op">&lt;</span> <span class="dv">0</span> <span class="op">)</span> perror<span class="op">(</span><span class="st">"hci_inquiry"</span><span class="op">);</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="op">(</span>i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> num_rsp<span class="op">;</span> i<span class="op">++)</span> <span class="op">{</span></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>    ba2str<span class="op">(&amp;(</span>ii<span class="op">+</span>i<span class="op">)-&gt;</span>bdaddr<span class="op">,</span> addr<span class="op">);</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>    memset<span class="op">(</span>name<span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="kw">sizeof</span><span class="op">(</span>name<span class="op">));</span></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>hci_read_remote_name<span class="op">(</span>sock<span class="op">,</span> <span class="op">&amp;(</span>ii<span class="op">+</span>i<span class="op">)-&gt;</span>bdaddr<span class="op">,</span> <span class="kw">sizeof</span><span class="op">(</span>name<span class="op">),</span> </span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>        name<span class="op">,</span> <span class="dv">0</span><span class="op">)</span> <span class="op">&lt;</span> <span class="dv">0</span><span class="op">)</span></span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>    strcpy<span class="op">(</span>name<span class="op">,</span> <span class="st">"[unknown]"</span><span class="op">);</span></span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a>    printf<span class="op">(</span><span class="st">"</span><span class="sc">%s</span><span class="st">  </span><span class="sc">%s\n</span><span class="st">"</span><span class="op">,</span> addr<span class="op">,</span> name<span class="op">);</span></span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a>free<span class="op">(</span> ii <span class="op">);</span></span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a>close<span class="op">(</span> sock <span class="op">);</span></span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>使用:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">root@H5:~#</span> vi test.c</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">root@H5:~#</span> gcc <span class="at">-o</span> simplescan test.c <span class="at">-lbluetooth</span></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="ex">root@H5:~#</span> ./simplescan</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="ex">CC:29:F5:79:14:21</span>  iPhone</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">root@H5:~#</span> vi test.c</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">root@H5:~#</span> gcc <span class="at">-o</span> simplescan test.c <span class="at">-lbluetooth</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="ex">root@H5:~#</span> ./simplescan</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="ex">CC:29:F5:79:14:21</span>  iPhone</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <h2 id="交叉编译bluez" class="anchored">交叉编译bluez</h2></li>
 <li><p>下载bluez</p>
 <p>首先去<a href="http://www.bluez.org/release-of-bluez-5-43/">官方网址</a>下载bluez,这里我还是选择使用5.43版本.</p></li>
-<li><p>解压配置 这里参考网络文章<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a>^. 将bluez5.43解压出来.并新建一个文件夹blue,用于存放安装的文件.</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> blue</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> bluez-5.43</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="va">CC</span><span class="op">=</span>/home/zqh/GccOrangPi/bin/aarch64-linux-gnu-gcc <span class="co">#指定交叉编译器</span></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./configure</span> <span class="at">--host</span><span class="op">=</span>aarch64-linux-gnu <span class="at">--prefix</span><span class="op">=</span>/home/zqh/Program/orangepi/blue  <span class="at">--disable-obex</span> <span class="at">--enable-library</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>这里如果配置检查出现错误那么参考这个文章<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a>^. 这里有一个比较恶心的错误:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">configure:</span> error: readline header files are required</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>我安装了readline-dev还是会出现这个错误,这里就需要把这个头文件复制到交叉编译器的头文件目录下.</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> cp <span class="at">-r</span> /usr/include/readline /home/zqh/GccOrangPi/aarch64-linux-gnu/libc/usr/include</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div></li>
-<li><p>编译安装 配置完成后开始编译以及安装</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> make install</span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /home/zqh/Program/orangepi/blue</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>之后就可以把blue目录下的文件移植到开发板上. 将/bin下所有文件，放到开发板/usr/bin include所有文件，放到开发板/usr/include lib所有文件，放到开发板/usr/lib sbin所有文件，放到开发板/usr/sbin 当然bluez安装还是会把许多的文件安装在默认目录,比如/etc下,我先尝试看看会不会影响开发. ## 偷懒方法 其实orangepi可以自己apt-get到libbluetooth-dev,那么我们可以直接将板子上的动态链接库拉过来使用即可~<strong>(注意编译动态链接库的编译器版本不同可能会出现错误,那么还是要全部手动编译一波,再安装进去)</strong> 不过要是大家有什么更简单的方法,可以方便的交叉编译,可以告诉我~</p></li>
+<li><p>解压配置 这里参考网络文章<sup>[2]</sup>. 将bluez5.43解压出来.并新建一个文件夹blue,用于存放安装的文件. <code>sh     mkdir blue     cd bluez-5.43     CC=/home/zqh/GccOrangPi/bin/aarch64-linux-gnu-gcc #指定交叉编译器     ./configure --host=aarch64-linux-gnu --prefix=/home/zqh/Program/orangepi/blue  --disable-obex --enable-library</code> 这里如果配置检查出现错误那么参考这个文章<sup>[3]</sup>. 这里有一个比较恶心的错误: <code>sh     configure: error: readline header files are required</code> 我安装了readline-dev还是会出现这个错误,这里就需要把这个头文件复制到交叉编译器的头文件目录下. <code>sh     sudo cp -r /usr/include/readline /home/zqh/GccOrangPi/aarch64-linux-gnu/libc/usr/include</code></p></li>
+<li><p>编译安装 配置完成后开始编译以及安装 <code>sh     make     sudo make install     cd /home/zqh/Program/orangepi/blue</code> 之后就可以把blue目录下的文件移植到开发板上. 将/bin下所有文件，放到开发板/usr/bin include所有文件，放到开发板/usr/include lib所有文件，放到开发板/usr/lib sbin所有文件，放到开发板/usr/sbin 当然bluez安装还是会把许多的文件安装在默认目录,比如/etc下,我先尝试看看会不会影响开发. ## 偷懒方法 其实orangepi可以自己apt-get到libbluetooth-dev,那么我们可以直接将板子上的动态链接库拉过来使用即可~<strong>(注意编译动态链接库的编译器版本不同可能会出现错误,那么还是要全部手动编译一波,再安装进去)</strong> 不过要是大家有什么更简单的方法,可以方便的交叉编译,可以告诉我~</p></li>
 </ol>
-<div class="no-row-height column-margin column-container"><div id="fn1"><p><sup>1</sup>&nbsp;1</p></div><div id="fn2"><p><sup>2</sup>&nbsp;2</p></div><div id="fn3"><p><sup>3</sup>&nbsp;3</p></div></div></section>
+</section>
 <section id="使用bluez" class="level2">
 <h2 class="anchored" data-anchor-id="使用bluez">使用bluez</h2>
 <ol type="1">
 <li><p>配置路径</p>
 <p>我这里使用的是cmake配置工程:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 设置工程名称</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">project</span> <span class="er">(</span><span class="ex">TEST</span><span class="kw">)</span></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="co"># 设置可执行文件名称</span></span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span><span class="er">(</span><span class="ex">MY_TARGET</span> t1<span class="kw">)</span></span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="co"># 需要链接的动态链接库</span></span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span><span class="er">(</span><span class="ex">EXTRA_LIBS</span> libpthread.so libbluetooth.so<span class="kw">)</span></span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="co"># CMAKE最小版本</span></span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="ex">cmake_minimum_required</span> <span class="er">(</span><span class="ex">VERSION</span> 2.6<span class="kw">)</span></span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="co"># 设置目标平台系统</span></span>
-<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span><span class="er">(</span><span class="ex">CMAKE_SYSTEM_NAME</span> Linux<span class="kw">)</span></span>
-<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a><span class="co"># 设置交叉编译库路径</span></span>
-<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span><span class="er">(</span><span class="ex">CMAKE_FIND_ROOT_PATH</span> /home/zqh/GccOrangPi/<span class="kw">)</span></span>
-<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a><span class="co"># set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)#只在交叉编译库路径中寻找</span></span>
-<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a><span class="co"># set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)</span></span>
-<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a><span class="co"># 设置交叉编译器</span></span>
-<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span><span class="er">(</span><span class="ex">CMAKE_C_COMPILER</span> /home/zqh/GccOrangPi/bin/aarch64-linux-gnu-gcc<span class="kw">)</span></span>
-<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span><span class="er">(</span><span class="ex">CMAKE_CXX_COMPILER</span> /home/zqh/GccOrangPi/bin/aarch64-linux-gnu-g++<span class="kw">)</span></span>
-<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span><span class="er">(</span><span class="ex">CMAKE_C_EXTENSIONS</span> <span class="st">"-lbluetooth -pipe -g -Wall -W -fPIE"</span><span class="kw">)</span></span>
-<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span><span class="er">(</span><span class="ex">CMAKE_CXX_EXTENSIONS</span> <span class="st">"-lbluetooth -pipe -g -Wall -W -fPIE"</span><span class="kw">)</span></span>
-<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a><span class="co">#设置执行文件输出目录</span></span>
-<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span><span class="er">(</span><span class="ex">EXECUTABLE_OUTPUT_PATH</span> <span class="va">${PROJECT_SOURCE_DIR}</span>/bin<span class="kw">)</span></span>
-<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a><span class="co">#设置库输出路径</span></span>
-<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span><span class="er">(</span><span class="ex">LIBRARY_OUTPUT_PATH</span> <span class="va">${PROJECT_SOURCE_DIR}</span>/lib<span class="kw">)</span></span>
-<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a><span class="ex">message</span><span class="er">(</span><span class="st">"++++++++++++++Start Build+++++++++++++++++"</span><span class="kw">)</span></span>
-<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a><span class="co"># 添加头文件目录</span></span>
-<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a><span class="ex">include_directories</span><span class="er">(</span><span class="va">${PROJECT_SOURCE_DIR}</span><span class="ex">/usr/inc</span><span class="kw">)</span></span>
-<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a><span class="ex">include_directories</span><span class="er">(</span><span class="st">"/home/zqh/Program/orangepi/blue/include"</span><span class="kw">)</span></span>
-<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a><span class="co"># 添加源文件目录</span></span>
-<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a><span class="ex">aux_source_directory</span><span class="er">(</span><span class="va">${PROJECT_SOURCE_DIR}</span><span class="ex">/usr/src</span> USRSRC<span class="kw">)</span></span>
-<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a><span class="co"># 添加子目录 子目录里面放一些别的编译好的模块</span></span>
-<span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a><span class="co">#ADD_SUBDIRECTORY(src)</span></span>
-<span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-41"><a href="#cb9-41" aria-hidden="true" tabindex="-1"></a><span class="co"># 链接库搜索路径</span></span>
-<span id="cb9-42"><a href="#cb9-42" aria-hidden="true" tabindex="-1"></a><span class="ex">link_directories</span><span class="er">(</span><span class="st">"/home/zqh/GccOrangPi/"</span> <span class="st">"/home/zqh/Program/orangepi/blue/lib"</span><span class="kw">)</span></span>
-<span id="cb9-43"><a href="#cb9-43" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-44"><a href="#cb9-44" aria-hidden="true" tabindex="-1"></a><span class="co"># 添加动态库</span></span>
-<span id="cb9-45"><a href="#cb9-45" aria-hidden="true" tabindex="-1"></a><span class="ex">link_libraries</span><span class="er">(</span><span class="va">${EXTRA_LIBS}</span><span class="kw">)</span></span>
-<span id="cb9-46"><a href="#cb9-46" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-47"><a href="#cb9-47" aria-hidden="true" tabindex="-1"></a><span class="co"># 添加可执行文件（可执行文件名 [配置] 源文件）</span></span>
-<span id="cb9-48"><a href="#cb9-48" aria-hidden="true" tabindex="-1"></a><span class="ex">add_executable</span><span class="er">(</span><span class="va">${MY_TARGET}</span> <span class="va">${USRSRC}</span><span class="kw">)</span></span>
-<span id="cb9-49"><a href="#cb9-49" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-50"><a href="#cb9-50" aria-hidden="true" tabindex="-1"></a><span class="co"># 执行文件链接属性</span></span>
-<span id="cb9-51"><a href="#cb9-51" aria-hidden="true" tabindex="-1"></a><span class="ex">TARGET_LINK_LIBRARIES</span><span class="er">(</span><span class="va">${MY_TARGET}</span> <span class="va">${EXTRA_LIBS}</span><span class="kw">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div></li>
-<li><p>编译运行 这里使用之前的代码.很简单:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> build</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cmake</span> ..</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>然后发送可执行文件到开发板上,运行:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="ex">root@H5:~#</span> ./t1</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="ex">CC:29:F5:79:14:21</span>  iPhone</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div></li>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 设置工程名称</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">project</span> <span class="er">(</span><span class="ex">TEST</span><span class="kw">)</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co"># 设置可执行文件名称</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span><span class="er">(</span><span class="ex">MY_TARGET</span> t1<span class="kw">)</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co"># 需要链接的动态链接库</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span><span class="er">(</span><span class="ex">EXTRA_LIBS</span> libpthread.so libbluetooth.so<span class="kw">)</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co"># CMAKE最小版本</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="ex">cmake_minimum_required</span> <span class="er">(</span><span class="ex">VERSION</span> 2.6<span class="kw">)</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co"># 设置目标平台系统</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span><span class="er">(</span><span class="ex">CMAKE_SYSTEM_NAME</span> Linux<span class="kw">)</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="co"># 设置交叉编译库路径</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span><span class="er">(</span><span class="ex">CMAKE_FIND_ROOT_PATH</span> /home/zqh/GccOrangPi/<span class="kw">)</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="co"># set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)#只在交叉编译库路径中寻找</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="co"># set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="co"># 设置交叉编译器</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span><span class="er">(</span><span class="ex">CMAKE_C_COMPILER</span> /home/zqh/GccOrangPi/bin/aarch64-linux-gnu-gcc<span class="kw">)</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span><span class="er">(</span><span class="ex">CMAKE_CXX_COMPILER</span> /home/zqh/GccOrangPi/bin/aarch64-linux-gnu-g++<span class="kw">)</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span><span class="er">(</span><span class="ex">CMAKE_C_EXTENSIONS</span> <span class="st">"-lbluetooth -pipe -g -Wall -W -fPIE"</span><span class="kw">)</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span><span class="er">(</span><span class="ex">CMAKE_CXX_EXTENSIONS</span> <span class="st">"-lbluetooth -pipe -g -Wall -W -fPIE"</span><span class="kw">)</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a><span class="co">#设置执行文件输出目录</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span><span class="er">(</span><span class="ex">EXECUTABLE_OUTPUT_PATH</span> <span class="va">${PROJECT_SOURCE_DIR}</span>/bin<span class="kw">)</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a><span class="co">#设置库输出路径</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span><span class="er">(</span><span class="ex">LIBRARY_OUTPUT_PATH</span> <span class="va">${PROJECT_SOURCE_DIR}</span>/lib<span class="kw">)</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a><span class="ex">message</span><span class="er">(</span><span class="st">"++++++++++++++Start Build+++++++++++++++++"</span><span class="kw">)</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a><span class="co"># 添加头文件目录</span></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a><span class="ex">include_directories</span><span class="er">(</span><span class="va">${PROJECT_SOURCE_DIR}</span><span class="ex">/usr/inc</span><span class="kw">)</span></span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a><span class="ex">include_directories</span><span class="er">(</span><span class="st">"/home/zqh/Program/orangepi/blue/include"</span><span class="kw">)</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a><span class="co"># 添加源文件目录</span></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a><span class="ex">aux_source_directory</span><span class="er">(</span><span class="va">${PROJECT_SOURCE_DIR}</span><span class="ex">/usr/src</span> USRSRC<span class="kw">)</span></span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a><span class="co"># 添加子目录 子目录里面放一些别的编译好的模块</span></span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a><span class="co">#ADD_SUBDIRECTORY(src)</span></span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a><span class="co"># 链接库搜索路径</span></span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a><span class="ex">link_directories</span><span class="er">(</span><span class="st">"/home/zqh/GccOrangPi/"</span> <span class="st">"/home/zqh/Program/orangepi/blue/lib"</span><span class="kw">)</span></span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a><span class="co"># 添加动态库</span></span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a><span class="ex">link_libraries</span><span class="er">(</span><span class="va">${EXTRA_LIBS}</span><span class="kw">)</span></span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a><span class="co"># 添加可执行文件（可执行文件名 [配置] 源文件）</span></span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a><span class="ex">add_executable</span><span class="er">(</span><span class="va">${MY_TARGET}</span> <span class="va">${USRSRC}</span><span class="kw">)</span></span>
+<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a><span class="co"># 执行文件链接属性</span></span>
+<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a><span class="ex">TARGET_LINK_LIBRARIES</span><span class="er">(</span><span class="va">${MY_TARGET}</span> <span class="va">${EXTRA_LIBS}</span><span class="kw">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div></li>
+<li><p>编译运行 这里使用之前的代码.很简单: <code>sh     cd build     cmake ..     make</code> 然后发送可执行文件到开发板上,运行: <code>sh     root@H5:~# ./t1     CC:29:F5:79:14:21  iPhone</code></p></li>
 </ol>
 </section>
 <section id="参考资料" class="level2">
@@ -332,7 +315,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 </section>
-
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
