@@ -70,6 +70,9 @@ ul.task-list li input[type="checkbox"] {
     "search-label": "Search"
   }
 }</script>
+<script src="../site_libs/quarto-diagram/mermaid.min.js"></script>
+<script src="../site_libs/quarto-diagram/mermaid-init.js"></script>
+<link href="../site_libs/quarto-diagram/mermaid.css" rel="stylesheet">
 
 
 <link rel="stylesheet" href="../styles.css">
@@ -160,7 +163,12 @@ ul.task-list li input[type="checkbox"] {
 <li><p>输入 <code>token + N 个 draft token</code> 一段共 <code>N+1</code> 个 token 到 target model 做<strong>一次</strong> prefill-style 前向（<code>batch=1, seq=N+1</code>），逐位置 verify，找出「最长可接受前缀」，然后将 target model / MTP model 的 KV cache 相关状态都<strong>回退到「已接受前缀」的位置</strong>，避免影响下一轮 decode。</p></li>
 </ol>
 <p>下图展示他的核心思想：<strong>主模型给出 1 个 token，draft 端串行展开 N 个候选，target 端一次性 verify，按接受前缀进入下一轮</strong>：</p>
-<pre class="mermaid"><code>flowchart TB
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">flowchart TB
     A([历史 token x1 ... xt])
 
     A --&gt; M["主模型 decode&lt;br/&gt;得到 token t+1"]
@@ -172,7 +180,13 @@ ul.task-list li input[type="checkbox"] {
 
     Verify --&gt; Accept["接受 k 个 token&lt;br/&gt;0 ≤ k ≤ N+1"]
     Accept --&gt; Next([进入下一轮 decode])
-    Next --&gt; A</code></pre>
+    Next --&gt; A
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
 <p>在上图中，verify 端的输入至少有主模型的 1 个 token，最多有 <code>N+1</code> 个 token（draft 端的 N 个），因此 MTP 的加速比取决于对于 draft token 的接受率（accept rate）。并且由于第一个 token 一定是主模型的输出，所以最坏状态下，模型输出的正确性不会被破坏，只是会有反加速效果（多执行了 MTP 层）。</p>
 </section>
 <section id="工程实现" class="level1">
@@ -181,7 +195,12 @@ ul.task-list li input[type="checkbox"] {
 <section id="prefill-阶段" class="level2">
 <h2 class="anchored" data-anchor-id="prefill-阶段">Prefill 阶段</h2>
 <p>prefill 阶段需要让 MTP 层把它自己的 KV 填上，否则进入 decode 第一步时 MTP KV 是空的，draft 出来全是噪声，加速效果归零。prompt 被切成多个 chunk，每个 chunk 都同时过主模型和 MTP 层，<strong>两边各自把自己那段 KV 填上</strong>。这一阶段 verifier 不参与（没有上一轮 draft 可以对照）。</p>
-<pre class="mermaid"><code>flowchart TB
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">flowchart TB
     Start([输入 prompt: x1 ... xN])
 
     Start --&gt; Loop{"还有未处理的 chunk?"}
@@ -190,7 +209,13 @@ ul.task-list li input[type="checkbox"] {
     Chunk --&gt; Main["主模型对 chunk 做 prefill&lt;br/&gt;填主模型 KV cache"]
     Main --&gt; MTP["MTP 层对 chunk 做 prefill&lt;br/&gt; 填 MTP KV cache"]
 
-    Loop -- 否 --&gt; Done([prefill 完成&lt;br/&gt;主 KV / MTP KV 已就绪])</code></pre>
+    Loop -- 否 --&gt; Done([prefill 完成&lt;br/&gt;主 KV / MTP KV 已就绪])
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
 </section>
 <section id="decode-阶段" class="level2">
 <h2 class="anchored" data-anchor-id="decode-阶段">Decode 阶段</h2>
@@ -200,7 +225,12 @@ ul.task-list li input[type="checkbox"] {
 <li><strong>后续每一轮</strong>：输入 = <code>上一轮主模型预测的下一个 token</code> + <code>上一轮 MTP 串行预测的 N 个 draft token</code>。</li>
 </ul>
 <p>加上我们的 <code>N = 3</code>，那么工作数据流图如下所示：</p>
-<pre class="mermaid"><code>flowchart TB
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">flowchart TB
     Init([prefill 完成&lt;br/&gt;cur_pos = prompt_len - 1])
 
     Init --&gt; Forward["输入 N+1 个 token &lt;br/&gt; 第一轮 draft token 是重复的&lt;br/&gt;后续 draft token 来自上一轮"]
@@ -220,7 +250,13 @@ ul.task-list li input[type="checkbox"] {
 
     NextDraft --&gt; Stop{"达到停止条件?"}
     Stop -- 否 --&gt; Forward
-    Stop -- 是 --&gt; End([输出生成序列])</code></pre>
+    Stop -- 是 --&gt; End([输出生成序列])
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
 <p>可以看到 decode 阶段并没有分化出两个分支，输入都是「主模型预测 + MTP 预测」，这一次 decode 的 sampler 所 verify 的是上一轮「MTP 预测」的 draft tokens。</p>
 </section>
 </section>
