@@ -267,6 +267,7 @@ ul.task-list li input[type="checkbox"] {
 <li><strong>MTP 的权重</strong>。不同的模型有区别，比如 DSv3.2 <code>MTP = 3</code> 对应 3 套独立权重；而 Qwen3.5 只有 1 套，要做多次 draft 预测就得复用同一份权重多次。</li>
 <li><strong>MTP 的 KV cache</strong>：DSv3.2 的 3 个 MTP layer 是复用 KV cache 的。</li>
 <li><strong>MTP 的 Sampler</strong>：MTP 层的采样策略和主模型并不一定一致，至少在 DSv3.2 和 Qwen3.5 里面 sglang 的实现中，他的采样策略是固定 <code>Top 1</code> 的。</li>
+<li><strong>MTP 的 bouns token</strong>：指的是最后一个预测中的下一个token可以直接接受， 比如MTP 1时，输入为 <code>[last, draft 0]</code> 此时预测输出为<code>[pred 0, pred 1]</code>， 当<code>pred 0 == draft 0</code>时，我们可以直接accept <code>pred 1</code>，这就是bouns token。 因为他是由主模型预测得到的，但我之前在这里踩过坑，实际上<strong>bounds token和非mtp下串行预测出来的token会不一样</strong>。</li>
 </ul>
 
 
