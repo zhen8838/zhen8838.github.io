@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.8.27">
+<meta name="generator" content="quarto-1.9.37">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -10,6 +10,9 @@
 
 <title>自己实现cp的程序 – Zheng’s Notes</title>
 <style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
 div.columns{display: flex; gap: min(4vw, 1.5em);}
@@ -69,15 +72,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="../assets/favicon.ico" rel="icon">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
-<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
 <script src="../site_libs/quarto-html/popper.min.js"></script>
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-acf12a64177840b8d86f2d4f01b2e9fb.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-7072389654d23eff08f359f9aa0d1ee7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-a68d55a7457d6c578309d53405216ea2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -200,47 +202,59 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    close<span class="op">(</span>fd<span class="op">);</span></span>
 <span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    exit<span class="op">(</span>EXIT_SUCCESS<span class="op">);</span></span>
 <span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div></li>
-<li><p><strong>编译运行</strong> <code>sh     $ gcc 4-2.c -o hole     $ ./hole     $ cat hole.txt     helloworld     $ du -h hole.txt     8.0K    hole.txt     $ od -c hole.txt     0000000   h   e   l   l   o  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0     0000020  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0     *     0303240  \0  \0  \0  \0  \0   w   o   r   l   d     0303252</code></p></li>
-<li><p><strong>程序代码</strong></p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode c code-with-copy"><code class="sourceCode c"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;ctype.h&gt;</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">"tlpi_hdr.h"</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;stdbool.h&gt;</span></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;sys/stat.h&gt;</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;fcntl.h&gt;</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">(</span><span class="dt">int</span> argc<span class="op">,</span> <span class="dt">char</span> <span class="op">*</span>argv<span class="op">[])</span></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="dt">char</span> buf<span class="op">[</span><span class="dv">1024</span><span class="op">];</span></span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> input<span class="op">,</span>output<span class="op">,</span> ret<span class="op">;</span></span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="dt">ssize_t</span> len<span class="op">;</span></span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="co">/* 读取选项 */</span></span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span><span class="op">(</span>argc<span class="op">!=</span><span class="dv">3</span><span class="op">||</span>strcmp<span class="op">(</span>argv<span class="op">[</span><span class="dv">1</span><span class="op">],</span><span class="st">"--help"</span><span class="op">)==</span><span class="dv">0</span><span class="op">)</span></span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a> printf<span class="op">(</span><span class="st">"usage:</span><span class="sc">%s</span><span class="st"> cp file1 to file2 </span><span class="sc">\n</span><span class="st">"</span><span class="op">,</span>argv<span class="op">[</span><span class="dv">0</span><span class="op">]);</span></span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a> exit<span class="op">(</span>EXIT_SUCCESS<span class="op">);</span></span>
-<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
-<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>input<span class="op">=</span>open<span class="op">(</span>argv<span class="op">[</span><span class="dv">1</span><span class="op">],</span> O_RDONLY <span class="op">,</span> S_IRUSR <span class="op">|</span> S_IWUSR <span class="op">|</span> S_IRGRP <span class="op">|</span> S_IWGRP <span class="op">|</span> S_IROTH <span class="op">|</span> S_IWOTH<span class="op">);</span></span>
-<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span><span class="op">(</span>input<span class="op">==-</span><span class="dv">1</span><span class="op">)</span></span>
-<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    errExit<span class="op">(</span><span class="st">"open input"</span><span class="op">);</span></span>
-<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>output<span class="op">=</span>open<span class="op">(</span>argv<span class="op">[</span><span class="dv">2</span><span class="op">],</span> O_WRONLY <span class="op">|</span> O_CREAT<span class="op">,</span> S_IRUSR <span class="op">|</span> S_IWUSR <span class="op">|</span> S_IRGRP <span class="op">|</span> S_IWGRP <span class="op">|</span> S_IROTH <span class="op">|</span> S_IWOTH<span class="op">);</span></span>
-<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span><span class="op">(</span>input<span class="op">==-</span><span class="dv">1</span><span class="op">)</span></span>
-<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>    errExit<span class="op">(</span><span class="st">"open output"</span><span class="op">);</span></span>
-<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="cf">while</span><span class="op">((</span>ret<span class="op">=</span>read<span class="op">(</span>input<span class="op">,</span>buf<span class="op">,</span><span class="dv">1024</span><span class="op">))&gt;</span><span class="dv">0</span><span class="op">)</span></span>
-<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
-<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>    write<span class="op">(</span>output<span class="op">,</span>buf<span class="op">,</span>ret<span class="op">);</span></span>
-<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
-<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>exit<span class="op">(</span>EXIT_SUCCESS<span class="op">);</span></span>
-<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="op">}</span>  </span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div></li>
 <li><p><strong>编译运行</strong></p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> <span class="kw">&amp;&amp;</span> <span class="ex">./4-2</span> hole.txt test.txt</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div></li>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">$</span> gcc 4-2.c <span class="at">-o</span> hole</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">$</span> ./hole</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="ex">$</span> cat hole.txt</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="ex">helloworld</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="ex">$</span> du <span class="at">-h</span> hole.txt</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="ex">8.0K</span>    hole.txt</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="ex">$</span> od <span class="at">-c</span> hole.txt</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="ex">0000000</span>   h   e   l   l   o  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="ex">0000020</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="ex">*</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="ex">0303240</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>   w   o   r   l   d</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="ex">0303252</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div></li>
+<li><p><strong>程序代码</strong></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode c code-with-copy"><code class="sourceCode c"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;ctype.h&gt;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">"tlpi_hdr.h"</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;stdbool.h&gt;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;sys/stat.h&gt;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;fcntl.h&gt;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">(</span><span class="dt">int</span> argc<span class="op">,</span> <span class="dt">char</span> <span class="op">*</span>argv<span class="op">[])</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="dt">char</span> buf<span class="op">[</span><span class="dv">1024</span><span class="op">];</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> input<span class="op">,</span>output<span class="op">,</span> ret<span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="dt">ssize_t</span> len<span class="op">;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="co">/* 读取选项 */</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span><span class="op">(</span>argc<span class="op">!=</span><span class="dv">3</span><span class="op">||</span>strcmp<span class="op">(</span>argv<span class="op">[</span><span class="dv">1</span><span class="op">],</span><span class="st">"--help"</span><span class="op">)==</span><span class="dv">0</span><span class="op">)</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a> printf<span class="op">(</span><span class="st">"usage:</span><span class="sc">%s</span><span class="st"> cp file1 to file2 </span><span class="sc">\n</span><span class="st">"</span><span class="op">,</span>argv<span class="op">[</span><span class="dv">0</span><span class="op">]);</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a> exit<span class="op">(</span>EXIT_SUCCESS<span class="op">);</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>input<span class="op">=</span>open<span class="op">(</span>argv<span class="op">[</span><span class="dv">1</span><span class="op">],</span> O_RDONLY <span class="op">,</span> S_IRUSR <span class="op">|</span> S_IWUSR <span class="op">|</span> S_IRGRP <span class="op">|</span> S_IWGRP <span class="op">|</span> S_IROTH <span class="op">|</span> S_IWOTH<span class="op">);</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span><span class="op">(</span>input<span class="op">==-</span><span class="dv">1</span><span class="op">)</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>    errExit<span class="op">(</span><span class="st">"open input"</span><span class="op">);</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>output<span class="op">=</span>open<span class="op">(</span>argv<span class="op">[</span><span class="dv">2</span><span class="op">],</span> O_WRONLY <span class="op">|</span> O_CREAT<span class="op">,</span> S_IRUSR <span class="op">|</span> S_IWUSR <span class="op">|</span> S_IRGRP <span class="op">|</span> S_IWGRP <span class="op">|</span> S_IROTH <span class="op">|</span> S_IWOTH<span class="op">);</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span><span class="op">(</span>input<span class="op">==-</span><span class="dv">1</span><span class="op">)</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>    errExit<span class="op">(</span><span class="st">"open output"</span><span class="op">);</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a><span class="cf">while</span><span class="op">((</span>ret<span class="op">=</span>read<span class="op">(</span>input<span class="op">,</span>buf<span class="op">,</span><span class="dv">1024</span><span class="op">))&gt;</span><span class="dv">0</span><span class="op">)</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>    write<span class="op">(</span>output<span class="op">,</span>buf<span class="op">,</span>ret<span class="op">);</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>exit<span class="op">(</span>EXIT_SUCCESS<span class="op">);</span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a><span class="op">}</span>  </span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div></li>
+<li><p><strong>编译运行</strong></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> <span class="kw">&amp;&amp;</span> <span class="ex">./4-2</span> hole.txt test.txt</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div></li>
 <li><p><strong>检查结果</strong></p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">$</span> od <span class="at">-c</span> test.txt</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">0000000</span>   h   e   l   l   o  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="ex">0000020</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span></span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="ex">*</span></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="ex">0303240</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>   w   o   r   l   d</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="ex">0303252</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div></li>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">$</span> od <span class="at">-c</span> test.txt</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">0000000</span>   h   e   l   l   o  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="ex">0000020</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="ex">*</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="ex">0303240</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>  <span class="dt">\0</span>   w   o   r   l   d</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="ex">0303252</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div></li>
 </ul>
 
 

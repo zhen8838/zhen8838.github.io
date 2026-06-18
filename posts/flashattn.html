@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.8.27">
+<meta name="generator" content="quarto-1.9.37">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -10,6 +10,9 @@
 
 <title>Flash Attention记录 – Zheng’s Notes</title>
 <style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
 div.columns{display: flex; gap: min(4vw, 1.5em);}
@@ -69,15 +72,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="../assets/favicon.ico" rel="icon">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
-<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
 <script src="../site_libs/quarto-html/popper.min.js"></script>
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-acf12a64177840b8d86f2d4f01b2e9fb.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-7072389654d23eff08f359f9aa0d1ee7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-a68d55a7457d6c578309d53405216ea2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -107,7 +109,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 }</script>
 
   <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
 
 <script type="text/javascript">
 const typesetMath = (el) => {
@@ -176,6 +178,12 @@ window.Quarto = {
   <li><a href="#pass-attention" id="toc-pass-attention" class="nav-link" data-scroll-target="#pass-attention">2-pass Attention</a></li>
   <li><a href="#pass-attention-1" id="toc-pass-attention-1" class="nav-link" data-scroll-target="#pass-attention-1">1-pass Attention</a></li>
   <li><a href="#flash-attention-v1" id="toc-flash-attention-v1" class="nav-link" data-scroll-target="#flash-attention-v1">Flash Attention v1</a></li>
+  </ul></li>
+  <li><a href="#用-tilelang-在-hopper-上实现-fa3" id="toc-用-tilelang-在-hopper-上实现-fa3" class="nav-link" data-scroll-target="#用-tilelang-在-hopper-上实现-fa3">用 TileLang 在 Hopper 上实现 FA3</a>
+  <ul class="collapse">
+  <li><a href="#完整实现" id="toc-完整实现" class="nav-link" data-scroll-target="#完整实现">完整实现</a></li>
+  <li><a href="#逻辑顺序-vs-实际发射时机" id="toc-逻辑顺序-vs-实际发射时机" class="nav-link" data-scroll-target="#逻辑顺序-vs-实际发射时机">逻辑顺序 vs 实际发射时机</a></li>
+  <li><a href="#流水线长什么样" id="toc-流水线长什么样" class="nav-link" data-scroll-target="#流水线长什么样">流水线长什么样</a></li>
   </ul></li>
   </ul>
 </nav>
@@ -457,6 +465,387 @@ softmax(X) &amp;= \frac{f(X)}{sum_{2N}}
 <span id="cb1-85"><a href="#cb1-85" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-86"><a href="#cb1-86" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">"__main__"</span>:</span>
 <span id="cb1-87"><a href="#cb1-87" aria-hidden="true" tabindex="-1"></a>  pytest.main([<span class="va">__file__</span>, <span class="st">"-vvs"</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+</section>
+<section id="用-tilelang-在-hopper-上实现-fa3" class="level1">
+<h1>用 TileLang 在 Hopper 上实现 FA3</h1>
+<p>FA2 到 FA3 的提速主要来自<strong>调度</strong>,不是数学。<a href="https://arxiv.org/html/2407.08608v2">FA3 论文</a> 的核心想法是把 <strong>GEMM(张量核)</strong> 和 <strong>softmax 里的 <code>exp</code>(跑在独立的 multi-function unit 上)</strong> 重叠起来——理想情况下,<code>exp</code> 应该在张量核做 matmul 的时候算。论文给了两个层次的重叠:</p>
+<p><strong>Ping-pong(warpgroup 之间)。</strong> 开两个 consumer warpgroup,用 <code>bar.sync</code> 命名屏障强制 warpgroup 1 的 GEMM(本轮的 <code>PV</code>、下一轮的 <code>QKᵀ</code>)排在 warpgroup 2 的 GEMM 之前;于是 <strong>warpgroup 1 的 softmax 正好在 warpgroup 2 跑 GEMM 时被调度</strong>,反之亦然。两个 WG 像打乒乓一样交替占用张量核:一个在算 softmax,另一个就在跑 matmul。</p>
+<p><strong>Intra-warpgroup overlap(warpgroup 内部)。</strong> 单个 warpgroup 内部也把 GEMM 和 softmax 流水起来:第 <code>j</code> 轮的第二个 WGMMA(<code>PV</code>)和第 <code>j+1</code> 轮的 softmax 重叠,代价是多一组寄存器缓存下一轮的分数。</p>
+<p>下面这份 TileLang 实现就是这两个重叠的落地:<code>384</code> 线程 = <code>1</code> 个 TMA producer warpgroup + <code>2</code> 个 consumer warpgroup,两个 consumer 之间做 ping-pong,每个 consumer 内部做上面的流水。</p>
+<section id="完整实现" class="level2">
+<h2 class="anchored" data-anchor-id="完整实现">完整实现</h2>
+<div class="callout callout-style-default callout-note callout-titled" title="完整 kernel `k_fa3pp.py`(点击展开)">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-1-contents" aria-controls="callout-1" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>完整 kernel <code>k_fa3pp.py</code>(点击展开)
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-1" class="callout-1-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">"""Faithful FlashInfer FA3 port WITH 2-warpgroup ping-pong (CUTLASS WarpScheduler).</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">  - 384 threads = 1 producer WG (TMA) + 2 consumer WG</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">  - each consumer WG does its OWN m=64 query rows; per-WG Qs[g] (A-operand</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co">    offset must be 0, so split buffers instead of slicing rows)</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co">  - register-P (rs-wgmma): P held in a fp16 fragment (pcast), fed straight to PV.</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co">    The cast stays AFTER wait_wgmma(0) so PV(k-1) finishes reading pcast before</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co">    it is overwritten (fusing exp-&gt;pcast earlier serializes PV -&gt; 114us).</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co">  - setmaxnreg: producer dealloc to 24 regs, consumers alloc 240 -&gt; rs-P fits</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co">    (without this, rs-P spilled/serialized and lost to smem-P).</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="co">  - WarpScheduler ping-pong via named barriers: WG0 sync(1)/arrive(2),</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="co">    WG1 sync(2)/arrive(1); WG1 primes bar1 once -&gt; WG0 softmax overlaps WG1 mma.</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="co">  - delayed PV + wait_wgmma(1): softmax(k) overlaps in-flight PV(k-1).</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="co">"""</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> tilelang</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> tilelang.language <span class="im">as</span> T</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tilelang.layout <span class="im">import</span> make_swizzled_layout</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os <span class="im">as</span> _os</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>BLOCK_M <span class="op">=</span> <span class="dv">128</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>BLOCK_N <span class="op">=</span> <span class="bu">int</span>(_os.environ.get(<span class="st">"BN"</span>, <span class="st">"128"</span>))</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>NSK <span class="op">=</span> <span class="bu">int</span>(_os.environ.get(<span class="st">"NSK"</span>, <span class="st">"2"</span>))</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>NSV <span class="op">=</span> <span class="bu">int</span>(_os.environ.get(<span class="st">"NSV"</span>, <span class="st">"2"</span>))</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>THREADS <span class="op">=</span> <span class="dv">384</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>NMMA <span class="op">=</span> <span class="dv">256</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>_FM <span class="op">=</span> _os.environ.get(<span class="st">"FM"</span>, <span class="st">"1"</span>) <span class="op">==</span> <span class="st">"1"</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>_pc <span class="op">=</span> {tilelang.PassConfigKey.TL_ENABLE_FAST_MATH: _FM,</span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>       tilelang.PassConfigKey.TL_DISABLE_THREAD_STORAGE_SYNC: <span class="va">True</span>}</span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>_cf <span class="op">=</span> [</span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>    <span class="st">"-O3"</span>,</span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>] <span class="op">+</span> ([<span class="st">"--use_fast_math"</span>] <span class="cf">if</span> _FM <span class="cf">else</span> []) <span class="op">+</span> [</span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>    <span class="st">"-Wno-deprecated-declarations"</span>,</span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>    <span class="st">"-U__CUDA_NO_HALF_OPERATORS__"</span>,</span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>    <span class="st">"-U__CUDA_NO_HALF_CONVERSIONS__"</span>,</span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>    <span class="st">"-U__CUDA_NO_HALF2_OPERATORS__"</span>,</span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>    <span class="st">"-U__CUDA_NO_BFLOAT16_CONVERSIONS__"</span>,</span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a>    <span class="st">"--expt-relaxed-constexpr"</span>,</span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>    <span class="st">"--expt-extended-lambda"</span>,</span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a>    <span class="st">"-DNDEBUG"</span>,</span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a><span class="at">@tilelang.jit</span>(out_idx<span class="op">=</span>[<span class="dv">3</span>], pass_configs<span class="op">=</span>_pc, compile_flags<span class="op">=</span>_cf)</span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> fa3_prefill(B, H, Hkv, Sq, Skv, D, dtype,</span>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a>                block_M<span class="op">=</span>BLOCK_M, block_N<span class="op">=</span>BLOCK_N, nsK<span class="op">=</span>NSK, nsV<span class="op">=</span>NSV, threads<span class="op">=</span>THREADS):</span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a>    scale <span class="op">=</span> (<span class="fl">1.0</span> <span class="op">/</span> D) <span class="op">**</span> <span class="fl">0.5</span> <span class="op">*</span> <span class="fl">1.44269504</span></span>
+<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a>    groups <span class="op">=</span> H <span class="op">//</span> Hkv</span>
+<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a>    co <span class="op">=</span> Skv <span class="op">-</span> Sq</span>
+<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a>    accum <span class="op">=</span> <span class="st">"float"</span></span>
+<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a>    half <span class="op">=</span> block_M <span class="op">//</span> <span class="dv">2</span></span>
+<span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a>    Pol <span class="op">=</span> T.GemmWarpPolicy.FullRow</span>
+<span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-55"><a href="#cb2-55" aria-hidden="true" tabindex="-1"></a>    <span class="at">@T.prim_func</span></span>
+<span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> main(</span>
+<span id="cb2-57"><a href="#cb2-57" aria-hidden="true" tabindex="-1"></a>        Q: T.Tensor([B, Sq, H, D], dtype),</span>
+<span id="cb2-58"><a href="#cb2-58" aria-hidden="true" tabindex="-1"></a>        K: T.Tensor([B, Skv, Hkv, D], dtype),</span>
+<span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a>        V: T.Tensor([B, Skv, Hkv, D], dtype),</span>
+<span id="cb2-60"><a href="#cb2-60" aria-hidden="true" tabindex="-1"></a>        O: T.Tensor([B, Sq, H, D], dtype),</span>
+<span id="cb2-61"><a href="#cb2-61" aria-hidden="true" tabindex="-1"></a>    ):</span>
+<span id="cb2-62"><a href="#cb2-62" aria-hidden="true" tabindex="-1"></a>        <span class="cf">with</span> T.Kernel(T.ceildiv(Sq, block_M), H, B, threads<span class="op">=</span>threads) <span class="im">as</span> (bx, by, bz):</span>
+<span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a>            Qs <span class="op">=</span> T.alloc_shared([<span class="dv">2</span>, half, D], dtype)</span>
+<span id="cb2-64"><a href="#cb2-64" aria-hidden="true" tabindex="-1"></a>            Ks <span class="op">=</span> T.alloc_shared([nsK, block_N, D], dtype)</span>
+<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a>            Vs <span class="op">=</span> T.alloc_shared([nsV, block_N, D], dtype)</span>
+<span id="cb2-66"><a href="#cb2-66" aria-hidden="true" tabindex="-1"></a>            Os <span class="op">=</span> T.alloc_shared([<span class="dv">2</span>, half, D], dtype)  <span class="co"># per-WG smem-staged output (FlashInfer epilogue)</span></span>
+<span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a>            T.annotate_layout({Qs: make_swizzled_layout(Qs), Ks: make_swizzled_layout(Ks),</span>
+<span id="cb2-68"><a href="#cb2-68" aria-hidden="true" tabindex="-1"></a>                               Vs: make_swizzled_layout(Vs)})</span>
+<span id="cb2-69"><a href="#cb2-69" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-70"><a href="#cb2-70" aria-hidden="true" tabindex="-1"></a>            q_bar <span class="op">=</span> T.alloc_barrier([<span class="dv">32</span>])             <span class="co"># 1-warp producer (FlashInfer NUM_PRODUCER_THREADS=32)</span></span>
+<span id="cb2-71"><a href="#cb2-71" aria-hidden="true" tabindex="-1"></a>            kready <span class="op">=</span> T.alloc_barrier([<span class="dv">32</span>] <span class="op">*</span> nsK)</span>
+<span id="cb2-72"><a href="#cb2-72" aria-hidden="true" tabindex="-1"></a>            kfree <span class="op">=</span> T.alloc_barrier([NMMA] <span class="op">*</span> nsK)</span>
+<span id="cb2-73"><a href="#cb2-73" aria-hidden="true" tabindex="-1"></a>            vready <span class="op">=</span> T.alloc_barrier([<span class="dv">32</span>] <span class="op">*</span> nsV)</span>
+<span id="cb2-74"><a href="#cb2-74" aria-hidden="true" tabindex="-1"></a>            vfree <span class="op">=</span> T.alloc_barrier([NMMA] <span class="op">*</span> nsV)</span>
+<span id="cb2-75"><a href="#cb2-75" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-76"><a href="#cb2-76" aria-hidden="true" tabindex="-1"></a>            cv <span class="op">=</span> by <span class="op">//</span> groups</span>
+<span id="cb2-77"><a href="#cb2-77" aria-hidden="true" tabindex="-1"></a>            q0 <span class="op">=</span> bx <span class="op">*</span> block_M</span>
+<span id="cb2-78"><a href="#cb2-78" aria-hidden="true" tabindex="-1"></a>            eff <span class="op">=</span> T.<span class="bu">min</span>(T.ceildiv(Skv, block_N),</span>
+<span id="cb2-79"><a href="#cb2-79" aria-hidden="true" tabindex="-1"></a>                        T.ceildiv(q0 <span class="op">+</span> block_M <span class="op">+</span> co, block_N))</span>
+<span id="cb2-80"><a href="#cb2-80" aria-hidden="true" tabindex="-1"></a>            tx <span class="op">=</span> T.get_thread_binding()</span>
+<span id="cb2-81"><a href="#cb2-81" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-82"><a href="#cb2-82" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> tx <span class="op">&gt;=</span> <span class="dv">256</span>:  <span class="co"># ================= producer =================</span></span>
+<span id="cb2-83"><a href="#cb2-83" aria-hidden="true" tabindex="-1"></a>                T.set_max_nreg(<span class="dv">24</span>, <span class="dv">0</span>)  <span class="co"># producer is TMA-only: release regs to consumers</span></span>
+<span id="cb2-84"><a href="#cb2-84" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> tx <span class="op">&gt;=</span> <span class="dv">256</span> <span class="kw">and</span> tx <span class="op">&lt;</span> <span class="dv">288</span>:  <span class="co"># only 1 warp issues TMA + waits (rest of WG idle)</span></span>
+<span id="cb2-85"><a href="#cb2-85" aria-hidden="true" tabindex="-1"></a>                T.tma_copy(Q[bz, q0:q0 <span class="op">+</span> half, by, :], Qs[<span class="dv">0</span>, :, :], barrier<span class="op">=</span>q_bar)</span>
+<span id="cb2-86"><a href="#cb2-86" aria-hidden="true" tabindex="-1"></a>                T.tma_copy(Q[bz, q0 <span class="op">+</span> half:q0 <span class="op">+</span> block_M, by, :], Qs[<span class="dv">1</span>, :, :], barrier<span class="op">=</span>q_bar)</span>
+<span id="cb2-87"><a href="#cb2-87" aria-hidden="true" tabindex="-1"></a>                T.mbarrier_arrive(q_bar)</span>
+<span id="cb2-88"><a href="#cb2-88" aria-hidden="true" tabindex="-1"></a>                <span class="cf">for</span> k <span class="kw">in</span> T.serial(eff):</span>
+<span id="cb2-89"><a href="#cb2-89" aria-hidden="true" tabindex="-1"></a>                    sk <span class="op">=</span> k <span class="op">%</span> nsK</span>
+<span id="cb2-90"><a href="#cb2-90" aria-hidden="true" tabindex="-1"></a>                    T.mbarrier_wait_parity(kfree[sk], ((k <span class="op">//</span> nsK) <span class="op">%</span> <span class="dv">2</span>) <span class="op">^</span> <span class="dv">1</span>)</span>
+<span id="cb2-91"><a href="#cb2-91" aria-hidden="true" tabindex="-1"></a>                    T.tma_copy(K[bz, k <span class="op">*</span> block_N:(k <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> block_N, cv, :], Ks[sk, :, :], barrier<span class="op">=</span>kready[sk])</span>
+<span id="cb2-92"><a href="#cb2-92" aria-hidden="true" tabindex="-1"></a>                    T.mbarrier_arrive(kready[sk])</span>
+<span id="cb2-93"><a href="#cb2-93" aria-hidden="true" tabindex="-1"></a>                    sv <span class="op">=</span> k <span class="op">%</span> nsV</span>
+<span id="cb2-94"><a href="#cb2-94" aria-hidden="true" tabindex="-1"></a>                    T.mbarrier_wait_parity(vfree[sv], ((k <span class="op">//</span> nsV) <span class="op">%</span> <span class="dv">2</span>) <span class="op">^</span> <span class="dv">1</span>)</span>
+<span id="cb2-95"><a href="#cb2-95" aria-hidden="true" tabindex="-1"></a>                    T.tma_copy(V[bz, k <span class="op">*</span> block_N:(k <span class="op">+</span> <span class="dv">1</span>) <span class="op">*</span> block_N, cv, :], Vs[sv, :, :], barrier<span class="op">=</span>vready[sv])</span>
+<span id="cb2-96"><a href="#cb2-96" aria-hidden="true" tabindex="-1"></a>                    T.mbarrier_arrive(vready[sv])</span>
+<span id="cb2-97"><a href="#cb2-97" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-98"><a href="#cb2-98" aria-hidden="true" tabindex="-1"></a>            <span class="cf">with</span> T.ws(<span class="dv">0</span>):</span>
+<span id="cb2-99"><a href="#cb2-99" aria-hidden="true" tabindex="-1"></a>                    T.set_max_nreg(<span class="dv">240</span>, <span class="dv">1</span>)  <span class="co"># consumer grabs producer's released regs</span></span>
+<span id="cb2-100"><a href="#cb2-100" aria-hidden="true" tabindex="-1"></a>                    r0 <span class="op">=</span> <span class="dv">0</span> <span class="op">*</span> half</span>
+<span id="cb2-101"><a href="#cb2-101" aria-hidden="true" tabindex="-1"></a>                    my_bar <span class="op">=</span> <span class="dv">1</span></span>
+<span id="cb2-102"><a href="#cb2-102" aria-hidden="true" tabindex="-1"></a>                    nxt_bar <span class="op">=</span> <span class="dv">2</span></span>
+<span id="cb2-103"><a href="#cb2-103" aria-hidden="true" tabindex="-1"></a>                    acc_s <span class="op">=</span> T.alloc_fragment([half, block_N], accum)</span>
+<span id="cb2-104"><a href="#cb2-104" aria-hidden="true" tabindex="-1"></a>                    pcast <span class="op">=</span> T.alloc_fragment([half, block_N], dtype)  <span class="co"># register-P (rs-wgmma)</span></span>
+<span id="cb2-105"><a href="#cb2-105" aria-hidden="true" tabindex="-1"></a>                    acc_o <span class="op">=</span> T.alloc_fragment([half, D], accum)</span>
+<span id="cb2-106"><a href="#cb2-106" aria-hidden="true" tabindex="-1"></a>                    sm <span class="op">=</span> T.alloc_fragment([half], accum)</span>
+<span id="cb2-107"><a href="#cb2-107" aria-hidden="true" tabindex="-1"></a>                    smp <span class="op">=</span> T.alloc_fragment([half], accum)</span>
+<span id="cb2-108"><a href="#cb2-108" aria-hidden="true" tabindex="-1"></a>                    alpha <span class="op">=</span> T.alloc_fragment([half], accum)</span>
+<span id="cb2-109"><a href="#cb2-109" aria-hidden="true" tabindex="-1"></a>                    ss <span class="op">=</span> T.alloc_fragment([half], accum)</span>
+<span id="cb2-110"><a href="#cb2-110" aria-hidden="true" tabindex="-1"></a>                    logsum <span class="op">=</span> T.alloc_fragment([half], accum)</span>
+<span id="cb2-111"><a href="#cb2-111" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-112"><a href="#cb2-112" aria-hidden="true" tabindex="-1"></a>                    T.fill(acc_o, <span class="dv">0</span>)</span>
+<span id="cb2-113"><a href="#cb2-113" aria-hidden="true" tabindex="-1"></a>                    T.fill(logsum, <span class="dv">0</span>)</span>
+<span id="cb2-114"><a href="#cb2-114" aria-hidden="true" tabindex="-1"></a>                    T.fill(alpha, <span class="fl">1.0</span>)  <span class="co"># pipelined rescale: carried alpha, 1st rescale no-op</span></span>
+<span id="cb2-115"><a href="#cb2-115" aria-hidden="true" tabindex="-1"></a>                    T.fill(sm, <span class="op">-</span>T.infinity(accum))</span>
+<span id="cb2-116"><a href="#cb2-116" aria-hidden="true" tabindex="-1"></a>                    T.mbarrier_wait_parity(q_bar, <span class="dv">0</span>)</span>
+<span id="cb2-117"><a href="#cb2-117" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">pass</span>  <span class="co"># WG0 goes first</span></span>
+<span id="cb2-118"><a href="#cb2-118" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-119"><a href="#cb2-119" aria-hidden="true" tabindex="-1"></a>                    <span class="co"># prologue: tile 0, QK + softmax (no PV)</span></span>
+<span id="cb2-120"><a href="#cb2-120" aria-hidden="true" tabindex="-1"></a>                    T.sync_threads(my_bar, NMMA)</span>
+<span id="cb2-121"><a href="#cb2-121" aria-hidden="true" tabindex="-1"></a>                    T.mbarrier_wait_parity(kready[<span class="dv">0</span>], <span class="dv">0</span>)</span>
+<span id="cb2-122"><a href="#cb2-122" aria-hidden="true" tabindex="-1"></a>                    T.wgmma_gemm(Qs[<span class="dv">0</span>, :, :], Ks[<span class="dv">0</span>, :, :], acc_s, transpose_B<span class="op">=</span><span class="va">True</span>, policy<span class="op">=</span>Pol, clear_accum<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-123"><a href="#cb2-123" aria-hidden="true" tabindex="-1"></a>                    T.named_barrier_arrive(nxt_bar, NMMA)</span>
+<span id="cb2-124"><a href="#cb2-124" aria-hidden="true" tabindex="-1"></a>                    T.wait_wgmma(<span class="dv">0</span>)</span>
+<span id="cb2-125"><a href="#cb2-125" aria-hidden="true" tabindex="-1"></a>                    T.mbarrier_arrive(kfree[<span class="dv">0</span>])</span>
+<span id="cb2-126"><a href="#cb2-126" aria-hidden="true" tabindex="-1"></a>                    T.reduce_max(acc_s, sm, dim<span class="op">=</span><span class="dv">1</span>, clear<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb2-127"><a href="#cb2-127" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">for</span> i, j <span class="kw">in</span> T.Parallel(half, block_N):</span>
+<span id="cb2-128"><a href="#cb2-128" aria-hidden="true" tabindex="-1"></a>                        acc_s[i, j] <span class="op">=</span> T.exp2(acc_s[i, j] <span class="op">*</span> scale <span class="op">-</span> sm[i] <span class="op">*</span> scale)</span>
+<span id="cb2-129"><a href="#cb2-129" aria-hidden="true" tabindex="-1"></a>                    T.reduce_sum(acc_s, ss, dim<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb2-130"><a href="#cb2-130" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">for</span> i <span class="kw">in</span> T.Parallel(half):</span>
+<span id="cb2-131"><a href="#cb2-131" aria-hidden="true" tabindex="-1"></a>                        logsum[i] <span class="op">=</span> ss[i]</span>
+<span id="cb2-132"><a href="#cb2-132" aria-hidden="true" tabindex="-1"></a>                    T.copy(acc_s, pcast)</span>
+<span id="cb2-133"><a href="#cb2-133" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-134"><a href="#cb2-134" aria-hidden="true" tabindex="-1"></a>                    nu <span class="op">=</span> T.<span class="bu">max</span>(<span class="dv">1</span>, T.<span class="bu">min</span>(eff, T.floordiv(q0 <span class="op">+</span> r0 <span class="op">+</span> co <span class="op">+</span> <span class="dv">1</span>, block_N)))</span>
+<span id="cb2-135"><a href="#cb2-135" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">for</span> k <span class="kw">in</span> T.serial(<span class="dv">1</span>, nu):</span>
+<span id="cb2-136"><a href="#cb2-136" aria-hidden="true" tabindex="-1"></a>                        sk <span class="op">=</span> k <span class="op">%</span> nsK</span>
+<span id="cb2-137"><a href="#cb2-137" aria-hidden="true" tabindex="-1"></a>                        svp <span class="op">=</span> (k <span class="op">-</span> <span class="dv">1</span>) <span class="op">%</span> nsV</span>
+<span id="cb2-138"><a href="#cb2-138" aria-hidden="true" tabindex="-1"></a>                        T.sync_threads(my_bar, NMMA)</span>
+<span id="cb2-139"><a href="#cb2-139" aria-hidden="true" tabindex="-1"></a>                        T.mbarrier_wait_parity(kready[sk], (k <span class="op">//</span> nsK) <span class="op">%</span> <span class="dv">2</span>)</span>
+<span id="cb2-140"><a href="#cb2-140" aria-hidden="true" tabindex="-1"></a>                        T.wgmma_gemm(Qs[<span class="dv">0</span>, :, :], Ks[sk, :, :], acc_s, transpose_B<span class="op">=</span><span class="va">True</span>, policy<span class="op">=</span>Pol, clear_accum<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-141"><a href="#cb2-141" aria-hidden="true" tabindex="-1"></a>                        <span class="cf">for</span> i, j <span class="kw">in</span> T.Parallel(half, D):  <span class="co"># pipelined rescale (prev alpha) covers QK latency</span></span>
+<span id="cb2-142"><a href="#cb2-142" aria-hidden="true" tabindex="-1"></a>                            acc_o[i, j] <span class="op">*=</span> alpha[i]</span>
+<span id="cb2-143"><a href="#cb2-143" aria-hidden="true" tabindex="-1"></a>                        T.mbarrier_wait_parity(vready[svp], ((k <span class="op">-</span> <span class="dv">1</span>) <span class="op">//</span> nsV) <span class="op">%</span> <span class="dv">2</span>)</span>
+<span id="cb2-144"><a href="#cb2-144" aria-hidden="true" tabindex="-1"></a>                        T.wgmma_gemm(pcast, Vs[svp, :, :], acc_o, policy<span class="op">=</span>Pol, clear_accum<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb2-145"><a href="#cb2-145" aria-hidden="true" tabindex="-1"></a>                        T.named_barrier_arrive(nxt_bar, NMMA)</span>
+<span id="cb2-146"><a href="#cb2-146" aria-hidden="true" tabindex="-1"></a>                        T.wait_wgmma(<span class="dv">1</span>)</span>
+<span id="cb2-147"><a href="#cb2-147" aria-hidden="true" tabindex="-1"></a>                        T.mbarrier_arrive(kfree[sk])</span>
+<span id="cb2-148"><a href="#cb2-148" aria-hidden="true" tabindex="-1"></a>                        T.copy(sm, smp)</span>
+<span id="cb2-149"><a href="#cb2-149" aria-hidden="true" tabindex="-1"></a>                        T.reduce_max(acc_s, sm, dim<span class="op">=</span><span class="dv">1</span>, clear<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb2-150"><a href="#cb2-150" aria-hidden="true" tabindex="-1"></a>                        <span class="cf">for</span> i <span class="kw">in</span> T.Parallel(half):</span>
+<span id="cb2-151"><a href="#cb2-151" aria-hidden="true" tabindex="-1"></a>                            alpha[i] <span class="op">=</span> T.exp2(smp[i] <span class="op">*</span> scale <span class="op">-</span> sm[i] <span class="op">*</span> scale)</span>
+<span id="cb2-152"><a href="#cb2-152" aria-hidden="true" tabindex="-1"></a>                        <span class="cf">for</span> i, j <span class="kw">in</span> T.Parallel(half, block_N):</span>
+<span id="cb2-153"><a href="#cb2-153" aria-hidden="true" tabindex="-1"></a>                            acc_s[i, j] <span class="op">=</span> T.exp2(acc_s[i, j] <span class="op">*</span> scale <span class="op">-</span> sm[i] <span class="op">*</span> scale)</span>
+<span id="cb2-154"><a href="#cb2-154" aria-hidden="true" tabindex="-1"></a>                        T.reduce_sum(acc_s, ss, dim<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb2-155"><a href="#cb2-155" aria-hidden="true" tabindex="-1"></a>                        T.wait_wgmma(<span class="dv">0</span>)</span>
+<span id="cb2-156"><a href="#cb2-156" aria-hidden="true" tabindex="-1"></a>                        T.mbarrier_arrive(vfree[svp])</span>
+<span id="cb2-157"><a href="#cb2-157" aria-hidden="true" tabindex="-1"></a>                        <span class="cf">for</span> i <span class="kw">in</span> T.Parallel(half):</span>
+<span id="cb2-158"><a href="#cb2-158" aria-hidden="true" tabindex="-1"></a>                            logsum[i] <span class="op">=</span> logsum[i] <span class="op">*</span> alpha[i] <span class="op">+</span> ss[i]</span>
+<span id="cb2-159"><a href="#cb2-159" aria-hidden="true" tabindex="-1"></a>                        T.copy(acc_s, pcast)</span>
+<span id="cb2-160"><a href="#cb2-160" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">for</span> k <span class="kw">in</span> T.serial(nu, eff):</span>
+<span id="cb2-161"><a href="#cb2-161" aria-hidden="true" tabindex="-1"></a>                        sk <span class="op">=</span> k <span class="op">%</span> nsK</span>
+<span id="cb2-162"><a href="#cb2-162" aria-hidden="true" tabindex="-1"></a>                        svp <span class="op">=</span> (k <span class="op">-</span> <span class="dv">1</span>) <span class="op">%</span> nsV</span>
+<span id="cb2-163"><a href="#cb2-163" aria-hidden="true" tabindex="-1"></a>                        T.sync_threads(my_bar, NMMA)</span>
+<span id="cb2-164"><a href="#cb2-164" aria-hidden="true" tabindex="-1"></a>                        T.mbarrier_wait_parity(kready[sk], (k <span class="op">//</span> nsK) <span class="op">%</span> <span class="dv">2</span>)</span>
+<span id="cb2-165"><a href="#cb2-165" aria-hidden="true" tabindex="-1"></a>                        T.wgmma_gemm(Qs[<span class="dv">0</span>, :, :], Ks[sk, :, :], acc_s, transpose_B<span class="op">=</span><span class="va">True</span>, policy<span class="op">=</span>Pol, clear_accum<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-166"><a href="#cb2-166" aria-hidden="true" tabindex="-1"></a>                        <span class="cf">for</span> i, j <span class="kw">in</span> T.Parallel(half, D):  <span class="co"># pipelined rescale (prev alpha)</span></span>
+<span id="cb2-167"><a href="#cb2-167" aria-hidden="true" tabindex="-1"></a>                            acc_o[i, j] <span class="op">*=</span> alpha[i]</span>
+<span id="cb2-168"><a href="#cb2-168" aria-hidden="true" tabindex="-1"></a>                        T.mbarrier_wait_parity(vready[svp], ((k <span class="op">-</span> <span class="dv">1</span>) <span class="op">//</span> nsV) <span class="op">%</span> <span class="dv">2</span>)</span>
+<span id="cb2-169"><a href="#cb2-169" aria-hidden="true" tabindex="-1"></a>                        T.wgmma_gemm(pcast, Vs[svp, :, :], acc_o, policy<span class="op">=</span>Pol, clear_accum<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb2-170"><a href="#cb2-170" aria-hidden="true" tabindex="-1"></a>                        T.named_barrier_arrive(nxt_bar, NMMA)</span>
+<span id="cb2-171"><a href="#cb2-171" aria-hidden="true" tabindex="-1"></a>                        T.wait_wgmma(<span class="dv">1</span>)</span>
+<span id="cb2-172"><a href="#cb2-172" aria-hidden="true" tabindex="-1"></a>                        T.mbarrier_arrive(kfree[sk])</span>
+<span id="cb2-173"><a href="#cb2-173" aria-hidden="true" tabindex="-1"></a>                        <span class="cf">for</span> i, j <span class="kw">in</span> T.Parallel(half, block_N):</span>
+<span id="cb2-174"><a href="#cb2-174" aria-hidden="true" tabindex="-1"></a>                            acc_s[i, j] <span class="op">=</span> T.if_then_else(</span>
+<span id="cb2-175"><a href="#cb2-175" aria-hidden="true" tabindex="-1"></a>                                q0 <span class="op">+</span> r0 <span class="op">+</span> i <span class="op">+</span> co <span class="op">&gt;=</span> k <span class="op">*</span> block_N <span class="op">+</span> j, acc_s[i, j], <span class="op">-</span>T.infinity(accum))</span>
+<span id="cb2-176"><a href="#cb2-176" aria-hidden="true" tabindex="-1"></a>                        T.copy(sm, smp)</span>
+<span id="cb2-177"><a href="#cb2-177" aria-hidden="true" tabindex="-1"></a>                        T.reduce_max(acc_s, sm, dim<span class="op">=</span><span class="dv">1</span>, clear<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb2-178"><a href="#cb2-178" aria-hidden="true" tabindex="-1"></a>                        <span class="cf">for</span> i <span class="kw">in</span> T.Parallel(half):</span>
+<span id="cb2-179"><a href="#cb2-179" aria-hidden="true" tabindex="-1"></a>                            alpha[i] <span class="op">=</span> T.exp2(smp[i] <span class="op">*</span> scale <span class="op">-</span> sm[i] <span class="op">*</span> scale)</span>
+<span id="cb2-180"><a href="#cb2-180" aria-hidden="true" tabindex="-1"></a>                        <span class="cf">for</span> i, j <span class="kw">in</span> T.Parallel(half, block_N):</span>
+<span id="cb2-181"><a href="#cb2-181" aria-hidden="true" tabindex="-1"></a>                            acc_s[i, j] <span class="op">=</span> T.exp2(acc_s[i, j] <span class="op">*</span> scale <span class="op">-</span> sm[i] <span class="op">*</span> scale)</span>
+<span id="cb2-182"><a href="#cb2-182" aria-hidden="true" tabindex="-1"></a>                        T.reduce_sum(acc_s, ss, dim<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb2-183"><a href="#cb2-183" aria-hidden="true" tabindex="-1"></a>                        T.wait_wgmma(<span class="dv">0</span>)</span>
+<span id="cb2-184"><a href="#cb2-184" aria-hidden="true" tabindex="-1"></a>                        T.mbarrier_arrive(vfree[svp])</span>
+<span id="cb2-185"><a href="#cb2-185" aria-hidden="true" tabindex="-1"></a>                        <span class="cf">for</span> i <span class="kw">in</span> T.Parallel(half):</span>
+<span id="cb2-186"><a href="#cb2-186" aria-hidden="true" tabindex="-1"></a>                            logsum[i] <span class="op">=</span> logsum[i] <span class="op">*</span> alpha[i] <span class="op">+</span> ss[i]</span>
+<span id="cb2-187"><a href="#cb2-187" aria-hidden="true" tabindex="-1"></a>                        T.copy(acc_s, pcast)</span>
+<span id="cb2-188"><a href="#cb2-188" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-189"><a href="#cb2-189" aria-hidden="true" tabindex="-1"></a>                    svp <span class="op">=</span> (eff <span class="op">-</span> <span class="dv">1</span>) <span class="op">%</span> nsV</span>
+<span id="cb2-190"><a href="#cb2-190" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">for</span> i, j <span class="kw">in</span> T.Parallel(half, D):  <span class="co"># pipelined rescale: final alpha before last PV</span></span>
+<span id="cb2-191"><a href="#cb2-191" aria-hidden="true" tabindex="-1"></a>                        acc_o[i, j] <span class="op">*=</span> alpha[i]</span>
+<span id="cb2-192"><a href="#cb2-192" aria-hidden="true" tabindex="-1"></a>                    T.mbarrier_wait_parity(vready[svp], ((eff <span class="op">-</span> <span class="dv">1</span>) <span class="op">//</span> nsV) <span class="op">%</span> <span class="dv">2</span>)</span>
+<span id="cb2-193"><a href="#cb2-193" aria-hidden="true" tabindex="-1"></a>                    T.wgmma_gemm(pcast, Vs[svp, :, :], acc_o, policy<span class="op">=</span>Pol, clear_accum<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb2-194"><a href="#cb2-194" aria-hidden="true" tabindex="-1"></a>                    T.wait_wgmma(<span class="dv">0</span>)</span>
+<span id="cb2-195"><a href="#cb2-195" aria-hidden="true" tabindex="-1"></a>                    T.mbarrier_arrive(vfree[svp])</span>
+<span id="cb2-196"><a href="#cb2-196" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">for</span> i, j <span class="kw">in</span> T.Parallel(half, D):</span>
+<span id="cb2-197"><a href="#cb2-197" aria-hidden="true" tabindex="-1"></a>                        acc_o[i, j] <span class="op">/=</span> logsum[i]</span>
+<span id="cb2-198"><a href="#cb2-198" aria-hidden="true" tabindex="-1"></a>                    T.copy(acc_o, Os[<span class="dv">0</span>, :, :])                                  <span class="co"># registers -&gt; smem</span></span>
+<span id="cb2-199"><a href="#cb2-199" aria-hidden="true" tabindex="-1"></a>                    T.copy(Os[<span class="dv">0</span>, :, :], O[bz, q0 <span class="op">+</span> r0:q0 <span class="op">+</span> r0 <span class="op">+</span> half, by, :])  <span class="co"># smem -&gt; global (coalesced)</span></span>
+<span id="cb2-200"><a href="#cb2-200" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-201"><a href="#cb2-201" aria-hidden="true" tabindex="-1"></a>            <span class="cf">with</span> T.ws(<span class="dv">1</span>):</span>
+<span id="cb2-202"><a href="#cb2-202" aria-hidden="true" tabindex="-1"></a>                    T.set_max_nreg(<span class="dv">240</span>, <span class="dv">1</span>)  <span class="co"># consumer grabs producer's released regs</span></span>
+<span id="cb2-203"><a href="#cb2-203" aria-hidden="true" tabindex="-1"></a>                    r0 <span class="op">=</span> <span class="dv">1</span> <span class="op">*</span> half</span>
+<span id="cb2-204"><a href="#cb2-204" aria-hidden="true" tabindex="-1"></a>                    my_bar <span class="op">=</span> <span class="dv">2</span></span>
+<span id="cb2-205"><a href="#cb2-205" aria-hidden="true" tabindex="-1"></a>                    nxt_bar <span class="op">=</span> <span class="dv">1</span></span>
+<span id="cb2-206"><a href="#cb2-206" aria-hidden="true" tabindex="-1"></a>                    acc_s <span class="op">=</span> T.alloc_fragment([half, block_N], accum)</span>
+<span id="cb2-207"><a href="#cb2-207" aria-hidden="true" tabindex="-1"></a>                    pcast <span class="op">=</span> T.alloc_fragment([half, block_N], dtype)  <span class="co"># register-P (rs-wgmma)</span></span>
+<span id="cb2-208"><a href="#cb2-208" aria-hidden="true" tabindex="-1"></a>                    acc_o <span class="op">=</span> T.alloc_fragment([half, D], accum)</span>
+<span id="cb2-209"><a href="#cb2-209" aria-hidden="true" tabindex="-1"></a>                    sm <span class="op">=</span> T.alloc_fragment([half], accum)</span>
+<span id="cb2-210"><a href="#cb2-210" aria-hidden="true" tabindex="-1"></a>                    smp <span class="op">=</span> T.alloc_fragment([half], accum)</span>
+<span id="cb2-211"><a href="#cb2-211" aria-hidden="true" tabindex="-1"></a>                    alpha <span class="op">=</span> T.alloc_fragment([half], accum)</span>
+<span id="cb2-212"><a href="#cb2-212" aria-hidden="true" tabindex="-1"></a>                    ss <span class="op">=</span> T.alloc_fragment([half], accum)</span>
+<span id="cb2-213"><a href="#cb2-213" aria-hidden="true" tabindex="-1"></a>                    logsum <span class="op">=</span> T.alloc_fragment([half], accum)</span>
+<span id="cb2-214"><a href="#cb2-214" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-215"><a href="#cb2-215" aria-hidden="true" tabindex="-1"></a>                    T.fill(acc_o, <span class="dv">0</span>)</span>
+<span id="cb2-216"><a href="#cb2-216" aria-hidden="true" tabindex="-1"></a>                    T.fill(logsum, <span class="dv">0</span>)</span>
+<span id="cb2-217"><a href="#cb2-217" aria-hidden="true" tabindex="-1"></a>                    T.fill(alpha, <span class="fl">1.0</span>)  <span class="co"># pipelined rescale: carried alpha, 1st rescale no-op</span></span>
+<span id="cb2-218"><a href="#cb2-218" aria-hidden="true" tabindex="-1"></a>                    T.fill(sm, <span class="op">-</span>T.infinity(accum))</span>
+<span id="cb2-219"><a href="#cb2-219" aria-hidden="true" tabindex="-1"></a>                    T.mbarrier_wait_parity(q_bar, <span class="dv">0</span>)</span>
+<span id="cb2-220"><a href="#cb2-220" aria-hidden="true" tabindex="-1"></a>                    T.named_barrier_arrive(<span class="dv">1</span>, NMMA)  <span class="co"># prime WG0</span></span>
+<span id="cb2-221"><a href="#cb2-221" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-222"><a href="#cb2-222" aria-hidden="true" tabindex="-1"></a>                    <span class="co"># prologue: tile 0, QK + softmax (no PV)</span></span>
+<span id="cb2-223"><a href="#cb2-223" aria-hidden="true" tabindex="-1"></a>                    T.sync_threads(my_bar, NMMA)</span>
+<span id="cb2-224"><a href="#cb2-224" aria-hidden="true" tabindex="-1"></a>                    T.mbarrier_wait_parity(kready[<span class="dv">0</span>], <span class="dv">0</span>)</span>
+<span id="cb2-225"><a href="#cb2-225" aria-hidden="true" tabindex="-1"></a>                    T.wgmma_gemm(Qs[<span class="dv">1</span>, :, :], Ks[<span class="dv">0</span>, :, :], acc_s, transpose_B<span class="op">=</span><span class="va">True</span>, policy<span class="op">=</span>Pol, clear_accum<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-226"><a href="#cb2-226" aria-hidden="true" tabindex="-1"></a>                    T.named_barrier_arrive(nxt_bar, NMMA)</span>
+<span id="cb2-227"><a href="#cb2-227" aria-hidden="true" tabindex="-1"></a>                    T.wait_wgmma(<span class="dv">0</span>)</span>
+<span id="cb2-228"><a href="#cb2-228" aria-hidden="true" tabindex="-1"></a>                    T.mbarrier_arrive(kfree[<span class="dv">0</span>])</span>
+<span id="cb2-229"><a href="#cb2-229" aria-hidden="true" tabindex="-1"></a>                    T.reduce_max(acc_s, sm, dim<span class="op">=</span><span class="dv">1</span>, clear<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb2-230"><a href="#cb2-230" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">for</span> i, j <span class="kw">in</span> T.Parallel(half, block_N):</span>
+<span id="cb2-231"><a href="#cb2-231" aria-hidden="true" tabindex="-1"></a>                        acc_s[i, j] <span class="op">=</span> T.exp2(acc_s[i, j] <span class="op">*</span> scale <span class="op">-</span> sm[i] <span class="op">*</span> scale)</span>
+<span id="cb2-232"><a href="#cb2-232" aria-hidden="true" tabindex="-1"></a>                    T.reduce_sum(acc_s, ss, dim<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb2-233"><a href="#cb2-233" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">for</span> i <span class="kw">in</span> T.Parallel(half):</span>
+<span id="cb2-234"><a href="#cb2-234" aria-hidden="true" tabindex="-1"></a>                        logsum[i] <span class="op">=</span> ss[i]</span>
+<span id="cb2-235"><a href="#cb2-235" aria-hidden="true" tabindex="-1"></a>                    T.copy(acc_s, pcast)</span>
+<span id="cb2-236"><a href="#cb2-236" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-237"><a href="#cb2-237" aria-hidden="true" tabindex="-1"></a>                    nu <span class="op">=</span> T.<span class="bu">max</span>(<span class="dv">1</span>, T.<span class="bu">min</span>(eff, T.floordiv(q0 <span class="op">+</span> r0 <span class="op">+</span> co <span class="op">+</span> <span class="dv">1</span>, block_N)))</span>
+<span id="cb2-238"><a href="#cb2-238" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">for</span> k <span class="kw">in</span> T.serial(<span class="dv">1</span>, nu):</span>
+<span id="cb2-239"><a href="#cb2-239" aria-hidden="true" tabindex="-1"></a>                        sk <span class="op">=</span> k <span class="op">%</span> nsK</span>
+<span id="cb2-240"><a href="#cb2-240" aria-hidden="true" tabindex="-1"></a>                        svp <span class="op">=</span> (k <span class="op">-</span> <span class="dv">1</span>) <span class="op">%</span> nsV</span>
+<span id="cb2-241"><a href="#cb2-241" aria-hidden="true" tabindex="-1"></a>                        T.sync_threads(my_bar, NMMA)</span>
+<span id="cb2-242"><a href="#cb2-242" aria-hidden="true" tabindex="-1"></a>                        T.mbarrier_wait_parity(kready[sk], (k <span class="op">//</span> nsK) <span class="op">%</span> <span class="dv">2</span>)</span>
+<span id="cb2-243"><a href="#cb2-243" aria-hidden="true" tabindex="-1"></a>                        T.wgmma_gemm(Qs[<span class="dv">1</span>, :, :], Ks[sk, :, :], acc_s, transpose_B<span class="op">=</span><span class="va">True</span>, policy<span class="op">=</span>Pol, clear_accum<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-244"><a href="#cb2-244" aria-hidden="true" tabindex="-1"></a>                        <span class="cf">for</span> i, j <span class="kw">in</span> T.Parallel(half, D):  <span class="co"># pipelined rescale (prev alpha) covers QK latency</span></span>
+<span id="cb2-245"><a href="#cb2-245" aria-hidden="true" tabindex="-1"></a>                            acc_o[i, j] <span class="op">*=</span> alpha[i]</span>
+<span id="cb2-246"><a href="#cb2-246" aria-hidden="true" tabindex="-1"></a>                        T.mbarrier_wait_parity(vready[svp], ((k <span class="op">-</span> <span class="dv">1</span>) <span class="op">//</span> nsV) <span class="op">%</span> <span class="dv">2</span>)</span>
+<span id="cb2-247"><a href="#cb2-247" aria-hidden="true" tabindex="-1"></a>                        T.wgmma_gemm(pcast, Vs[svp, :, :], acc_o, policy<span class="op">=</span>Pol, clear_accum<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb2-248"><a href="#cb2-248" aria-hidden="true" tabindex="-1"></a>                        T.named_barrier_arrive(nxt_bar, NMMA)</span>
+<span id="cb2-249"><a href="#cb2-249" aria-hidden="true" tabindex="-1"></a>                        T.wait_wgmma(<span class="dv">1</span>)</span>
+<span id="cb2-250"><a href="#cb2-250" aria-hidden="true" tabindex="-1"></a>                        T.mbarrier_arrive(kfree[sk])</span>
+<span id="cb2-251"><a href="#cb2-251" aria-hidden="true" tabindex="-1"></a>                        T.copy(sm, smp)</span>
+<span id="cb2-252"><a href="#cb2-252" aria-hidden="true" tabindex="-1"></a>                        T.reduce_max(acc_s, sm, dim<span class="op">=</span><span class="dv">1</span>, clear<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb2-253"><a href="#cb2-253" aria-hidden="true" tabindex="-1"></a>                        <span class="cf">for</span> i <span class="kw">in</span> T.Parallel(half):</span>
+<span id="cb2-254"><a href="#cb2-254" aria-hidden="true" tabindex="-1"></a>                            alpha[i] <span class="op">=</span> T.exp2(smp[i] <span class="op">*</span> scale <span class="op">-</span> sm[i] <span class="op">*</span> scale)</span>
+<span id="cb2-255"><a href="#cb2-255" aria-hidden="true" tabindex="-1"></a>                        <span class="cf">for</span> i, j <span class="kw">in</span> T.Parallel(half, block_N):</span>
+<span id="cb2-256"><a href="#cb2-256" aria-hidden="true" tabindex="-1"></a>                            acc_s[i, j] <span class="op">=</span> T.exp2(acc_s[i, j] <span class="op">*</span> scale <span class="op">-</span> sm[i] <span class="op">*</span> scale)</span>
+<span id="cb2-257"><a href="#cb2-257" aria-hidden="true" tabindex="-1"></a>                        T.reduce_sum(acc_s, ss, dim<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb2-258"><a href="#cb2-258" aria-hidden="true" tabindex="-1"></a>                        T.wait_wgmma(<span class="dv">0</span>)</span>
+<span id="cb2-259"><a href="#cb2-259" aria-hidden="true" tabindex="-1"></a>                        T.mbarrier_arrive(vfree[svp])</span>
+<span id="cb2-260"><a href="#cb2-260" aria-hidden="true" tabindex="-1"></a>                        <span class="cf">for</span> i <span class="kw">in</span> T.Parallel(half):</span>
+<span id="cb2-261"><a href="#cb2-261" aria-hidden="true" tabindex="-1"></a>                            logsum[i] <span class="op">=</span> logsum[i] <span class="op">*</span> alpha[i] <span class="op">+</span> ss[i]</span>
+<span id="cb2-262"><a href="#cb2-262" aria-hidden="true" tabindex="-1"></a>                        T.copy(acc_s, pcast)</span>
+<span id="cb2-263"><a href="#cb2-263" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">for</span> k <span class="kw">in</span> T.serial(nu, eff):</span>
+<span id="cb2-264"><a href="#cb2-264" aria-hidden="true" tabindex="-1"></a>                        sk <span class="op">=</span> k <span class="op">%</span> nsK</span>
+<span id="cb2-265"><a href="#cb2-265" aria-hidden="true" tabindex="-1"></a>                        svp <span class="op">=</span> (k <span class="op">-</span> <span class="dv">1</span>) <span class="op">%</span> nsV</span>
+<span id="cb2-266"><a href="#cb2-266" aria-hidden="true" tabindex="-1"></a>                        T.sync_threads(my_bar, NMMA)</span>
+<span id="cb2-267"><a href="#cb2-267" aria-hidden="true" tabindex="-1"></a>                        T.mbarrier_wait_parity(kready[sk], (k <span class="op">//</span> nsK) <span class="op">%</span> <span class="dv">2</span>)</span>
+<span id="cb2-268"><a href="#cb2-268" aria-hidden="true" tabindex="-1"></a>                        T.wgmma_gemm(Qs[<span class="dv">1</span>, :, :], Ks[sk, :, :], acc_s, transpose_B<span class="op">=</span><span class="va">True</span>, policy<span class="op">=</span>Pol, clear_accum<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-269"><a href="#cb2-269" aria-hidden="true" tabindex="-1"></a>                        <span class="cf">for</span> i, j <span class="kw">in</span> T.Parallel(half, D):  <span class="co"># pipelined rescale (prev alpha)</span></span>
+<span id="cb2-270"><a href="#cb2-270" aria-hidden="true" tabindex="-1"></a>                            acc_o[i, j] <span class="op">*=</span> alpha[i]</span>
+<span id="cb2-271"><a href="#cb2-271" aria-hidden="true" tabindex="-1"></a>                        T.mbarrier_wait_parity(vready[svp], ((k <span class="op">-</span> <span class="dv">1</span>) <span class="op">//</span> nsV) <span class="op">%</span> <span class="dv">2</span>)</span>
+<span id="cb2-272"><a href="#cb2-272" aria-hidden="true" tabindex="-1"></a>                        T.wgmma_gemm(pcast, Vs[svp, :, :], acc_o, policy<span class="op">=</span>Pol, clear_accum<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb2-273"><a href="#cb2-273" aria-hidden="true" tabindex="-1"></a>                        T.named_barrier_arrive(nxt_bar, NMMA)</span>
+<span id="cb2-274"><a href="#cb2-274" aria-hidden="true" tabindex="-1"></a>                        T.wait_wgmma(<span class="dv">1</span>)</span>
+<span id="cb2-275"><a href="#cb2-275" aria-hidden="true" tabindex="-1"></a>                        T.mbarrier_arrive(kfree[sk])</span>
+<span id="cb2-276"><a href="#cb2-276" aria-hidden="true" tabindex="-1"></a>                        <span class="cf">for</span> i, j <span class="kw">in</span> T.Parallel(half, block_N):</span>
+<span id="cb2-277"><a href="#cb2-277" aria-hidden="true" tabindex="-1"></a>                            acc_s[i, j] <span class="op">=</span> T.if_then_else(</span>
+<span id="cb2-278"><a href="#cb2-278" aria-hidden="true" tabindex="-1"></a>                                q0 <span class="op">+</span> r0 <span class="op">+</span> i <span class="op">+</span> co <span class="op">&gt;=</span> k <span class="op">*</span> block_N <span class="op">+</span> j, acc_s[i, j], <span class="op">-</span>T.infinity(accum))</span>
+<span id="cb2-279"><a href="#cb2-279" aria-hidden="true" tabindex="-1"></a>                        T.copy(sm, smp)</span>
+<span id="cb2-280"><a href="#cb2-280" aria-hidden="true" tabindex="-1"></a>                        T.reduce_max(acc_s, sm, dim<span class="op">=</span><span class="dv">1</span>, clear<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb2-281"><a href="#cb2-281" aria-hidden="true" tabindex="-1"></a>                        <span class="cf">for</span> i <span class="kw">in</span> T.Parallel(half):</span>
+<span id="cb2-282"><a href="#cb2-282" aria-hidden="true" tabindex="-1"></a>                            alpha[i] <span class="op">=</span> T.exp2(smp[i] <span class="op">*</span> scale <span class="op">-</span> sm[i] <span class="op">*</span> scale)</span>
+<span id="cb2-283"><a href="#cb2-283" aria-hidden="true" tabindex="-1"></a>                        <span class="cf">for</span> i, j <span class="kw">in</span> T.Parallel(half, block_N):</span>
+<span id="cb2-284"><a href="#cb2-284" aria-hidden="true" tabindex="-1"></a>                            acc_s[i, j] <span class="op">=</span> T.exp2(acc_s[i, j] <span class="op">*</span> scale <span class="op">-</span> sm[i] <span class="op">*</span> scale)</span>
+<span id="cb2-285"><a href="#cb2-285" aria-hidden="true" tabindex="-1"></a>                        T.reduce_sum(acc_s, ss, dim<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb2-286"><a href="#cb2-286" aria-hidden="true" tabindex="-1"></a>                        T.wait_wgmma(<span class="dv">0</span>)</span>
+<span id="cb2-287"><a href="#cb2-287" aria-hidden="true" tabindex="-1"></a>                        T.mbarrier_arrive(vfree[svp])</span>
+<span id="cb2-288"><a href="#cb2-288" aria-hidden="true" tabindex="-1"></a>                        <span class="cf">for</span> i <span class="kw">in</span> T.Parallel(half):</span>
+<span id="cb2-289"><a href="#cb2-289" aria-hidden="true" tabindex="-1"></a>                            logsum[i] <span class="op">=</span> logsum[i] <span class="op">*</span> alpha[i] <span class="op">+</span> ss[i]</span>
+<span id="cb2-290"><a href="#cb2-290" aria-hidden="true" tabindex="-1"></a>                        T.copy(acc_s, pcast)</span>
+<span id="cb2-291"><a href="#cb2-291" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-292"><a href="#cb2-292" aria-hidden="true" tabindex="-1"></a>                    svp <span class="op">=</span> (eff <span class="op">-</span> <span class="dv">1</span>) <span class="op">%</span> nsV</span>
+<span id="cb2-293"><a href="#cb2-293" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">for</span> i, j <span class="kw">in</span> T.Parallel(half, D):  <span class="co"># pipelined rescale: final alpha before last PV</span></span>
+<span id="cb2-294"><a href="#cb2-294" aria-hidden="true" tabindex="-1"></a>                        acc_o[i, j] <span class="op">*=</span> alpha[i]</span>
+<span id="cb2-295"><a href="#cb2-295" aria-hidden="true" tabindex="-1"></a>                    T.mbarrier_wait_parity(vready[svp], ((eff <span class="op">-</span> <span class="dv">1</span>) <span class="op">//</span> nsV) <span class="op">%</span> <span class="dv">2</span>)</span>
+<span id="cb2-296"><a href="#cb2-296" aria-hidden="true" tabindex="-1"></a>                    T.wgmma_gemm(pcast, Vs[svp, :, :], acc_o, policy<span class="op">=</span>Pol, clear_accum<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb2-297"><a href="#cb2-297" aria-hidden="true" tabindex="-1"></a>                    T.wait_wgmma(<span class="dv">0</span>)</span>
+<span id="cb2-298"><a href="#cb2-298" aria-hidden="true" tabindex="-1"></a>                    T.mbarrier_arrive(vfree[svp])</span>
+<span id="cb2-299"><a href="#cb2-299" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">for</span> i, j <span class="kw">in</span> T.Parallel(half, D):</span>
+<span id="cb2-300"><a href="#cb2-300" aria-hidden="true" tabindex="-1"></a>                        acc_o[i, j] <span class="op">/=</span> logsum[i]</span>
+<span id="cb2-301"><a href="#cb2-301" aria-hidden="true" tabindex="-1"></a>                    T.copy(acc_o, Os[<span class="dv">1</span>, :, :])                                  <span class="co"># registers -&gt; smem</span></span>
+<span id="cb2-302"><a href="#cb2-302" aria-hidden="true" tabindex="-1"></a>                    T.copy(Os[<span class="dv">1</span>, :, :], O[bz, q0 <span class="op">+</span> r0:q0 <span class="op">+</span> r0 <span class="op">+</span> half, by, :])  <span class="co"># smem -&gt; global (coalesced)</span></span>
+<span id="cb2-303"><a href="#cb2-303" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-304"><a href="#cb2-304" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> main</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</div>
+</div>
+</section>
+<section id="逻辑顺序-vs-实际发射时机" class="level2">
+<h2 class="anchored" data-anchor-id="逻辑顺序-vs-实际发射时机">逻辑顺序 vs 实际发射时机</h2>
+<p>在线 softmax 每个 K-block 的<strong>逻辑</strong>顺序是固定的四步:</p>
+<blockquote class="blockquote">
+<p><strong>QK</strong> → <strong>softmax</strong>(更新 max、算 <code>P</code>、更新 sum) → <strong>rescale</strong>(<code>acc_o *= exp(m_prev − m_new)</code>,把已累加的输出修正到新 max) → <strong>PV</strong>(<code>acc_o += P·V</code>)</p>
+</blockquote>
+<p>但为了凑成上面两种重叠,实际 kernel 把这四步<strong>打散、错位发射</strong>:</p>
+<ul>
+<li><strong>delayed PV</strong>:第 <code>j</code> 轮迭代发射的是<strong>上一块</strong>的 <code>PV(j-1)</code>,这样它的 wgmma 能盖在本轮 <code>softmax(j)</code> 底下(intra-warpgroup overlap)。</li>
+<li><strong>carried-alpha rescale</strong>:<code>rescale</code> 用的是上一轮 softmax 算好的 <code>alpha</code>,挪到 QK 之后、PV 之前,用来盖住 QK 的延迟。</li>
+</ul>
+<p>结果是一个<strong>物理迭代 <code>j</code></strong> 里混了两个逻辑 tile 的操作:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>图上的块</th>
+<th>逻辑归属</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>QK·j</code>、<code>softmax·j</code></td>
+<td>tile <strong><code>j</code></strong> 的前半:算这块的分数和 <code>P</code></td>
+</tr>
+<tr class="even">
+<td><code>rescale·(j-1)</code>、<code>PV·(j-1)</code></td>
+<td>tile <strong><code>j-1</code></strong> 的后半:用上一块的 <code>alpha</code> 修正、再把上一块的 <code>P·V</code> 累加进去</td>
+</tr>
+</tbody>
+</table>
+<p>两个边界情况:tile 0 在 prologue 里只做 <code>QK·0</code> 和 <code>softmax·0</code>(没有可累加的历史,不需要 rescale/PV);<code>rescale</code> 从 <code>rescale·0</code> 开始,但它是 <code>alpha=1</code> 的<strong>空操作</strong>(此时 <code>acc_o</code> 还是 0),第一个真正起作用的是 <code>rescale·1</code>。</p>
+</section>
+<section id="流水线长什么样" class="level2">
+<h2 class="anchored" data-anchor-id="流水线长什么样">流水线长什么样</h2>
+<p>上面这套错位发射,直接画成时间线最直观。我写了个<strong>带打点的版本</strong>:在三个 warpgroup 的每个 tile 级操作边界用 <code>clock64()</code> 记一个时间戳到 log tensor,跑单个 CTA(B=H=1,4 个 K-tile),再把时间线画出来,做成一张<strong>交互式全屏图</strong>(滚轮左右平移,<code>放大/缩小</code>按钮拉伸时间轴,hover 看每块的周期数)。图比较宽,嵌在正文里太挤,单独开了一页:</p>
+<p><a href="../assets/tilelang-fa3-pipeline.html" target="_blank" rel="noopener" style="display:inline-block;padding:12px 22px;margin:6px 0 4px;background:#2f5d8c;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:1.05em;">▶ 打开交互式流水线图(新标签页 · 全屏)</a></p>
+<p>怎么读这张图:</p>
+<ul>
+<li>每个 consumer WG 有<strong>两条泳道</strong>:上面 <code>Consumer WGx</code>(SIMT)是 warpgroup 线程按程序序在干的事(各种 wait、rescale、softmax);下面 <code>⤷ WGx tensor core</code> 是 wgmma 的<strong>异步在飞区间</strong>(从发射到把它 drain 掉的那次 wait)。</li>
+<li><strong>intra-warpgroup 异步</strong>就是 tensor-core 泳道的条盖在上方 SIMT 泳道底下——比如 <code>PV·(k-1)</code> 整条盖在 <code>softmax·k</code> 下面,说明 PV 在张量核上跑的同时,线程在算 softmax。</li>
+<li><strong>softmax 是大头</strong>(每块约 2000 cycle),QK/PV 的发射只是一瞬;真正的矩阵乘时间被藏在 softmax 底下。</li>
+<li><strong>紫色箭头</strong>是 ping-pong handoff:某个 WG 发完 wgmma → <code>arrive</code> → 放行对面的 <code>sync</code>(每行开头那个很小的 <code>wait peer</code> 块);箭头中点标了用的是 <code>bar1</code> 还是 <code>bar2</code>。</li>
+<li><strong>producer 大段停在 <code>wait buffer free</code></strong>,说明 TMA 远不是瓶颈,它早把数据搬好在等消费者腾 buffer。</li>
+</ul>
+<blockquote class="blockquote">
+<p>这是<strong>打点版</strong>,<code>clock64</code> 读取和额外的 global store 会轻微扰动时序,别拿它读绝对性能;而且单线程 clock 对不准<strong>跨 warpgroup</strong> 的屏障因果(偶尔会出现 arrive 读数晚于对面 sync 的反向箭头),它适合看<strong>结构与重叠关系</strong>,不适合掐精确延迟。完整的打点 kernel 与画图脚本和这里贴的 <code>tilelang_fa3.py</code> 配套。</p>
+</blockquote>
 
 
 </section>
