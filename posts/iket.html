@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.37">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2026-06-21">
+
+<title>CuTeDSL IKET 浅析 – Zheng’s Notes</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../assets/favicon.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-acf12a64177840b8d86f2d4f01b2e9fb.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-a68d55a7457d6c578309d53405216ea2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">Zheng’s Notes</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#iket-是什么" id="toc-iket-是什么" class="nav-link active" data-scroll-target="#iket-是什么">1. IKET 是什么</a></li>
+  <li><a href="#iket-的数据模型从-token-到-buffer" id="toc-iket-的数据模型从-token-到-buffer" class="nav-link" data-scroll-target="#iket-的数据模型从-token-到-buffer">2. IKET 的数据模型：从 token 到 buffer</a>
+  <ul class="collapse">
+  <li><a href="#buffer-是怎么定形的" id="toc-buffer-是怎么定形的" class="nav-link" data-scroll-target="#buffer-是怎么定形的">buffer 是怎么定形的</a></li>
+  </ul></li>
+  <li><a href="#编译和运行流程" id="toc-编译和运行流程" class="nav-link" data-scroll-target="#编译和运行流程">3. 编译和运行流程</a></li>
+  <li><a href="#推测后端实现方式" id="toc-推测后端实现方式" class="nav-link" data-scroll-target="#推测后端实现方式">4. 推测后端实现方式</a></li>
+  <li><a href="#iket-相比手写-clock到底多做了什么" id="toc-iket-相比手写-clock到底多做了什么" class="nav-link" data-scroll-target="#iket-相比手写-clock到底多做了什么">5. IKET 相比手写 clock，到底多做了什么</a>
+  <ul class="collapse">
+  <li><a href="#手写-clock-的能力边界" id="toc-手写-clock-的能力边界" class="nav-link" data-scroll-target="#手写-clock-的能力边界">手写 clock 的能力边界</a></li>
+  <li><a href="#iket-把哪些东西系统化了" id="toc-iket-把哪些东西系统化了" class="nav-link" data-scroll-target="#iket-把哪些东西系统化了">IKET 把哪些东西系统化了</a></li>
+  <li><a href="#插在哪一层仍然重要但不是唯一重点" id="toc-插在哪一层仍然重要但不是唯一重点" class="nav-link" data-scroll-target="#插在哪一层仍然重要但不是唯一重点">插在哪一层仍然重要，但不是唯一重点</a></li>
+  </ul></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">CuTeDSL IKET 浅析</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">编译器</div>
+  </div>
+  </div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">June 21, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>最近看了一下 CuTeDSL 4.6 里的 IKET（In-Kernel Event Tracing）。这个东西表面上只是“在 kernel 里打点”，但继续往下看，会发现它想解决的不是读一次 <code>clock64()</code> 这么简单的问题，而是怎么把 kernel 内部事件稳定地收集、组织、导出成一条能看的 timeline。</p>
+<p>这篇文章主要按它自己的机制来拆：前端 API 怎么写，MLIR 里怎么表示，运行时 buffer 怎么分，PMTRIG / NativeDump 这两条后端大概怎么工作。最后再回到手写 <code>clock64()</code> / <code>globaltimer</code>：普通 clock 不是不能用，我们这次也没复现所谓“必然 reorder”的问题；IKET 更像是把这些零散的手工打点做成一套 profiling infrastructure。</p>
+<blockquote class="blockquote">
+<p>说明：本文结论来自对 <code>nvidia-cutlass-dsl 4.6.0.dev0</code> 的二进制反编译（符号表 + Python 层）。凡是「实测」无法在手头机器完成的地方，文末都标了证据边界——尤其后端那部分有「已确认」和「推测」之分，正文里会随时点明。</p>
+</blockquote>
+<!--more-->
+<section id="iket-是什么" class="level1">
+<h1>1. IKET 是什么</h1>
+<p>IKET 在 <code>cutlass.cute.experimental.iket</code> 下面。最直接的理解是：你在 kernel 里标几个点，或者标一段 range，运行时把每个 warp 经过这些位置的时间戳收集出来，最后导成 Perfetto 之类的 timeline。</p>
+<p>它给你两类语义原语：</p>
+<ul>
+<li><strong>mark</strong>：单点事件。warp 跑到这一行，记一个时间戳，可带 payload。</li>
+<li><strong>range</strong>：区间。<code>range_start</code> / <code>range_end</code> 配对，量「这一段花了多久」。</li>
+</ul>
+<p>这里容易误解的一点是：IKET 不是因为“能指定位置”才特殊。手写 <code>clock64()</code> 也能指定位置。它真正不一样的地方在于，<code>iket.mark / range_start / range_end</code> 是 CuTeDSL 认识的 MLIR op，不是普通函数调用，也不是一段 inline asm。也就是说，这些点从一开始就带着事件语义进入编译流程，后面才能自然地生成 metadata、插桩点、buffer record 和 trace。否则每写一个 kernel 都要手工维护一套 <code>Log[wg, slot]</code>，很快就会变成后处理地狱。</p>
+</section>
+<section id="iket-的数据模型从-token-到-buffer" class="level1">
+<h1>2. IKET 的数据模型：从 token 到 buffer</h1>
+<p>先看前端怎么写：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> cutlass.cute.experimental <span class="im">import</span> iket</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>tok <span class="op">=</span> iket.range_start(<span class="st">"MMA_mainloop"</span>)   <span class="co"># 区间开始, 返回 SSA token</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># ... 一段计算 ...</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>iket.range_end(tok)                      <span class="co"># 区间结束</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>iket.mark(<span class="st">"checkpoint"</span>, payload<span class="op">=</span>x)       <span class="co"># 单点事件, 可带 payload</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><code>range_start</code> 返回一个 SSA <code>!iket.range.token</code>，<code>range_end</code> 必须吃这个 token 才能配对——靠 SSA value 配对而不是名字字符串匹配，所以嵌套、跨 <code>scf.for</code> 都能正确闭合。</p>
+<p>API 只是入口。IKET 真正有意思的是后面这串东西：前端的 token 和事件属性，怎么变成 cubin 里的插桩点，再怎么落到运行时 buffer 里的一条条 record。下面这张图是我从 <code>4.6.0.dev0</code> 的 Python 包和 C++ 符号里对出来的主干结构：</p>
+<pre class="mermaid"><code>classDiagram
+    class RangeToken {
+        &lt;&lt;前端 SSA token&gt;&gt;
+        +token
+        +str event_name
+    }
+    class EvtAttributes {
+        +str event_name
+        +int event_id
+        +InstrumentMethod instrument_method
+        +PayloadType payload_type
+        +EventPos event_pos
+        +int range_id
+    }
+    class KernelInstrumentPoint {
+        +int offset_start
+        +int offset_end
+        +EvtAttributes event_attr
+    }
+    class EventRecord {
+        +int_or_float timestamp
+        +int event_id
+        +PayloadType payload_type
+        +int_or_float payload_val
+    }
+    class WarpBuffer {
+        +Header16B header
+        +EventRecord records
+    }
+    class InstrumentMethod {
+        &lt;&lt;enumeration&gt;&gt;
+        PMTRIG5
+        PMTRIG6
+        NATIVE_DUMP
+        UTRACE_EVENT
+        EXTENDED_NATIVE_DUMP
+    }
+    class PayloadType {
+        &lt;&lt;enumeration&gt;&gt;
+        NO_PAYLOAD
+        I32
+        UI32
+        I64
+        FP32
+        POINTER
+    }
+    class EventPos {
+        &lt;&lt;enumeration&gt;&gt;
+        NOT_IN_RANGE
+        RANGE_START
+        RANGE_END
+        RANGE_INTERNAL
+    }
+    RangeToken ..&gt; EvtAttributes : range_start/end 生成
+    KernelInstrumentPoint --&gt; EvtAttributes : event_attr
+    EvtAttributes --&gt; InstrumentMethod
+    EvtAttributes --&gt; PayloadType
+    EvtAttributes --&gt; EventPos
+    WarpBuffer "1" --&gt; "0..N" EventRecord : 最多 maxTsCntPerWarp 条
+    EventRecord ..&gt; EvtAttributes : event_id 关联</code></pre>
+<p>顺着这张图读一遍，数据流大概是这样：</p>
+<ul>
+<li><strong><code>RangeToken</code></strong>：<code>range_start</code> 返回的 SSA token，用来把 <code>range_start</code> / <code>range_end</code> 配对。本质是 MLIR 层的 SSA 值，编译后不留下。</li>
+<li><strong><code>mark</code></strong>：单点事件，没有 token，只生成一条 event metadata / instrument point。两者最终都把属性沉淀成 <code>EvtAttributes</code>。</li>
+<li><strong><code>EvtAttributes</code></strong>：一个事件的全部静态属性——名字、<code>event_id</code>、用哪种 <code>instrument_method</code>、<code>payload_type</code>、它在区间里的位置 <code>event_pos</code>（start / end / internal）、属于哪个 <code>range_id</code>。这是连接前端语义和后端插桩的枢纽。</li>
+<li><strong><code>KernelInstrumentPoint</code></strong>：cubin 里的插桩点，就是一段 SASS 指令偏移区间 <code>[offset_start, offset_end]</code> + 一个 <code>EvtAttributes</code>。后端要 patch / lower 的位置由它定。</li>
+<li><strong><code>EventRecord</code></strong>：运行时真正写进 buffer 的一条记录——<code>timestamp + event_id + payload</code>。<code>timestamp</code> 按 <code>TimestampType</code> 可以是 u64 / u32 / f32。</li>
+<li><strong><code>WarpBuffer</code></strong>：每个 warp 一块 slot，<code>16B header + 若干 EventRecord</code>。</li>
+</ul>
+<p>另外还有一层 <code>iket.dag</code>。它不改 IR，只是保存一张依赖图：哪个区间依赖哪个区间，中间经由什么 barrier / buffer。这个信息对画 timeline 很关键，因为单看时间戳其实很难判断“谁在等谁”。</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>dag <span class="op">=</span> iket.dag(<span class="st">"gemm"</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>dag.edge(<span class="st">"prologue"</span>, <span class="st">"MMA_mainloop"</span>, label<span class="op">=</span><span class="st">"smem[0]"</span>, via<span class="op">=</span><span class="st">"mbarrier"</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>dag.edge(<span class="st">"MMA_mainloop"</span>, <span class="st">"epilogue"</span>, label<span class="op">=</span><span class="st">"acc"</span>, via<span class="op">=</span><span class="st">"tcgen05_commit"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<section id="buffer-是怎么定形的" class="level2">
+<h2 class="anchored" data-anchor-id="buffer-是怎么定形的">buffer 是怎么定形的</h2>
+<p><code>WarpBuffer</code> 不是 IR 里写死的全局符号，而是一块<strong>运行时按每次 launch 分配的 context buffer</strong>，按 warp 切片，每个 warp 一块独立 slot——写时间戳不需要跨 warp 原子，零争用。slot 大小的约定（来自 <code>iket/profiler/utils.py</code> 的 <code>compute_warp_buffer_size_bytes</code> / <code>compute_required_buffer_size</code>，对应 C++ <code>IketKernelPatchRecipeImpl::getWarpBufferSizeInBytes</code>）：</p>
+<pre class="text"><code>warp_slot = align8(16B header + maxTsCntPerWarp × bytes_per_event)
+header    = u32 + u8 + u8 + u16 + u64 = 16B (packed)
+
+bytes_per_event:
+  NativeDump / PMTrig:  payload &lt; 8B → 4 + payload_size   (无 payload = 4B)
+                        payload ≥ 8B → 16B
+  ExtendedNativeDump:   无 payload 8B, 有 payload 16B
+  UTraceEvent:          0 (走 HWPM, 不用这块 buffer)
+
+total ≈ Σ_launch( grid_cta_count × warps_per_cta × warp_slot ) × 1.15
+        warps_per_cta = ceil(block_threads / 32)</code></pre>
+<p>这里有几个细节值得单独拎出来：</p>
+<ul>
+<li><code>maxTsCntPerWarp</code> 是每 warp 的时间戳条数上限，来自 dryrun tracker（或手动 <code>--max-ts-cnt-per-warp</code>）。超了会丢，对应 <code>getMissedInstrumentPoints</code>，不是静默截断。</li>
+<li>总大小<strong>启动期才定</strong>：要等拿到每次 launch 的 grid / block 维度才能算 warp 数，再乘 1.15 留余量。</li>
+<li>buffer 基址通过注入的 launch 参数 + trampoline 传进 kernel。</li>
+</ul>
+<p>所以它不是简单在 kernel 里塞一个全局数组。slot 大小、偏移和插桩点在编译 / dryrun 阶段就能算出来；真正的内存到 launch 时再按 grid / block 分配；buffer 基址则靠注入参数传进 kernel。</p>
+</section>
+</section>
+<section id="编译和运行流程" class="level1">
+<h1>3. 编译和运行流程</h1>
+<p>因为 <code>iket.*</code> 是 MLIR op，NVVM / PTX / ptxas 都不认识它，所以 CuTeDSL 必须在进入 NVVM 之前就把这些 op 处理掉。它的下降路径大致是 <code>Python → MLIR → NVVM → PTX → ptxas → SASS</code>，IKET 相关的消化主要由 <code>enable-iket</code> 这个 pass 完成：</p>
+<pre class="mermaid"><code>flowchart LR
+    py["iket.range_start / mark&lt;br/&gt;(Python)"] --&gt; op["MLIR iket dialect op"]
+    op --&gt; pass["enable-iket pass"]
+    pass --&gt; strip["strip-iket-ops&lt;br/&gt;op 被剥掉"]
+    strip --&gt; meta["cubin 里留下 metadata&lt;br/&gt;__iket_meta_info / 标记插桩点"]
+    meta --&gt; rt["metadata / instrument point&lt;br/&gt;被后续 instrumentation 流程使用"]</code></pre>
+<p>关键点是：<code>iket</code> op 活不到 PTX。lower 完之后，IR 里已经没有“我是 trace 点”的 op，cubin 里留下的是 metadata 和 instrument point。真正怎么记录，要等 <code>iket profile</code> 这层 profiling runtime 按 metadata / config 去处理。</p>
+<pre class="mermaid"><code>flowchart TB
+    prog["你的程序 (已编译 cubin)"] --&gt; dry["dryrun / tracker&lt;br/&gt;统计每 warp 最多几条时间戳"]
+    dry --&gt; cfg["生成 instrument config"]
+    cfg --&gt; run["SModelRun: 真跑程序&lt;br/&gt;拦截每次 launch"]
+    run --&gt; patch["生成 / 注入探针逻辑&lt;br/&gt;PMTRIG 已确认 SASS patch&lt;br/&gt;NativeDump 待验证"]
+    patch --&gt; post["postprocess → Perfetto trace"]</code></pre>
+<p>这里的 runtime 不是 CUDA runtime，而是 <code>iket profile</code> / <code>libsmodel_injection.so</code> 这一层宿主侧工具。它更像 NVBit / CUPTI 那类东西：程序已经编译好了，但每次 kernel launch 之前，它有机会看到 cubin / SASS，按 metadata 和 config 做 patch / trampoline / buffer 参数注入，然后再让 kernel 真正下发。</p>
+<pre class="mermaid"><code>flowchart LR
+    app["你的程序 + cubin"] --&gt; hook["iket profile 拦截层&lt;br/&gt;(SModelRun, NVBit 风格)"]
+    hook --&gt;|patch SASS + 注入 buffer 指针| drv["CUDA driver / launch"]
+    drv --&gt; gpu["GPU 执行&lt;br/&gt;探针写 per-warp buffer"]</code></pre>
+<p>所以这套东西不是单纯的编译期 pass，也不是 CUDA runtime 自动给你 trace。编译期负责把“哪里要插桩”这件事讲清楚；launch 时的 profiling runtime 负责真正补探针、分 buffer、把结果拿回来。</p>
+<p>再具体一点，从 <code>libsmodel_injection.so</code> 的符号看，它大概率走的是 CUDA driver 工具链里的进程内注入 + 回调：</p>
+<ul>
+<li><code>iket profile your_program</code> 大概率就是设好 <code>CUDA_INJECTION64_PATH=.../libsmodel_injection.so</code>（外加一个 config 环境变量）再启动你的程序——你的代码一行不用改。</li>
+<li>这个 .so 带 <code>InitializeInjection</code> 入口，说明它走的是 CUDA driver 官方的 injection 机制被加载进目标进程（CUPTI / Nsight 同源），而不是预加载一个普通库。</li>
+<li>进去后它注册成 driver 的 tools 回调订阅者，于是能在 <strong>module 加载</strong>、<strong>kernel launch</strong> 这些事件点被 driver 回调。</li>
+<li>module 加载时做 cubin / metadata 解析、SASS patch、设 trampoline；每次 launch 时（<code>AppendLaunchRecord</code>）按 grid/block 算并分配 buffer、把 buffer 基址作为参数注入、记录这次 launch。执行完再异步把 buffer D2H 拷回 host 做 postprocess。</li>
+</ul>
+<p>所以这里可以把它理解成 driver tools 层面的注入 + 回调，而不是“编译器已经把所有记录代码都塞好了”。</p>
+</section>
+<section id="推测后端实现方式" class="level1">
+<h1>4. 推测后端实现方式</h1>
+<p>后端探针主要有两条路。这里要分清楚哪些是能从符号和流程里确认的，哪些还只是推测。</p>
+<ul>
+<li><strong>PMTRIG</strong>（硬件 perfmon trigger）：patch 进一条硬件性能监视器触发指令，几乎零开销，扰动最小。符号 <code>Pmtrig5Machine</code> / <code>Is_PMTRIG</code> / <code>Read_PMTRIG_Imm</code>。<strong>这条路已确认是 ptxas 之后 patch SASS</strong>（<code>IketKernelPatchRecipe::patchKernel</code>、<code>driver_patch_offset</code>、<code>Set LaunchPc to Trampoline</code>），探针是 inline SASS、不是函数调用，唯一的 call/jump 是入口 trampoline。注意：从 4.6 的 sizing 逻辑看，PMTRIG 仍然要分配 per-warp timestamp buffer（和 NativeDump 同一类 <code>bytes_per_event</code> 计算），真正不需要这块 buffer 的是 UTraceEvent（走 HWPM）。</li>
+<li><strong>NativeDump</strong>：产生 / 注入「读 <code>SR_GLOBALTIMER</code> + 把时间戳 / event_id / payload 写进 buffer」的记录逻辑，数据自带、拿取方便。符号 <code>SassInstrUtils::Get_SR_GlobalTimerLo</code>。它深度接入了同一套运行时（buffer / config / trampoline 都有迹），<strong>强暗示</strong>也是 post-patch；但「那几条 <code>globaltimer + store</code> 到底是 ptxas 前 lower 进 kernel，还是 ptxas 后 patch 进 SASS」，没有最终 SASS dump 还<strong>不能下死结论</strong>（见第 6 节）。所以「inline SASS、非函数调用」这个描述目前只确定适用于 PMTRIG / SASS-patch 路径，不强行套到 NativeDump 上。</li>
+</ul>
+<pre class="mermaid"><code>flowchart LR
+    ev["instrument point"] --&gt; method{"method"}
+    method --&gt; pm["PMTRIG"]
+    method --&gt; nd["NativeDump"]
+    pm --&gt; p1["post-ptxas patch"]
+    pm --&gt; p2["timestamp buffer"]
+    nd --&gt; n1["globaltimer + store"]
+    nd --&gt; n2["插入层待验证"]</code></pre>
+<p>两条路的时间戳源都指向 <code>SR_GLOBALTIMER</code>，不是 per-SM 的 <code>clock64</code>。这点很重要：跨 warp、跨 SM 画 timeline 时，<code>globaltimer</code> 天然比 <code>clock64</code> 好对齐。</p>
+</section>
+<section id="iket-相比手写-clock到底多做了什么" class="level1">
+<h1>5. IKET 相比手写 clock，到底多做了什么</h1>
+<p>看完 IKET 的流程后，可以回到一个很现实的问题：既然我自己也能在 kernel 里写 <code>clock64()</code> / <code>globaltimer</code>，那 IKET 到底多做了什么？</p>
+<p>我的理解是：手写 timer 在很多小实验里完全够用，但它只解决“拿到几个时间戳”这件事。IKET 解决的是另一件事：怎么把事件定义、记录格式、buffer 分配、依赖关系、后处理导出都收进同一套机制里。</p>
+<p>如果把两条路径放在一起，大概是这个差别：</p>
+<pre class="mermaid"><code>flowchart TB
+    subgraph manual["手写 clock / globaltimer"]
+        m0["源码里写 clock + store"]
+        m1["手写 Log[wg, slot]"]
+        m2["手写后处理脚本"]
+        m3["人工解释 slot / handoff"]
+        m0 --&gt; m1 --&gt; m2 --&gt; m3
+    end
+
+    subgraph iket["IKET"]
+        i0["DSL/MLIR event op"]
+        i1["EvtAttributes / event_id"]
+        i2["KernelInstrumentPoint"]
+        i3["runtime buffer sizing / injection"]
+        i4["EventRecord + DAG metadata"]
+        i5["Perfetto / trace export"]
+        i0 --&gt; i1 --&gt; i2 --&gt; i3 --&gt; i4 --&gt; i5
+    end</code></pre>
+<p>这里真正的差别不是时间戳来自 <code>clock64</code> 还是 <code>globaltimer</code>，而是谁来维护事件语义。手写版本里，语义散在代码、slot 编号、runner 和 plot 脚本里；IKET 试图把它们收成一份 metadata。</p>
+<section id="手写-clock-的能力边界" class="level2">
+<h2 class="anchored" data-anchor-id="手写-clock-的能力边界">手写 clock 的能力边界</h2>
+<p>手写方式通常很朴素：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>lane <span class="op">==</span> <span class="dv">0</span><span class="op">)</span> Log<span class="op">[</span>wg<span class="op">][</span>slot0<span class="op">]</span> <span class="op">=</span> clock64<span class="op">();</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="co">// ... wait / mma / tma / softmax ...</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>lane <span class="op">==</span> <span class="dv">0</span><span class="op">)</span> Log<span class="op">[</span>wg<span class="op">][</span>slot1<span class="op">]</span> <span class="op">=</span> clock64<span class="op">();</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>这种写法很直接，也确实能工作。我们在 CUDA 12.9 + H200 上做过几个最小实验，也看过 TileLang FA3 那个 <code>prof_clock()</code> kernel 的 final SASS，没有看到 <code>CS2R SR_CLOCKLO</code> 跨关键 wait / barrier / WGMMA / TMA 边界移动。所以这里不能再把“clock 一定会被重排”当成 IKET 的动机。</p>
+<p>问题更多出在工程维护上。</p>
+<p>首先它侵入 kernel。你要改源码、加 log buffer 参数、加 global store，这些东西都有可能改变寄存器压力、调度和 memory traffic。</p>
+<p>其次是 schema 靠人维护。<code>Log[wg, slot]</code> 的每个 slot 是什么意思，要在 kernel、runner、plot 脚本里手动对齐。前面 FA3 timeline 里那个 <code>wait peer</code> 依赖线画错，本质上就是后处理把 named-barrier handoff 配错了：时间戳本身没问题，但 <code>arrive</code> 和 <code>sync release</code> 不是同一轮，被脚本硬连到了一起。</p>
+<p>再往后，跨 kernel 复用也麻烦。每个 kernel 都要重新定义事件表、buffer layout、decode 逻辑。能改源码时还好；如果想看第三方库或者编译器生成的 kernel，手写 clock 就不太现实。</p>
+<p>所以我更愿意把手写 clock 看成 baseline：快速、透明、适合验证局部假设，但它不是一套长期可维护的 trace 基础设施。</p>
+</section>
+<section id="iket-把哪些东西系统化了" class="level2">
+<h2 class="anchored" data-anchor-id="iket-把哪些东西系统化了">IKET 把哪些东西系统化了</h2>
+<p>IKET 做的事情，是把“这里发生了一个事件”变成编译器和运行时都认识的对象：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>tok <span class="op">=</span> iket.range_start(<span class="st">"MMA_mainloop"</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="co"># ...</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>iket.range_end(tok)</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>iket.mark(<span class="st">"checkpoint"</span>, payload<span class="op">=</span>x)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>后面跟着的就不只是两个孤立时间戳，而是一组可以被统一处理的信息：</p>
+<ul>
+<li><strong>event id</strong>：稳定标识每个事件，不靠人工 slot 编号猜含义。</li>
+<li><strong>range token</strong>：用 SSA token 配对 start / end，避免字符串或 slot 配错。</li>
+<li><strong>payload type</strong>：事件可以带 i32 / u32 / i64 / fp32 / pointer 等 payload。</li>
+<li><strong>instrument method</strong>：同一套 event 语义可以选择 PMTRIG、NativeDump、ExtendedNativeDump、UTraceEvent。</li>
+<li><strong>warp-local buffer layout</strong>：运行时按 launch 维度分配 per-warp slot，避免每个 kernel 手写 buffer schema。</li>
+<li><strong>DAG metadata</strong>：可以把 <code>arrive -&gt; wait release</code>、<code>producer -&gt; consumer</code>、<code>mainloop -&gt; epilogue</code> 这种依赖关系作为元数据导出，而不是在画图时靠人工配对。</li>
+</ul>
+<p>所以 IKET 的价值不是“读时间戳”这个动作本身，而是这条完整链路：event schema、placement metadata、runtime buffer、postprocess / export。单独看每一步都不神秘，但组合起来，就比每个 kernel 手写一套 trace 可靠得多。</p>
+</section>
+<section id="插在哪一层仍然重要但不是唯一重点" class="level2">
+<h2 class="anchored" data-anchor-id="插在哪一层仍然重要但不是唯一重点">插在哪一层仍然重要，但不是唯一重点</h2>
+<p>IKET 仍然从 DSL / MLIR 出发，也要经过 MLIR → PTX → SASS。它不是魔法地绕开编译器。更准确的拆法是：</p>
+<pre class="mermaid"><code>flowchart LR
+    src["CuTeDSL / MLIR event op"] --&gt; pass["enable-iket pass"]
+    pass --&gt; meta["event metadata / instrument point"]
+    meta --&gt; cubin["cubin / SASS"]
+    cubin --&gt; runtime["iket profile runtime"]
+    runtime --&gt; probe["按 method 配置或 patch probe"]
+    probe --&gt; record["per-warp EventRecord"]</code></pre>
+<p>PMTRIG 这条路目前比较清楚：编译期留下 metadata / instrument point，运行时在 cubin / SASS 层 patch probe。NativeDump 也接入了同一套 runtime，但那几条 <code>globaltimer + store</code> 最终到底是在 ptxas 前 lower 进去，还是 ptxas 后 patch 进去，还需要真正 dump SASS 才能下结论。</p>
+<p>这件事有价值，但它不是 IKET 的全部价值。即使 source-level clock 在某些 kernel 里完全可靠，IKET 仍然解决了这些麻烦：</p>
+<ul>
+<li>不手写 buffer；</li>
+<li>不手写 event table；</li>
+<li>不手写 DAG/handoff 配对；</li>
+<li>不为每个 kernel 写 decode 脚本；</li>
+<li>可以在 profiling runtime 里统一开关和采集；</li>
+<li>可以把最终 trace 稳定导出成 Perfetto / timeline。</li>
+</ul>
+<p>所以这篇文章最后想表达的不是“普通 clock 不行”，而是：普通 clock 是一个可用的、透明的 baseline；IKET 则是在这个基础上，把 kernel 内 tracing 做成更结构化、更可复用、更接近工具链的一套系统。</p>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/zhen8838\.github\.io");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script src="https://utteranc.es/client.js" repo="zhen8838/zhen8838.github.io" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
