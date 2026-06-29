@@ -9,7 +9,7 @@
 <link>https://zhen8838.github.io/</link>
 <atom:link href="https://zhen8838.github.io/index.xml" rel="self" type="application/rss+xml"/>
 <description>A blog built with Quarto</description>
-<generator>quarto-1.9.37</generator>
+<generator>quarto-1.8.27</generator>
 <lastBuildDate>Sun, 21 Jun 2026 03:40:00 GMT</lastBuildDate>
 <item>
   <title>CuTeDSL IKET 浅析</title>
@@ -66,7 +66,12 @@ background-color: null;
 font-style: inherit;"># 单点事件, 可带 payload</span></span></code></pre></div></div>
 <p><code>range_start</code> 返回一个 SSA <code>!iket.range.token</code>，<code>range_end</code> 必须吃这个 token 才能配对——靠 SSA value 配对而不是名字字符串匹配，所以嵌套、跨 <code>scf.for</code> 都能正确闭合。</p>
 <p>API 只是入口。IKET 真正有意思的是后面这串东西：前端的 token 和事件属性，怎么变成 cubin 里的插桩点，再怎么落到运行时 buffer 里的一条条 record。下面这张图是我从 <code>4.6.0.dev0</code> 的 Python 包和 C++ 符号里对出来的主干结构：</p>
-<pre class="mermaid"><code>classDiagram
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">classDiagram
     class RangeToken {
         &lt;&lt;前端 SSA token&gt;&gt;
         +token
@@ -125,7 +130,13 @@ font-style: inherit;"># 单点事件, 可带 payload</span></span></code></pre><
     EvtAttributes --&gt; PayloadType
     EvtAttributes --&gt; EventPos
     WarpBuffer "1" --&gt; "0..N" EventRecord : 最多 maxTsCntPerWarp 条
-    EventRecord ..&gt; EvtAttributes : event_id 关联</code></pre>
+    EventRecord ..&gt; EvtAttributes : event_id 关联
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
 <p>顺着这张图读一遍，数据流大概是这样：</p>
 <ul>
 <li><strong><code>RangeToken</code></strong>：<code>range_start</code> 返回的 SSA token，用来把 <code>range_start</code> / <code>range_end</code> 配对。本质是 MLIR 层的 SSA 值，编译后不留下。</li>
@@ -136,12 +147,12 @@ font-style: inherit;"># 单点事件, 可带 payload</span></span></code></pre><
 <li><strong><code>WarpBuffer</code></strong>：每个 warp 一块 slot，<code>16B header + 若干 EventRecord</code>。</li>
 </ul>
 <p>另外还有一层 <code>iket.dag</code>。它不改 IR，只是保存一张依赖图：哪个区间依赖哪个区间，中间经由什么 barrier / buffer。这个信息对画 timeline 很关键，因为单看时间戳其实很难判断“谁在等谁”。</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1">dag <span class="op" style="color: #5E5E5E;
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1">dag <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> iket.dag(<span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"gemm"</span>)</span>
-<span id="cb3-2">dag.edge(<span class="st" style="color: #20794D;
+<span id="cb2-2">dag.edge(<span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"prologue"</span>, <span class="st" style="color: #20794D;
 background-color: null;
@@ -154,7 +165,7 @@ background-color: null;
 font-style: inherit;">=</span><span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"mbarrier"</span>)</span>
-<span id="cb3-3">dag.edge(<span class="st" style="color: #20794D;
+<span id="cb2-3">dag.edge(<span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"MMA_mainloop"</span>, <span class="st" style="color: #20794D;
 background-color: null;
@@ -193,24 +204,57 @@ total ≈ Σ_launch( grid_cta_count × warps_per_cta × warp_slot ) × 1.15
 <section id="编译和运行流程" class="level1">
 <h1>3. 编译和运行流程</h1>
 <p>因为 <code>iket.*</code> 是 MLIR op，NVVM / PTX / ptxas 都不认识它，所以 CuTeDSL 必须在进入 NVVM 之前就把这些 op 处理掉。它的下降路径大致是 <code>Python → MLIR → NVVM → PTX → ptxas → SASS</code>，IKET 相关的消化主要由 <code>enable-iket</code> 这个 pass 完成：</p>
-<pre class="mermaid"><code>flowchart LR
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">flowchart LR
     py["iket.range_start / mark&lt;br/&gt;(Python)"] --&gt; op["MLIR iket dialect op"]
     op --&gt; pass["enable-iket pass"]
     pass --&gt; strip["strip-iket-ops&lt;br/&gt;op 被剥掉"]
     strip --&gt; meta["cubin 里留下 metadata&lt;br/&gt;__iket_meta_info / 标记插桩点"]
-    meta --&gt; rt["metadata / instrument point&lt;br/&gt;被后续 instrumentation 流程使用"]</code></pre>
+    meta --&gt; rt["metadata / instrument point&lt;br/&gt;被后续 instrumentation 流程使用"]
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
 <p>关键点是：<code>iket</code> op 活不到 PTX。lower 完之后，IR 里已经没有“我是 trace 点”的 op，cubin 里留下的是 metadata 和 instrument point。真正怎么记录，要等 <code>iket profile</code> 这层 profiling runtime 按 metadata / config 去处理。</p>
-<pre class="mermaid"><code>flowchart TB
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">flowchart TB
     prog["你的程序 (已编译 cubin)"] --&gt; dry["dryrun / tracker&lt;br/&gt;统计每 warp 最多几条时间戳"]
     dry --&gt; cfg["生成 instrument config"]
     cfg --&gt; run["SModelRun: 真跑程序&lt;br/&gt;拦截每次 launch"]
     run --&gt; patch["生成 / 注入探针逻辑&lt;br/&gt;PMTRIG 已确认 SASS patch&lt;br/&gt;NativeDump 待验证"]
-    patch --&gt; post["postprocess → Perfetto trace"]</code></pre>
+    patch --&gt; post["postprocess → Perfetto trace"]
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
 <p>这里的 runtime 不是 CUDA runtime，而是 <code>iket profile</code> / <code>libsmodel_injection.so</code> 这一层宿主侧工具。它更像 NVBit / CUPTI 那类东西：程序已经编译好了，但每次 kernel launch 之前，它有机会看到 cubin / SASS，按 metadata 和 config 做 patch / trampoline / buffer 参数注入，然后再让 kernel 真正下发。</p>
-<pre class="mermaid"><code>flowchart LR
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">flowchart LR
     app["你的程序 + cubin"] --&gt; hook["iket profile 拦截层&lt;br/&gt;(SModelRun, NVBit 风格)"]
     hook --&gt;|patch SASS + 注入 buffer 指针| drv["CUDA driver / launch"]
-    drv --&gt; gpu["GPU 执行&lt;br/&gt;探针写 per-warp buffer"]</code></pre>
+    drv --&gt; gpu["GPU 执行&lt;br/&gt;探针写 per-warp buffer"]
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
 <p>所以这套东西不是单纯的编译期 pass，也不是 CUDA runtime 自动给你 trace。编译期负责把“哪里要插桩”这件事讲清楚；launch 时的 profiling runtime 负责真正补探针、分 buffer、把结果拿回来。</p>
 <p>再具体一点，从 <code>libsmodel_injection.so</code> 的符号看，它大概率走的是 CUDA driver 工具链里的进程内注入 + 回调：</p>
 <ul>
@@ -228,14 +272,25 @@ total ≈ Σ_launch( grid_cta_count × warps_per_cta × warp_slot ) × 1.15
 <li><strong>PMTRIG</strong>（硬件 perfmon trigger）：patch 进一条硬件性能监视器触发指令，几乎零开销，扰动最小。符号 <code>Pmtrig5Machine</code> / <code>Is_PMTRIG</code> / <code>Read_PMTRIG_Imm</code>。<strong>这条路已确认是 ptxas 之后 patch SASS</strong>（<code>IketKernelPatchRecipe::patchKernel</code>、<code>driver_patch_offset</code>、<code>Set LaunchPc to Trampoline</code>），探针是 inline SASS、不是函数调用，唯一的 call/jump 是入口 trampoline。注意：从 4.6 的 sizing 逻辑看，PMTRIG 仍然要分配 per-warp timestamp buffer（和 NativeDump 同一类 <code>bytes_per_event</code> 计算），真正不需要这块 buffer 的是 UTraceEvent（走 HWPM）。</li>
 <li><strong>NativeDump</strong>：产生 / 注入「读 <code>SR_GLOBALTIMER</code> + 把时间戳 / event_id / payload 写进 buffer」的记录逻辑，数据自带、拿取方便。符号 <code>SassInstrUtils::Get_SR_GlobalTimerLo</code>。它深度接入了同一套运行时（buffer / config / trampoline 都有迹），<strong>强暗示</strong>也是 post-patch；但「那几条 <code>globaltimer + store</code> 到底是 ptxas 前 lower 进 kernel，还是 ptxas 后 patch 进 SASS」，没有最终 SASS dump 还<strong>不能下死结论</strong>（见第 6 节）。所以「inline SASS、非函数调用」这个描述目前只确定适用于 PMTRIG / SASS-patch 路径，不强行套到 NativeDump 上。</li>
 </ul>
-<pre class="mermaid"><code>flowchart LR
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">flowchart LR
     ev["instrument point"] --&gt; method{"method"}
     method --&gt; pm["PMTRIG"]
     method --&gt; nd["NativeDump"]
     pm --&gt; p1["post-ptxas patch"]
     pm --&gt; p2["timestamp buffer"]
     nd --&gt; n1["globaltimer + store"]
-    nd --&gt; n2["插入层待验证"]</code></pre>
+    nd --&gt; n2["插入层待验证"]
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
 <p>两条路的时间戳源都指向 <code>SR_GLOBALTIMER</code>，不是 per-SM 的 <code>clock64</code>。这点很重要：跨 warp、跨 SM 画 timeline 时，<code>globaltimer</code> 天然比 <code>clock64</code> 好对齐。</p>
 </section>
 <section id="iket-相比手写-clock到底多做了什么" class="level1">
@@ -243,7 +298,12 @@ total ≈ Σ_launch( grid_cta_count × warps_per_cta × warp_slot ) × 1.15
 <p>看完 IKET 的流程后，可以回到一个很现实的问题：既然我自己也能在 kernel 里写 <code>clock64()</code> / <code>globaltimer</code>，那 IKET 到底多做了什么？</p>
 <p>我的理解是：手写 timer 在很多小实验里完全够用，但它只解决“拿到几个时间戳”这件事。IKET 解决的是另一件事：怎么把事件定义、记录格式、buffer 分配、依赖关系、后处理导出都收进同一套机制里。</p>
 <p>如果把两条路径放在一起，大概是这个差别：</p>
-<pre class="mermaid"><code>flowchart TB
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">flowchart TB
     subgraph manual["手写 clock / globaltimer"]
         m0["源码里写 clock + store"]
         m1["手写 Log[wg, slot]"]
@@ -260,12 +320,18 @@ total ≈ Σ_launch( grid_cta_count × warps_per_cta × warp_slot ) × 1.15
         i4["EventRecord + DAG metadata"]
         i5["Perfetto / trace export"]
         i0 --&gt; i1 --&gt; i2 --&gt; i3 --&gt; i4 --&gt; i5
-    end</code></pre>
+    end
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
 <p>这里真正的差别不是时间戳来自 <code>clock64</code> 还是 <code>globaltimer</code>，而是谁来维护事件语义。手写版本里，语义散在代码、slot 编号、runner 和 plot 脚本里；IKET 试图把它们收成一份 metadata。</p>
 <section id="手写-clock-的能力边界" class="level2">
 <h2 class="anchored" data-anchor-id="手写-clock-的能力边界">手写 clock 的能力边界</h2>
 <p>手写方式通常很朴素：</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10" style="background: #f1f3f5;"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb10-1"><span class="cf" style="color: #003B4F;
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4" style="background: #f1f3f5;"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb4-1"><span class="cf" style="color: #003B4F;
 background-color: null;
 font-weight: bold;
 font-style: inherit;">if</span> <span class="op" style="color: #5E5E5E;
@@ -287,10 +353,10 @@ background-color: null;
 font-style: inherit;">=</span> clock64<span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">();</span></span>
-<span id="cb10-2"><span class="co" style="color: #5E5E5E;
+<span id="cb4-2"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">// ... wait / mma / tma / softmax ...</span></span>
-<span id="cb10-3"><span class="cf" style="color: #003B4F;
+<span id="cb4-3"><span class="cf" style="color: #003B4F;
 background-color: null;
 font-weight: bold;
 font-style: inherit;">if</span> <span class="op" style="color: #5E5E5E;
@@ -322,16 +388,16 @@ font-style: inherit;">();</span></span></code></pre></div></div>
 <section id="iket-把哪些东西系统化了" class="level2">
 <h2 class="anchored" data-anchor-id="iket-把哪些东西系统化了">IKET 把哪些东西系统化了</h2>
 <p>IKET 做的事情，是把“这里发生了一个事件”变成编译器和运行时都认识的对象：</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1">tok <span class="op" style="color: #5E5E5E;
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1">tok <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> iket.range_start(<span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"MMA_mainloop"</span>)</span>
-<span id="cb11-2"><span class="co" style="color: #5E5E5E;
+<span id="cb5-2"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;"># ...</span></span>
-<span id="cb11-3">iket.range_end(tok)</span>
-<span id="cb11-4">iket.mark(<span class="st" style="color: #20794D;
+<span id="cb5-3">iket.range_end(tok)</span>
+<span id="cb5-4">iket.mark(<span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"checkpoint"</span>, payload<span class="op" style="color: #5E5E5E;
 background-color: null;
@@ -350,13 +416,24 @@ font-style: inherit;">=</span>x)</span></code></pre></div></div>
 <section id="插在哪一层仍然重要但不是唯一重点" class="level2">
 <h2 class="anchored" data-anchor-id="插在哪一层仍然重要但不是唯一重点">插在哪一层仍然重要，但不是唯一重点</h2>
 <p>IKET 仍然从 DSL / MLIR 出发，也要经过 MLIR → PTX → SASS。它不是魔法地绕开编译器。更准确的拆法是：</p>
-<pre class="mermaid"><code>flowchart LR
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">flowchart LR
     src["CuTeDSL / MLIR event op"] --&gt; pass["enable-iket pass"]
     pass --&gt; meta["event metadata / instrument point"]
     meta --&gt; cubin["cubin / SASS"]
     cubin --&gt; runtime["iket profile runtime"]
     runtime --&gt; probe["按 method 配置或 patch probe"]
-    probe --&gt; record["per-warp EventRecord"]</code></pre>
+    probe --&gt; record["per-warp EventRecord"]
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
 <p>PMTRIG 这条路目前比较清楚：编译期留下 metadata / instrument point，运行时在 cubin / SASS 层 patch probe。NativeDump 也接入了同一套 runtime，但那几条 <code>globaltimer + store</code> 最终到底是在 ptxas 前 lower 进去，还是 ptxas 后 patch 进去，还需要真正 dump SASS 才能下结论。</p>
 <p>这件事有价值，但它不是 IKET 的全部价值。即使 source-level clock 在某些 kernel 里完全可靠，IKET 仍然解决了这些麻烦：</p>
 <ul>
