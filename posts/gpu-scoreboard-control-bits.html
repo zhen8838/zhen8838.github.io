@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2026-09-28">
+
+<title>传统 Scoreboard 与现代 GPU 的编译器协同依赖管理 – Zheng’s Notes</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../assets/favicon.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-7072389654d23eff08f359f9aa0d1ee7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<meta name="mermaid-theme" content="default">
+<script src="../site_libs/quarto-diagram/mermaid.min.js"></script>
+<script src="../site_libs/quarto-diagram/mermaid-init.js"></script>
+<link href="../site_libs/quarto-diagram/mermaid.css" rel="stylesheet">
+
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">Zheng’s Notes</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#目标" id="toc-目标" class="nav-link active" data-scroll-target="#目标">1. 目标</a></li>
+  <li><a href="#固定程序和依赖" id="toc-固定程序和依赖" class="nav-link" data-scroll-target="#固定程序和依赖">2. 固定程序和依赖</a></li>
+  <li><a href="#依赖状态需要对应真实硬件事件" id="toc-依赖状态需要对应真实硬件事件" class="nav-link" data-scroll-target="#依赖状态需要对应真实硬件事件">3. 依赖状态需要对应真实硬件事件</a></li>
+  <li><a href="#传统硬件-scoreboard-的内部状态" id="toc-传统硬件-scoreboard-的内部状态" class="nav-link" data-scroll-target="#传统硬件-scoreboard-的内部状态">4. 传统硬件 Scoreboard 的内部状态</a>
+  <ul class="collapse">
+  <li><a href="#指令提供的信息" id="toc-指令提供的信息" class="nav-link" data-scroll-target="#指令提供的信息">4.1 指令提供的信息</a></li>
+  <li><a href="#writer-scoreboard" id="toc-writer-scoreboard" class="nav-link" data-scroll-target="#writer-scoreboard">4.2 Writer Scoreboard</a></li>
+  <li><a href="#发射机制" id="toc-发射机制" class="nav-link" data-scroll-target="#发射机制">4.3 发射机制</a></li>
+  <li><a href="#reader-scoreboard" id="toc-reader-scoreboard" class="nav-link" data-scroll-target="#reader-scoreboard">4.4 Reader Scoreboard</a></li>
+  </ul></li>
+  <li><a href="#现代-gpu-的编译器协同依赖管理" id="toc-现代-gpu-的编译器协同依赖管理" class="nav-link" data-scroll-target="#现代-gpu-的编译器协同依赖管理">5. 现代 GPU 的编译器协同依赖管理</a>
+  <ul class="collapse">
+  <li><a href="#分工变化" id="toc-分工变化" class="nav-link" data-scroll-target="#分工变化">5.1 分工变化</a></li>
+  <li><a href="#编译后的程序" id="toc-编译后的程序" class="nav-link" data-scroll-target="#编译后的程序">5.2 编译后的程序</a></li>
+  <li><a href="#硬件状态和发射机制" id="toc-硬件状态和发射机制" class="nav-link" data-scroll-target="#硬件状态和发射机制">5.3 硬件状态和发射机制</a></li>
+  <li><a href="#固定延迟stall-counter" id="toc-固定延迟stall-counter" class="nav-link" data-scroll-target="#固定延迟stall-counter">5.4 固定延迟：Stall Counter</a></li>
+  <li><a href="#可变延迟dependence-counters" id="toc-可变延迟dependence-counters" class="nav-link" data-scroll-target="#可变延迟dependence-counters">5.5 可变延迟：Dependence Counters</a></li>
+  <li><a href="#counter-更新窗口" id="toc-counter-更新窗口" class="nav-link" data-scroll-target="#counter-更新窗口">5.6 Counter 更新窗口</a></li>
+  <li><a href="#depbar.le" id="toc-depbar.le" class="nav-link" data-scroll-target="#depbar.le">5.7 DEPBAR.LE</a></li>
+  </ul></li>
+  <li><a href="#warp-ready-与-issue-scheduler" id="toc-warp-ready-与-issue-scheduler" class="nav-link" data-scroll-target="#warp-ready-与-issue-scheduler">6. Warp Ready 与 Issue Scheduler</a></li>
+  <li><a href="#与传统-scoreboard-的状态量对比" id="toc-与传统-scoreboard-的状态量对比" class="nav-link" data-scroll-target="#与传统-scoreboard-的状态量对比">7. 与传统 Scoreboard 的状态量对比</a></li>
+  <li><a href="#总结" id="toc-总结" class="nav-link" data-scroll-target="#总结">8. 总结</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content page-columns page-full" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">传统 Scoreboard 与现代 GPU 的编译器协同依赖管理</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">计算机体系结构</div>
+  </div>
+  </div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">September 28, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="目标" class="level2">
+<h2 class="anchored" data-anchor-id="目标">1. 目标</h2>
+<p>上一篇文章允许不同执行单元重叠以后，观察到下面的问题：</p>
+<pre class="text"><code>目标执行单元空闲
+不代表指令现在执行是正确的</code></pre>
+<p>本文从这个问题开始，先构造传统硬件 scoreboard，再解释论文 <em>Dissecting and Modeling the Architecture of Modern GPU Cores</em> 描述的编译器协同机制。</p>
+<p>论文认为现代 NVIDIA GPU 不使用传统的 per-register scoreboard 管理数据依赖。传统 scoreboard 是本文用于比较的中间设计。</p>
+<hr>
+</section>
+<section id="固定程序和依赖" class="level2">
+<h2 class="anchored" data-anchor-id="固定程序和依赖">2. 固定程序和依赖</h2>
+<p>继续使用上一篇文章的三条指令：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode asm code-with-copy"><code class="sourceCode fasm"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">I1:</span> <span class="bu">LOAD</span> R1<span class="op">,</span> <span class="op">[</span>R2<span class="op">]</span>      <span class="op">//</span> 可变延迟，写 R1</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">I2:</span> <span class="bu">ADD</span>  R4<span class="op">,</span> R5<span class="op">,</span> R6    <span class="op">//</span> 与 I1 无关</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="fu">I3:</span> <span class="bu">ADD</span>  R7<span class="op">,</span> R1<span class="op">,</span> <span class="kw">R8</span>    <span class="op">//</span> 读取 I1 产生的 R1</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>此时已经知道 I3 必须等待 I1 产生 R1：</p>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">flowchart LR
+  I1["I1: LOAD R1, [R2]"]
+  I2["I2: ADD R4, R5, R6"]
+  I3["I3: ADD R7, R1, R8"]
+
+  I1 --&gt;|"RAW · R1"| I3
+  I2 -. "independent" .- I3
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+<p>I2 不依赖 I1，可以在 I1 尚未完成时执行。</p>
+<hr>
+</section>
+<section id="依赖状态需要对应真实硬件事件" class="level2">
+<h2 class="anchored" data-anchor-id="依赖状态需要对应真实硬件事件">3. 依赖状态需要对应真实硬件事件</h2>
+<p>一条指令从发射到结果可见，至少涉及三个不同事件：</p>
+<pre class="text"><code>issue          指令离开发射位置
+register read  指令真正读取源寄存器
+write-back     指令结果写回目的寄存器</code></pre>
+<p>对于 I1 和 I3 的 RAW：</p>
+<pre class="text"><code>I1 issue
+→ I1 执行
+→ I1 write-back R1
+→ I3 才能读取 R1</code></pre>
+<p>因此，依赖状态不能在 I1 issue 后立即清除。它必须保持到 I1 write-back。</p>
+<p>WAR 的解除时刻不同：老指令真正完成 register read 后，年轻 writer 就可以覆盖这个寄存器，不必等老指令 write-back。</p>
+<p>这些事件决定了 scoreboard 状态在什么时候设置和清除。</p>
+<hr>
+</section>
+<section id="传统硬件-scoreboard-的内部状态" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="传统硬件-scoreboard-的内部状态">4. 传统硬件 Scoreboard 的内部状态</h2>
+<section id="指令提供的信息" class="level3">
+<h3 class="anchored" data-anchor-id="指令提供的信息">4.1 指令提供的信息</h3>
+<p>普通机器指令已经编码：</p>
+<pre class="text"><code>source registers
+destination register
+target execution unit</code></pre>
+<p>硬件可以用这些寄存器编号查询 scoreboard。</p>
+</section>
+<section id="writer-scoreboard" class="level3">
+<h3 class="anchored" data-anchor-id="writer-scoreboard">4.2 Writer Scoreboard</h3>
+<p>为每个可写寄存器保存一个 writer bit：</p>
+<pre class="text"><code>writer[R] = 1
+表示存在一条已经 issue、但尚未 write-back 的指令将写 R</code></pre>
+<p>I1 issue 时：</p>
+<pre class="text"><code>writer[R1] = 1</code></pre>
+<p>I1 write-back 时：</p>
+<pre class="text"><code>writer[R1] = 0</code></pre>
+<p>I3 发射前检查所有 source：</p>
+<pre class="text"><code>writer[R1] == 0
+writer[R8] == 0</code></pre>
+<p>年轻 writer 还要检查自己的 destination，避免 WAW：</p>
+<pre class="text"><code>writer[destination] == 0</code></pre>
+<p>同一个 writer scoreboard 可以处理 RAW 和 WAW。</p>
+</section>
+<section id="发射机制" class="level3 page-columns page-full">
+<h3 class="anchored" data-anchor-id="发射机制">4.3 发射机制</h3>
+<p>候选指令读取：</p>
+<pre class="text"><code>所有 source 的 writer bits
+destination 的 writer bit
+目标执行单元状态</code></pre>
+<p>只有这些状态都可用，指令才能发射。</p>
+<div class="column-screen-inset">
+<iframe src="instruction-issue-from-first-principles/replay/index.html?stage=scoreboard" title="Stage 2：传统硬件 Scoreboard 的指令发射回放" style="width: 100%; height: 760px; border: 0;" loading="lazy">
+</iframe>
+</div>
+<p>在 C2，I3 的橙框包含 R1、R8、R7 和 ALU。R1 仍为黄色使用中，因此 I3 stall。</p>
+<p>I1 在 C4 write-back 后，R1 恢复可用，I3 才能发射。</p>
+</section>
+<section id="reader-scoreboard" class="level3">
+<h3 class="anchored" data-anchor-id="reader-scoreboard">4.4 Reader Scoreboard</h3>
+<p>writer bit 不能处理 WAR。</p>
+<p>如果老指令已经 issue 但尚未完成 register read，年轻指令不能覆盖它的 source register。</p>
+<p>因此还需要为每个寄存器记录未完成 reader 的数量：</p>
+<pre class="text"><code>readers[R]</code></pre>
+<p>老指令 issue 时增加 reader count：</p>
+<pre class="text"><code>readers[source] += 1</code></pre>
+<p>真正完成 register read 时减少：</p>
+<pre class="text"><code>readers[source] -= 1</code></pre>
+<p>年轻 writer 发射前检查：</p>
+<pre class="text"><code>readers[destination] == 0</code></pre>
+<p>传统实现因此需要两类状态：</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>状态</th>
+<th>处理的 hazard</th>
+<th>清除时刻</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>writer bit</td>
+<td>RAW、WAW</td>
+<td>write-back</td>
+</tr>
+<tr class="even">
+<td>reader count</td>
+<td>WAR</td>
+<td>register read</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+</section>
+<section id="现代-gpu-的编译器协同依赖管理" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="现代-gpu-的编译器协同依赖管理">5. 现代 GPU 的编译器协同依赖管理</h2>
+<section id="分工变化" class="level3">
+<h3 class="anchored" data-anchor-id="分工变化">5.1 分工变化</h3>
+<p>传统 scoreboard 由硬件根据 src/dst 动态恢复依赖。</p>
+<p>编译器在生成机器指令时已经知道 I1→I3 的依赖关系。论文描述的机制把这部分信息编码进每条机器指令的 control bits。</p>
+<p>编译器负责说明：</p>
+<pre class="text"><code>producer 更新哪个 Dependence counter
+consumer 等待哪个 Dependence counter</code></pre>
+<p>硬件负责记录 counter 在运行时是否仍然非零。</p>
+</section>
+<section id="编译后的程序" class="level3">
+<h3 class="anchored" data-anchor-id="编译后的程序">5.2 编译后的程序</h3>
+<p>下面使用简化记号表示 control bits：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb17"><pre class="sourceCode asm code-with-copy"><code class="sourceCode fasm"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>#                            S    WB    <span class="dt">RD</span>    WAIT</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="fu">I1:</span> <span class="bu">LOAD</span> R1<span class="op">,</span> <span class="op">[</span>R2<span class="op">]</span>         <span class="co">; 0    SB0   -     {}</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="fu">I2:</span> <span class="bu">ADD</span>  R4<span class="op">,</span> R5<span class="op">,</span> R6       <span class="co">; 0    -     -     {}</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="fu">I3:</span> <span class="bu">ADD</span>  R7<span class="op">,</span> R1<span class="op">,</span> <span class="kw">R8</span>       <span class="co">; 0    -     -     {SB0}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>字段含义为：</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>字段</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>S</td>
+<td>issue 后设置的 Stall counter</td>
+</tr>
+<tr class="even">
+<td>WB</td>
+<td>issue 后递增、write-back 后递减的 counter</td>
+</tr>
+<tr class="odd">
+<td>RD</td>
+<td>issue 后递增、register read 后递减的 counter</td>
+</tr>
+<tr class="even">
+<td>WAIT</td>
+<td>当前指令 issue 前必须为 0 的 counters</td>
+</tr>
+</tbody>
+</table>
+<p>I1 的 WB=SB0 表示 I1 issue 后增加 SB0，并在 write-back 时减少 SB0。</p>
+<p>I3 的 WAIT={SB0} 表示 SB0 非零时 I3 不能发射。</p>
+</section>
+<section id="硬件状态和发射机制" class="level3 page-columns page-full">
+<h3 class="anchored" data-anchor-id="硬件状态和发射机制">5.3 硬件状态和发射机制</h3>
+<p>每个 warp 保存：</p>
+<pre class="text"><code>一个 Stall counter
+六个 Dependence counters：SB0-SB5</code></pre>
+<p>当前指令检查：</p>
+<pre class="text"><code>Stall counter
+WAIT mask 指定的 Dependence counters
+目标执行单元</code></pre>
+<div class="column-screen-inset">
+<iframe src="instruction-issue-from-first-principles/replay/index.html?stage=compiler" title="Stage 3：编译器 Control Bits 与 Dependence Counters" style="width: 100%; height: 760px; border: 0;" loading="lazy">
+</iframe>
+</div>
+<p>I1 issue 后，SB0 在下一周期增加为 1。</p>
+<p>I2 的 WAIT 为空，因此可以与 I1 重叠。</p>
+<p>I3 检查 SB0。I1 write-back 前 SB0 非零，因此 I3 stall。I1 write-back 后 SB0 归零，I3 才能发射。</p>
+</section>
+<section id="固定延迟stall-counter" class="level3">
+<h3 class="anchored" data-anchor-id="固定延迟stall-counter">5.4 固定延迟：Stall Counter</h3>
+<p>固定延迟 producer 不需要等待运行时 completion event。</p>
+<p>编译器知道 producer latency，可以在 producer 中编码 Stall value：</p>
+<pre class="text"><code>Stall value
+    = producer latency
+      - producer 与第一个 consumer 之间的指令数</code></pre>
+<p>warp 的 Stall counter 非零时不能继续 issue。计数器每周期减 1，直到归零。</p>
+<p>论文通过手工设置过小的 Stall value 得到了错误结果。这说明硬件不会再次根据寄存器编号检查 RAW。</p>
+</section>
+<section id="可变延迟dependence-counters" class="level3">
+<h3 class="anchored" data-anchor-id="可变延迟dependence-counters">5.5 可变延迟：Dependence Counters</h3>
+<p>LOAD 和 special-function 指令的延迟不能在编译时确定，因此使用 SB0-SB5。</p>
+<p>每条指令可以指定两个要增加的 counter：</p>
+<ul>
+<li>write-back counter：在 write-back 时减少，用于 RAW/WAW；</li>
+<li>register-read counter：在 register read 时减少，用于 WAR。</li>
+</ul>
+<p>每条指令还包含一个 6-bit WAIT mask，指定 issue 前必须等待哪些 counters 归零。</p>
+<p>同一个 counter 可以由多个 producer 增加。consumer 等待 counter 归零，相当于等待这些 producer 全部完成。</p>
+</section>
+<section id="counter-更新窗口" class="level3">
+<h3 class="anchored" data-anchor-id="counter-更新窗口">5.6 Counter 更新窗口</h3>
+<p>Dependence counter 在 producer issue 的下一周期才完成增加。</p>
+<p>如果 consumer 紧跟 producer，consumer 可能在 counter 增加可见以前进行检查。</p>
+<p>这种情况下，producer 还需要设置短的 Stall value，防止 consumer 在下一周期过早发射。</p>
+</section>
+<section id="depbar.le" class="level3">
+<h3 class="anchored" data-anchor-id="depbar.le">5.7 DEPBAR.LE</h3>
+<p><code>DEPBAR.LE</code> 可以等待某个 counter 小于等于阈值，并同时等待一组 counters 归零：</p>
+<pre class="text"><code>DEPBAR.LE SBx, threshold, {other counters}</code></pre>
+<p>它用于多个 producer 共享 counter、但 consumer 只需要等待其中一部分完成的情况。</p>
+<hr>
+</section>
+</section>
+<section id="warp-ready-与-issue-scheduler" class="level2">
+<h2 class="anchored" data-anchor-id="warp-ready-与-issue-scheduler">6. Warp Ready 与 Issue Scheduler</h2>
+<p>每个 warp 按程序顺序提供最老的指令。</p>
+<p>一个 warp 成为 issue candidate，需要满足：</p>
+<pre class="text"><code>Instruction Buffer 中存在有效指令
+Stall counter 为 0
+WAIT mask 指定的 counters 满足条件
+执行资源可用</code></pre>
+<p>论文推断每个 sub-core 每周期最多 issue 一条指令，并使用 Compiler Guided Greedy Then Youngest：</p>
+<pre class="text"><code>当前 warp 仍然 ready
+→ 继续选择当前 warp
+
+当前 warp 不再 ready
+→ 选择最年轻的 ready warp</code></pre>
+<p>编译器还可以设置 Yield，要求下一周期不要继续选择同一个 warp。</p>
+<hr>
+</section>
+<section id="与传统-scoreboard-的状态量对比" class="level2">
+<h2 class="anchored" data-anchor-id="与传统-scoreboard-的状态量对比">7. 与传统 Scoreboard 的状态量对比</h2>
+<p>论文建模的传统 scoreboard 需要覆盖每个 warp 的 332 个可写寄存器。</p>
+<p>如果 WAR scoreboard 最多支持 63 个 pending consumer，单个 warp 需要：</p>
+<pre class="text"><code>332 + 332 × 6 = 2324 bit</code></pre>
+<p>control-bits 机制需要：</p>
+<pre class="text"><code>6 × 6 bit Dependence counters
+1 × 4 bit Stall counter
+1 × 1 bit Yield
+= 41 bit per warp</code></pre>
+<p>论文估算的面积开销为：</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>机制</th>
+<th style="text-align: right;">相对 regular register file 的面积开销</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>传统 scoreboard</td>
+<td style="text-align: right;">5.32%</td>
+</tr>
+<tr class="even">
+<td>control-bits 机制</td>
+<td style="text-align: right;">0.09%</td>
+</tr>
+</tbody>
+</table>
+<p>传统 scoreboard 支持 63 个 consumer 时，论文测得的平均性能约为 control-bits 机制的 0.98 倍。</p>
+<hr>
+</section>
+<section id="总结" class="level2">
+<h2 class="anchored" data-anchor-id="总结">8. 总结</h2>
+<p>传统 scoreboard 的分工是：</p>
+<pre class="text"><code>机器指令提供 src/dst
+硬件根据寄存器编号恢复依赖
+硬件按 register read / write-back 更新状态</code></pre>
+<p>论文描述的编译器协同机制是：</p>
+<pre class="text"><code>编译器把依赖编码成 S、WB、RD、WAIT
+硬件维护 Stall counter 和 SB0-SB5
+counter 状态与执行资源共同决定 warp 是否 ready
+scheduler 从 ready warps 中选择一条指令</code></pre>
+<p><a href="instruction-issue-from-first-principles.html">上一篇：从严格串行到朴素指令发射</a></p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/zhen8838\.github\.io");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script src="https://utteranc.es/client.js" repo="zhen8838/zhen8838.github.io" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
