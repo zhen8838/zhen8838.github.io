@@ -1,0 +1,635 @@
+---
+title: "从串行执行到 Control Bits：指令发射与依赖管理"
+date: 2026-09-28
+categories:
+  - 计算机体系结构
+tags:
+  - Instruction Issue
+  - Scoreboard
+  - GPU
+  - Compiler
+---
+
+## 1. 目标
+
+本文的目标旨在学习现代 GPU 指令发射机制，为了理解复杂的机制为什么存在，本文先从一个最小问题开始：
+
+    上一条指令还没有完成时，下一条指令什么时候可以发射？
+
+随后逐步加入硬件 Scoreboard、静态编译调度，以及编译器与硬件协同的 control-bits 机制。
+
+这里的 Stage 是机制层次，不表示所有处理器都经历过同一条线性历史, 实际历史上存在不同路线：
+
+- [CDC 6600](https://gordonbell.azurewebsites.net/Computer_Structures__Readings_and_Examples/00000509.htm) 在 1964 年使用硬件 scoreboard 管理多个功能单元；
+- [Stanford MIPS](https://os.ecci.ucr.ac.cr/ci1310/articulos/Mips/Hennessy.pdf) 后来选择由编译器静态重排指令或插入 NOP，不提供硬件 pipeline interlock；
+- 论文 [*Dissecting and Modeling the Architecture of Modern GPU Cores*](https://doi.org/10.1145/3725843.3756041) 描述的现代 NVIDIA GPU 使用编译器 control bits 和硬件 counters 协同管理依赖。
+
+---
+
+## 2. 固定程序
+
+全文使用下面十条指令。四个 Stage 的输入程序完全相同：
+
+```asm
+I1:  FADD R1, R2, R3          // 固定延迟，写 R1
+I2:  IADD R4, R5, R6          // 与 I1、I3 无关
+I3:  FFMA R7, R1, R2, R3      // 读取 I1 产生的 R1：RAW
+
+I4:  LOAD R1, [R2]            // 可变延迟，重新定义 R1
+I5:  IADD R4, R5, R6          // 与 I4、I6 无关
+I6:  IADD R7, R1, R8          // 读取 I4 产生的 R1：RAW
+
+I7:  LOAD R1, [R2]            // 可变延迟，重新定义 R1
+I8:  IADD R1, R3, R4          // 再次写 R1：WAW
+
+I9:  LOAD R7, [R8]            // 读取 R8
+I10: IADD R8, R2, R3          // 写 R8：WAR
+```
+
+本文重点观察下面四条会直接产生等待的数据依赖：
+
+```{mermaid}
+flowchart LR
+  I1["I1 · FADD → R1"] -->|"RAW · R1"| I3["I3 · FFMA ← R1"]
+  I2["I2 · independent"]
+
+  I4["I4 · LOAD → R1"] -->|"RAW · R1"| I6["I6 · IADD ← R1"]
+  I5["I5 · independent"]
+
+  I7["I7 · LOAD → R1"] -->|"WAW · R1"| I8["I8 · IADD → R1"]
+
+  I9["I9 · LOAD ← R8"] -->|"WAR · R8"| I10["I10 · IADD → R8"]
+```
+
+I2 和 I5 用来填充 producer 与 consumer 之间的空隙。I4、I7 和 I9 的完成或读寄存器时刻由运行时决定，用来观察可变延迟依赖。
+
+四组示例复用 R1-R8。上一组对某个寄存器的读写已经结束后，下一组才重新定义它，因此复用寄存器不会在动画中引入额外等待。
+
+动画每次显示七条指令和十六个周期。当前周期越过窗口约三分之二的位置，或候选指令离开第七行以后，窗口才会向后移动；未来尚未执行的格子保持空白。
+
+每个 Stage 改变的是硬件提供的状态，以及候选指令在发射前检查的状态。
+
+---
+
+## 3. Stage 0：严格串行
+
+在流水线、动态调度和多执行单元普及以前，处理器通常按程序顺序逐条推进指令。控制逻辑只需要知道当前指令是否已经结束；当前指令完成后，控制器才开始下一条指令。
+
+这里的 Stage 0 是对这种顺序执行方式的抽象，不对应某一款具体 GPU。它提供一个基线：没有依赖跟踪机制时，让所有指令严格串行即可保证正确。后来的流水线和并行执行机制，都是在保持同样结果的前提下，逐步取消不必要的等待。
+
+### 3.1 硬件资源
+
+硬件提供：
+
+```text
+一个 FP unit
+一个 INT unit
+一个 MEM unit
+一个全局 active 状态
+```
+
+全局 active 状态表示当前是否已有一条指令正在执行。
+
+这个阶段不保存寄存器依赖状态。
+
+### 3.2 发射机制
+
+候选指令检查：
+
+```text
+全局 active 状态
+目标执行单元状态
+```
+
+active 为空并且目标执行单元可用时，指令可以发射。
+
+当前指令完成以前，active 不会清除，因此下一条指令不能发射。
+
+### 3.3 执行过程
+
+::: {.column-screen-inset}
+<iframe
+  src="instruction-issue-from-first-principles/replay/index.html?stage=serial"
+  title="Stage 0：严格串行的指令发射回放"
+  style="width: 100%; height: 1000px; border: 0;"
+  loading="lazy">
+</iframe>
+:::
+
+I1 发射后，全局 active 状态保持占用，直到 I1 完成。
+
+因此：
+
+```text
+I1 完成
+→ I2 才能发射
+→ I2 完成
+→ I3 才能发射
+→ 后续七条指令继续遵循同一规则
+```
+
+程序结果一定正确，但同一时刻只能有一条指令执行。
+
+### 3.4 优缺点
+
+优点：
+
+- 控制状态最少；
+- 不需要显式依赖检查；
+- 程序顺序、执行顺序和完成顺序完全一致。
+
+缺点：
+
+- 不同执行单元不能并行工作；
+- 长延迟指令会阻塞所有年轻指令；
+- 硬件利用率低。
+
+---
+
+## 4. Stage 1：硬件 Scoreboard
+
+### 4.1 硬件资源
+
+CDC 6600 在 1964 年交付。它包含多个可以并行工作的功能单元，并使用 scoreboard 管理寄存器、功能单元和操作数通路的状态。
+
+Thornton 对 CDC 6600 的描述是：指令按程序顺序发射，但功能单元可以并行工作，指令可以乱序完成。
+
+参考：
+
+- [James E. Thornton, “Parallel Operation in the Control Data 6600”](https://gordonbell.azurewebsites.net/Computer_Structures__Readings_and_Examples/00000509.htm)
+- [James E. Thornton, *Design of a Computer: The Control Data 6600*](https://archive.computerhistory.org/resources/text/CDC/cdc.6600.thornton.design_of_a_computer_the_control_data_6600.1970.102630394.pdf)
+
+本文使用的简化 scoreboard 包含：
+
+```text
+每个寄存器一个 writer bit
+每个寄存器一个 reader count
+FP、INT 和 MEM 的占用状态
+```
+
+writer bit 表示是否存在一条已经发射、但尚未 write-back 的指令将写该寄存器。
+
+reader count 表示有多少老指令尚未真正读取该寄存器。
+
+这组状态可以表示第 2 节依赖图中的 RAW、WAW 和 WAR。
+
+### 4.2 发射机制
+
+普通机器指令已经提供：
+
+```text
+source registers
+destination register
+target execution unit
+```
+
+候选指令读取 scoreboard 中对应的状态。
+
+对于 source register：
+
+```text
+writer[source] == 0
+```
+
+这个条件避免 RAW。
+
+对于 destination register：
+
+```text
+writer[destination] == 0
+readers[destination] == 0
+```
+
+这两个条件分别避免 WAW 和 WAR。
+
+目标执行单元也必须可用。
+
+在经典 scoreboard 中，依赖控制分成三个时刻：
+
+| 时刻 | 检查或更新 |
+|---|---|
+| issue | 功能单元可用，并且没有 WAW |
+| register read | producer 已完成，没有 RAW |
+| write-back | 老 reader 已完成读取，没有 WAR |
+
+### 4.3 执行过程
+
+::: {.column-screen-inset}
+<iframe
+  src="instruction-issue-from-first-principles/replay/index.html?stage=scoreboard"
+  title="Stage 1：硬件 Scoreboard 的指令发射回放"
+  style="width: 100%; height: 1000px; border: 0;"
+  loading="lazy">
+</iframe>
+:::
+
+动画把一个寄存器和它的两个状态放在同一张卡中。例如 R1 卡片里的 `W 1` 表示 R1 有未完成的 writer，`R 0` 表示没有老指令等待读取 R1。
+
+I1 在 C0 发射后，`W:R1` 变为 1。
+
+C1 时 I2 查询的 scoreboard 项和 INT unit 都可用，因此 I2 可以与 I1 重叠。
+
+C2 时 I3 查询 `W:R1`。该状态仍为 1，因此 I3 stall。
+
+I1 在 C4 write-back 后，R1 卡片里的 `W` 清零，I3 才能发射。
+
+继续向后播放，可以看到同一套状态分别处理 I4→I6 的 RAW、I7→I8 的 WAW 和 I9→I10 的 WAR。
+
+这里的动画把依赖判断集中显示在候选指令的发射时刻。经典 CDC 6600 还把 issue、operand read 和 write result 分成不同阶段；动画保留的是 writer/reader 状态所表达的依赖条件，不是 CDC 6600 的周期精确模型。
+
+最终得到：
+
+```text
+程序顺序保持正确
+无关指令可以重叠
+相关指令只等待必要的依赖
+```
+
+### 4.4 优缺点
+
+优点：
+
+- 根据运行时状态处理依赖；
+- 可以适应 LOAD 等可变延迟指令；
+- 无关指令可以在不同功能单元中重叠执行。
+
+缺点：
+
+- 每个寄存器都需要 writer/reader 状态；
+- 发射逻辑需要查询和比较多个 scoreboard 项；
+- warp 数量和寄存器数量增加时，面积与连线开销增大。
+
+---
+
+## 5. Stage 2：静态编译调度
+
+### 5.1 硬件资源
+
+硬件提供：
+
+```text
+一个 FP unit
+一个 INT unit
+一个 MEM unit
+按程序顺序发射的 issue slot
+```
+
+硬件不保存 writer bits、reader counts 或其他寄存器依赖状态。
+
+正确性依赖一个额外前提：编译器知道每类指令的固定执行延迟。
+
+Stanford MIPS 采用过这类真实设计。MIPS 不提供硬件 pipeline interlock，而是由 pipeline reorganizer 重排指令，并在无法填满延迟槽时插入 NOP。
+
+参考：[MIPS: A Microprocessor Architecture](https://os.ecci.ucr.ac.cr/ci1310/articulos/Mips/Hennessy.pdf)
+
+### 5.2 发射机制
+
+在这个 Stage 中，编译器必须把每类指令的延迟当作固定值。动画使用的静态延迟为：FADD/FFMA 4 周期，三个 LOAD 分别为 6、5、7 周期。
+
+编译器从第 2 节的十条原始指令生成一条新的指令流。开头部分为：
+
+```asm
+I1: FADD R1, R2, R3
+I2: IADD R4, R5, R6
+N1: NOP
+N2: NOP
+I3: FFMA R7, R1, R2, R3
+```
+
+I2 填充一个延迟周期，剩余两个周期由 NOP 填充。编译器随后用相同方法为 I4→I6、I7→I8 和 I9→I10 计算间隔，并在没有独立指令可填时插入 NOP。
+
+硬件只按程序顺序发射编译后的指令流，并检查目标执行单元是否可用。它不再动态判断 I3 是否依赖 I1。
+
+### 5.3 执行过程
+
+::: {.column-screen-inset}
+<iframe
+  src="instruction-issue-from-first-principles/replay/index.html?stage=static"
+  title="Stage 2：静态编译调度"
+  style="width: 100%; height: 1000px; border: 0;"
+  loading="lazy">
+</iframe>
+:::
+
+I1 在 C0 发射，I2 在 C1 发射。
+
+C2 和 C3 发射编译器插入的 NOP。
+
+C4 轮到 I3 时，I1 的固定延迟已经结束，因此 I3 可以安全读取 R1。
+
+继续播放时，七行窗口会显示完整十条输入指令，以及编译器为后续三组依赖插入的 NOP。
+
+这个 Stage 中的 LOAD 延迟只是编译期假设。如果运行时出现 cache miss，实际延迟超过假设，固定数量的 NOP 就不能保证正确；这正是下一阶段需要运行时 counter 的原因。
+
+### 5.4 优缺点
+
+优点：
+
+- 硬件不需要 per-register scoreboard；
+- 发射逻辑简单；
+- 编译器可以用无关指令填充已知的延迟槽。
+
+缺点：
+
+- 依赖固定、可预测的执行延迟；
+- 无法填满延迟槽时需要 NOP，增加代码尺寸并浪费 issue slot；
+- cache miss 等运行时可变延迟无法由固定 NOP 数量准确覆盖。
+
+---
+
+## 6. Stage 3：编译器 Control Bits 与硬件 Counters
+
+### 6.1 硬件资源
+
+本文这一阶段参考 Rodrigo Huerta 等人在 MICRO 2025 发表的论文 [*Dissecting and Modeling the Architecture of Modern GPU Cores*](https://doi.org/10.1145/3725843.3756041)。论文描述的现代 NVIDIA GPU 不使用传统的 per-register scoreboard。
+
+它仍然有 register file。寄存器保存程序数据，执行单元也仍然从 register file 读取操作数。变化的是：发射逻辑不再为每个寄存器保存和查询 writer bit、reader count。
+
+每个 warp 保存：
+
+```text
+一个 4-bit Stall counter
+六个 6-bit Dependence counters：SB0-SB5
+```
+
+因此本阶段动画同时画出两类资源：
+
+```text
+Register file
+  保存 R1-R8 的值
+  不参与本阶段的 issue check
+
+Issue state
+  Stall counter
+  SB0-SB5 dependence counters
+  候选指令读取这些状态
+```
+
+执行单元仍然提供自己的占用状态。
+
+与传统 scoreboard 相比，硬件不再为所有寄存器保存 writer bits 和 reader counts。
+
+### 6.2 发射机制
+
+编译器已经知道指令依赖图，因此把依赖编码进机器指令的 control bits。
+
+动画使用 `[control bits] ASM` 的伪反汇编形式，把一条机器指令和与它配套的 control bits 放在同一行。方括号中的字段不属于 `FADD`、`LOAD` 等 mnemonic；它们表示随该指令一起生成和保存的调度控制信息。
+
+下面使用简化记号表示十条程序的编译结果：
+
+```asm
+#                                  S    WB    RD    WAIT
+I1:  FADD R1, R2, R3            ; 0    -     -     {}
+I2:  IADD R4, R5, R6            ; 2    -     -     {}
+I3:  FFMA R7, R1, R2, R3        ; 0    -     -     {}
+
+I4:  LOAD R1, [R2]              ; 0    SB0   -     {}
+I5:  IADD R4, R5, R6            ; 0    -     -     {}
+I6:  IADD R7, R1, R8            ; 0    -     -     {SB0}
+
+I7:  LOAD R1, [R2]              ; 0    SB1   -     {}
+I8:  IADD R1, R3, R4            ; 0    -     -     {SB1}
+
+I9:  LOAD R7, [R8]              ; 0    -     SB2   {}
+I10: IADD R8, R2, R3            ; 0    -     -     {SB2}
+```
+
+字段含义为：
+
+| 字段 | 含义 |
+|---|---|
+| S | issue 后设置的 Stall counter |
+| WB | issue 后递增、write-back 后递减的 counter |
+| RD | issue 后递增、register read 后递减的 counter |
+| WAIT | issue 前必须为 0 的 counters |
+
+下面分别使用四组指令说明这些字段如何生效。
+
+#### 固定延迟：S 直接规定等待周期
+
+先看 I1→I3：
+
+```asm
+#                                  S    WB    RD    WAIT
+I1: FADD R1, R2, R3             ; 0    -     -     {}
+I2: IADD R4, R5, R6             ; 2    -     -     {}
+I3: FFMA R7, R1, R2, R3         ; 0    -     -     {}
+```
+
+I1 的 FADD 延迟固定，因此编译器能够计算 R1 在哪个周期可读。I2 与这条依赖无关，但它正好位于 I1 和 I3 之间。编译器在 I2 上设置 `S=2`，表示 **I2 发射以后**，当前 warp 的 Stall counter 在接下来的两个周期保持非零。
+
+`S=2` 不表示“等待上一条指令两个周期”，也不指向某一条 producer 或某一个寄存器。S 属于携带它的指令，它的含义始终是：这条指令发射后，同一 warp 暂停发射多少周期。在这个简化例子中，编译器先用独立的 I2 填掉一个周期，再把剩余等待放在 I2 后面，使 I3 到 C4 才能发射。
+
+```{mermaid}
+flowchart LR
+  A["C0 · I1 issue"] --> B["C1 · I2 issue<br/>设置 S=2"]
+  B --> C["C2 · Stall=2<br/>I3 不能 issue"]
+  C --> D["C3 · Stall=1<br/>I3 不能 issue"]
+  D --> E["C4 · Stall=0<br/>I3 issue"]
+```
+
+这里没有使用 SB counter。`S` 表示确定的时间间隔，不表示某一个寄存器依赖。
+
+#### 可变延迟 RAW：WB 与 WAIT 等待 write-back
+
+再看 I4→I6：
+
+```asm
+I4: LOAD R1, [R2]               ; WB=SB0   WAIT={}
+I5: IADD R4, R5, R6             ; WB=-     WAIT={}
+I6: IADD R7, R1, R8             ; WB=-     WAIT={SB0}
+```
+
+LOAD 的完成周期可能受 cache hit 或 cache miss 影响，编译器不能把等待时间写成固定的 `S`。因此 I4 使用 `WB=SB0`：I4 发射后 SB0 递增，I4 write-back 时 SB0 递减。I6 的 `WAIT={SB0}` 要求 SB0 为 0。
+
+SB0 可以理解成一个很小的计数式 barrier，但它不是带有独立对象或地址语义的 `mbarrier`。它只是当前 warp 内六个 6-bit dependence counters 之一。多个 producer 可以指定同一个 `WB=SB0`：每个 producer 发射后各执行一次 `SB0 += 1`，各自 write-back 时再执行一次 `SB0 -= 1`。
+
+因此多个 producer 可以共用一个 counter。如果某个 consumer 本来就需要等待这些 producer 全部完成，共用不会损失并行性；如果不同 producer-consumer pair 被迫共用，较早的 consumer 也会等到其他 producer 完成，可能产生额外 stall。
+
+```{mermaid}
+flowchart LR
+  A["I4 issue"] --> B["SB0 += 1"]
+  B --> C["I5 issue<br/>WAIT 为空"]
+  C --> D{"I6 检查 SB0"}
+  D -->|"SB0 > 0"| E["I6 stall"]
+  E --> F["I4 write-back<br/>SB0 -= 1"]
+  F --> G["SB0 = 0<br/>I6 issue"]
+```
+
+I6 不需要知道 producer 是 I4，也不需要查询 R1。编译器已经把这条 RAW 依赖映射到 SB0，硬件只读取 I6 的 WAIT mask 和 SB0 当前值。
+
+#### 可变延迟 WAW：仍然等待老 writer 完成
+
+I7 和 I8 都写 R1：
+
+```asm
+I7: LOAD R1, [R2]               ; WB=SB1   WAIT={}
+I8: IADD R1, R3, R4             ; WB=-     WAIT={SB1}
+```
+
+它与上一组 RAW 在硬件动作上没有区别：producer 发射后增加 WB counter，write-back 时减少 counter，后面的指令等 counter 归零才能发射。区别只在编译器建立这条等待关系的原因。RAW 是防止 consumer 过早读取旧值；WAW 是防止老 writer 最后写回并覆盖年轻 writer 的新值。
+
+如果 I8 在 I7 write-back 前完成，I7 随后的 write-back 会覆盖 I8 的新值。编译器因此让 I7 在 SB1 中登记未完成的 write-back，并让 I8 等待 SB1。
+
+```{mermaid}
+flowchart LR
+  A["I7 issue<br/>SB1 += 1"] --> B{"I8 检查 SB1"}
+  B -->|"SB1 > 0"| C["I8 stall"]
+  C --> D["I7 write-back<br/>SB1 -= 1"]
+  D --> E["I8 issue"]
+```
+
+RAW 和 WAW 都需要等待老指令完成写回，所以都使用 WB counter。
+
+#### 可变延迟 WAR：RD 等待老 reader 完成读取
+
+最后看 I9→I10：
+
+```asm
+I9:  LOAD R7, [R8]              ; RD=SB2   WAIT={}
+I10: IADD R8, R2, R3            ; RD=-     WAIT={SB2}
+```
+
+这里的等待方向相反：不是 I9 的 write-back 等 I10，而是年轻 writer I10 等老 reader I9。I9 已经发射，但还没有真正读取 R8，因此它用 `RD=SB2` 登记一次未完成的 register read；I9 读到 R8 后，SB2 才递减。I10 的 `WAIT={SB2}` 保证它在此之前不能写 R8。
+
+所以这条 WAR 依赖确实由前面的老 reader I9 设置 RD counter、后面的年轻 writer I10 等待该 counter。I9 最终什么时候 write-back 与这条 WAR 是否解除无关。
+
+```{mermaid}
+flowchart LR
+  A["I9 issue<br/>SB2 += 1"] --> B{"I10 检查 SB2"}
+  B -->|"SB2 > 0"| C["I10 stall"]
+  C --> D["I9 register read R8<br/>SB2 -= 1"]
+  D --> E["I10 issue"]
+```
+
+因此 WAR 使用 RD counter，而不是 WB counter。
+
+#### 候选指令最终检查什么
+
+对于每条候选指令，硬件只执行三类检查：
+
+```text
+Stall counter 是否为 0
+WAIT mask 指定的 SB counters 是否为 0
+目标执行单元是否可用
+```
+
+Dependence counter 的递增在 producer 发射后的下一周期才可见。如果 consumer 紧跟 producer，编译器还需要设置一个短的 `S`，覆盖 counter 尚未完成递增的窗口。
+
+### 6.3 执行过程
+
+::: {.column-screen-inset}
+<iframe
+  src="instruction-issue-from-first-principles/replay/index.html?stage=compiler"
+  title="Stage 3：编译器 Control Bits 与 Dependence Counters"
+  style="width: 100%; height: 1000px; border: 0;"
+  loading="lazy">
+</iframe>
+:::
+
+动画依次显示四种情况：
+
+| 周期范围 | 指令 | 观察点 |
+|---|---|---|
+| C0-C4 | I1-I3 | `S=2` 产生两个固定 stall 周期 |
+| C5-C11 | I4-I6 | I6 等待 I4 write-back 清除 SB0 |
+| C12-C17 | I7-I8 | I8 等待 I7 write-back 清除 SB1 |
+| C18-C21 | I9-I10 | I10 等待 I9 register read 清除 SB2 |
+
+动画为了可重复播放，为 I4、I7 和 I9 选择了固定的示例运行时延迟。这个数值不是编译器写入的等待周期：如果完成事件更晚到达，对应 counter 会更久保持非零，consumer 也会继续等待。
+
+把鼠标移到尚未发射的 I6、I8 或 I10 上，可以看到橙框落在其 WAIT mask 指定的 counter 上。寄存器仍然存在于 register file 中，但它们不再承担依赖状态。
+
+#### Warp Ready 与 Issue Scheduler
+
+每个 warp 按程序顺序提供最老的指令。
+
+一个 warp 成为 issue candidate，需要满足：
+
+```text
+Instruction Buffer 中存在有效指令
+Stall counter 为 0
+WAIT mask 指定的 counters 满足条件
+执行资源可用
+```
+
+论文推断每个 sub-core 每周期最多 issue 一条指令，并使用 Compiler Guided Greedy Then Youngest：
+
+```text
+当前 warp 仍然 ready
+→ 继续选择当前 warp
+
+当前 warp 不再 ready
+→ 选择最年轻的 ready warp
+```
+
+编译器还可以设置 Yield，要求下一周期不要继续选择同一个 warp。
+
+### 6.4 优缺点
+
+#### 与传统 Scoreboard 的状态量对比
+
+论文建模的传统 scoreboard 需要覆盖每个 warp 的 332 个可写寄存器。
+
+如果 reader scoreboard 最多支持 63 个 pending consumer，单个 warp 需要：
+
+```text
+332 + 332 × 6 = 2324 bit
+```
+
+control-bits 机制需要：
+
+```text
+6 × 6 bit Dependence counters
+1 × 4 bit Stall counter
+1 × 1 bit Yield
+= 41 bit per warp
+```
+
+论文估算的面积开销为：
+
+| 机制 | 相对 regular register file 的面积开销 |
+|---|---:|
+| 传统 scoreboard | 5.32% |
+| control-bits 机制 | 0.09% |
+
+优点：
+
+- 编译器直接提供依赖关系，硬件不需要为所有寄存器保存 scoreboard；
+- Dependence counters 仍然根据运行时 completion event 更新，可以处理可变延迟；
+- 相比传统 scoreboard，论文估算的状态量和面积显著降低。
+
+缺点：
+
+- 编译器必须正确生成 S、WB、RD、WAIT 和 Yield；
+- 只有六个 Dependence counters，counter 共享可能引入额外等待；
+- control bits 增加了指令编码和编译器调度的复杂度。
+
+---
+
+## 7. 总结
+
+四个 Stage 使用同一段程序，但候选指令检查的信息不同：
+
+| Stage | 候选指令检查的状态 |
+|---|---|
+| 严格串行 | 全局 active、目标执行单元 |
+| 硬件 Scoreboard | writer bits、reader counts、目标执行单元 |
+| 静态编译调度 | 编译器生成的指令间隔、目标执行单元 |
+| Compiler Control Bits | Stall counter、WAIT 指定的 SB counters、目标执行单元 |
+
+完整变化为：
+
+```text
+没有依赖状态
+→ 所有指令严格串行
+
+per-register scoreboard
+→ 硬件从 src/dst 动态恢复依赖
+
+静态编译调度
+→ 编译器用重排和 NOP 保证固定延迟
+
+compiler control bits + counters
+→ 编译器指定依赖，硬件跟踪运行时完成状态
+```
