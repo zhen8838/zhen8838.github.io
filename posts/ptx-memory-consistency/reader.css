@@ -1,0 +1,157 @@
+/* Keep the article at its 700px reading width; figures only use spare space. */
+body {
+  --ptx-var-data: #0f6e78;
+  --ptx-var-full: #985200;
+  --ptx-var-done1: #7945ad;
+  --ptx-var-done2: #b13c70;
+  --ptx-var-empty: #197444;
+}
+.ptx-v-data { --ptx-variable-color: var(--ptx-var-data); }
+.ptx-v-full { --ptx-variable-color: var(--ptx-var-full); }
+.ptx-v-done1 { --ptx-variable-color: var(--ptx-var-done1); }
+.ptx-v-done2 { --ptx-variable-color: var(--ptx-var-done2); }
+.ptx-v-empty { --ptx-variable-color: var(--ptx-var-empty); }
+.ptx-var { color: var(--ptx-variable-color) !important; fill: var(--ptx-variable-color); font-weight: 500; }
+/* 数值用正文色；只有变量带颜色，避免数字也变成高亮的蓝。 */
+code span.dv, code span.bn, code span.fl, code span.cn, code span.il { color: inherit; }
+#ptx-lab { display: none; min-width: 0; }
+#ptx-lab[hidden] { display: none !important; }
+#ptx-lab-figure { min-width: 0; }
+#ptx-lab .tl-card { width: 100% !important; }
+.ptx-pending { color: #687181; border-left: 2px solid #dce2eb; padding-left: 16px; margin: 1.25rem 0; }
+.ptx-pending p { margin: 0; }
+.ptx-inline-figure { margin: 1.5rem 0; }
+.ptx-inline-figure:empty { display: none; }
+#quarto-margin-sidebar { display: none; }
+.ptx-program-scroll { max-width: 100%; overflow-x: auto; margin: 1.25rem 0; }
+.ptx-program-table { table-layout: fixed; width: 100%; margin: 0; border-collapse: collapse; }
+.ptx-program-table th { width: 33.333%; padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #dce2e8; }
+.ptx-program-table td { vertical-align: top; padding: 0; border-bottom: 1px solid #dce2e8; }
+.ptx-program-table th + th, .ptx-program-table td + td { border-left: 1px solid #dce2e8; }
+.ptx-program-table div.sourceCode { margin: 0; border: 0; border-radius: 0; }
+.ptx-program-table pre.sourceCode { margin: 0; padding: 12px; border: 0; border-radius: 0; min-height: 180px; }
+.ptx-program-table pre.sourceCode code { font-size: 13px; line-height: 1.75; }
+.ptx-phase-key { font-size: 12px; color: var(--tl-muted); }
+.ptx-phase-label { font: 12px var(--tl-body); fill: var(--tl-muted); }
+.ptx-phase-divider { stroke: var(--tl-rule); }
+.ptx-phase-label-bg { fill: var(--tl-bg); }
+.ptx-variable-legend { display: flex; gap: 5px 12px; flex-wrap: wrap; font: 12px var(--tl-mono); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .tl-card {
+    --ptx-var-data: #6fd3e0;
+    --ptx-var-full: #ffbe69;
+    --ptx-var-done1: #c2a0f0;
+    --ptx-var-done2: #f399bd;
+    --ptx-var-empty: #7dd6a0;
+  }
+}
+@media (max-width: 600px) {
+  .ptx-program-table { min-width: 600px; }
+  .ptx-program-table pre.sourceCode { padding: 10px; }
+}
+/* 宽屏：目录 300 / 正文 780 / 图 300，左右等宽 → 正文居中 */
+@media (min-width: 1440px) {
+  #quarto-content {
+    grid-template-columns: [screen-start] minmax(24px, 1fr) [page-start page-start-inset] 300px [body-start-outset] 8px [body-start body-content-start] minmax(0, 780px) [body-content-end body-end] 8px [body-end-outset margin-start] 300px [margin-end page-end-inset page-end] minmax(24px, 1fr) [screen-end];
+  }
+}
+/* 中屏：目录先缩到 220，图保持 280；左侧补 60px 空列，正文仍然居中 */
+@media (min-width: 1240px) and (max-width: 1439.98px) {
+  #quarto-content {
+    grid-template-columns: [screen-start] minmax(24px, 1fr) [comp-start] 60px [page-start page-start-inset] 220px [body-start-outset] 8px [body-start body-content-start] minmax(0, 720px) [body-content-end body-end] 8px [body-end-outset margin-start] 280px [margin-end page-end-inset page-end] minmax(24px, 1fr) [screen-end];
+  }
+}
+@media (min-width: 1240px) {
+  #ptx-lab {
+    display: block;
+    grid-column: margin-start / margin-end;
+    grid-row: content-top / content-bottom;
+    position: sticky;
+    top: calc(var(--ptx-header-bottom, 136px) + 16px);
+    align-self: start;
+    max-height: calc(100vh - var(--ptx-header-bottom, 136px) - 36px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    padding: 0 0 12px;
+    z-index: 2;
+  }
+  .ptx-inline-figure { display: none; }
+}
+/* 大纲栏不要贴到正文，留出和右侧一样的 8px */
+@media (min-width: 992px) {
+  #quarto-sidebar {
+    grid-column: page-start / body-start-outset;
+  }
+}
+/* 中屏以下：图卡改为正文内嵌，右侧留出与目录等宽的空列，正文仍居中 */
+@media (min-width: 992px) and (max-width: 1239.98px) {
+  #quarto-content {
+    grid-template-columns: [screen-start] minmax(20px, 1fr) [page-start page-start-inset] minmax(140px, 200px) [body-start-outset] 8px [body-start body-content-start] minmax(0, 700px) [body-content-end body-end] 8px [body-end-outset margin-start] minmax(140px, 200px) [margin-end page-end-inset page-end] minmax(20px, 1fr) [screen-end];
+  }
+}
+@media (max-width: 1239px) {
+  #quarto-document-content { min-width: 0; }
+  .ptx-inline-figure .tl-card { max-width: 550px; margin-inline: auto; }
+}
+
+/* 三列都是同一种容器：白底 + 1px 描边 + 10px 圆角 */
+.sidebar,
+#quarto-sidebar {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+#TOC,
+nav[role="doc-toc"],
+#quarto-document-content {
+  background-color: #fff;
+  border: 1px solid var(--line-color);
+  border-radius: 10px;
+}
+#TOC,
+nav[role="doc-toc"] {
+  padding: 12px 14px;
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
+}
+/* 正文卡片内边距，正文实际行宽仍是 700px */
+#quarto-document-content {
+  padding: 24px 24px;
+  box-sizing: border-box;
+}
+@media (max-width: 991.98px) {
+  #quarto-document-content { width: auto; padding: 16px 14px; border-radius: 8px; }
+}
+
+/* 三栏顶部对齐：都从 header 下方 16px 开始（图卡靠 sticky 的 top 值对齐） */
+#TOC, #quarto-document-content { margin-top: 16px; }
+
+/* 正文里的控件和普通图片一样，上下留一样的间距 */
+[data-code-run] { margin: 1.5rem 0; }
+
+/* 2.5 的程序块：fence 行要加粗，代码块里做不到，改用 <pre> + <b> */
+.ptx-program-table pre.ptx-prog {
+  margin: 0; padding: 12px; border: 0; border-radius: 0; min-height: 180px;
+  font: 13px/1.75 ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: var(--code-bg, #efefef); overflow-x: auto;
+}
+.ptx-program-table pre.ptx-prog b { font-weight: 700; }
+
+/* 四象限坐标系 */
+.qd-svg { display: block; width: 100%; height: auto; }
+.qd-box { fill: #fff; stroke: var(--tl-rule); stroke-width: 1.2; }
+.qd-node.is-on .qd-box { stroke: var(--tl-po); stroke-width: 1.6; fill: color-mix(in srgb, var(--tl-po) 6%, #fff); }
+.qd-code { font: 600 12.5px var(--tl-mono); fill: var(--tl-ink); }
+.qd-kind { font: 10.5px var(--tl-body); fill: var(--tl-muted); }
+.qd-axis { font: 12px var(--tl-body); fill: var(--tl-muted); }
+.qd-edge { fill: none; stroke-width: 1.6; stroke: var(--tl-po); }
+.qd-head { fill: var(--tl-po); stroke: none; }
+.qd-edge-label { font: 10.5px var(--tl-mono); fill: var(--tl-po); }
+.qd-tag { font: 600 11.5px var(--tl-mono); color: var(--tl-po); border: 1px solid var(--tl-po); border-radius: 999px; padding: 1px 8px; }
+.qd-note { font-size: 12px; color: var(--tl-muted); line-height: 1.5; }
+
+
+/* 正文里始终显示的时间线（侧栏已被象限图占用） */
+.ptx-body-figure { margin: 1.5rem 0; }
+.ptx-body-figure:empty { display: none; }
+.ptx-body-figure .tl-card { max-width: 550px; margin-inline: auto; }
