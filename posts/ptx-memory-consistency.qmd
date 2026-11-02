@@ -16,8 +16,8 @@ format:
     code-fold: false
     css:
       - ptx-memory-consistency/timeline.css
-      - ptx-memory-consistency/reader.css?v=10
-      - ptx-memory-consistency/code-run.css
+      - ptx-memory-consistency/reader.css?v=16
+      - ptx-memory-consistency/code-run.css?v=3
     grid:
       sidebar-width: 170px
       body-width: 700px
@@ -200,22 +200,22 @@ P 写 data=42 → P 写 full=1 → C1 读 full==1 → C1 读 data
 
 <div data-code-run="2.4"></div>
 
-打开之后，读 `data` 在 t1 发出，`done1` 在 t2 就生效了；这条写一路传到 C2 和 P，P 在 t3 写下 43；读直到 t5 才返回，带回的是 43——一个在读发出时还不存在的值。1.2 那条推理链被反过来用了一遍。
+打开之后，读 `data` 在 t1 发出，`done1` 在 t2 就生效了；这条写一路传到 C2 和 P，P 在 t3 写下 43；读直到 t5 才返回，带回的是 43——一个在读发出时还不存在的值。[1.2](#sec-1-2) 那条推理链被反过来用了一遍。
 
 在两者之间插进一行 `fence.sc.gpu`，读必须取到值才能写 `done1`，链条就跑不到前面去。
 
 程序里先读 `data`、后写 `done1`，图上却是 `done1` 先生效：生效顺序和程序顺序又对不上了。这一对是读和写，记作 `R→W`；模型允许这种不一致，就叫 `R→W` 被**松弛**。
 
-同一条「我读完了」的消息一路上还经过另外两处 `R→W`：C2 读完 `done1` 再写 `empty`，P 读完 `empty` 再写 43。控制依赖在 PTX 里不构成顺序保证（见 6.3），所以每处都得自己补 fence。松弛得越多，要加的 fence 就越多。
+同一条「我读完了」的消息一路上还经过另外两处 `R→W`：C2 读完 `done1` 再写 `empty`，P 读完 `empty` 再写 43。控制依赖在 PTX 里不构成顺序保证（见 [6.3](#sec-6-3)），所以每处都得自己补 fence。松弛得越多，要加的 fence 就越多。
 
 ### 2.5 小结 {#sec-2-5}
 
 | 小节 | 优化 | 松弛的顺序 | 出问题的一对 | 模型 |
 | --- | --- | --- | --- | --- |
-| 2.1 | 写缓冲与读旁路 | `W→R` | 写 `done1` → 读 `done2` | IBM 370、TSO、PC |
-| 2.2 | 写操作重叠 | `W→W` | 写 `data` → 写 `full` | PSO |
-| 2.3 | 非阻塞读 | `R→R` | 读 `full` → 读 `data` | 松弛全部程序顺序 |
-| 2.4 | 读与后续写重叠 | `R→W` | 读 `data` → 写 `done1` | 同上 |
+| [2.1](#sec-2-1) | 写缓冲与读旁路 | `W→R` | 写 `done1` → 读 `done2` | IBM 370、TSO、PC |
+| [2.2](#sec-2-2) | 写操作重叠 | `W→W` | 写 `data` → 写 `full` | PSO |
+| [2.3](#sec-2-3) | 非阻塞读 | `R→R` | 读 `full` → 读 `data` | 松弛全部程序顺序 |
+| [2.4](#sec-2-4) | 读与后续写重叠 | `R→W` | 读 `data` → 写 `done1` | 同上 |
 
 
 四个小节下来能看出一个规律：模型允许的这些乱序，都不是必须发生的，需要的地方总能补回来。学术界把这套补救手段叫 **安全网（safety net）**，fence 是其中一种。
@@ -279,7 +279,7 @@ if done1 == 1:
 </div>
 
 
-数一遍能看出两件事。fence 从不贴着 `data`，只贴着三个标志（`full`、`done`、`empty`）；位置也只有两种——写在标志之前（交出去），或者读到标志之后（拿进来）。只有 2.1 那一处例外，它夹在两次读之间。
+数一遍能看出两件事。fence 从不贴着 `data`，只贴着三个标志（`full`、`done`、`empty`）；位置也只有两种——写在标志之前（交出去），或者读到标志之后（拿进来）。只有 [2.1](#sec-2-1) 那一处例外，它夹在两次读之间。
 
 
 <div class="ptx-inline-figure" data-ptx-inline="2.5"></div>
@@ -287,7 +287,7 @@ if done1 == 1:
 
 ## 3 release 与 acquire {#sec-3}
 
-第 2 节的补法是往每一次需要顺序的地方插 `fence.sc`。照 2.5 那个程序，三个线程交接一份数据要用 10 个 fence，而且看不出意图：读代码的人分不清哪一处是在「交出」，哪一处是在「拿到」。
+第 2 节的补法是往每一次需要顺序的地方插 `fence.sc`。照 [2.5](#sec-2-5) 那个程序，三个线程交接一份数据要用 10 个 fence，而且看不出意图：读代码的人分不清哪一处是在「交出」，哪一处是在「拿到」。
 
 这一节换一套工具。先把访问分成两类，再让「交出」的写和「拿到」的读自己带上语义，fence 只留给剩下的少数位置。
 
@@ -308,7 +308,7 @@ if done1 == 1:
 
 共享不等于特殊。`data` 也是被多个线程访问的，但它前后有 `full` 和 `done` 隔着，不会有两个线程同时碰它——这正是第 2 节那套交接在保证的事。分好类之后，模型只在特殊操作上兑现顺序承诺；两个特殊操作之间的普通操作，仍然可以重叠、可以乱序。
 
-拿 2.5 的程序对照：等 `full` → 读 `data`、读 `data` → 写 `done1`、写 `done1` → 读 `done2`，每一对都至少有一端是特殊操作，所以都保序；C1 若连着读 100 次 `data`，这 100 次之间就没有任何保证。
+拿 [2.5](#sec-2-5) 的程序对照：等 `full` → 读 `data`、读 `data` → 写 `done1`、写 `done1` → 读 `done2`，每一对都至少有一端是特殊操作，所以都保序；C1 若连着读 100 次 `data`，这 100 次之间就没有任何保证。
 
 **RC（Release Consistency，释放一致性）**模型在这棵树上再往下分一层。^[Gharachorloo、Lenoski、Laudon、Gibbons、Gupta 与 Hennessy，*Memory Consistency and Event Ordering in Scalable Shared-Memory Multiprocessors*，ISCA 1990。] 特殊操作里，真正用来交接的叫**同步操作**（sync），其余的叫**非同步操作**（nsync）；同步操作又分两种：为拿到访问权而做的**读**叫 acquire，为交出访问权而做的**写**叫 release。
 
@@ -322,62 +322,57 @@ if done1 == 1:
       └─ release：为交出访问权而做的写      写 full、写 done、写 empty
 ```
 
+三种 fence 的差别如下。「上面」「下面」指同一个线程里 fence 之前、之后的访问：
+
+| fence | 等上面的 | 拦住下面的 | 保住 |
+| --- | --- | --- | --- |
+| `fence.sc` | 读、写 | 读、写 | 四种全部 |
+| `fence.release` | 读、写 | 只拦写 | `W→W`、`R→W` |
+| `fence.acquire` | 只等读 | 读、写 | `R→R`、`R→W` |
+
+release 和 acquire 加起来还缺 `W→R`，这一对只有 `fence.sc` 能保，[3.6](#sec-3-6) 再讲。
+
 ### 3.2 release：交出之前先完成 {#sec-3-2}
 
-release 只管一件事：它前面的访问先完成。
+[2.5](#sec-2-5) 的程序里，P 交出 `data` 时用的是 `fence.sc`。其实 P 在这里只要一件事：`data` 写完以后，`full` 才生效。
 
-> **release** 是一条同步写：程序顺序上排在它前面的访问要先完成，之后才轮到它自己生效。它不约束后面的操作，也不约束别的线程。
+在我们的例子里，把 P 的 `fence.sc` 换成 `fence.release`，C1 不动。
 
-只看 2.2 那一对就够。P 先写 `data = 42`，再写 `full = 1`。不加任何东西时，两边的顺序可能对不上：
+下面第 2 节的优化全部打开。先用 `fence.sc` 跑一遍，再换成 `fence.release` 跑一遍，对比结果。
 
-```text
-程序顺序（代码里写的）          生效顺序（什么也不加）
-    data = 42                      full = 1     ← 先被别人看到
-        │                              │
-        ▼                              ▼
-    full = 1                       data = 42
-```
+<div data-code-run="3.2"></div>
 
-右边这一列就是 2.2 的问题：`full` 先落地，C1 被叫醒时 `data` 还没到。可 `full` 要说的明明是「`data` 已经写好了」，它没资格抢在前面——这就是 release 要盯的地方。把 release 放在两条写之间：
+换成 release 以后，`r1` 还是 42。只有一处变了：P 读 `empty` 时不用再等 `data` 落地，可以提前取到值。
 
-```text
-    data = 42  ──┐
-                 ├── release：data 落地之后，full 才能生效
-    full = 1   ──┘
-```
+把 P 的代码按 fence 分成上下、再分读写，画成四象限图。release 只点亮指向「下·写」的箭头：
 
-换成 PTX 就是 `fence.release`（要 PTX ISA 8.6 与 sm_90 及以上；更早的架构用 `fence.acq_rel`）。和 2.2 加 `fence.sc` 的时间线比，只差在用的指令，效果一样。
-
-release 只管「下面那条是写」的情形：上面那条是读也行，比如 C1 读完 `data` 再写 `done1`（2.4 那一对），一样靠它对齐。反过来——要让上面的写完成之后、下面的读才能取值——release 管不着，那得靠 acquire。P 后面那次读 `empty` 就是这种：它可以在写 `data` 完成之前就取得值，这里无害，P 只是还要再等一轮。
+- `data = 42` → `full = 1` 亮了，交出靠的就是这一条。
+- `data = 42` → 读 `empty` 没有亮。读 `empty` 提前也没有害处：读到 0，P 只要再等一轮。
 
 <div class="ptx-inline-figure" data-ptx-inline="3.2"></div>
 
 ### 3.3 acquire：拿到之后再进行 {#sec-3-3}
 
-acquire 也只管一件事：它后面的访问要等它完成。
+[2.5](#sec-2-5) 的程序里，C1 拿到 `data` 时用的也是 `fence.sc`。其实 C1 在这里只要一件事：读到 `full == 1` 以后，才去读 `data`。
 
-> **acquire** 是一条同步读：程序顺序上排在它后面的访问，要等它完成之后才开始。它不约束前面的操作。
+在我们的例子里，P 用 [3.2](#sec-3-2) 的 `fence.release`，C1 先不加 fence。
 
-C1 的等 `full == 1` 是 acquire。它拿到的是「可以用 `data` 了」这句话，那就得让后面的读 `data` 等在它之后——这正是 2.3 缺的那一步。P 的等 `empty == 1` 也是 acquire，它后面跟着写 `data = 43`，补上 2.4 链上 P 那一处；C2 读到 `done1` 同样是 acquire，它后面的写 `empty` 排在它之后。
+下面第 2 节的优化全部打开。先不给 C1 加 fence 跑一遍，再加上 `fence.sc`，最后换成 `fence.acquire`，对比结果。
 
-四块图里，acquire 封的是另一侧：
+<div data-code-run="3.3"></div>
 
-```text
-              读              写
-上面        上·读           上·写
-────────────  acquire  ────────────
-下面        下·读           下·写
-```
+C1 不加 fence 时，`r1` 是 0：读 `data` 在 t1 就发出了。P 的 release 只管 P 自己的两条写，管不到 C1。加上 `fence.sc` 或 `fence.acquire` 以后，`r1` 都是 42，两条时间线完全一样。
 
-上面的读完成以后，下面的读和写才能完成；上面的写不受约束。
+把 C1 的代码按 fence 分成上下、再分读写，画成四象限图。acquire 点亮从「上·读」出发的箭头：
 
-PTX 里是 `fence.acquire`。对「读 `full` → 读 `data`」这一对来说，它和 `fence.sc` 效果相同：读 `data` 仍可以提前发出，但它的 ◆ 必须落在读 `full` 的 ◆ 之后。
+- `while full != 1` → `r1 = data` 亮了，拿到靠的就是这一条。
+- 「上·写」是空的：C1 在 fence 上面没有写。sc 比 acquire 多等的就是这一格，所以这里两者一样。
 
 <div class="ptx-inline-figure" data-ptx-inline="3.3"></div>
 
 ### 3.4 release 与 acquire 配合 {#sec-3-4}
 
-两种操作合起来，正好把 2.2、2.3、2.4 都补上，2.1 则留给 3.6。按这个思路改写 2.5 的程序（省略 `.gpu`）：
+两种操作合起来，正好把 [2.2](#sec-2-2)、[2.3](#sec-2-3)、[2.4](#sec-2-4) 都补上，[2.1](#sec-2-1) 则留给 [3.6](#sec-3-6)。按这个思路改写 [2.5](#sec-2-5) 的程序：
 
 <div class="ptx-program-scroll" role="region" aria-label="用 release 与 acquire 改写后的三个线程" tabindex="0">
 
@@ -388,11 +383,11 @@ PTX 里是 `fence.acquire`。对「读 `full` → 读 `data`」这一对来说�
 
 ```python
 data = 42
-fence.release
+fence.release.gpu
 full = 1
 while empty != 1:
     pass
-fence.acquire
+fence.acquire.gpu
 data = 43
 ```
 
@@ -402,12 +397,13 @@ data = 43
 ```python
 while full != 1:
     pass
-fence.acquire
+fence.acquire.gpu
 value1 = data
-fence.release
+fence.release.gpu
 done1 = 1
+fence.sc.gpu
 if done2 == 1:
-    fence.acq_rel
+    fence.acq_rel.gpu
     empty = 1
 ```
 
@@ -417,12 +413,13 @@ if done2 == 1:
 ```python
 while full != 1:
     pass
-fence.acquire
+fence.acquire.gpu
 value2 = data
-fence.release
+fence.release.gpu
 done2 = 1
+fence.sc.gpu
 if done1 == 1:
-    fence.acq_rel
+    fence.acq_rel.gpu
     empty = 1
 ```
 
@@ -432,101 +429,184 @@ if done1 == 1:
 
 </div>
 
-fence 还是 10 个，但只剩两次 `fence.sc`（2.1 那处 W→R），其余都换成了更轻的 `fence.release` / `fence.acquire`，而且名字直接说明了用意。
+fence 还是 10 个，但只剩两次 `fence.sc`（[2.1](#sec-2-1) 那处 W→R），其余都换成了更轻的 `fence.release` / `fence.acquire`，而且名字直接说明了用意。
 
-`fence.sc` 贵在哪，看四块图左下角那个「上·写 → 下·读」：要保住它，下面的读必须等上面的写传到所有相关线程，而读本来就快、写往往很慢，读只好陪着等。release 和 acquire 都不管这一格，所以它们之后再出现的读不必等前面的写传完。^[PTX 文档把这层差别说成 “a slower fence … at the cost of performance”；综述也指出，放开 W→R 的主要收益正是隐藏写的延迟。]
+`fence.sc` 比 release、acquire 多保住一个 `W→R`。要保住它，下面的读得等上面的写离开写缓冲（[2.1](#sec-2-1)），才能取值。写往往很慢，读只好陪着等，所以 `fence.sc` 最贵。^[PTX 文档把这层差别说成 “a slower fence … at the cost of performance”；综述也指出，放开 W→R 的主要收益正是隐藏写的延迟。]
 
-写 `empty` 之前用的是 `fence.acq_rel`：读到对方的 `done` 是「拿到」，写 `empty` 是「交出」，两种身份都有。
+写 `empty` 之前用的是 `fence.acq_rel`：读到对方的 `done` 是「拿到」，写 `empty` 是「交出」，两种身份都有。^[只用 `fence.acquire` 时，下面的时间线不变，但按 PTX 的定义链会在 C1 断开（累积性，PTX ISA §8.9.5），[6.3](#sec-6-3) 再对照。]
 
-**跨线程的那条链怎么接上。** 当 C1 的 acquire 读到 P 的 release 写进去的值时，P 在 release 之前的操作才对 C1 在 acquire 之后的操作可见。「release 在前」不是硬件强制的先后，而是「读到了」才成立：C1 若读到初值 0，两边没建立任何关系，读 `data` 可能是 0 也可能是 42——所以 C1 得循环等 `full == 1`。
+把整段程序跑一遍，只看一件事：C2 读完 `data`，P 怎么知道。P 从没和 C2 直接通信，消息要经过 C1 接力。
 
-三件事同时成立才算接上：^[PTX ISA §8.9.4。]
+<div data-code-run="3.4"></div>
 
-- 同一个位置：P 写 `full`，C1 读 `full`；
-- 两端各带一个标记：写的一端是 release，读的一端是 acquire；
-- 读到的就是这次写的值：C1 实际读到的，正是 P 这次写进去的 1（也可以经过一串读改写传过来，见 4.4）。
+C2 读 `data` 和 P 写 43 之间连着五条边：C2 的 release 让读 `data` 排在写 `done2` 之前；C1 读到 `done2`；C1 的 `fence.acq_rel` 让读 `done2` 排在写 `empty` 之前；P 读到 `empty`；P 的 acquire 让读 `empty` 排在写 43 之前。五条连成一条链，C2 读 `data` 就排在 P 写 43 之前，读不到 43。
 
-缺第三条，位置相同、两端也有标记，链仍然没接上。缺第二条，只有一端带标记也不行：P 用 release、C1 不用 acquire，2.3 的问题会回来；P 不用 release、C1 用 acquire，2.2 的问题会回来。
+去掉 C2 的 `fence.release`，第一条边断开：读 `data` 还没返回，`done2` 已经落地，后面四条照样走完，P 写下 43 时 C2 还没读完。
 
-**链上的三条边各有来源。** 回到 1.2 那条推理链：
+PTX 把这样由程序顺序和「读到」连成的先后叫**因果序**（causality order），作用相当于 C++ 的 happens-before。
 
-```text
-W_data ──①程序顺序──► W_full ──②读到──► R_full ──③程序顺序──► R_data
-         release 保住                             acquire 保住
+### 3.5 relaxed：每轮都真的去读 {#sec-3-5}
+
+前面的程序里，标志的读写都没带标记。写成 PTX 时，没带标记的 `ld`、`st` 就是 [3.1](#sec-3-1) 的普通操作。拿 C1 等 `full` 的这几行，分别用普通读和 relaxed 读编译，对比 ptxas 在 H200 上生成的机器码（SASS；省略了取参数、写回 `r1` 的指令，操作数也做了简化）：
+
+```{=html}
+<div class="ptx-program-scroll">
+<table class="ptx-program-table ptx-asm-table" data-quarto-disable-processing="true">
+<thead><tr><th></th><th>普通读 <code>ld</code></th><th>relaxed 读 <code>ld.relaxed.gpu</code></th></tr></thead>
+<tbody>
+<tr><th scope="row">代码</th>
+<td><pre class="ptx-prog"><span class="ln is-gone">while full != 1:</span><span class="ln is-gone">    pass</span><span class="ln">r1 = data</span></pre></td>
+<td><pre class="ptx-prog"><span class="ln is-kept">while full != 1:</span><span class="ln is-kept">    pass</span><span class="ln">r1 = data</span></pre></td></tr>
+<tr><th scope="row">SASS</th>
+<td><pre class="ptx-prog"><span class="ln">LDG.E R3, [data]</span></pre></td>
+<td><pre class="ptx-prog"><span class="ln is-kept">loop: LDG.E.STRONG.GPU R0, [full]</span><span class="ln is-kept">      ISETP.NE P0, R0, 1</span><span class="ln is-kept">      @P0 BRA loop</span><span class="ln">LDG.E R3, [data]</span></pre></td></tr>
+</tbody>
+</table>
+</div>
 ```
 
-① 是 P 的程序顺序，由 release 保住；② 是 C1 读到了 P 写进去的 1，这条边跨线程；③ 是 C1 的程序顺序，由 acquire 保住。三条连起来，`R_data` 就排在 `W_data` 之后；初始写排在 `W_data` 之前，于是被排除，`R_data` 只能读到 42。PTX 把这样由程序顺序和同步连起来的先后叫**因果序**（causality order），作用相当于 C++ 的 happens-before。
+普通读的循环整个没了。普通读默认没有别的线程同时写 `full`，那么 `full` 一直是第一次读到的值：是 1，循环马上结束；不是 1，循环永远不结束。编译器又默认循环总会结束，只剩「是 1」一种可能，就把循环删了。^[循环里还有别的事要做时（比如实测程序里的超时判断），ptxas 没有删循环，而是把读提到循环外，只读一次。结果一样：循环里不再真的去读 `full`。]
 
-**接力。** C1 还要把「C2 也读完了」这件事转交给 P：C2 读 `data` → 写 `done2`，C1 读到 `done2` → 写 `empty`，P 读到 `empty` → 写 `data = 43`。P 从没和 C2 直接通信，凭什么相信 C2 已经读完？
+标成 relaxed 以后，编译器不能再这样假设，循环每轮都真的去读。^[反过来，普通读就算读到 1 也不算数：它不算线程间的通信，[3.4](#sec-3-4) 那条链里「C1 读到 `full`」这一环接不上。] P 写 `full` 也要一起标成 `st.relaxed.gpu`。^[PTX 没有写明循环多久一定读到 1。旧代码常用 `volatile`，PTX 里它相当于 `.relaxed.sys`。] relaxed 自己不带顺序，`data` 的先后还靠旁边的 fence；也可以直接写 `st.release.gpu`、`ld.acquire.gpu`，一条指令两件事都做。
 
-```text
-C2: 读 data
-      │ ① 程序顺序（fence.release 保住）
-      ▼
-C2: 写 done2 ──②读到──► C1: 读 done2
-                           │ ③ 程序顺序（fence.acq_rel 保住）
-                           ▼
-                        C1: 写 empty ──④读到──► P: 读 empty
-                                                  │ ⑤ 程序顺序（fence.acquire 保住）
-                                                  ▼
-                                               P: 写 data = 43
-```
+GPU 上的 fence 和 relaxed、release、acquire 访问还要写一个 scope，说明它和哪些线程通信：
 
-五条边连成一条因果序，C2 的读 `data` 就排在 P 写 43 之前，C2 读不到 43。中间的 C1 必须先 acquire（接住 C2 的交接）再 release（交给 P），所以写 `empty` 之前用的是 `fence.acq_rel`；只用 `fence.acquire` 的话，读 `done2` 和写 `empty` 之间没有 release 类的 fence，链会在 C1 断开。C1 的 release 把它看到的 C2 的操作也一并交给了 P——PTX 把这叫同步操作的累积性。^[PTX ISA §8.9.5 脚注；6.3 再对照。]
+| scope | 和谁通信 |
+| --- | --- |
+| `.cta` | 同一个 CTA 的线程 |
+| `.cluster` | 同一个 cluster 的线程 |
+| `.gpu` | 同一块 GPU 上的线程 |
+| `.sys` | 所有 GPU 和 CPU 上的线程 |
 
-### 3.5 relaxed：读到才算数 {#sec-3-5}
-
-正文待补。
-
-<div class="ptx-inline-figure" data-ptx-inline="3.5"></div>
+本例三个线程在不同 CTA，所以前面都写 `.gpu`。写成 `.cta`，读到 1 也不算数。^[实测：两端用 `st.release.cta`、`ld.acquire.cta`，两个线程放在不同 CTA，640 万轮里有 18.8 万轮读到 `full` 是 1，`data` 却还是旧值。]
 
 ### 3.6 fence.sc：不读到也能同步 {#sec-3-6}
 
-正文待补。
+[3.4](#sec-3-4) 的程序里还剩两个 `fence.sc` 没讲。它们管的是 C1、C2 谁最后完成：两边各写自己的 `done`，再读对方的 `done`；至少要有一个读到 1，由它写 `empty`。
+
+先只用前面学过的 release、acquire：中间放 `fence.acq_rel`。跑一遍，再换成 `fence.sc` 对比。
+
+<div data-code-run="3.6"></div>
+
+只用 `fence.acq_rel`，两个读可能都是 0。^[PTX 文档的 SB（Store Buffering）例子也说明，用 `fence.acq_rel` 时两边都可能读到 0（PTX ISA §8.10.6）。] release、acquire 是交接：一方写，另一方读到这个值，顺序才接得上。这里两边同时写、同时读，谁都可能没读到对方的写，交接接不上。没人写 `empty`，P 一直等下去。
+
+换成 `fence.sc`，两个里一定有一个读到 1。所有 `fence.sc` 排成一队，两个里总有一个在前。^[PTX 把这一队叫 Fence-SC order（PTX ISA §8.9.3），并规定排在前面的 `fence.sc` 与排在后面的 synchronize with（§8.9.4）。] 在前的那个相当于 release，在后的那个相当于 acquire，不用读到值就接上一条边。图里 C1 的在前，紫色箭头就是这条边：C1 写 `done1` 排在 C2 读 `done1` 之前，C2 读到 1，由它写 `empty`。C2 的在前时反过来，C1 读到 1。^[综述把 RC 分成两种：RCsc 在特殊操作之间保持 SC，`W→R` 也保；RCpc 不保这一对。PTX 的 release、acquire 像 RCpc，需要时用 `fence.sc` 补（Adve 与 Gharachorloo，1996，第 73 页）。]
 
 <div class="ptx-inline-figure" data-ptx-inline="3.6"></div>
 
 ## 4 atom {#sec-4}
 
-::: {.ptx-pending}
-本章正文待逐节整理。已有时间线可在对应小节旁预览。
-:::
+[3.6](#sec-3-6) 靠 `fence.sc` 决定 C1、C2 谁最后完成，而 `fence.sc` 最贵（[3.4](#sec-3-4)）。消费者再多一些，每人还要读所有别人的 `done`。
+
+换个办法：用一个计数 `count` 代替两个 `done`。每个消费者把 `count` 加 1，拿到旧值 1 的是最后一个，由它写 `empty`。每人只碰 `count` 这一个位置，不再有「写自己的、读对方的」那一对 `W→R`，也就不用 `fence.sc`。
+
+这一节先把计数加对，再一步步把它用到底，最后得到 barrier：P 直接等完成的人数。
 
 ### 4.1 atom：读改写一步完成 {#sec-4-1}
 
-正文待补。
+先用第 3 节的写法：读出 `count`，写回加 1 的值，前后的 fence 照 [3.4](#sec-3-4) 放好。下面按 [1.2](#sec-1-2) 的理想执行跑一遍，没有任何优化：
 
-<div class="ptx-inline-figure" data-ptx-inline="4.1"></div>
+<div data-code-run="4.1"></div>
+
+C2 的读插在了 C1 的读和写之间：两人都拿到 0，`count` 只加到 1，没人写 `empty`。
+
+fence 在这里帮不上忙。fence 只管一个线程自己的先后，而每个线程自己的读、写都没乱，是别人的写插进了中间。这里要的是另一件事：读、加 1、写回一步完成，别人插不进来，叫**不可分割**。它用 fence 合成不出来，PTX 用 `atom` 指令提供。
+
+把读写换成 `atom.add`，fence 不动，结果就对了：先加的拿到 0，后加的一定拿到 1，由它写 `empty`。^[PTX ISA §8.10.3 的原子性公理：一个读改写读到某次写的值以后，别的写不能插在那次写和它自己的写之间。前提是双方的 scope 互相包含，见 [4.2](#sec-4-2)。]
+
+`atom` 的「原子」指不可分割，和第 3 节的顺序是两件事。`atom.add` 不写 `.sem` 时是 relaxed，只管不可分割，不带顺序，所以前后的 fence 一个都不能少。^[PTX：`atom` 不写 `.sem` 时为 `.relaxed`，不写 `.scope` 时为 `.gpu`。C++ 的 `std::atomic` 把两件事放在一起：类型保证每次访问不可分割，并提供 `fetch_add` 等读改写；每次访问的 `memory_order` 参数给出顺序。PTX 没有「atomic 变量」，只有带标记的访问和 `atom` 指令。]
 
 ### 4.2 `.scope`：原子性也有范围 {#sec-4-2}
 
-正文待补。
+C1、C2 在不同 CTA。现在 C1 的 `atom` 写成 `.cta`，比如从只在一个 CTA 里跑的代码里抄过来；C2 写 `.gpu`。
 
-<div class="ptx-inline-figure" data-ptx-inline="4.2"></div>
+<div data-code-run="4.2"></div>
 
-### 4.3 `.sem`：计数同时交接 {#sec-4-3}
+`atom.cta` 只保证本 CTA 的线程插不进来，C2 不在其中。在 C2 看来，C1 的读改写像是被拆开了，自己的读改写插在了中间，两人又都拿到 0。^[PTX ISA §8.10.3 的例子：不同 CTA 中一个 `atom.cta.inc`、一个 `atom.gpu.inc`，最终 `x` 可能是 1。原文：“Atomicity is not guaranteed if the operations are not morally strong.”] 每个读改写本身仍是一步完成的，只是完成的地方不同：可以想成 `atom.cta` 在本 SM 一层完成，`atom.gpu` 在 L2 完成，谁也挡不住谁。^[这只是帮助理解的示意，NVIDIA 没有公开实现。]
 
-正文待补。
+规则和 [3.5](#sec-3-5) 的 scope 一样：两端的 scope 都要包含对方。3.5 里它决定读到算不算数，这里还决定不可分割成不成立。修复是两端都写 `.gpu`。scope 要覆盖所有可能同时改这个位置的线程。
 
-<div class="ptx-inline-figure" data-ptx-inline="4.3"></div>
+### 4.3 `.sem`：把 fence 并进 atom {#sec-4-3}
 
-### 4.4 `.sem`：交接穿过读改写链 {#sec-4-4}
+[3.5](#sec-3-5) 讲过，`st`、`ld` 可以直接带 release、acquire，省掉旁边的 fence。`atom` 也一样，`.sem` 可以写 `.release`、`.acquire`、`.acq_rel`。把 4.1 的 C1 改写一下：
 
-正文待补。
+```{=html}
+<div class="ptx-program-scroll">
+<table class="ptx-program-table ptx-asm-table" data-quarto-disable-processing="true">
+<thead><tr><th></th><th>fence 写法（4.1）</th><th>带标记的写法</th></tr></thead>
+<tbody>
+<tr><th scope="row">C1</th>
+<td><pre class="ptx-prog"><span class="ln">value1 = data</span><span class="ln is-kept">fence.release.gpu</span><span class="ln">old1 = atom.add(count, 1)</span><span class="ln">if old1 == 1:</span><span class="ln is-kept">    fence.acq_rel.gpu</span><span class="ln">    empty = 1</span></pre></td>
+<td><pre class="ptx-prog"><span class="ln">value1 = data</span><span class="ln is-kept">old1 = atom.acq_rel.add(count, 1)</span><span class="ln">if old1 == 1:</span><span class="ln is-kept">    empty = 1    # st.release.gpu</span></pre></td></tr>
+</tbody>
+</table>
+</div>
+```
 
-<div class="ptx-inline-figure" data-ptx-inline="4.4"></div>
+两处 fence 各自挪到它服务的访问上：
+
+- `fence.release` 在 `atom` 前面，只为这条 `atom` 做 release。并进去，`atom` 带上 release 一半。
+- `fence.acq_rel` 夹在 `atom` 和写 `empty` 中间，同时替两条访问干活：acquire 一半给前面的 `atom`，拿到 1 时接住对方；release 一半给后面的写 `empty`，交给 P。拆开以后，`atom` 再带上 acquire 一半，写 `empty` 标成 `st.release`。
+
+合起来，`atom` 就是 `.acq_rel`。事先不知道谁先加，两人都这样写。^[C++ 里 `cuda::atomic_ref<unsigned, cuda::thread_scope_device>(count).fetch_add(1, cuda::memory_order_acq_rel)` 编出来就是这一条 `atom.add.acq_rel.gpu`。]
+
+两种写法在这里作用相同，差别在范围：带标记的写法只管这一条访问；fence 还会让它旁边别的 strong 访问也成为 release、acquire 点。^[PTX 没有用一种写法定义另一种，而是把两种写法并列为 release、acquire pattern（PTX ISA §8.8）。]
+
+### 4.4 barrier：P 直接等人数 {#sec-4-4}
+
+4.3 的交接绕了一道：最后一个人先用 acquire 接住对方，再写 `empty` 交给 P。所以两个消费者都得带 acquire，还要多写一个 `empty`。
+
+改成让 P 直接等 `count` 变成 2，再写 43。P 等的是「已经完成的人数」，这就是 barrier，[5.2](#sec-5-2) 的 mbarrier 也是这样数人数。消费者不用再判断谁最后，只要交出：两人都写 `atom.release.add`，不用 acquire，也不写 `empty`；P 用 `ld.acquire` 读 `count`。
+
+<div data-code-run="4.4"></div>
+
+P 读到的 2 是后加的人写的，P 和它直接接上。先加的人只写了 1，P 从没读到过这个 1。先加的人交出的 `data`，P 也接到了吗？
+
+接到了。2 是在 1 上加出来的，读改写会把「读到」往下传：P 看到 2，就算看到了 1。^[PTX ISA §8.9.2：“Observation order relates a write W to a read R through an optional sequence of atomic read-modify-write operations.” C++ 里对应的是 release sequence。只有读改写能这样传：用普通的 `st` 把 2 写进去，就接不上了。] 图里那条从先加的人直接连到 P 的橙线就是它。
+
+所以等到 2，就是等到了两个人。点「C2 先加」，两人换了先后，P 的代码和结果都不变：P 要的是两个人都排在它前面，不用管 C1、C2 之间谁先。
 
 ### 4.5 red：不读回，不能 acquire {#sec-4-5}
 
-正文待补。
+4.4 的消费者用不到旧值。这时可以把 `atom` 换成 `red`：一样是读改写，只是不把旧值返回给线程。在 CUDA 里写同一句 `atomicAdd`，用不用返回值，ptxas 生成的机器码不同（H200；省略了 warp 内合并的指令，操作数也做了简化）：
 
-<div class="ptx-inline-figure" data-ptx-inline="4.5"></div>
+```{=html}
+<div class="ptx-program-scroll">
+<table class="ptx-program-table ptx-asm-table" data-quarto-disable-processing="true">
+<thead><tr><th></th><th>不用返回值</th><th>用返回值</th></tr></thead>
+<tbody>
+<tr><th scope="row">CUDA</th>
+<td><pre class="ptx-prog"><span class="ln">atomicAdd(&amp;count, 1);</span></pre></td>
+<td><pre class="ptx-prog"><span class="ln">old = atomicAdd(&amp;count, 1);</span></pre></td></tr>
+<tr><th scope="row">PTX</th>
+<td><pre class="ptx-prog"><span class="ln">atom.global.add.u32</span></pre></td>
+<td><pre class="ptx-prog"><span class="ln">atom.global.add.u32</span></pre></td></tr>
+<tr><th scope="row">SASS</th>
+<td><pre class="ptx-prog"><span class="ln is-kept">REDG.E.ADD.STRONG.GPU [count], R5</span></pre></td>
+<td><pre class="ptx-prog"><span class="ln is-kept">ATOMG.E.ADD.STRONG.GPU R3, [count], R9</span></pre></td></tr>
+</tbody>
+</table>
+</div>
+```
+
+`REDG` 没有目的寄存器，线程发出去就继续走，不用等结果回来。^[这是这台机器、这个编译器上的实现，PTX 不规定。]
+
+`red` 能替 4.4 的 `atom.release.add`：它也是原子操作，两人照样不丢加，4.4 的读改写链照样成立。^[PTX ISA §8.4 的表把 `red` 算作 atomic operation，但不算 read operation；§8.9.2 的链能不能经过 `red`，PTX 正文没有明说。形式化论文把 `red` 当作不返回值的 `atom`，链成立。]
+
+`red` 的 `.sem` 只有 `.relaxed`、`.release`，它不能当 acquire，后面接一个 `fence.acquire` 也不行。^[PTX ISA §8.8：“while atomic reductions conceptually perform a strong read as part of its read-modify-write sequence, this strong read does not form an acquire pattern. E.g.: red.add [M], 1; fence.acquire; is not an acquire pattern.” §8.11.1 的例子里，`red` 内部读到了对方的写，两边仍然接不上；原文：“Using the atom instruction instead of red forbids this outcome.”] 所以 [4.3](#sec-4-3) 的消费者不能用 `red`：最后一人要拿到旧值才知道自己最后，还要 acquire 接住对方。^[PTX 没有给原因。本文的推断：acquire 要等读的结果回来，后面的操作才能走；`red` 本来就不等结果。]
 
 ### 4.6 小结 {#sec-4-6}
 
-正文待补。
+第 2 到 4 节用到的每条同步指令，都是四件事的组合。PTX 的指令格式也按这几件排：`ld{.sem}{.scope}`、`st{.sem}{.scope}`、`atom{.sem}{.scope}.op`、`fence{.sem}.scope`。
 
-<div class="ptx-inline-figure" data-ptx-inline="4.6"></div>
+| 这件事 | 回答的问题 | 写在哪 | 讲过的小节 |
+| --- | --- | --- | --- |
+| strong / weak | 读到算不算数 | `.sem`：`ld`、`st` 不写为 weak；`atom` 不写为 `.relaxed` | [3.5](#sec-3-5) |
+| 顺序 | 给别的访问排先后 | `.sem`：`.release`、`.acquire`、`.acq_rel`；或单独的 fence | 第 2、3 节 |
+| 不可分割 | 读改写一步完成 | `atom`、`red` | [4.1](#sec-4-1) |
+| scope | 和哪些线程打交道 | `.scope`：`.cta`、`.cluster`、`.gpu`、`.sys` | [3.5](#sec-3-5)、[4.2](#sec-4-2) |
+
+带标记的访问，都可以看成把旁边的 fence 并到这条访问上（[3.5](#sec-3-5)、[4.3](#sec-4-3)）。只有 `fence.sc` 没有对应的一条写法，没有 `ld.sc`、`st.sc`。
 
 ## 5 异步拷贝与 proxy {#sec-5}
 
