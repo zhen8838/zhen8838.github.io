@@ -1318,387 +1318,6 @@ barrier.cluster.wait                     barrier.cluster.wait</code></pre>
   <pubDate>Wed, 28 Oct 2026 16:00:00 GMT</pubDate>
 </item>
 <item>
-  <title>传统 Scoreboard 与现代 GPU 的编译器协同依赖管理</title>
-  <link>https://zhen8838.github.io/posts/gpu-scoreboard-control-bits.html</link>
-  <description><![CDATA[ 
-
-
-
-
-<!-- Recovered from gh-pages 2a908a8: the original source was not tracked. -->
-<section id="目标" class="level2">
-<h2 class="anchored" data-anchor-id="目标">1. 目标</h2>
-<p>上一篇文章允许不同执行单元重叠以后，观察到下面的问题：</p>
-<pre class="text"><code>目标执行单元空闲
-不代表指令现在执行是正确的</code></pre>
-<p>本文从这个问题开始，先构造传统硬件 scoreboard，再解释论文 <em>Dissecting and Modeling the Architecture of Modern GPU Cores</em> 描述的编译器协同机制。</p>
-<p>论文认为现代 NVIDIA GPU 不使用传统的 per-register scoreboard 管理数据依赖。传统 scoreboard 是本文用于比较的中间设计。</p>
-<hr>
-</section>
-<section id="固定程序和依赖" class="level2">
-<h2 class="anchored" data-anchor-id="固定程序和依赖">2. 固定程序和依赖</h2>
-<p>继续使用上一篇文章的三条指令：</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2" style="background: #f1f3f5;"><pre class="sourceCode asm code-with-copy"><code class="sourceCode fasm"><span id="cb2-1"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">I1:</span> <span class="bu" style="color: null;
-background-color: null;
-font-style: inherit;">LOAD</span> R1<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">,</span> <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">[</span>R2<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">]</span>      <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">//</span> 可变延迟，写 R1</span>
-<span id="cb2-2"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">I2:</span> <span class="bu" style="color: null;
-background-color: null;
-font-style: inherit;">ADD</span>  R4<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">,</span> R5<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">,</span> R6    <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">//</span> 与 I1 无关</span>
-<span id="cb2-3"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">I3:</span> <span class="bu" style="color: null;
-background-color: null;
-font-style: inherit;">ADD</span>  R7<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">,</span> R1<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">,</span> <span class="kw" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">R8</span>    <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">//</span> 读取 I1 产生的 R1</span></code></pre></div></div>
-<p>此时已经知道 I3 必须等待 I1 产生 R1：</p>
-<div class="cell" data-layout-align="default">
-<div class="cell-output-display">
-<div>
-<p></p><figure class="figure"><p></p>
-<div>
-<pre class="mermaid mermaid-js">flowchart LR
-  I1["I1: LOAD R1, [R2]"]
-  I2["I2: ADD R4, R5, R6"]
-  I3["I3: ADD R7, R1, R8"]
-
-  I1 --&gt;|"RAW · R1"| I3
-  I2 -. "independent" .- I3
-</pre>
-</div>
-<p></p></figure><p></p>
-</div>
-</div>
-</div>
-<p>I2 不依赖 I1，可以在 I1 尚未完成时执行。</p>
-<hr>
-</section>
-<section id="依赖状态需要对应真实硬件事件" class="level2">
-<h2 class="anchored" data-anchor-id="依赖状态需要对应真实硬件事件">3. 依赖状态需要对应真实硬件事件</h2>
-<p>一条指令从发射到结果可见，至少涉及三个不同事件：</p>
-<pre class="text"><code>issue          指令离开发射位置
-register read  指令真正读取源寄存器
-write-back     指令结果写回目的寄存器</code></pre>
-<p>对于 I1 和 I3 的 RAW：</p>
-<pre class="text"><code>I1 issue
-→ I1 执行
-→ I1 write-back R1
-→ I3 才能读取 R1</code></pre>
-<p>因此，依赖状态不能在 I1 issue 后立即清除。它必须保持到 I1 write-back。</p>
-<p>WAR 的解除时刻不同：老指令真正完成 register read 后，年轻 writer 就可以覆盖这个寄存器，不必等老指令 write-back。</p>
-<p>这些事件决定了 scoreboard 状态在什么时候设置和清除。</p>
-<hr>
-</section>
-<section id="传统硬件-scoreboard-的内部状态" class="level2 page-columns page-full">
-<h2 class="anchored" data-anchor-id="传统硬件-scoreboard-的内部状态">4. 传统硬件 Scoreboard 的内部状态</h2>
-<section id="指令提供的信息" class="level3">
-<h3 class="anchored" data-anchor-id="指令提供的信息">4.1 指令提供的信息</h3>
-<p>普通机器指令已经编码：</p>
-<pre class="text"><code>source registers
-destination register
-target execution unit</code></pre>
-<p>硬件可以用这些寄存器编号查询 scoreboard。</p>
-</section>
-<section id="writer-scoreboard" class="level3">
-<h3 class="anchored" data-anchor-id="writer-scoreboard">4.2 Writer Scoreboard</h3>
-<p>为每个可写寄存器保存一个 writer bit：</p>
-<pre class="text"><code>writer[R] = 1
-表示存在一条已经 issue、但尚未 write-back 的指令将写 R</code></pre>
-<p>I1 issue 时：</p>
-<pre class="text"><code>writer[R1] = 1</code></pre>
-<p>I1 write-back 时：</p>
-<pre class="text"><code>writer[R1] = 0</code></pre>
-<p>I3 发射前检查所有 source：</p>
-<pre class="text"><code>writer[R1] == 0
-writer[R8] == 0</code></pre>
-<p>年轻 writer 还要检查自己的 destination，避免 WAW：</p>
-<pre class="text"><code>writer[destination] == 0</code></pre>
-<p>同一个 writer scoreboard 可以处理 RAW 和 WAW。</p>
-</section>
-<section id="发射机制" class="level3 page-columns page-full">
-<h3 class="anchored" data-anchor-id="发射机制">4.3 发射机制</h3>
-<p>候选指令读取：</p>
-<pre class="text"><code>所有 source 的 writer bits
-destination 的 writer bit
-目标执行单元状态</code></pre>
-<p>只有这些状态都可用，指令才能发射。</p>
-<div class="column-screen-inset">
-<iframe src="instruction-issue-from-first-principles/replay/index.html?stage=scoreboard" title="Stage 2：传统硬件 Scoreboard 的指令发射回放" style="width: 100%; height: 760px; border: 0;" loading="lazy">
-</iframe>
-</div>
-<p>在 C2，I3 的橙框包含 R1、R8、R7 和 ALU。R1 仍为黄色使用中，因此 I3 stall。</p>
-<p>I1 在 C4 write-back 后，R1 恢复可用，I3 才能发射。</p>
-</section>
-<section id="reader-scoreboard" class="level3">
-<h3 class="anchored" data-anchor-id="reader-scoreboard">4.4 Reader Scoreboard</h3>
-<p>writer bit 不能处理 WAR。</p>
-<p>如果老指令已经 issue 但尚未完成 register read，年轻指令不能覆盖它的 source register。</p>
-<p>因此还需要为每个寄存器记录未完成 reader 的数量：</p>
-<pre class="text"><code>readers[R]</code></pre>
-<p>老指令 issue 时增加 reader count：</p>
-<pre class="text"><code>readers[source] += 1</code></pre>
-<p>真正完成 register read 时减少：</p>
-<pre class="text"><code>readers[source] -= 1</code></pre>
-<p>年轻 writer 发射前检查：</p>
-<pre class="text"><code>readers[destination] == 0</code></pre>
-<p>传统实现因此需要两类状态：</p>
-<table class="caption-top table">
-<thead>
-<tr class="header">
-<th style="text-align: left;">状态</th>
-<th style="text-align: left;">处理的 hazard</th>
-<th style="text-align: left;">清除时刻</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: left;">writer bit</td>
-<td style="text-align: left;">RAW、WAW</td>
-<td style="text-align: left;">write-back</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">reader count</td>
-<td style="text-align: left;">WAR</td>
-<td style="text-align: left;">register read</td>
-</tr>
-</tbody>
-</table>
-<hr>
-</section>
-</section>
-<section id="现代-gpu-的编译器协同依赖管理" class="level2 page-columns page-full">
-<h2 class="anchored" data-anchor-id="现代-gpu-的编译器协同依赖管理">5. 现代 GPU 的编译器协同依赖管理</h2>
-<section id="分工变化" class="level3">
-<h3 class="anchored" data-anchor-id="分工变化">5.1 分工变化</h3>
-<p>传统 scoreboard 由硬件根据 src/dst 动态恢复依赖。</p>
-<p>编译器在生成机器指令时已经知道 I1→I3 的依赖关系。论文描述的机制把这部分信息编码进每条机器指令的 control bits。</p>
-<p>编译器负责说明：</p>
-<pre class="text"><code>producer 更新哪个 Dependence counter
-consumer 等待哪个 Dependence counter</code></pre>
-<p>硬件负责记录 counter 在运行时是否仍然非零。</p>
-</section>
-<section id="编译后的程序" class="level3">
-<h3 class="anchored" data-anchor-id="编译后的程序">5.2 编译后的程序</h3>
-<p>下面使用简化记号表示 control bits：</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb17" style="background: #f1f3f5;"><pre class="sourceCode asm code-with-copy"><code class="sourceCode fasm"><span id="cb17-1">#                            S    WB    <span class="dt" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">RD</span>    WAIT</span>
-<span id="cb17-2"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">I1:</span> <span class="bu" style="color: null;
-background-color: null;
-font-style: inherit;">LOAD</span> R1<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">,</span> <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">[</span>R2<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">]</span>         <span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">; 0    SB0   -     {}</span></span>
-<span id="cb17-3"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">I2:</span> <span class="bu" style="color: null;
-background-color: null;
-font-style: inherit;">ADD</span>  R4<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">,</span> R5<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">,</span> R6       <span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">; 0    -     -     {}</span></span>
-<span id="cb17-4"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">I3:</span> <span class="bu" style="color: null;
-background-color: null;
-font-style: inherit;">ADD</span>  R7<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">,</span> R1<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">,</span> <span class="kw" style="color: #003B4F;
-background-color: null;
-font-weight: bold;
-font-style: inherit;">R8</span>       <span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">; 0    -     -     {SB0}</span></span></code></pre></div></div>
-<p>字段含义为：</p>
-<table class="caption-top table">
-<thead>
-<tr class="header">
-<th style="text-align: left;">字段</th>
-<th style="text-align: left;">含义</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: left;">S</td>
-<td style="text-align: left;">issue 后设置的 Stall counter</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">WB</td>
-<td style="text-align: left;">issue 后递增、write-back 后递减的 counter</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">RD</td>
-<td style="text-align: left;">issue 后递增、register read 后递减的 counter</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">WAIT</td>
-<td style="text-align: left;">当前指令 issue 前必须为 0 的 counters</td>
-</tr>
-</tbody>
-</table>
-<p>I1 的 WB=SB0 表示 I1 issue 后增加 SB0，并在 write-back 时减少 SB0。</p>
-<p>I3 的 WAIT={SB0} 表示 SB0 非零时 I3 不能发射。</p>
-</section>
-<section id="硬件状态和发射机制" class="level3 page-columns page-full">
-<h3 class="anchored" data-anchor-id="硬件状态和发射机制">5.3 硬件状态和发射机制</h3>
-<p>每个 warp 保存：</p>
-<pre class="text"><code>一个 Stall counter
-六个 Dependence counters：SB0-SB5</code></pre>
-<p>当前指令检查：</p>
-<pre class="text"><code>Stall counter
-WAIT mask 指定的 Dependence counters
-目标执行单元</code></pre>
-<div class="column-screen-inset">
-<iframe src="instruction-issue-from-first-principles/replay/index.html?stage=compiler" title="Stage 3：编译器 Control Bits 与 Dependence Counters" style="width: 100%; height: 760px; border: 0;" loading="lazy">
-</iframe>
-</div>
-<p>I1 issue 后，SB0 在下一周期增加为 1。</p>
-<p>I2 的 WAIT 为空，因此可以与 I1 重叠。</p>
-<p>I3 检查 SB0。I1 write-back 前 SB0 非零，因此 I3 stall。I1 write-back 后 SB0 归零，I3 才能发射。</p>
-</section>
-<section id="固定延迟stall-counter" class="level3">
-<h3 class="anchored" data-anchor-id="固定延迟stall-counter">5.4 固定延迟：Stall Counter</h3>
-<p>固定延迟 producer 不需要等待运行时 completion event。</p>
-<p>编译器知道 producer latency，可以在 producer 中编码 Stall value：</p>
-<pre class="text"><code>Stall value
-    = producer latency
-      - producer 与第一个 consumer 之间的指令数</code></pre>
-<p>warp 的 Stall counter 非零时不能继续 issue。计数器每周期减 1，直到归零。</p>
-<p>论文通过手工设置过小的 Stall value 得到了错误结果。这说明硬件不会再次根据寄存器编号检查 RAW。</p>
-</section>
-<section id="可变延迟dependence-counters" class="level3">
-<h3 class="anchored" data-anchor-id="可变延迟dependence-counters">5.5 可变延迟：Dependence Counters</h3>
-<p>LOAD 和 special-function 指令的延迟不能在编译时确定，因此使用 SB0-SB5。</p>
-<p>每条指令可以指定两个要增加的 counter：</p>
-<ul>
-<li>write-back counter：在 write-back 时减少，用于 RAW/WAW；</li>
-<li>register-read counter：在 register read 时减少，用于 WAR。</li>
-</ul>
-<p>每条指令还包含一个 6-bit WAIT mask，指定 issue 前必须等待哪些 counters 归零。</p>
-<p>同一个 counter 可以由多个 producer 增加。consumer 等待 counter 归零，相当于等待这些 producer 全部完成。</p>
-</section>
-<section id="counter-更新窗口" class="level3">
-<h3 class="anchored" data-anchor-id="counter-更新窗口">5.6 Counter 更新窗口</h3>
-<p>Dependence counter 在 producer issue 的下一周期才完成增加。</p>
-<p>如果 consumer 紧跟 producer，consumer 可能在 counter 增加可见以前进行检查。</p>
-<p>这种情况下，producer 还需要设置短的 Stall value，防止 consumer 在下一周期过早发射。</p>
-</section>
-<section id="depbar.le" class="level3">
-<h3 class="anchored" data-anchor-id="depbar.le">5.7 DEPBAR.LE</h3>
-<p><code>DEPBAR.LE</code> 可以等待某个 counter 小于等于阈值，并同时等待一组 counters 归零：</p>
-<pre class="text"><code>DEPBAR.LE SBx, threshold, {other counters}</code></pre>
-<p>它用于多个 producer 共享 counter、但 consumer 只需要等待其中一部分完成的情况。</p>
-<hr>
-</section>
-</section>
-<section id="warp-ready-与-issue-scheduler" class="level2">
-<h2 class="anchored" data-anchor-id="warp-ready-与-issue-scheduler">6. Warp Ready 与 Issue Scheduler</h2>
-<p>每个 warp 按程序顺序提供最老的指令。</p>
-<p>一个 warp 成为 issue candidate，需要满足：</p>
-<pre class="text"><code>Instruction Buffer 中存在有效指令
-Stall counter 为 0
-WAIT mask 指定的 counters 满足条件
-执行资源可用</code></pre>
-<p>论文推断每个 sub-core 每周期最多 issue 一条指令，并使用 Compiler Guided Greedy Then Youngest：</p>
-<pre class="text"><code>当前 warp 仍然 ready
-→ 继续选择当前 warp
-
-当前 warp 不再 ready
-→ 选择最年轻的 ready warp</code></pre>
-<p>编译器还可以设置 Yield，要求下一周期不要继续选择同一个 warp。</p>
-<hr>
-</section>
-<section id="与传统-scoreboard-的状态量对比" class="level2">
-<h2 class="anchored" data-anchor-id="与传统-scoreboard-的状态量对比">7. 与传统 Scoreboard 的状态量对比</h2>
-<p>论文建模的传统 scoreboard 需要覆盖每个 warp 的 332 个可写寄存器。</p>
-<p>如果 WAR scoreboard 最多支持 63 个 pending consumer，单个 warp 需要：</p>
-<pre class="text"><code>332 + 332 × 6 = 2324 bit</code></pre>
-<p>control-bits 机制需要：</p>
-<pre class="text"><code>6 × 6 bit Dependence counters
-1 × 4 bit Stall counter
-1 × 1 bit Yield
-= 41 bit per warp</code></pre>
-<p>论文估算的面积开销为：</p>
-<table class="caption-top table">
-<thead>
-<tr class="header">
-<th style="text-align: left;">机制</th>
-<th style="text-align: center;">相对 regular register file 的面积开销</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: left;">传统 scoreboard</td>
-<td style="text-align: center;">5.32%</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">control-bits 机制</td>
-<td style="text-align: center;">0.09%</td>
-</tr>
-</tbody>
-</table>
-<p>传统 scoreboard 支持 63 个 consumer 时，论文测得的平均性能约为 control-bits 机制的 0.98 倍。</p>
-<hr>
-</section>
-<section id="总结" class="level2">
-<h2 class="anchored" data-anchor-id="总结">8. 总结</h2>
-<p>传统 scoreboard 的分工是：</p>
-<pre class="text"><code>机器指令提供 src/dst
-硬件根据寄存器编号恢复依赖
-硬件按 register read / write-back 更新状态</code></pre>
-<p>论文描述的编译器协同机制是：</p>
-<pre class="text"><code>编译器把依赖编码成 S、WB、RD、WAIT
-硬件维护 Stall counter 和 SB0-SB5
-counter 状态与执行资源共同决定 warp 是否 ready
-scheduler 从 ready warps 中选择一条指令</code></pre>
-<p><a href="instruction-issue-from-first-principles.html">上一篇：从严格串行到朴素指令发射</a></p>
-
-
-</section>
-
- ]]></description>
-  <category>体系结构</category>
-  <guid>https://zhen8838.github.io/posts/gpu-scoreboard-control-bits.html</guid>
-  <pubDate>Sun, 27 Sep 2026 16:00:00 GMT</pubDate>
-</item>
-<item>
   <title>从串行执行到 Control Bits：指令发射与依赖管理</title>
   <link>https://zhen8838.github.io/posts/instruction-issue-from-first-principles.html</link>
   <description><![CDATA[ 
@@ -44054,6 +43673,335 @@ font-style: inherit;">;</span></span></code></pre></div></div>
   <category>运筹学</category>
   <guid>https://zhen8838.github.io/posts/ampl-learn.html</guid>
   <pubDate>Fri, 14 Jun 2024 06:46:02 GMT</pubDate>
+</item>
+<item>
+  <title>Constraints Solver Internals</title>
+  <link>https://zhen8838.github.io/posts/constraints-solver-internals.html</link>
+  <description><![CDATA[ 
+
+
+
+
+<!-- 添加介绍 -->
+<p>关于ortools中<code>Constraints Solver</code>的内部逻辑.</p>
+<!--more-->
+<p>首先是数据结构:</p>
+<pre class="plantuml"><code>@startuml
+
+class Decision {
+  &lt;color:green&gt; 表示在搜索树中的一个选择点, Apply向右, Refute向左. &lt;/color&gt;
+  + void {abstract} Apply(Solver* s)&lt;color:green&gt; // 决策执行时调用 &lt;/color&gt;
+  + void {abstract} Refute(Solver* s) &lt;color:green&gt; // 回溯后调用 &lt;/color&gt;
+  + void {abstract} Accept(DecisionVisitor* visitor)
+}
+
+class Solver {
+  + DefaultSolverParameters() ConstraintSolverParameters
+  + AddConstraint(Constraint*)
+  + Solve(DecisionBuilder*, vector&lt;SearchMonitor*&gt;)
+}
+
+class DecisionBuilder {
+  &lt;color:green&gt; 构造搜索树 &lt;/color&gt;
+  + Decision* Next(Solver*)  &lt;color:green&gt; 返回下一步决策, 如果为空则结束. &lt;/color&gt;
+  + void AppendMonitors(Solver*, vector&lt;SearchMonitor*&gt;*) &lt;color:green&gt; 搜索开始前添加monitor. &lt;/color&gt;
+  + void Accept(ModelVisitor*)
+}
+
+class RestoreAssignment {
+  &lt;color:green&gt; 只执行一次, 将Assignment全部恢复到Var &lt;/color&gt;
+}
+
+DecisionBuilder &lt;|-- RestoreAssignment
+
+class StoreAssignment {
+  &lt;color:green&gt; 只执行一次, 将Var当前值存储到Assignment &lt;/color&gt;
+}
+
+DecisionBuilder &lt;|-- StoreAssignment
+
+DecisionBuilder *--- Decision
+
+class Demon {
+  &lt;color:green&gt; 传播队列的基础元素, 负责在变量值域中传播变量的约束以及删除不满足约束的值 &lt;/color&gt;
+  &lt;color:green&gt; 主要思想是附加到变量上监听变量的修改. &lt;/color&gt;
+  + void {abstract} Run(Solver* s) &lt;color:green&gt; //  &lt;/color&gt;
+  + DemonPriority {abstract} priority() &lt;color:green&gt; // 执行的优先级 &lt;/color&gt;
+  + void inhibit(Solver* s) &lt;color:green&gt; // 在当前位置抑制demon &lt;/color&gt;
+  + void desinhibit(Solver* s) &lt;color:green&gt; // 解除之前的抑制 &lt;/color&gt;
+}
+
+class PropagationBaseObject {
+  + Solver* solver() 
+  + void FreezeQueue()
+  + void UnfreezeQueue()
+  + void EnqueueDelayedDemon(Demon* const d)
+  + void EnqueueVar(Demon* const d)
+  + void ExecuteAll(const SimpleRevFIFO&lt;Demon*&gt;&amp; demons)
+  + void EnqueueAll(const SimpleRevFIFO&lt;Demon*&gt;&amp; demons)
+}
+
+abstract class Constraint {
+  &lt;color:green&gt; 建模约束 &lt;/color&gt;
+  + void {abstract} Post() &lt;color:green&gt; // 在solve过程中将demon附加到var上. &lt;/color&gt;
+  + void {abstract} InitialPropagate() &lt;color:green&gt; // 初始化传播, 在Post之后调用 &lt;/color&gt;
+  void PostAndPropagate() &lt;color:green&gt; // 在root节点是同时做两件事 &lt;/color&gt;
+  + void {abstract} Accept(ModelVisitor* visitor)
+  bool IsCastConstraint() &lt;color:green&gt; // 是否是cast到integer &lt;/color&gt;
+  + IntVar*{abstract} Var(); &lt;color:green&gt; // 返回代表约束满足的bool var, 如果为Null表示不支持 &lt;/color&gt;
+} 
+
+PropagationBaseObject &lt;|-- Constraint
+
+class CastConstraint {
+  &lt;color:green&gt; 特殊的约束 &lt;/color&gt;
+  + IntVar* target_var() 
+}
+
+Constraint &lt;|-- CastConstraint
+
+class IntExpr {
+  &lt;color:green&gt; 整数表达式, 建模的基础, 可以进行如下操作 &lt;/color&gt;
+  &lt;color:green&gt;  1. 查询边界值 &lt;/color&gt;
+  &lt;color:green&gt;  2. 设定边界值 &lt;/color&gt;
+  &lt;color:green&gt;  3. 监听边界值改变 &lt;/color&gt;
+  &lt;color:green&gt;  4. 构造对应var &lt;/color&gt;
+  + int64_t  {abstract} Min();
+  + void  {abstract} SetMin(int64_t m);
+  + int64_t  {abstract} Max();
+  + void  {abstract} SetMax(int64_t m);
+  + void  {abstract} Range(int64_t* l, int64_t* u);
+  + void  {abstract} SetRange(int64_t l, int64_t u);
+  + void  {abstract} SetValue(int64_t v);
+  + bool  {abstract} Bound();
+  + bool  {abstract} IsVar();
+  + IntVar* {abstract}  Var();
+  + void  {abstract} WhenRange(Demon* d);
+}
+
+PropagationBaseObject &lt;|-- IntExpr
+
+class IntVar {
+  &lt;color:green&gt; Var也是表达式 &lt;/color&gt;
+  + int64_t {abstract} Value()
+  + void {abstract} RemoveValue(int64_t v)
+  + void {abstract} RemoveInterval(int64_t l, int64_t u)
+  + void {abstract} RemoveValues(const std::vector&lt;int64_t&gt;&amp; values);
+  + void {abstract} SetValues(const std::vector&lt;int64_t&gt;&amp; values);
+  + void {abstract} WhenBound(Demon* d)
+  + void WhenBound(Solver::Closure closure)
+  + void WhenBound(Solver::Action action)
+  + void {abstract} WhenDomain(Demon* d)
+  + void WhenDomain(Solver::Closure closure)
+  + void WhenDomain(Solver::Action action)
+  + uint64_t {abstract} Size()
+  + bool {abstract} Contains(int64_t v)
+  + IntVarIterator*{abstract}  MakeHoleIterator(bool reversible)
+  + IntVarIterator*{abstract}  MakeDomainIterator(bool reversible)
+  + int64_t {abstract} OldMin()
+  + int64_t {abstract} OldMax()
+  + int {abstract} VarType() const;
+  + IntVar* {abstract} IsEqual(int64_t constant)
+  + IntVar* {abstract} IsDifferent(int64_t constant)
+  + IntVar* {abstract} IsGreaterOrEqual(int64_t constant)
+  + IntVar* {abstract} IsLessOrEqual(int64_t constant)
+  + int index()
+}
+
+IntExpr &lt;|-- IntVar
+
+
+abstract class SearchMonitor {
+  + void {abstract} EnterSearch()
+  + void {abstract} RestartSearch()
+  + void {abstract} ExitSearch()
+  + void {abstract} BeginNextDecision(DecisionBuilder* b)
+  + void {abstract} EndNextDecision(DecisionBuilder* b, Decision* d)
+  + void {abstract} ApplyDecision(Decision* d)
+  + void {abstract} RefuteDecision(Decision* d)
+  + void {abstract} AfterDecision(Decision* d, bool apply)
+  + void {abstract} BeginFail()
+  + void {abstract} EndFail()
+  + void {abstract} BeginInitialPropagation()
+  + void {abstract} EndInitialPropagation()
+  + bool {abstract} AcceptSolution()
+  + bool {abstract} AtSolution()
+  + void {abstract} NoMoreSolutions()
+  + bool {abstract} LocalOptimum()
+  + bool {abstract} AcceptDelta(Assignment* delta, Assignment* deltadelta)
+  + void {abstract} AcceptNeighbor()
+  + void {abstract} AcceptUncheckedNeighbor()
+  + bool {abstract} IsUncheckedSolutionLimitReached(
+  + void {abstract} PeriodicCheck()
+  + int {abstract} ProgressPercent()
+  + void {abstract} Accept(ModelVisitor* visitor)
+  + void {abstract} Install() &lt;b&gt;&lt;color:green&gt; // 注册自身&lt;/color&gt; 
+}
+
+class SolutionCollector {
+  &lt;color:green&gt; 收集添加过的变量 &lt;/color&gt;
+  + void Add(IntVar* var)
+  + void Add(const std::vector&lt;IntVar*&gt;&amp; vars)
+  + void Add(IntervalVar* var)
+  + void Add(const std::vector&lt;IntervalVar*&gt;&amp; vars)
+  + void Add(SequenceVar* var)
+  + void Add(const std::vector&lt;SequenceVar*&gt;&amp; vars)
+  + void AddObjective(IntVar* objective)
+  + void AddObjectives(const std::vector&lt;IntVar*&gt;&amp; objectives)
+}
+
+SearchMonitor &lt;|-- SolutionCollector
+
+class ObjectiveMonitor {
+  &lt;color:green&gt; 优化目标监控基类 &lt;/color&gt;
+  + IntVar* ObjectiveVar(int index)
+  + IntVar* MinimizationVar(int index)
+  + int64_t Step(int index)
+  + bool Maximize(int index)
+  + int64_t BestValue(int index)
+  + int Size()
+  + void EnterSearch()
+  + bool AtSolution()
+  + bool AcceptDelta(Assignment* delta, Assignment* deltadelta)
+  + void Accept(ModelVisitor* visitor)
+}
+
+SearchMonitor &lt;|-- ObjectiveMonitor
+
+class OptimizeVar {
+  &lt;color:green&gt; 概括目标, 指定方向, 变量, 步幅即可 &lt;/color&gt;
+  + int64_t best()
+  + IntVar* var()
+  + void BeginNextDecision(DecisionBuilder* db)
+  + void RefuteDecision(Decision* d)
+  + bool AtSolution()
+  + bool AcceptSolution()
+  + void ApplyBound()
+}
+
+ObjectiveMonitor &lt;|-- OptimizeVar
+
+
+class SearchLimit {
+  + void EnterSearch() 
+  + void BeginNextDecision(DecisionBuilder* b) 
+  + void PeriodicCheck() 
+  + void RefuteDecision(Decision* d) 
+  + void Install()
+  + bool crossed() &lt;b&gt;&lt;color:green&gt; // 检查limit是否已经失败 &lt;/color&gt;  
+  + bool Check() &lt;b&gt;&lt;color:green&gt; // 检查limit状态 &lt;/color&gt;  
+  + bool {abstract} CheckWithOffset(absl::Duration offset) &lt;b&gt;&lt;color:green&gt; // 自定义检查方法 &lt;/color&gt;  
+}
+
+SearchMonitor &lt;|-- SearchLimit
+
+class RegularLimit {
+  &lt;color:green&gt; 基于搜索时间/探索分支数/失败错误来限制搜索 &lt;/color&gt;
+  + bool CheckWithOffset(absl::Duration offset)
+} 
+
+class ImprovementSearchLimit {
+  &lt;color:green&gt;基于目标变量的改善率或者词典序进行限制.&lt;/color&gt;
+  + int64_t wall_time()
+  + int64_t branches()
+  + int64_t failures()
+  + int64_t solutions()
+  + bool CheckWithOffset(absl::Duration offset)
+} 
+
+SearchLimit &lt;|-- RegularLimit
+SearchLimit &lt;|-- ImprovementSearchLimit
+
+
+class IntervalVar {
+  &lt;color:green&gt;包含duration的var.&lt;/color&gt;
+}
+
+PropagationBaseObject &lt;|-- IntervalVar
+
+class SequenceVar {
+  &lt;color:green&gt;包含多个IntervalVar.&lt;/color&gt;
+  + IntervalVar* Interval(int index)
+}
+
+PropagationBaseObject &lt;|-- SequenceVar
+
+class AssignmentElement {
+
+}
+class IntVarElement {
+
+}
+
+AssignmentElement &lt;|-- IntVarElement
+
+class IntervalVarElement {
+
+}
+
+AssignmentElement &lt;|-- IntervalVarElement
+
+class SequenceVarElement {
+
+}
+
+AssignmentElement &lt;|-- SequenceVarElement
+
+class Assignment {
+  &lt;color:green&gt; 包含domain到var的映射, 用于展示solution.&lt;/color&gt;
+  + void Clear();
+  + bool Empty()
+  + int Size()
+  + int NumIntVars()
+  + int NumIntervalVars()
+  + int NumSequenceVars()
+  + void Store()
+  + void Restore()
+  + bool Load(const std::string&amp; filename)
+}
+
+PropagationBaseObject &lt;|-- Assignment
+
+class Pack {
+  &lt;color:green&gt; 多个var映射到bin的约束. &lt;/color&gt;
+  + void AddWeightedSumLessOrEqualConstantDimension(const std::vector&lt;int64_t&gt;&amp; weights, const std::vector&lt;int64_t&gt;&amp; bounds);
+  + void AddWeightedSumLessOrEqualConstantDimension(Solver::IndexEvaluator1 weights, const std::vector&lt;int64_t&gt;&amp; bounds);
+  + void AddWeightedSumLessOrEqualConstantDimension(Solver::IndexEvaluator2 weights, const std::vector&lt;int64_t&gt;&amp; bounds);
+  + void AddWeightedSumEqualVarDimension(const std::vector&lt;int64_t&gt;&amp; weights,const std::vector&lt;IntVar*&gt;&amp; loads);
+  + void AddWeightedSumEqualVarDimension(Solver::IndexEvaluator2 weights,const std::vector&lt;IntVar*&gt;&amp; loads);
+  + void AddSumVariableWeightsLessOrEqualConstantDimension(const std::vector&lt;IntVar*&gt;&amp; usage, const std::vector&lt;int64_t&gt;&amp; capacity);
+  + void AddWeightedSumOfAssignedDimension(const std::vector&lt;int64_t&gt;&amp; weights,IntVar* cost_var);
+  + void AddCountUsedBinDimension(IntVar* count_var);
+  + void AddCountAssignedItemsDimension(IntVar* count_var);
+}
+
+Constraint &lt;|-- Pack
+
+
+Constraint &lt;|-- DisjunctiveConstraint
+
+
+@enduml</code></pre>
+<p>其中整个优化模型由IntExpr和Constraints构成. 构建好约束后通过 DecisionBuilder来生成Decision, 每个Decision会给变量进行分配值, 分配好值</p>
+<pre class="plantuml"><code>@startuml
+NextSolution -&gt; BeginInitialPropagation
+NextSolution &lt;- BeginInitialPropagation
+NextSolution -&gt; Next : DecisionBuilder.Next() 
+Next -&gt; Apply : Decision.Apply() 
+Apply -&gt; SetValue  : Decision.Apply() 
+SetValue -&gt; EnqueueVar : EnqueueVar the Demon Handler
+EnqueueVar -&gt; Queue.Process : when freeze_level_ == 0
+Queue.Process -&gt; Demon.Run : pop the enqueued demons and run it
+Demon.Run -&gt; Var.ExecuteAll : exec the the constraints
+@enduml</code></pre>
+<!-- DecisionBuilder -> Decision -->
+
+
+
+ ]]></description>
+  <category>运筹学</category>
+  <guid>https://zhen8838.github.io/posts/constraints-solver-internals.html</guid>
+  <pubDate>Wed, 08 May 2024 03:24:39 GMT</pubDate>
 </item>
 </channel>
 </rss>
