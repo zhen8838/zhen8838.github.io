@@ -1,0 +1,1794 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2026-10-29">
+<meta name="description" content="从一个生产者与两个消费者的缓冲区交接开始，逐步理解内存顺序与同步。">
+
+<title>从数据交接理解 GPU 内存一致性 – Zheng’s Notes</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../assets/favicon.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-0ee2852052c9989b754395ee75b22920.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="ptx-memory-consistency/timeline.css">
+<link rel="stylesheet" href="ptx-memory-consistency/reader.css?v=19">
+<link rel="stylesheet" href="ptx-memory-consistency/code-run.css?v=4">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">Zheng’s Notes</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#sec-1" id="toc-sec-1" class="nav-link active" data-scroll-target="#sec-1">1 理想的执行</a>
+  <ul class="collapse">
+  <li><a href="#sec-1-1" id="toc-sec-1-1" class="nav-link" data-scroll-target="#sec-1-1">1.1 三个线程交接一个缓冲区</a></li>
+  <li><a href="#sec-1-2" id="toc-sec-1-2" class="nav-link" data-scroll-target="#sec-1-2">1.2 理想的交接与读值规则</a></li>
+  </ul></li>
+  <li><a href="#sec-2" id="toc-sec-2" class="nav-link" data-scroll-target="#sec-2">2 fence：把顺序补回来</a>
+  <ul class="collapse">
+  <li><a href="#sec-2-1" id="toc-sec-2-1" class="nav-link" data-scroll-target="#sec-2-1">2.1 写缓冲与读旁路</a></li>
+  <li><a href="#sec-2-2" id="toc-sec-2-2" class="nav-link" data-scroll-target="#sec-2-2">2.2 写操作重叠</a></li>
+  <li><a href="#sec-2-3" id="toc-sec-2-3" class="nav-link" data-scroll-target="#sec-2-3">2.3 非阻塞读</a></li>
+  <li><a href="#sec-2-4" id="toc-sec-2-4" class="nav-link" data-scroll-target="#sec-2-4">2.4 读与后续写重叠</a></li>
+  <li><a href="#sec-2-5" id="toc-sec-2-5" class="nav-link" data-scroll-target="#sec-2-5">2.5 小结</a></li>
+  </ul></li>
+  <li><a href="#sec-3" id="toc-sec-3" class="nav-link" data-scroll-target="#sec-3">3 release 与 acquire</a>
+  <ul class="collapse">
+  <li><a href="#sec-3-1" id="toc-sec-3-1" class="nav-link" data-scroll-target="#sec-3-1">3.1 区分内存操作</a></li>
+  <li><a href="#sec-3-2" id="toc-sec-3-2" class="nav-link" data-scroll-target="#sec-3-2">3.2 release：交出之前先完成</a></li>
+  <li><a href="#sec-3-3" id="toc-sec-3-3" class="nav-link" data-scroll-target="#sec-3-3">3.3 acquire：拿到之后再进行</a></li>
+  <li><a href="#sec-3-4" id="toc-sec-3-4" class="nav-link" data-scroll-target="#sec-3-4">3.4 release 与 acquire 配合</a></li>
+  <li><a href="#sec-3-5" id="toc-sec-3-5" class="nav-link" data-scroll-target="#sec-3-5">3.5 relaxed：每轮都真的去读</a></li>
+  <li><a href="#sec-3-6" id="toc-sec-3-6" class="nav-link" data-scroll-target="#sec-3-6">3.6 fence.sc：不读到也能同步</a></li>
+  </ul></li>
+  <li><a href="#sec-4" id="toc-sec-4" class="nav-link" data-scroll-target="#sec-4">4 atom</a>
+  <ul class="collapse">
+  <li><a href="#sec-4-1" id="toc-sec-4-1" class="nav-link" data-scroll-target="#sec-4-1">4.1 atom：读改写一步完成</a></li>
+  <li><a href="#sec-4-2" id="toc-sec-4-2" class="nav-link" data-scroll-target="#sec-4-2">4.2 <code>.scope</code>：原子性也有范围</a></li>
+  <li><a href="#sec-4-3" id="toc-sec-4-3" class="nav-link" data-scroll-target="#sec-4-3">4.3 <code>.sem</code>：把 fence 并进 atom</a></li>
+  <li><a href="#sec-4-4" id="toc-sec-4-4" class="nav-link" data-scroll-target="#sec-4-4">4.4 barrier：P 直接等人数</a></li>
+  <li><a href="#sec-4-5" id="toc-sec-4-5" class="nav-link" data-scroll-target="#sec-4-5">4.5 red：不读回，不能 acquire</a></li>
+  <li><a href="#sec-4-6" id="toc-sec-4-6" class="nav-link" data-scroll-target="#sec-4-6">4.6 小结</a></li>
+  </ul></li>
+  <li><a href="#sec-5" id="toc-sec-5" class="nav-link" data-scroll-target="#sec-5">5 异步拷贝与 proxy</a>
+  <ul class="collapse">
+  <li><a href="#sec-5-1" id="toc-sec-5-1" class="nav-link" data-scroll-target="#sec-5-1">5.1 cp.async：拷贝不在程序顺序里</a></li>
+  <li><a href="#sec-5-2" id="toc-sec-5-2" class="nav-link" data-scroll-target="#sec-5-2">5.2 TMA：完成记在 mbarrier 上</a></li>
+  <li><a href="#sec-5-3" id="toc-sec-5-3" class="nav-link" data-scroll-target="#sec-5-3">5.3 proxy：两条访问路径</a></li>
+  <li><a href="#sec-5-4" id="toc-sec-5-4" class="nav-link" data-scroll-target="#sec-5-4">5.4 cluster：mbarrier 跨 CTA</a></li>
+  <li><a href="#sec-5-5" id="toc-sec-5-5" class="nav-link" data-scroll-target="#sec-5-5">5.5 小结</a></li>
+  </ul></li>
+  <li><a href="#sec-6" id="toc-sec-6" class="nav-link" data-scroll-target="#sec-6">6 对照 PTX 文档</a>
+  <ul class="collapse">
+  <li><a href="#sec-6-1" id="toc-sec-6-1" class="nav-link" data-scroll-target="#sec-6-1">6.1 名词：访问的分类</a></li>
+  <li><a href="#sec-6-2" id="toc-sec-6-2" class="nav-link" data-scroll-target="#sec-6-2">6.2 morally strong 与数据竞争</a></li>
+  <li><a href="#sec-6-3" id="toc-sec-6-3" class="nav-link" data-scroll-target="#sec-6-3">6.3 关系：前文箭头的正式名称</a></li>
+  <li><a href="#sec-6-4" id="toc-sec-6-4" class="nav-link" data-scroll-target="#sec-6-4">6.4 公理：限制读能读到的值</a></li>
+  <li><a href="#sec-6-5" id="toc-sec-6-5" class="nav-link" data-scroll-target="#sec-6-5">6.5 PTX 在综述中的位置</a></li>
+  <li><a href="#sec-6-6" id="toc-sec-6-6" class="nav-link" data-scroll-target="#sec-6-6">6.6 小结：一次读可以读到哪个值</a></li>
+  </ul></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">参考资料</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">从数据交接理解 GPU 内存一致性</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">体系结构</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    从一个生产者与两个消费者的缓冲区交接开始，逐步理解内存顺序与同步。
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">October 29, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p><a href="../posts/instruction-issue-from-first-principles.html">上一篇关于指令发射与依赖管理的文章</a>讨论一条指令什么时候可以发射。本文从一个数据交接程序开始，回答三个问题：程序员期望读到什么值；系统的优化为什么会改变结果；程序怎样写出它需要的保证。</p>
+<p>全文使用同一个主例子。每一步只改变一个条件，然后说明出现的问题和需要补上的保证。</p>
+<!--more-->
+<section id="sec-1" class="level2">
+<h2 class="anchored" data-anchor-id="sec-1">1 理想的执行</h2>
+<section id="sec-1-1" class="level3">
+<h3 class="anchored" data-anchor-id="sec-1-1">1.1 三个线程交接一个缓冲区</h3>
+<p>生产者 P 把一份数据写进缓冲区，消费者 C1、C2 读这份数据。两个消费者都读完以后，P 才能覆盖缓冲区，写入下一份数据。</p>
+<p>下面用 Python 的写法表示三个线程的程序。三个线程共享 <code>data</code>、<code>full</code>、<code>done1</code>、<code>done2</code>、<code>empty</code>，初值都是 0。</p>
+<div class="ptx-program-scroll" role="region" aria-label="三个线程的 Python 程序" tabindex="0">
+<table class="ptx-program-table">
+<thead>
+<tr>
+<th>
+生产者 P
+</th>
+<th>
+消费者 C1
+</th>
+<th>
+消费者 C2
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> <span class="dv">42</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>full <span class="op">=</span> <span class="dv">1</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="cf">while</span> empty <span class="op">!=</span> <span class="dv">1</span>:</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> <span class="dv">43</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</td>
+<td>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="cf">while</span> full <span class="op">!=</span> <span class="dv">1</span>:</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>value1 <span class="op">=</span> data</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>done1 <span class="op">=</span> <span class="dv">1</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> done2 <span class="op">==</span> <span class="dv">1</span>:</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    empty <span class="op">=</span> <span class="dv">1</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</td>
+<td>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="cf">while</span> full <span class="op">!=</span> <span class="dv">1</span>:</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>value2 <span class="op">=</span> data</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>done2 <span class="op">=</span> <span class="dv">1</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> done1 <span class="op">==</span> <span class="dv">1</span>:</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    empty <span class="op">=</span> <span class="dv">1</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>P 写好数据以后，把 <code>full</code> 设为 1，通知两个消费者。每个消费者读完数据以后，把自己的 <code>done</code> 设为 1，再检查对方的 <code>done</code>。发现两个都已读完的消费者，把 <code>empty</code> 设为 1，通知 P 可以复用缓冲区。代码中的 <code>while ...: pass</code> 表示一直检查，直到条件成立。</p>
+<p>期望的结果是：两个消费者都读到 42，P 收到通知，然后写入下一份数据 43。本文只看这一轮交接。</p>
+<div class="ptx-inline-figure" data-ptx-inline="1.2">
+
+</div>
+</section>
+<section id="sec-1-2" class="level3">
+<h3 class="anchored" data-anchor-id="sec-1-2">1.2 理想的交接与读值规则</h3>
+<p>先假设各线程按程序顺序交错执行，每一步完成一次访问。时间线中的 t1–t13 只表示先后，省略了等待时的重复检查。</p>
+<blockquote class="blockquote">
+<p><strong>程序顺序</strong>（program order）是同一个线程内访问的先后，也就是代码中的顺序。它只规定代码的先后，不规定访问在硬件上什么时候发出、什么时候完成。</p>
+</blockquote>
+<p>在单线程中，一次读读到程序顺序中同一位置最近一次写的值。多个线程共享存储时，不同线程的读写之间没有这种先后，所以要用规则来确定读到的值。</p>
+<blockquote class="blockquote">
+<p><strong>内存一致性模型</strong>规定共享存储系统对程序员表现出的行为，也就是读操作可以返回哪些值。它是程序员与系统之间的接口。<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></p>
+</blockquote>
+<p>本例对 <code>data</code> 有三次写：初始写入 0、P 写入 42、P 写入 43。模型规定 C1 读 <code>data</code> 时，可以读到其中哪些写的值。</p>
+<p>这次执行把所有访问交错成一条序列，这条序列保留各线程的程序顺序。每次读都读到序列中同一位置在它之前最近一次写的值。这符合顺序一致性的要求：</p>
+<blockquote class="blockquote">
+<p><strong>顺序一致性</strong>（Sequential Consistency，SC）要求：每次执行的结果，都能用一条全局访问序列解释。这条序列保留各线程的程序顺序，并且每次读都读到同一位置在它之前最近一次写的值。<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></p>
+</blockquote>
+<p>SC 只约束能观察到的结果，硬件内部仍然可以并行。用 SC 分析本例：C1 读到 <code>full == 1</code> 时，全局序列中一定有下面的先后：</p>
+<pre class="text"><code>P 写 data=42 → P 写 full=1 → C1 读 full==1 → C1 读 data</code></pre>
+<p>两端的先后来自各自的程序顺序。中间的先后来自一个事实：C1 读到了 P 唯一一次写入的 <code>full = 1</code>。所以 C1 读 <code>data</code> 排在 P 写 42 之后，不能读到初值 0。</p>
+</section>
+</section>
+<section id="sec-2" class="level2">
+<h2 class="anchored" data-anchor-id="sec-2">2 fence：把顺序补回来</h2>
+<p>第 1 节假设每次访问一步完成。真实的机器把一次访问分成两步：<strong>发出</strong>和<strong>完成</strong>。写的完成叫<strong>生效</strong>，生效以后别的线程才能读到它写的值；读的完成是读到值。两步之间可以隔一段时间，所以后面的访问可能先完成，同一个线程中两次访问的先后不再可靠。</p>
+<p>下面的时间线中，● 表示发出，◆ 表示完成。</p>
+<section id="sec-2-1" class="level3">
+<h3 class="anchored" data-anchor-id="sec-2-1">2.1 写缓冲与读旁路</h3>
+<p>写发出以后，值不一定马上进入存储。硬件给每个线程一个私有的队列。写先进入队列，线程不等它生效就继续执行，所以写生效的时间推后了。在这段时间里，后面读别的地址的读可以越过这个写，直接从存储读到值。</p>
+<blockquote class="blockquote">
+<p><strong>写缓冲</strong>就是这个队列，它位于写发出之后、进入共享存储系统之前。写在队列中时，别的线程看不到它；写离开队列时才生效。同一个队列中的写先进先出，所以写与写之间的顺序不变。<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a></p>
+</blockquote>
+<p>在本例中，C1、C2 各自先写自己的 <code>done</code>，再读对方的 <code>done</code>。</p>
+<p>下面的图把代码和时间线放在一起。先点<strong>运行</strong>，看不打开优化时的结果；再打开写缓冲，运行一次，对比结果。</p>
+<div data-code-run="2.1">
+
+</div>
+<p>打开写缓冲以后，两个读在 t3、t4 完成，两个写在 t5、t6 才生效。读完成时写还在缓冲中，所以两个读都读到 0。没有消费者写 <code>empty</code>，P 一直收不到通知。</p>
+<p>在写和读之间插入一行 <code>fence.sc.gpu</code> 以后，写先生效，读才发出，顺序恢复了。</p>
+<p>程序中写在前、读在后，图中却是读先完成：完成的顺序与程序顺序不一致。把写记作 <code>W</code>、读记作 <code>R</code>，这一对就是 <code>W→R</code>。模型允许这种不一致，叫作 <code>W→R</code> 被<strong>松弛</strong>。</p>
+<blockquote class="blockquote">
+<p><a href="https://www.cl.cam.ac.uk/~pes20/weakmemory/x86tso-paper.pdf"><strong>TSO</strong>（Total Store Order）</a>：每个线程有一个先进先出的写缓冲。写进入缓冲就算提交；读可以越过还没生效的写；写与写之间保持顺序。</p>
+</blockquote>
+<p>只松弛 <code>W→R</code> 的模型有三个：IBM 370、TSO、PC。x86 属于 TSO。</p>
+</section>
+<section id="sec-2-2" class="level3">
+<h3 class="anchored" data-anchor-id="sec-2-2">2.2 写操作重叠</h3>
+<p>存储分成多个模块。一个模块忙时，另一个模块还能接收新的写。所以同一个线程的多个写可以同时在途，各自生效的时间互不相关，后发出的写可能先生效。</p>
+<blockquote class="blockquote">
+<p><strong>写操作重叠</strong>指同一个线程的多个写不等前一个生效就发出，生效的先后也不再由发出的先后决定。<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a></p>
+</blockquote>
+<p>在本例中，P 先写 <code>data</code>（42），再写 <code>full</code>（1）。</p>
+<p>下面的图把代码和时间线放在一起。先点<strong>运行</strong>，看不打开优化时的结果；再打开写重叠，运行一次，对比结果。</p>
+<div data-code-run="2.2">
+
+</div>
+<p>打开写重叠以后，两个写生效的先后反了：<code>full</code> 在 t3 生效，<code>data</code> 在 t6 才生效。C1 仍然按顺序读，在 t4 读到 <code>full == 1</code>。但这时 <code>data</code> 还没有生效，所以 C1 读到 0。</p>
+<p>在两个写之间插入一行 <code>fence.sc.gpu</code> 以后，<code>data</code> 先生效，<code>full</code> 才发出，顺序恢复了。</p>
+<p>程序中 <code>data</code> 在前、<code>full</code> 在后，图中却是 <code>full</code> 先生效：完成的顺序与程序顺序又不一致。这一对是写和写，记作 <code>W→W</code>。模型允许这种不一致，叫作 <code>W→W</code> 被<strong>松弛</strong>。</p>
+<blockquote class="blockquote">
+<p><a href="https://doi.org/10.1109/2.546611"><strong>PSO</strong>（Partial Store Order）</a>：在 TSO 的基础上再松弛 <code>W→W</code>，写与写之间的先后也不保证，要用 <code>STBAR</code> 恢复。</p>
+</blockquote>
+<p>只松弛 <code>W→R</code> 和 <code>W→W</code> 的模型是 PSO，SPARC 的 PSO 属于这一类。写的一侧保序以后，读的一侧还可能出问题。</p>
+</section>
+<section id="sec-2-3" class="level3">
+<h3 class="anchored" data-anchor-id="sec-2-3">2.3 非阻塞读</h3>
+<p>读要等存储把值送回来。在这段时间里，处理器不空等：它让这个读继续等待，同时执行后面的指令，包括后面的读。所以后面的读可能先读到值。</p>
+<blockquote class="blockquote">
+<p><strong>非阻塞读</strong>指一次读发出以后，不等值返回，后面的读就可以发出，并且可能先读到值。两次读完成的顺序可以反过来。<a href="#fn5" class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a></p>
+</blockquote>
+<p>在本例中，C1 先等到 <code>full == 1</code>，再读 <code>data</code>。</p>
+<p>下面的图把代码和时间线放在一起。先点<strong>运行</strong>，看不打开优化时的结果；再打开非阻塞读，运行一次，对比结果。</p>
+<div data-code-run="2.3">
+
+</div>
+<p>打开非阻塞读以后，读 <code>data</code> 在 t1 发出，比读 <code>full</code> 早。<code>full</code> 变成 1 时，读 <code>data</code> 带回的值仍然是 0。</p>
+<p>在两次读之间插入一行 <code>fence.sc.gpu</code> 以后，第二次读要等第一次读完成才发出，顺序恢复了。</p>
+<p>程序中先读 <code>full</code>、后读 <code>data</code>，图中却是读 <code>data</code> 先发出：访问的顺序与程序顺序又不一致。这一对是读和读，记作 <code>R→R</code>。模型允许这种不一致，叫作 <code>R→R</code> 被<strong>松弛</strong>。</p>
+<blockquote class="blockquote">
+<p><a href="https://doi.org/10.1109/2.546611"><strong>松弛全部程序顺序</strong></a>的模型有六个：WO、RCsc、RCpc、Alpha、RMO、PowerPC。这些模型连 <code>R→R</code> 也不保证。需要顺序的地方，全部靠显式的 fence 或同步操作。</p>
+</blockquote>
+</section>
+<section id="sec-2-4" class="level3">
+<h3 class="anchored" data-anchor-id="sec-2-4">2.4 读与后续写重叠</h3>
+<p>读要等存储把值送回来，写却不用等：写发出以后，线程就能继续执行。硬件没有理由让后面的写等这个读：</p>
+<ul>
+<li><code>done1</code> 的值是常数 1，与这次读的结果无关。</li>
+<li>读可能很慢。后面的写也停下来等，只会浪费时间。</li>
+<li>两次访问之间没有依赖，所以写可以排到读前面。</li>
+</ul>
+<blockquote class="blockquote">
+<p><strong>读与后续写重叠</strong>指一次读发出以后、值还没返回时，同一个线程后面的写已经生效。<a href="#fn6" class="footnote-ref" id="fnref6" role="doc-noteref"><sup>6</sup></a></p>
+</blockquote>
+<p>在本例中，C1 先读完 <code>data</code>，再写 <code>done1 = 1</code>，告诉别的线程<mark>我读完了</mark>。</p>
+<p>下面的图把代码和时间线放在一起。先点<strong>运行</strong>，看不打开优化时的结果；再打开读与后续写重叠，运行一次，对比结果。</p>
+<div data-code-run="2.4">
+
+</div>
+<p>打开以后，读 <code>data</code> 在 t1 发出，<code>done1</code> 在 t2 生效。这个消息经过 C2 传到 P，P 在 t3 写入 43。读 <code>data</code> 在 t5 才返回，读到的是 43。读发出时，这个值还不存在。<a href="#sec-1-2">1.2</a> 的推理链在这里反了过来。</p>
+<p>在读和写之间插入一行 <code>fence.sc.gpu</code> 以后，读先读到值，写 <code>done1</code> 才发出，推理链不能再反过来。</p>
+<p>程序中先读 <code>data</code>、后写 <code>done1</code>，图中却是 <code>done1</code> 先生效：完成的顺序与程序顺序又不一致。这一对是读和写，记作 <code>R→W</code>。模型允许这种不一致，叫作 <code>R→W</code> 被<strong>松弛</strong>。</p>
+<p><mark>我读完了</mark>这个消息还经过另外两处 <code>R→W</code>：C2 读完 <code>done1</code> 以后写 <code>empty</code>；P 读完 <code>empty</code> 以后写 43。在 PTX 中，控制依赖不保证顺序（见 <a href="#sec-6-3">6.3</a>），所以每一处都要加 fence。松弛的顺序越多，要加的 fence 越多。</p>
+</section>
+<section id="sec-2-5" class="level3">
+<h3 class="anchored" data-anchor-id="sec-2-5">2.5 小结</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>小节</th>
+<th>优化</th>
+<th>松弛的顺序</th>
+<th>出问题的一对</th>
+<th>模型</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="#sec-2-1">2.1</a></td>
+<td>写缓冲与读旁路</td>
+<td><code>W→R</code></td>
+<td>写 <code>done1</code> → 读 <code>done2</code></td>
+<td>IBM 370、TSO、PC</td>
+</tr>
+<tr class="even">
+<td><a href="#sec-2-2">2.2</a></td>
+<td>写操作重叠</td>
+<td><code>W→W</code></td>
+<td>写 <code>data</code> → 写 <code>full</code></td>
+<td>PSO</td>
+</tr>
+<tr class="odd">
+<td><a href="#sec-2-3">2.3</a></td>
+<td>非阻塞读</td>
+<td><code>R→R</code></td>
+<td>读 <code>full</code> → 读 <code>data</code></td>
+<td>松弛全部程序顺序</td>
+</tr>
+<tr class="even">
+<td><a href="#sec-2-4">2.4</a></td>
+<td>读与后续写重叠</td>
+<td><code>R→W</code></td>
+<td>读 <code>data</code> → 写 <code>done1</code></td>
+<td>同上</td>
+</tr>
+</tbody>
+</table>
+<p>四个小节有一个共同点：模型允许的这些乱序不一定发生，需要顺序的地方都能补回来。学术界把这些补救方法叫作<strong>安全网</strong>（safety net），fence 是其中一种。</p>
+<p>松弛全部程序顺序的模型有六个：WO、RCsc、RCpc、Alpha、RMO、PowerPC。本节讲的是 Alpha、RMO、PowerPC 这一组，它们用显式的 fence 恢复顺序。另外三个模型 WO、RCsc、RCpc 也松弛全部程序顺序，但它们把访问标成同步操作来恢复顺序。</p>
+<p>按第 2 节的方法，主例子要这样写才正确：</p>
+<div class="ptx-program-scroll" role="region" aria-label="加上 fence 之后三个线程的程序" tabindex="0">
+<table class="ptx-program-table">
+<thead>
+<tr>
+<th>
+生产者 P
+</th>
+<th>
+消费者 C1
+</th>
+<th>
+消费者 C2
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<pre class="ptx-prog"><code>data = 42
+<b>fence.sc.gpu</b>
+full = 1
+while empty != 1:
+    pass
+<b>fence.sc.gpu</b>
+data = 43
+</code></pre>
+</td>
+<td>
+<pre class="ptx-prog"><code>while full != 1:
+    pass
+<b>fence.sc.gpu</b>
+value1 = data
+<b>fence.sc.gpu</b>
+done1 = 1
+<b>fence.sc.gpu</b>
+if done2 == 1:
+    fence.sc.gpu
+    empty = 1
+</code></pre>
+</td>
+<td>
+<pre class="ptx-prog"><code>while full != 1:
+    pass
+<b>fence.sc.gpu</b>
+value2 = data
+<b>fence.sc.gpu</b>
+done2 = 1
+<b>fence.sc.gpu</b>
+if done1 == 1:
+    fence.sc.gpu
+    empty = 1
+</code></pre>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>看这些 fence 的位置，可以发现两件事。第一，fence 从不紧挨 <code>data</code>，只紧挨三个标志（<code>full</code>、<code>done</code>、<code>empty</code>）。第二，fence 的位置只有两种：在写标志之前（交出），或在读到标志之后（拿到）。只有 <a href="#sec-2-1">2.1</a> 的那一处是例外，它在写自己的 <code>done</code> 和读对方的 <code>done</code> 之间。</p>
+</section>
+</section>
+<section id="sec-3" class="level2">
+<h2 class="anchored" data-anchor-id="sec-3">3 release 与 acquire</h2>
+<p>第 2 节的方法是在每一处需要顺序的地方插入 <code>fence.sc</code>。按 <a href="#sec-2-5">2.5</a> 的程序，三个线程交接一份数据要用 10 个 fence。而且读代码的人看不出每个 fence 的用意：哪一处是<mark>交出</mark>，哪一处是<mark>拿到</mark>。</p>
+<p>本节换一套方法。先把访问分成两类，再让<mark>交出</mark>的写和<mark>拿到</mark>的读自己带上语义。fence 只留在剩下的少数位置。</p>
+<section id="sec-3-1" class="level3">
+<h3 class="anchored" data-anchor-id="sec-3-1">3.1 区分内存操作</h3>
+<p>到这里为止，模型对所有访问一样对待。但在实际程序中，访问的作用不同：<code>full</code> 替 <code>data</code> 排好了先后，<code>full</code> 自己却没有保护，另一个线程随时可能同时写它。<strong>WO 模型（Weak Ordering，弱序）</strong>先在这里分出一层：<a href="#fn7" class="footnote-ref" id="fnref7" role="doc-noteref"><sup>7</sup></a></p>
+<blockquote class="blockquote">
+<p><strong>特殊操作</strong>（special）是这样的访问：别的线程可能同时访问同一个位置，并且两个访问中至少有一个是写。其余的访问叫<strong>普通操作</strong>（ordinary）。要保证两个操作之间的先后，两者中至少要有一个是特殊操作。<a href="#fn8" class="footnote-ref" id="fnref8" role="doc-noteref"><sup>8</sup></a></p>
+</blockquote>
+<p>在本例中：</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>变量</th>
+<th>被多个线程访问</th>
+<th>可能同时被访问</th>
+<th>分类</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>data</code></td>
+<td>是</td>
+<td>否：<code>full</code> 让 P 和 C1 错开</td>
+<td>普通操作</td>
+</tr>
+<tr class="even">
+<td><code>full</code></td>
+<td>是</td>
+<td>是：C1 反复读时，P 可能正在写</td>
+<td>特殊操作</td>
+</tr>
+<tr class="odd">
+<td><code>done1</code>、<code>done2</code></td>
+<td>是</td>
+<td>是：一个消费者读时，另一个可能正在写</td>
+<td>特殊操作</td>
+</tr>
+<tr class="even">
+<td><code>empty</code></td>
+<td>是</td>
+<td>是：P 反复读时，消费者可能正在写</td>
+<td>特殊操作</td>
+</tr>
+</tbody>
+</table>
+<p>共享不等于特殊。多个线程都访问 <code>data</code>，但 <code>data</code> 前后有 <code>full</code> 和 <code>done</code> 隔开，两个线程不会同时访问它。第 2 节的交接保证的正是这一点。分类以后，模型只对特殊操作保证顺序。两个特殊操作之间的普通操作，仍然可以重叠，也可以乱序。</p>
+<p>用 <a href="#sec-2-5">2.5</a> 的程序对照：等 <code>full</code> → 读 <code>data</code>、读 <code>data</code> → 写 <code>done1</code>、写 <code>done1</code> → 读 <code>done2</code>，每一对中至少有一个是特殊操作，所以都保序。如果 C1 连续读 100 次 <code>data</code>，这 100 次读之间没有任何顺序保证。</p>
+<p><strong>RC（Release Consistency，释放一致性）</strong>模型在这棵树上再分一层。<a href="#fn9" class="footnote-ref" id="fnref9" role="doc-noteref"><sup>9</sup></a> 特殊操作中，用来交接的叫<strong>同步操作</strong>（sync），其余的叫<strong>非同步操作</strong>（nsync）。同步操作又分两种：为了拿到访问权而做的<strong>读</strong>叫 acquire，为了交出访问权而做的<strong>写</strong>叫 release。</p>
+<pre class="text"><code>内存操作
+├─ 普通操作（ordinary）                     读 data
+└─ 特殊操作（special）
+   ├─ 非同步操作（nsync）                   3.5 节介绍
+   └─ 同步操作（sync）
+      ├─ acquire：为拿到访问权而做的读      等 full、等 empty、读到对方的 done
+      └─ release：为交出访问权而做的写      写 full、写 done、写 empty</code></pre>
+<p>三种 fence 的差别如下。<mark>上面</mark><mark>下面</mark>指同一个线程中 fence 之前、之后的访问：</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>fence</th>
+<th>要等的上面的访问</th>
+<th>要拦住的下面的访问</th>
+<th>保序的对</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>fence.sc</code></td>
+<td>读、写</td>
+<td>读、写</td>
+<td>四种全部</td>
+</tr>
+<tr class="even">
+<td><code>fence.release</code></td>
+<td>读、写</td>
+<td>只拦写</td>
+<td><code>W→W</code>、<code>R→W</code></td>
+</tr>
+<tr class="odd">
+<td><code>fence.acquire</code></td>
+<td>只等读</td>
+<td>读、写</td>
+<td><code>R→R</code>、<code>R→W</code></td>
+</tr>
+</tbody>
+</table>
+<p>release 和 acquire 合起来，还缺 <code>W→R</code> 这一对。只有 <code>fence.sc</code> 能保证这一对的顺序，见 <a href="#sec-3-6">3.6</a>。</p>
+</section>
+<section id="sec-3-2" class="level3">
+<h3 class="anchored" data-anchor-id="sec-3-2">3.2 release：交出之前先完成</h3>
+<p><a href="#sec-2-5">2.5</a> 的程序中，P 交出 <code>data</code> 时用的是 <code>fence.sc</code>。但 P 在这里只需要一件事：<code>data</code> 生效以后，<code>full</code> 才生效。</p>
+<p>在本例中，把 P 的 <code>fence.sc</code> 换成 <code>fence.release</code>，C1 不变。</p>
+<p>下面的图打开第 2 节的全部优化。先用 <code>fence.sc</code> 运行一次，再换成 <code>fence.release</code> 运行一次，对比结果。</p>
+<div data-code-run="3.2">
+
+</div>
+<p>换成 release 以后，<code>r1</code> 仍然是 42。只有一处不同：P 读 <code>empty</code> 时不再等 <code>data</code> 生效，可以提前读到值。</p>
+<p>把 P 的代码按 fence 分成上下两部分，再按读写分开，画成四象限图。release 只点亮指向<mark>下·写</mark>的箭头：</p>
+<ul>
+<li><code>data = 42</code> → <code>full = 1</code> 亮了。交出就靠这一条。</li>
+<li><code>data = 42</code> → 读 <code>empty</code> 没有亮。提前读 <code>empty</code> 没有害处：如果读到 0，P 只要再等一轮。</li>
+</ul>
+<div class="ptx-inline-figure" data-ptx-inline="3.2">
+
+</div>
+</section>
+<section id="sec-3-3" class="level3">
+<h3 class="anchored" data-anchor-id="sec-3-3">3.3 acquire：拿到之后再进行</h3>
+<p><a href="#sec-2-5">2.5</a> 的程序中，C1 拿到 <code>data</code> 时用的也是 <code>fence.sc</code>。但 C1 在这里只需要一件事：读到 <code>full == 1</code> 以后，才读 <code>data</code>。</p>
+<p>在本例中，P 用 <a href="#sec-3-2">3.2</a> 的 <code>fence.release</code>，C1 先不加 fence。</p>
+<p>下面的图打开第 2 节的全部优化。先不给 C1 加 fence，运行一次；再加上 <code>fence.sc</code>；最后换成 <code>fence.acquire</code>。对比三次的结果。</p>
+<div data-code-run="3.3">
+
+</div>
+<p>C1 不加 fence 时，<code>r1</code> 是 0：读 <code>data</code> 在 t1 就发出了。P 的 release 只对 P 自己的两个写保序，对 C1 没有作用。加上 <code>fence.sc</code> 或 <code>fence.acquire</code> 以后，<code>r1</code> 都是 42，两条时间线完全相同。</p>
+<p>把 C1 的代码按 fence 分成上下两部分，再按读写分开，画成四象限图。acquire 点亮从<mark>上·读</mark>出发的箭头：</p>
+<ul>
+<li><code>while full != 1</code> → <code>r1 = data</code> 亮了。拿到就靠这一条。</li>
+<li><mark>上·写</mark>是空的：C1 在 fence 上面没有写。<code>fence.sc</code> 比 <code>fence.acquire</code> 多等的只有这一格，所以这里两者效果相同。</li>
+</ul>
+<div class="ptx-inline-figure" data-ptx-inline="3.3">
+
+</div>
+</section>
+<section id="sec-3-4" class="level3">
+<h3 class="anchored" data-anchor-id="sec-3-4">3.4 release 与 acquire 配合</h3>
+<p>两种操作合起来，正好补上 <a href="#sec-2-2">2.2</a>、<a href="#sec-2-3">2.3</a>、<a href="#sec-2-4">2.4</a> 的问题。<a href="#sec-2-1">2.1</a> 的问题留到 <a href="#sec-3-6">3.6</a>。按这个方法改写 <a href="#sec-2-5">2.5</a> 的程序：</p>
+<div class="ptx-program-scroll" role="region" aria-label="用 release 与 acquire 改写后的三个线程" tabindex="0">
+<table class="ptx-program-table">
+<thead>
+<tr>
+<th>
+生产者 P
+</th>
+<th>
+消费者 C1
+</th>
+<th>
+消费者 C2
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> <span class="dv">42</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>fence.release.gpu</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>full <span class="op">=</span> <span class="dv">1</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="cf">while</span> empty <span class="op">!=</span> <span class="dv">1</span>:</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>fence.acquire.gpu</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> <span class="dv">43</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</td>
+<td>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="cf">while</span> full <span class="op">!=</span> <span class="dv">1</span>:</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>fence.acquire.gpu</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>value1 <span class="op">=</span> data</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>fence.release.gpu</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>done1 <span class="op">=</span> <span class="dv">1</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>fence.sc.gpu</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> done2 <span class="op">==</span> <span class="dv">1</span>:</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    fence.acq_rel.gpu</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>    empty <span class="op">=</span> <span class="dv">1</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</td>
+<td>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="cf">while</span> full <span class="op">!=</span> <span class="dv">1</span>:</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>fence.acquire.gpu</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>value2 <span class="op">=</span> data</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>fence.release.gpu</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>done2 <span class="op">=</span> <span class="dv">1</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>fence.sc.gpu</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> done1 <span class="op">==</span> <span class="dv">1</span>:</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    fence.acq_rel.gpu</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    empty <span class="op">=</span> <span class="dv">1</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>fence 仍然是 10 个，但只剩两个 <code>fence.sc</code>（<a href="#sec-2-1">2.1</a> 那一处 <code>W→R</code>）。其余的都换成了开销更小的 <code>fence.release</code> 或 <code>fence.acquire</code>，而且 fence 的名字直接说明了用意。</p>
+<p><code>fence.sc</code> 比 release、acquire 多保证一对 <code>W→R</code> 的顺序。为此，下面的读要等上面的写离开写缓冲（<a href="#sec-2-1">2.1</a>），才能读到值。写常常很慢，读也只能一起等，所以 <code>fence.sc</code> 的开销最大。<a href="#fn10" class="footnote-ref" id="fnref10" role="doc-noteref"><sup>10</sup></a></p>
+<p>写 <code>empty</code> 之前用的是 <code>fence.acq_rel</code>：读到对方的 <code>done</code> 是<mark>拿到</mark>，写 <code>empty</code> 是<mark>交出</mark>，这个 fence 两种作用都有。<a href="#fn11" class="footnote-ref" id="fnref11" role="doc-noteref"><sup>11</sup></a></p>
+<p>下面把整个程序运行一次，只看一件事：C2 读完 <code>data</code> 以后，P 怎样知道这件事。P 与 C2 从不直接通信，这个消息要经过 C1 接力。</p>
+<div data-code-run="3.4">
+
+</div>
+<p>在 C2 读 <code>data</code> 和 P 写 43 之间，有五条边：</p>
+<ol type="1">
+<li>C2 的 release 使读 <code>data</code> 排在写 <code>done2</code> 之前。</li>
+<li>C1 读到 <code>done2</code>。</li>
+<li>C1 的 <code>fence.acq_rel</code> 使读 <code>done2</code> 排在写 <code>empty</code> 之前。</li>
+<li>P 读到 <code>empty</code>。</li>
+<li>P 的 acquire 使读 <code>empty</code> 排在写 43 之前。</li>
+</ol>
+<p>第 2、4 条边把两个线程连起来：一端是 release 写，另一端是 acquire 读，并且这个读读到了这个写的值。本文把这种连接叫作<strong>接上</strong>。五条边连成一条链，所以 C2 读 <code>data</code> 排在 P 写 43 之前，C2 读不到 43。</p>
+<p>去掉 C2 的 <code>fence.release</code> 以后，第一条边断开：读 <code>data</code> 还没返回，<code>done2</code> 已经生效。后面四条边照常连上，所以 P 写入 43 时，C2 还没读完 <code>data</code>。</p>
+<p>PTX 把由程序顺序和<mark>读到</mark>连成的先后叫作<strong>因果序</strong>（causality order）。它的作用相当于 C++ 的 happens-before。</p>
+</section>
+<section id="sec-3-5" class="level3">
+<h3 class="anchored" data-anchor-id="sec-3-5">3.5 relaxed：每轮都真的去读</h3>
+<p>前面的程序中，标志的读写都没有标记。写成 PTX 时，没有标记的 <code>ld</code>、<code>st</code> 就是 <a href="#sec-3-1">3.1</a> 的普通操作。把 C1 等 <code>full</code> 的这几行分别用普通读和 relaxed 读编译。下表对比 ptxas 在 H200 上生成的机器码（SASS；省略了读取参数、写回 <code>r1</code> 的指令，操作数也做了简化）：</p>
+<div class="ptx-program-scroll">
+<table class="ptx-program-table ptx-asm-table" data-quarto-disable-processing="true">
+<thead><tr><th></th><th>普通读 <code>ld</code></th><th>relaxed 读 <code>ld.relaxed.gpu</code></th></tr></thead>
+<tbody>
+<tr><th scope="row">代码</th>
+<td><pre class="ptx-prog"><span class="ln is-gone">while full != 1:</span><span class="ln is-gone">    pass</span><span class="ln">r1 = data</span></pre></td>
+<td><pre class="ptx-prog"><span class="ln is-kept">while full != 1:</span><span class="ln is-kept">    pass</span><span class="ln">r1 = data</span></pre></td></tr>
+<tr><th scope="row">SASS</th>
+<td><pre class="ptx-prog"><span class="ln">LDG.E R3, [data]</span></pre></td>
+<td><pre class="ptx-prog"><span class="ln is-kept">loop: LDG.E.STRONG.GPU R0, [full]</span><span class="ln is-kept">      ISETP.NE P0, R0, 1</span><span class="ln is-kept">      @P0 BRA loop</span><span class="ln">LDG.E R3, [data]</span></pre></td></tr>
+</tbody>
+</table>
+</div>
+<p>用普通读时，整个循环被删掉了。编译器假设没有别的线程同时写 <code>full</code>，所以 <code>full</code> 一直是第一次读到的值：如果是 1，循环马上结束；如果不是 1，循环永远不结束。编译器还假设循环一定会结束，所以只剩<mark>是 1</mark>这一种情况，于是编译器删掉了循环。<a href="#fn12" class="footnote-ref" id="fnref12" role="doc-noteref"><sup>12</sup></a></p>
+<p>标成 relaxed 以后，编译器不能再这样假设，循环每一轮都读 <code>full</code>。<a href="#fn13" class="footnote-ref" id="fnref13" role="doc-noteref"><sup>13</sup></a> P 写 <code>full</code> 也要标成 <code>st.relaxed.gpu</code>。<a href="#fn14" class="footnote-ref" id="fnref14" role="doc-noteref"><sup>14</sup></a> relaxed 本身不带顺序，<code>data</code> 的先后仍然靠旁边的 fence。也可以直接写 <code>st.release.gpu</code>、<code>ld.acquire.gpu</code>，一条指令同时完成这两件事。</p>
+<p>GPU 上的 fence，以及 relaxed、release、acquire 访问，还要写一个 scope，说明它与哪些线程通信：</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>scope</th>
+<th>和谁通信</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>.cta</code></td>
+<td>同一个 CTA 的线程</td>
+</tr>
+<tr class="even">
+<td><code>.cluster</code></td>
+<td>同一个 cluster 的线程</td>
+</tr>
+<tr class="odd">
+<td><code>.gpu</code></td>
+<td>同一块 GPU 上的线程</td>
+</tr>
+<tr class="even">
+<td><code>.sys</code></td>
+<td>所有 GPU 和 CPU 上的线程</td>
+</tr>
+</tbody>
+</table>
+<p>本例的三个线程在不同的 CTA 中，所以前面都写 <code>.gpu</code>。如果写成 <code>.cta</code>，读到 1 也不构成通信。<a href="#fn15" class="footnote-ref" id="fnref15" role="doc-noteref"><sup>15</sup></a></p>
+</section>
+<section id="sec-3-6" class="level3">
+<h3 class="anchored" data-anchor-id="sec-3-6">3.6 fence.sc：不读到也能同步</h3>
+<p><a href="#sec-3-4">3.4</a> 的程序中还有两个 <code>fence.sc</code> 没有说明。它们决定 C1、C2 中谁最后完成：两个消费者各写自己的 <code>done</code>，再读对方的 <code>done</code>。至少要有一个消费者读到 1，由它写 <code>empty</code>。</p>
+<p>先只用前面讲过的 release 和 acquire：在中间放 <code>fence.acq_rel</code>。运行一次，再换成 <code>fence.sc</code>，对比结果。</p>
+<div data-code-run="3.6">
+
+</div>
+<p>只用 <code>fence.acq_rel</code> 时，两个读可能都读到 0。<a href="#fn16" class="footnote-ref" id="fnref16" role="doc-noteref"><sup>16</sup></a> release 和 acquire 靠<mark>读到</mark>接上：一方写，另一方读到这个值，两个线程才接上。这里两个消费者同时写、同时读，两个读都可能读不到对方的写，所以接不上。没有消费者写 <code>empty</code>，P 一直等。</p>
+<p>换成 <code>fence.sc</code> 以后，两个读中一定有一个读到 1。所有 <code>fence.sc</code> 排成一个先后，两个 <code>fence.sc</code> 中总有一个在前。<a href="#fn17" class="footnote-ref" id="fnref17" role="doc-noteref"><sup>17</sup></a> 在前的 <code>fence.sc</code> 相当于 release，在后的相当于 acquire，两者不用读到值就能接上。图中 C1 的 <code>fence.sc</code> 在前，紫色箭头就是这条边：C1 写 <code>done1</code> 排在 C2 读 <code>done1</code> 之前，所以 C2 读到 1，由 C2 写 <code>empty</code>。如果 C2 的 <code>fence.sc</code> 在前，结果相反，C1 读到 1。<a href="#fn18" class="footnote-ref" id="fnref18" role="doc-noteref"><sup>18</sup></a></p>
+<div class="ptx-inline-figure" data-ptx-inline="3.6">
+
+</div>
+</section>
+</section>
+<section id="sec-4" class="level2">
+<h2 class="anchored" data-anchor-id="sec-4">4 atom</h2>
+<p><a href="#sec-3-6">3.6</a> 用 <code>fence.sc</code> 决定 C1、C2 中谁最后完成，但 <code>fence.sc</code> 的开销最大（<a href="#sec-3-4">3.4</a>）。另外，消费者越多，每个消费者要读的 <code>done</code> 越多。</p>
+<p>另一种方法是用一个计数 <code>count</code> 代替两个 <code>done</code>。每个消费者把 <code>count</code> 加 1，读到旧值 1 的消费者是最后一个，由它写 <code>empty</code>。每个消费者只访问 <code>count</code> 这一个位置，不再有<mark>写自己的、读对方的</mark>这一对 <code>W→R</code>，所以不需要 <code>fence.sc</code>。</p>
+<p>本节先保证计数正确，再逐步改进这个方法，最后得到 barrier：P 直接等完成的人数。</p>
+<section id="sec-4-1" class="level3">
+<h3 class="anchored" data-anchor-id="sec-4-1">4.1 atom：读改写一步完成</h3>
+<p>先用第 3 节的方法：读出 <code>count</code>，写回加 1 的值，前后的 fence 按 <a href="#sec-3-4">3.4</a> 放好。下面按 <a href="#sec-1-2">1.2</a> 的理想执行运行一次，不打开任何优化：</p>
+<div data-code-run="4.1">
+
+</div>
+<p>C2 的读插在 C1 的读和写之间：两个消费者都读到 0，<code>count</code> 只加到 1，没有消费者写 <code>empty</code>。</p>
+<p>fence 在这里没有作用。fence 只管一个线程内部的先后，而每个线程自己的读和写都没有乱序。问题是别的线程的写插在了中间。这里需要另一种保证：读、加 1、写回作为一步完成，别的线程的写不能插在中间。这种保证叫<strong>不可分割</strong>。fence 不能提供不可分割，PTX 用 <code>atom</code> 指令提供它。</p>
+<p>把读和写换成一条 <code>atom.add</code>，fence 不变，结果就正确了：先加的消费者读到 0，后加的消费者一定读到 1，由它写 <code>empty</code>。<a href="#fn19" class="footnote-ref" id="fnref19" role="doc-noteref"><sup>19</sup></a></p>
+<p><code>atom</code> 中的<mark>原子</mark>指不可分割，与第 3 节的顺序是两件事。<code>atom.add</code> 不写 <code>.sem</code> 时是 relaxed：它只保证不可分割，不带顺序，所以前后的 fence 都要保留。<a href="#fn20" class="footnote-ref" id="fnref20" role="doc-noteref"><sup>20</sup></a></p>
+</section>
+<section id="sec-4-2" class="level3">
+<h3 class="anchored" data-anchor-id="sec-4-2">4.2 <code>.scope</code>：原子性也有范围</h3>
+<p>C1、C2 在不同的 CTA 中。现在 C1 的 <code>atom</code> 写成 <code>.cta</code>（例如，从只在一个 CTA 中运行的代码复制过来），C2 写成 <code>.gpu</code>。</p>
+<div data-code-run="4.2">
+
+</div>
+<p><code>atom.cta</code> 只保证本 CTA 的线程不能插在中间，C2 不在本 CTA 中。从 C2 看，C1 的读改写被分成了两步，C2 的读改写插在中间，两个消费者又都读到 0。<a href="#fn21" class="footnote-ref" id="fnref21" role="doc-noteref"><sup>21</sup></a> 每个读改写本身仍然是一步完成的，只是完成的位置不同：可以认为 <code>atom.cta</code> 在本 SM 这一层完成，<code>atom.gpu</code> 在 L2 完成，两者都不能阻止对方。<a href="#fn22" class="footnote-ref" id="fnref22" role="doc-noteref"><sup>22</sup></a></p>
+<p>规则与 <a href="#sec-3-5">3.5</a> 的 scope 规则相同：两端的 scope 都要包含对方。在 3.5 中，这条规则决定读到的值是否构成通信；在这里，它还决定不可分割是否成立。修复方法是两端都写 <code>.gpu</code>。scope 要包含所有可能同时修改这个位置的线程。</p>
+</section>
+<section id="sec-4-3" class="level3">
+<h3 class="anchored" data-anchor-id="sec-4-3">4.3 <code>.sem</code>：把 fence 并进 atom</h3>
+<p><a href="#sec-3-5">3.5</a> 说明过，<code>st</code>、<code>ld</code> 可以直接带 release、acquire，不再需要旁边的 fence。<code>atom</code> 也一样：<code>.sem</code> 可以写 <code>.release</code>、<code>.acquire</code>、<code>.acq_rel</code>。下面改写 4.1 中 C1 的代码：</p>
+<div class="ptx-program-scroll">
+<table class="ptx-program-table ptx-asm-table" data-quarto-disable-processing="true">
+<thead><tr><th></th><th>fence 写法（4.1）</th><th>带标记的写法</th></tr></thead>
+<tbody>
+<tr><th scope="row">C1</th>
+<td><pre class="ptx-prog"><span class="ln">value1 = data</span><span class="ln is-kept">fence.release.gpu</span><span class="ln">old1 = atom.add(count, 1)</span><span class="ln">if old1 == 1:</span><span class="ln is-kept">    fence.acq_rel.gpu</span><span class="ln">    empty = 1</span></pre></td>
+<td><pre class="ptx-prog"><span class="ln">value1 = data</span><span class="ln is-kept">old1 = atom.acq_rel.add(count, 1)</span><span class="ln">if old1 == 1:</span><span class="ln is-kept">    empty = 1    # st.release.gpu</span></pre></td></tr>
+</tbody>
+</table>
+</div>
+<p>两个 fence 分别移到它们服务的访问上：</p>
+<ul>
+<li><code>fence.release</code> 在 <code>atom</code> 前面，只为这个 <code>atom</code> 做 release。移进 <code>atom</code> 以后，<code>atom</code> 带上 release 这一半。</li>
+<li><code>fence.acq_rel</code> 在 <code>atom</code> 和写 <code>empty</code> 之间，同时为两个访问服务。它的 acquire 一半给前面的 <code>atom</code>：读到 1 时，拿到对方交出的结果。它的 release 一半给后面的写 <code>empty</code>：把结果交给 P。分开以后，<code>atom</code> 再带上 acquire 这一半，写 <code>empty</code> 标成 <code>st.release</code>。</li>
+</ul>
+<p>合起来，<code>atom</code> 就是 <code>.acq_rel</code>。消费者事先不知道谁先加，所以两个消费者都这样写。<a href="#fn23" class="footnote-ref" id="fnref23" role="doc-noteref"><sup>23</sup></a></p>
+<p>两种写法在这里作用相同，差别在作用范围。带标记的写法只对这一个访问有效。fence 还会使旁边别的 strong 访问也成为 release 或 acquire 点。<a href="#fn24" class="footnote-ref" id="fnref24" role="doc-noteref"><sup>24</sup></a></p>
+</section>
+<section id="sec-4-4" class="level3">
+<h3 class="anchored" data-anchor-id="sec-4-4">4.4 barrier：P 直接等人数</h3>
+<p>4.3 的交接多了一步：最后一个消费者先用 acquire 拿到对方交出的结果，再写 <code>empty</code> 交给 P。所以两个消费者都要带 acquire，还要多写一个 <code>empty</code>。</p>
+<p>现在改成 P 直接等 <code>count</code> 变成 2，再写 43。P 等的是<mark>已经完成的人数</mark>，这就是 barrier。<a href="#sec-5-2">5.2</a> 的 mbarrier 也是这样计数。消费者不用再判断谁是最后一个，只要交出：两个消费者都写 <code>atom.release.add</code>，不用 acquire，也不写 <code>empty</code>。P 用 <code>ld.acquire</code> 读 <code>count</code>。</p>
+<div data-code-run="4.4">
+
+</div>
+<p>P 读到的 2 是后加的消费者写的，所以 P 与它直接接上。先加的消费者只写了 1，P 从来没有读到这个 1。下面说明：先加的消费者交出的 <code>data</code>，P 也拿到了。</p>
+<p>2 是在 1 的基础上加出来的。读改写会把<mark>读到</mark>传下去：P 读到 2，就算读到了 1。<a href="#fn25" class="footnote-ref" id="fnref25" role="doc-noteref"><sup>25</sup></a> 图中从先加的消费者直接连到 P 的橙色箭头就是这条边。</p>
+<p>所以 P 等到 2，就等于等到了两个消费者。点<strong>C2 先加</strong>，两个消费者的先后互换，P 的代码和结果都不变。P 需要的是两个消费者都排在它之前，不需要知道 C1、C2 谁先。</p>
+</section>
+<section id="sec-4-5" class="level3">
+<h3 class="anchored" data-anchor-id="sec-4-5">4.5 red：不读回，不能 acquire</h3>
+<p>4.4 中的消费者不使用旧值。这时可以把 <code>atom</code> 换成 <code>red</code>：<code>red</code> 也是读改写，但不把旧值返回给线程。在 CUDA 中写同一句 <code>atomicAdd</code> 时，ptxas 生成的机器码取决于是否使用返回值（H200；省略了 warp 内合并的指令，操作数也做了简化）：</p>
+<div class="ptx-program-scroll">
+<table class="ptx-program-table ptx-asm-table" data-quarto-disable-processing="true">
+<thead><tr><th></th><th>不用返回值</th><th>用返回值</th></tr></thead>
+<tbody>
+<tr><th scope="row">CUDA</th>
+<td><pre class="ptx-prog"><span class="ln">atomicAdd(&amp;count, 1);</span></pre></td>
+<td><pre class="ptx-prog"><span class="ln">old = atomicAdd(&amp;count, 1);</span></pre></td></tr>
+<tr><th scope="row">PTX</th>
+<td><pre class="ptx-prog"><span class="ln">atom.global.add.u32</span></pre></td>
+<td><pre class="ptx-prog"><span class="ln">atom.global.add.u32</span></pre></td></tr>
+<tr><th scope="row">SASS</th>
+<td><pre class="ptx-prog"><span class="ln is-kept">REDG.E.ADD.STRONG.GPU [count], R5</span></pre></td>
+<td><pre class="ptx-prog"><span class="ln is-kept">ATOMG.E.ADD.STRONG.GPU R3, [count], R9</span></pre></td></tr>
+</tbody>
+</table>
+</div>
+<p><code>REDG</code> 没有目的寄存器，线程发出以后就继续执行，不等结果返回。<a href="#fn26" class="footnote-ref" id="fnref26" role="doc-noteref"><sup>26</sup></a></p>
+<p><code>red</code> 可以代替 4.4 中的 <code>atom.release.add</code>：<code>red</code> 也是原子操作，两个消费者的加 1 都不会丢失，4.4 的读改写链仍然成立。<a href="#fn27" class="footnote-ref" id="fnref27" role="doc-noteref"><sup>27</sup></a></p>
+<p><code>red</code> 的 <code>.sem</code> 只有 <code>.relaxed</code>、<code>.release</code>。<code>red</code> 不能作为 acquire，在后面加一个 <code>fence.acquire</code> 也不行。<a href="#fn28" class="footnote-ref" id="fnref28" role="doc-noteref"><sup>28</sup></a> 所以 <a href="#sec-4-3">4.3</a> 中的消费者不能用 <code>red</code>：最后一个消费者要读到旧值，才知道自己是最后一个；它还要用 acquire 拿到对方交出的结果。<a href="#fn29" class="footnote-ref" id="fnref29" role="doc-noteref"><sup>29</sup></a></p>
+</section>
+<section id="sec-4-6" class="level3">
+<h3 class="anchored" data-anchor-id="sec-4-6">4.6 小结</h3>
+<p>第 2 到第 4 节用到的每一条同步指令，都由四个属性组合而成。PTX 的指令格式也按这四个属性排列：<code>ld{.sem}{.scope}</code>、<code>st{.sem}{.scope}</code>、<code>atom{.sem}{.scope}.op</code>、<code>fence{.sem}.scope</code>。</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>属性</th>
+<th>回答的问题</th>
+<th>写在哪里</th>
+<th>讲过的小节</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>strong / weak</td>
+<td>读到的值是否构成通信</td>
+<td><code>.sem</code>：<code>ld</code>、<code>st</code> 不写为 weak；<code>atom</code> 不写为 <code>.relaxed</code></td>
+<td><a href="#sec-3-5">3.5</a></td>
+</tr>
+<tr class="even">
+<td>顺序</td>
+<td>给别的访问排先后</td>
+<td><code>.sem</code>：<code>.release</code>、<code>.acquire</code>、<code>.acq_rel</code>；或单独的 fence</td>
+<td>第 2、3 节</td>
+</tr>
+<tr class="odd">
+<td>不可分割</td>
+<td>读改写一步完成</td>
+<td><code>atom</code>、<code>red</code></td>
+<td><a href="#sec-4-1">4.1</a></td>
+</tr>
+<tr class="even">
+<td>scope</td>
+<td>与哪些线程通信</td>
+<td><code>.scope</code>：<code>.cta</code>、<code>.cluster</code>、<code>.gpu</code>、<code>.sys</code></td>
+<td><a href="#sec-3-5">3.5</a>、<a href="#sec-4-2">4.2</a></td>
+</tr>
+</tbody>
+</table>
+<p>带标记的访问，都可以看成把旁边的 fence 并到这一个访问上（<a href="#sec-3-5">3.5</a>、<a href="#sec-4-3">4.3</a>）。只有 <code>fence.sc</code> 没有对应的带标记写法：PTX 没有 <code>ld.sc</code>、<code>st.sc</code>。</p>
+</section>
+</section>
+<section id="sec-5" class="level2">
+<h2 class="anchored" data-anchor-id="sec-5">5 异步拷贝与 proxy</h2>
+<p>前四节中，<code>data</code> 一直由 P 用普通的 <code>st</code> 写入。实际的 kernel 很少这样搬运数据。kernel 通常用异步拷贝把一块 tile 从 global memory 搬到 shared memory，P 只负责发出拷贝。</p>
+<p>本节换一个场景，名字不变：P、C 是同一个 CTA 中的两个 warp，<code>data</code> 在 shared memory 中。P 把一块 tile 搬进 <code>data</code>，然后通知 <code>full</code>；C 等到 <code>full</code> 以后读 <code>data</code>，读完以后通知 <code>empty</code>。</p>
+<section id="sec-5-1" class="level3">
+<h3 class="anchored" data-anchor-id="sec-5-1">5.1 cp.async：拷贝不在程序顺序里</h3>
+<p>P 用 <code>cp.async</code> 把 tile 从 global memory 直接搬进 <code>data</code>，不经过寄存器。<code>full</code> 用一个 named barrier：P 执行 <code>bar.arrive</code> 通知，C 执行 <code>bar.sync</code> 等待。<a href="#fn30" class="footnote-ref" id="fnref30" role="doc-noteref"><sup>30</sup></a></p>
+<div data-code-run="5.1">
+
+</div>
+<p>C 读到的是旧值。<code>cp.async</code> 发出以后，拷贝单独进行，P 不等拷贝完成就执行 <code>bar.arrive</code>。这是本文第一次出现不在程序顺序中的操作：这个拷贝虽然写在 <code>bar.arrive</code> 前面，但它不算 P<mark>之前的访问</mark>，所以 <code>bar</code> 不对它保序。<a href="#fn31" class="footnote-ref" id="fnref31" role="doc-noteref"><sup>31</sup></a></p>
+<p>修复方法是先等拷贝完成：<code>cp.async.wait_all</code> 使 P 停下来，等它发出的拷贝全部完成，再执行 <code>bar.arrive</code>。<a href="#fn32" class="footnote-ref" id="fnref32" role="doc-noteref"><sup>32</sup></a></p>
+<p>执行 wait 以后，仍然要保留 <code>bar</code>：wait 只使拷贝的结果对 P 自己可见。要把结果交给 C，还要同步一次。<a href="#fn33" class="footnote-ref" id="fnref33" role="doc-noteref"><sup>33</sup></a></p>
+<p>这里的 <code>bar</code> 是第三种同步。它与 <a href="#sec-3-6">3.6</a> 的 <code>fence.sc</code> 一样，不用读到值：<code>bar.arrive</code> 与同一个 barrier 上的 <code>bar.sync</code> 直接接上，就是图中的紫色虚线。它的范围固定是本 CTA。<a href="#fn34" class="footnote-ref" id="fnref34" role="doc-noteref"><sup>34</sup></a> 到这里，三种同步都出现了：release 和 acquire 要读到值才接上（第 3 节），<code>fence.sc</code> 和 barrier 不用读到值。</p>
+</section>
+<section id="sec-5-2" class="level3">
+<h3 class="anchored" data-anchor-id="sec-5-2">5.2 TMA：完成记在 mbarrier 上</h3>
+<p>从 H100 开始，可以用 TMA 搬运数据：P 发出一条 <code>cp.async.bulk</code>，整块拷贝由单独的硬件 TMA 完成。按 5.1 的写法：</p>
+<div data-code-run="5.2">
+
+</div>
+<p>C 又读得太早。这次没有 wait 可用：拷贝不由 P 执行，P 发出以后就继续执行，没有指令能让 P 等这个拷贝。<a href="#fn35" class="footnote-ref" id="fnref35" role="doc-noteref"><sup>35</sup></a></p>
+<p>修复方法是把完成记到 <code>full</code> 上。<code>full</code> 改用 mbarrier：P 先用 <code>mbarrier.arrive.expect_tx</code> 告诉 <code>full</code> 这一轮要等多少字节，再发出 TMA，并在指令中带上 <code>full</code>。TMA 每写完一部分，就从 <code>full</code> 上减去相应的字节数。C 用 <code>mbarrier.try_wait</code> 等到这一轮完成，再读 <code>data</code>。从本节开始，图中的代码省略 <code>mbarrier.</code> 前缀和拷贝的源地址。</p>
+<p>mbarrier 的一轮要满足两个条件才完成：到达的线程数，以及 expect_tx 给出的字节数。第一个条件就是 <a href="#sec-4-4">4.4</a> 的 count，第二个条件是 TMA 写完的字节。</p>
+<p>5.1 和 5.2 是 PTX 的两种完成机制。两者的差别在于：完成以后，结果对谁可见。<a href="#fn36" class="footnote-ref" id="fnref36" role="doc-noteref"><sup>36</sup></a></p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th></th>
+<th><code>cp.async</code>（5.1）</th>
+<th>TMA（5.2）</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>谁等完成</td>
+<td>发出的线程（wait）</td>
+<td>等 mbarrier 的线程（<code>try_wait</code>）</td>
+</tr>
+<tr class="even">
+<td>完成后对谁可见</td>
+<td>只对发出的线程</td>
+<td>对参与这个 mbarrier 的所有线程</td>
+</tr>
+<tr class="odd">
+<td>交给别的线程</td>
+<td>还要一次 <code>bar</code></td>
+<td>不需要，mbarrier 本身就是同步</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="sec-5-3" class="level3">
+<h3 class="anchored" data-anchor-id="sec-5-3">5.3 proxy：两条访问路径</h3>
+<p><code>data</code> 要复用：C 读完第一块，用 <code>mbarrier.arrive</code> 通知 <code>empty</code>；P 等到 <code>empty</code> 以后，用 TMA 把第二块写进同一个 <code>data</code>。按第 3 节的规则，先后已经排好。C 的读在 arrive（release）之前，P 的 try_wait（acquire）在发出 TMA 之前。<a href="#fn37" class="footnote-ref" id="fnref37" role="doc-noteref"><sup>37</sup></a></p>
+<div data-code-run="5.3">
+
+</div>
+<p>C 仍然可能读到第二块。TMA 用自己的通路读写 shared memory，不使用 C 的 <code>ld</code> 所用的通路。<a href="#fn38" class="footnote-ref" id="fnref38" role="doc-noteref"><sup>38</sup></a> PTX 把访问内存的通路叫作 proxy：普通的 <code>ld</code>、<code>st</code> 使用 generic proxy，TMA 使用 async proxy。排好的先后只在同一个通路中有效。两次访问使用不同的通路时，中间要加一条 proxy fence 来切换通路。<a href="#fn39" class="footnote-ref" id="fnref39" role="doc-noteref"><sup>39</sup></a></p>
+<p>下图画出两个通路。两个通路都能访问同一个 <code>data</code>：</p>
+<figure class="ptx-paths figure">
+<div class="ptx-program-scroll">
+<svg viewbox="0 0 640 300" role="img" aria-label="两个访问通路：generic 通路与 async 通路，都通到 shared memory 中的 data">
+  <defs>
+    <marker id="pp-arrow" viewbox="0 0 10 10" refx="9" refy="5" markerwidth="7" markerheight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" class="pp-head"></path></marker>
+    <marker id="pp-arrow-f" viewbox="0 0 10 10" refx="9" refy="5" markerwidth="7" markerheight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" class="pp-head-f"></path></marker>
+  </defs>
+  <rect x="220" y="10" width="200" height="36" rx="8" class="pp-box"></rect>
+  <text x="320" y="33" class="pp-t">线程（P 或 C）</text>
+  <path d="M290,46 L170,88" class="pp-line" marker-end="url(#pp-arrow)"></path>
+  <path d="M350,46 L470,88" class="pp-line" marker-end="url(#pp-arrow)"></path>
+  <rect x="20" y="90" width="260" height="110" rx="10" class="pp-path pp-generic"></rect>
+  <text x="150" y="116" class="pp-title pp-c-generic">generic 通路</text>
+  <text x="150" y="148" class="pp-code">ld　st　atom　red</text>
+  <text x="150" y="176" class="pp-code">cp.async<tspan class="pp-note">（异步，也走这条）</tspan></text>
+  <rect x="360" y="90" width="260" height="110" rx="10" class="pp-path pp-async"></rect>
+  <text x="490" y="116" class="pp-title pp-c-async">async 通路</text>
+  <text x="490" y="148" class="pp-code">cp.async.bulk<tspan class="pp-note">（TMA）</tspan><tspan class="pp-flag"> ⚑</tspan></text>
+  <text x="490" y="176" class="pp-code">wgmma<tspan class="pp-note">（读 A、B）</tspan><tspan class="pp-flag"> ⚑</tspan></text>
+  <path d="M284,150 L356,150" class="pp-fence" marker-end="url(#pp-arrow-f)"></path>
+  <text x="320" y="140" class="pp-small pp-c-fence">切换通路</text>
+  <text x="320" y="168" class="pp-small pp-c-fence">fence</text>
+  <path d="M150,200 L230,238" class="pp-line pp-c-generic" marker-end="url(#pp-arrow)"></path>
+  <path d="M490,200 L410,238" class="pp-line pp-c-async" marker-end="url(#pp-arrow)"></path>
+  <rect x="140" y="240" width="360" height="44" rx="8" class="pp-box"></rect>
+  <text x="320" y="267" class="pp-t">shared memory：<tspan class="pp-code">data</tspan></text>
+</svg>
+</div>
+<figcaption>
+<span><span class="pp-key pp-flag">⚑</span> 完成时自带 proxy fence：async 在前、generic 在后时，不用手动加（5.2）。</span>
+<span><span class="pp-key pp-c-fence">切换通路</span> generic 在前、async 在后时，要手动加 <code>fence.proxy.async</code>（本节）。</span>
+</figcaption>
+</figure>
+<p>修复方法：C 读完以后、arrive 之前，加一条 <code>fence.proxy.async</code>。这个 fence 只在 C 自己的线程中切换通路，不与别的线程配对。把结果交给 P 仍然靠 arrive 和 try_wait。<a href="#fn40" class="footnote-ref" id="fnref40" role="doc-noteref"><sup>40</sup></a></p>
+<p>5.2 不需要加这个 fence，原因是：TMA 完成时自带一条 proxy fence，这条 fence 正好在 TMA 的写和 C 的读之间。<a href="#fn41" class="footnote-ref" id="fnref41" role="doc-noteref"><sup>41</sup></a> 自带的 fence 在异步操作完成之后，所以只适用于<mark>async 在前、generic 在后</mark>，就是图中的 ⚑。<mark>generic 在前、async 在后</mark>时，没有完成可以自带 fence，所以只能手动加。本节的 <code>ld</code> 读 → TMA 写是一种情况，<code>st</code> 写 → <code>wgmma</code> 读是另一种情况。同一个通路中的两次访问不需要加。</p>
+</section>
+<section id="sec-5-4" class="level3">
+<h3 class="anchored" data-anchor-id="sec-5-4">5.4 cluster：mbarrier 跨 CTA</h3>
+<p>H100 可以把几个 CTA 组成一个 cluster。两个 CTA 使用同一块 tile 时，TMA 可以从 global memory 读一次，同时写进两个 CTA 的 <code>data</code>。<a href="#fn42" class="footnote-ref" id="fnref42" role="doc-noteref"><sup>42</sup></a> 现在 C2 在另一个 CTA B 中，读 B 自己的 <code>data</code>。<code>empty</code> 只放在 A 中，因为等待 <code>empty</code> 的是 P。<a href="#fn43" class="footnote-ref" id="fnref43" role="doc-noteref"><sup>43</sup></a></p>
+<p>C2 按 5.3 的写法，arrive 的是 A 中的 <code>empty</code>：</p>
+<div data-code-run="5.4">
+
+</div>
+<p>C2 和 P 接不上。<code>arrive</code> 和 <code>try_wait</code> 不写 scope 时都是 <code>.cta</code>。C2 的 arrive 只对 B 中的线程有效，P 的 try_wait 只对 A 中的线程有效，两端都不包含对方。<a href="#fn44" class="footnote-ref" id="fnref44" role="doc-noteref"><sup>44</sup></a> 这与 <a href="#sec-4-2">4.2</a> 中 <code>atom.cta</code> 的问题相同，修复方法也相同：两端都写 <code>.cluster</code>。<a href="#fn45" class="footnote-ref" id="fnref45" role="doc-noteref"><sup>45</sup></a></p>
+<p>还有一个问题：使用 mbarrier 之前，要先执行 <code>mbarrier.init</code>，init 是一次写。<a href="#fn46" class="footnote-ref" id="fnref46" role="doc-noteref"><sup>46</sup></a> 只有一个 CTA 时，init 之后执行一次 <code>bar.sync</code>，init 的结果就交给了所有线程。现在 C2 在 B 中，不参加 A 的 <code>bar</code>。所以要用 cluster 范围的 barrier，所有线程都执行下面的代码：</p>
+<pre class="text"><code>做 init 的线程（A、B 各一个）            其他线程
+mbarrier.init [full]、[empty]
+fence.mbarrier_init.release.cluster
+barrier.cluster.arrive.relaxed           barrier.cluster.arrive.relaxed
+barrier.cluster.wait                     barrier.cluster.wait</code></pre>
+<p><code>barrier.cluster</code> 就是 5.1 的 barrier 同步，范围从 CTA 扩大到 cluster。前面的 fence 只为 init 做 release，所以 arrive 用 relaxed 就够了。这与 <a href="#sec-4-3">4.3</a> 的做法相反：把 release 从 arrive 上分出来，只用于 init。<a href="#fn47" class="footnote-ref" id="fnref47" role="doc-noteref"><sup>47</sup></a></p>
+</section>
+<section id="sec-5-5" class="level3">
+<h3 class="anchored" data-anchor-id="sec-5-5">5.5 小结</h3>
+<p>第 5 节在交接中加入了三个新东西，每个都带来一个问题：</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>新东西</th>
+<th>带来的问题</th>
+<th>解决方法</th>
+<th>小节</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>异步操作</td>
+<td>不在程序顺序中</td>
+<td>完成机制：wait、mbarrier</td>
+<td><a href="#sec-5-1">5.1</a>、<a href="#sec-5-2">5.2</a></td>
+</tr>
+<tr class="even">
+<td>proxy</td>
+<td>两个通路之间，排好的先后无效</td>
+<td>proxy fence</td>
+<td><a href="#sec-5-3">5.3</a></td>
+</tr>
+<tr class="odd">
+<td>cluster</td>
+<td>交接跨过 CTA</td>
+<td><code>barrier.cluster</code>；scope 写 <code>.cluster</code></td>
+<td><a href="#sec-5-4">5.4</a></td>
+</tr>
+</tbody>
+</table>
+<p>指令名称中的 async 只说明这条指令不在程序顺序中，不说明它使用哪个通路。<code>cp.async</code> 使用的是 generic 通路（<a href="#sec-5-3">5.3</a> 的图），所以 5.1 不需要 proxy fence。<a href="#fn48" class="footnote-ref" id="fnref48" role="doc-noteref"><sup>48</sup></a></p>
+</section>
+</section>
+<section id="sec-6" class="level2">
+<h2 class="anchored" data-anchor-id="sec-6">6 对照 PTX 文档</h2>
+<p>前五节都从例子开始，每次只引入当时需要的规则。本节只列出定义：按 PTX ISA 第 8 章的顺序，给出前文说法的正式名称，不再举例。每条定义后面注明前文在哪里用到。</p>
+<section id="sec-6-1" class="level3">
+<h3 class="anchored" data-anchor-id="sec-6-1">6.1 名词：访问的分类</h3>
+<p>PTX 先对操作分类（§8.4）：<a href="#fn49" class="footnote-ref" id="fnref49" role="doc-noteref"><sup>49</sup></a></p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>PTX 名词</th>
+<th>指哪些</th>
+<th>前文的说法</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>weak operation</td>
+<td>带 <code>.weak</code> 的 <code>ld</code>、<code>st</code>；不写标记时就是 <code>.weak</code></td>
+<td>普通操作（<a href="#sec-3-1">3.1</a>、<a href="#sec-3-5">3.5</a>）</td>
+</tr>
+<tr class="even">
+<td>strong operation</td>
+<td>fence，以及带 <code>.relaxed</code>、<code>.acquire</code>、<code>.release</code>、<code>.acq_rel</code>、<code>.volatile</code>、<code>.mmio</code> 的访问</td>
+<td>特殊操作（<a href="#sec-3-1">3.1</a>）</td>
+</tr>
+<tr class="odd">
+<td>release / acquire operation</td>
+<td>带 <code>.release</code> 或 <code>.acquire</code> 的访问，<code>.acq_rel</code> 两样都算</td>
+<td><a href="#sec-3-5">3.5</a>、<a href="#sec-4-3">4.3</a></td>
+</tr>
+<tr class="even">
+<td>synchronizing operation</td>
+<td>barrier、fence、release 操作、acquire 操作</td>
+<td>同步操作（<a href="#sec-3-1">3.1</a>）</td>
+</tr>
+<tr class="odd">
+<td>atomic operation</td>
+<td><code>atom</code>、<code>red</code></td>
+<td>读改写（第 4 节）</td>
+</tr>
+<tr class="even">
+<td>read operation</td>
+<td><code>ld</code> 和 <code>atom</code>，不含 <code>red</code></td>
+<td><a href="#sec-4-5">4.5</a></td>
+</tr>
+<tr class="odd">
+<td>proxy fence operation</td>
+<td><code>fence.proxy</code>、<code>membar.proxy</code></td>
+<td>切换通路的 fence（<a href="#sec-5-3">5.3</a>）</td>
+</tr>
+</tbody>
+</table>
+<p>strong 和 synchronizing 回答两个不同的问题。strong 只与这一个位置有关：这次访问能否与别的线程的访问同时进行，读到的值是否构成通信。synchronizing 与别的位置有关：它能否为别的访问排定先后。<code>.relaxed</code> 是 strong，但不是 synchronizing。</p>
+<p>另外两个属性：</p>
+<ul>
+<li>scope（§8.5）：每个 strong 操作都必须带 scope。scope 是可能与这个操作直接通信的线程集合，有 <code>.cta</code>、<code>.cluster</code>、<code>.gpu</code>、<code>.sys</code> 四个（<a href="#sec-3-5">3.5</a>）。</li>
+<li>proxy（§8.6）：访问内存的方法，本文叫作通路。没有特别说明的访问都使用 generic proxy（<a href="#sec-5-3">5.3</a>）。</li>
+</ul>
+</section>
+<section id="sec-6-2" class="level3">
+<h3 class="anchored" data-anchor-id="sec-6-2">6.2 morally strong 与数据竞争</h3>
+<p>两个操作 morally strong（§8.7），要同时满足三条：<a href="#fn50" class="footnote-ref" id="fnref50" role="doc-noteref"><sup>50</sup></a></p>
+<ol type="1">
+<li>在同一个线程里；或者两端都是 strong，并且各自的 scope 包含对方的线程（<a href="#sec-3-5">3.5</a>、<a href="#sec-4-2">4.2</a>、<a href="#sec-5-4">5.4</a>）。</li>
+<li>使用同一个 proxy（<a href="#sec-5-3">5.3</a>）。</li>
+<li>如果都是内存访问，访问的字节完全重叠。</li>
+</ol>
+<p>PTX 的大部分公理只对 morally strong 的操作成立。</p>
+<p>冲突与数据竞争（§8.7.1）：</p>
+<ul>
+<li>冲突：两个重叠的内存操作，至少一个是写。</li>
+<li>数据竞争：冲突的两个操作，既没有被因果序（<a href="#sec-6-3">6.3</a>）排出先后，又不是 morally strong。</li>
+</ul>
+<pre class="text"><code>冲突的一对 ─┬─ 因果序排出了先后 ──► 不是数据竞争
+            ├─ morally strong ────► 不是数据竞争
+            └─ 两样都没有 ────────► 数据竞争</code></pre>
+<p>数据竞争的后果（§8.7.2）分两种：</p>
+<ul>
+<li>两个操作的字节完全重叠（uniform-size）：公理仍然适用，读可能读到任何一个没有被公理排除的写的值。</li>
+<li>两个操作只部分重叠（mixed-size）：程序中只要有一处，全部公理都不适用。</li>
+</ul>
+<p>这一点与 C++ 不同：在 C++ 中，有数据竞争的程序，整个行为都未定义。<a href="#fn51" class="footnote-ref" id="fnref51" role="doc-noteref"><sup>51</sup></a></p>
+</section>
+<section id="sec-6-3" class="level3">
+<h3 class="anchored" data-anchor-id="sec-6-3">6.3 关系：前文箭头的正式名称</h3>
+<p>先是两种 pattern（§8.8）：</p>
+<ul>
+<li>release pattern（在位置 M 上）有两种写法：M 上的一个 release 操作；一个 release fence 后面接 M 上的 strong 写。它只影响 pattern 第一条指令之前的操作。</li>
+<li>acquire pattern（在位置 M 上）有两种写法：M 上的一个 acquire 操作；M 上的 strong 读后面接一个 acquire fence。它只影响 pattern 最后一条指令之后的操作。</li>
+<li><code>red</code> 里的读不构成 acquire pattern（<a href="#sec-4-5">4.5</a>）。<a href="#fn52" class="footnote-ref" id="fnref52" role="doc-noteref"><sup>52</sup></a></li>
+</ul>
+<p>然后是 §8.9 的几种关系：</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>PTX 的关系</th>
+<th>定义</th>
+<th>前文的说法</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>program order（§8.9.1）</td>
+<td>一个线程里的操作按源码顺序排成全序，不跨线程</td>
+<td>线程内代码的先后</td>
+</tr>
+<tr class="even">
+<td>异步操作（§8.9.1.1）</td>
+<td><code>cp.async</code>、<code>cp.async.bulk</code>、<code>wgmma</code> 等不在程序顺序里，只排在同一线程前面的指令之后（<code>wgmma</code> 除外）</td>
+<td><a href="#sec-5-1">5.1</a></td>
+</tr>
+<tr class="odd">
+<td>observation order（§8.9.2）</td>
+<td>写 W 在读 R 之前：两者 morally strong 且 R 读到 W 写的值；或者中间经过一串 atomic 操作</td>
+<td>读到（<a href="#sec-3-4">3.4</a>）；读改写链（<a href="#sec-4-4">4.4</a>）</td>
+</tr>
+<tr class="even">
+<td>Fence-SC order（§8.9.3）</td>
+<td>所有 morally strong 的 <code>fence.sc</code> 两两之间的先后，运行时决定</td>
+<td><a href="#sec-3-6">3.6</a></td>
+</tr>
+<tr class="odd">
+<td>synchronizes（§8.9.4）</td>
+<td>见下</td>
+<td>接上</td>
+</tr>
+<tr class="even">
+<td>causality order（§8.9.5）</td>
+<td>见下</td>
+<td>因果序（<a href="#sec-3-4">3.4</a>）</td>
+</tr>
+<tr class="odd">
+<td>coherence order（§8.9.6）</td>
+<td>两个重叠的写，morally strong 或有因果序时排出先后；构成数据竞争的两个写没有先后</td>
+<td>同一位置上各次写的先后（<a href="#sec-4-4">4.4</a>）</td>
+</tr>
+<tr class="even">
+<td>communication order（§8.9.7）</td>
+<td>写 → 读：读读到这个写的值；写 → 写：coherence order；读 → 写：读读到的值来自 coherence order 中更早的写。X 在 Y 之前，叫作 X 对 Y 可见</td>
+<td>可见</td>
+</tr>
+</tbody>
+</table>
+<p>synchronizes 有这几种（§8.9.4）：</p>
+<ul>
+<li>release pattern X 与 acquire pattern Y（<a href="#sec-3-4">3.4</a>）：X 中的写在 observation order 中排在 Y 中的读之前。另外，X 的第一个操作和 Y 的最后一个操作要 morally strong。</li>
+<li><code>fence.sc</code> X 与 <code>fence.sc</code> Y：X 在 Fence-SC order 中排在 Y 之前（<a href="#sec-3-6">3.6</a>）。</li>
+<li><code>bar.arrive</code>、<code>bar.sync</code> 与同一个 barrier 上的 <code>bar.sync</code>（<a href="#sec-5-1">5.1</a>）；<code>barrier.cluster.arrive</code> 与 <code>barrier.cluster.wait</code>（<a href="#sec-5-4">5.4</a>）。</li>
+<li>CUDA API 带来的同步，例如 kernel 开始与 kernel 里所有线程开始。</li>
+</ul>
+<p>causality order 分三层（§8.9.5）：</p>
+<ol type="1">
+<li>base causality order：程序顺序和 synchronizes 可以任意首尾相接，并且可以传递。这种传递就是同步的<mark>累积性</mark>：一个线程交出的结果，可以经过中间的线程，传到后面的线程（<a href="#sec-3-4">3.4</a> 的接力）。</li>
+<li>proxy-preserved base causality order：上一层的先后，只在下面三种情况下保留（<a href="#sec-5-3">5.3</a>）：
+<ul>
+<li>两次访问同一地址，都使用 generic proxy。</li>
+<li>两次访问同一地址，使用同一个 proxy，并且在同一个 CTA 中。</li>
+<li>两次访问是 alias，并且路径上有 alias proxy fence。</li>
+</ul></li>
+<li>causality order：在上一层的基础上，再加一种不传递的边。如果 W 在 observation order 中排在 Z 之前，并且 Z 在上一层中排在 Y 之前，那么 W 排在 Y 之前。</li>
+</ol>
+<p>数据、地址、控制依赖都不在这些关系里，PTX 只在 No Thin Air 公理里提到依赖（<a href="#sec-2-4">2.4</a>）。</p>
+</section>
+<section id="sec-6-4" class="level3">
+<h3 class="anchored" data-anchor-id="sec-6-4">6.4 公理：限制读能读到的值</h3>
+<p>六条公理（§8.10）：</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>公理</th>
+<th>内容</th>
+<th>前文</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Coherence</td>
+<td>因果序中在前的写，coherence order 中也在前</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td>Fence-SC</td>
+<td>Fence-SC order 不与因果序矛盾</td>
+<td><a href="#sec-3-6">3.6</a></td>
+</tr>
+<tr class="odd">
+<td>Atomicity</td>
+<td>morally strong 的冲突访问不会只读到一半（single-copy atomicity）；读改写读到某个写以后，与它 morally strong 的写插不进它和自己的写之间</td>
+<td><a href="#sec-4-1">4.1</a>、<a href="#sec-4-2">4.2</a></td>
+</tr>
+<tr class="even">
+<td>No Thin Air</td>
+<td>值不能凭空出现：推测不能借依赖和线程间通信让自己成立</td>
+<td><a href="#sec-2-4">2.4</a></td>
+</tr>
+<tr class="odd">
+<td>SC per location</td>
+<td>同一位置、两两 morally strong 的访问，communication order 不与程序顺序矛盾</td>
+<td><a href="#sec-3-5">3.5</a></td>
+</tr>
+<tr class="even">
+<td>Causality</td>
+<td>communication order 不与因果序矛盾</td>
+<td><a href="#sec-1-2">1.2</a>、<a href="#sec-3-4">3.4</a>、第 5 节</td>
+</tr>
+</tbody>
+</table>
+<p>Causality 公理落到读上，是两条排除规则（§8.10.6）：</p>
+<ul>
+<li>读 R 在因果序中排在重叠的写 W 之前：R 不能读 W。</li>
+<li>写 W 在因果序中排在重叠的读 R 之前：R 不能读 coherence order 中排在 W 之前的写。</li>
+</ul>
+<p>每个字节在所有线程开始之前，都有一次初始写（§8.2.6）。</p>
+</section>
+<section id="sec-6-5" class="level3">
+<h3 class="anchored" data-anchor-id="sec-6-5">6.5 PTX 在综述中的位置</h3>
+<p>按综述 Table 1 的几列看 PTX：</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>综述的列</th>
+<th>PTX</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>松弛 <code>W→R</code>、<code>W→W</code>、<code>R→RW</code></td>
+<td>都松弛（第 2 节）</td>
+</tr>
+<tr class="even">
+<td>读到别人的写过早（写原子性）</td>
+<td>允许，PTX 不是 multi-copy atomic</td>
+</tr>
+<tr class="odd">
+<td>安全网</td>
+<td>单独的 fence；标在访问上的 <code>.release</code>、<code>.acquire</code> 等；<code>atom</code>；barrier</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>写原子性有两条要求：同一位置的写，所有线程看到的先后相同；一次写对所有线程都可见之前，任何读都不能读到它的值。对 morally strong 的访问，PTX 保证第一条（coherence order 与 SC per location），不保证第二条。<a href="#fn53" class="footnote-ref" id="fnref53" role="doc-noteref"><sup>53</sup></a></li>
+<li>同步只有三种：release、acquire 配对；<code>fence.sc</code>；barrier（<a href="#sec-5-1">5.1</a>）。</li>
+<li>在同步操作之间，PTX 像 RCpc：release 后面接 acquire 不保序，要 <code>fence.sc</code> 补（<a href="#sec-3-6">3.6</a>）。</li>
+<li>综述的模型没有的两根轴：scope 规定<mark>与哪些线程</mark>，proxy 规定<mark>使用哪个通路</mark>。</li>
+</ul>
+</section>
+<section id="sec-6-6" class="level3">
+<h3 class="anchored" data-anchor-id="sec-6-6">6.6 小结：一次读可以读到哪个值</h3>
+<pre class="text"><code>一次读 R 可以读到哪个写的值
+├─ 候选：同一位置的全部写，包括初始写（§8.2.6）
+├─ 排除：Causality 公理（6.4）
+│  ├─ 因果序：程序顺序 + 同步，可以传递；再加经过 observation order 的边（6.3）
+│  │  ├─ 同步：release、acquire 配对；fence.sc；barrier
+│  │  └─ 只在同一个通路中保留：proxy
+│  └─ observation order 要求两端 morally strong：strong、scope、同一个 proxy（6.2）
+├─ 同一位置的保证：Coherence、SC per location、Atomicity
+└─ 数据竞争：没有被公理排除的写都可能读到（6.2）</code></pre>
+</section>
+</section>
+<section id="references" class="level2">
+<h2 class="anchored" data-anchor-id="references">参考资料</h2>
+<ol type="1">
+<li>Sarita V. Adve and Kourosh Gharachorloo. <em>Shared Memory Consistency Models: A Tutorial</em>. IEEE Computer, 29(12): 66–76, December 1996. <a href="https://doi.org/10.1109/2.546611">DOI</a> · <a href="https://www.cs.cmu.edu/afs/cs/academic/class/15740-f18/www/papers/ieeemicro96-adve-consistency.pdf">论文 PDF</a>。用于经典模型分类、程序顺序与写原子性的放松，以及恢复必要保证的 safety nets。</li>
+<li>同作者的详细版本：<em>Shared Memory Consistency Models: A Tutorial</em>, WRL Research Report 95/7, September 1995。<a href="https://people.cs.umass.edu/~emery/classes/cmpsci691w-spring2006/adve95shared.pdf">技术报告 PDF</a>。第 6 节比较放松模型，第 7 节讨论 programmer-centric 视角。</li>
+<li>Daniel Lustig, Sameer Sahasrabuddhe, and Olivier Giroux. <em>A Formal Analysis of the NVIDIA PTX Memory Consistency Model</em>. ASPLOS 2019. <a href="https://doi.org/10.1145/3297858.3304043">DOI</a> · <a href="https://d1qx31qr3h6wln.cloudfront.net/publications/ASPLOS_2019_PTXMemoryModel.pdf">论文 PDF</a> · <a href="https://github.com/NVlabs/ptxmemorymodel">形式化模型与证明代码</a>。第 2.2 节介绍公理化模型的共同概念，第 3 节形式化当时的 PTX 模型；用于建立事件、关系、公理及编译映射的理解基础，具体规则与当前 PTX 文档对照。</li>
+<li>Leslie Lamport. How to Make a Multiprocessor Computer That Correctly Executes Multiprocess Programs. <em>IEEE Transactions on Computers</em>, C-28(9): 690–691, September 1979. <a href="https://www.microsoft.com/en-us/research/wp-content/uploads/2016/12/How-to-Make-a-Multiprocessor-Computer-That-Correctly-Executes-Multiprocess-Programs.pdf">PDF</a>。SC 的原始定义。</li>
+<li>Kourosh Gharachorloo, Daniel Lenoski, James Laudon, Phillip Gibbons, Anoop Gupta, and John Hennessy. Memory Consistency and Event Ordering in Scalable Shared-Memory Multiprocessors. ISCA 1990, pp.&nbsp;15–26. <a href="https://www.csl.cornell.edu/courses/ece5750/gharachorloo.isca90.pdf">PDF</a>。定义 2.1 转述 performed with respect to；同文给出 release consistency。</li>
+<li>Michel Dubois, Christoph Scheurich, and Faye A. Briggs. Memory Access Buffering in Multiprocessors. ISCA 1986, pp.&nbsp;434–442。performed with respect to 的原始出处；本文经参考资料 5 转引。</li>
+<li>Peter Sewell, Susmit Sarkar, Scott Owens, Francesco Zappa Nardelli, and Magnus O. Myreen. x86-TSO: A Rigorous and Usable Programmer’s Model for x86 Multiprocessors. <em>Communications of the ACM</em>, 53(7): 89–97, July 2010. <a href="https://www.cl.cam.ac.uk/~pes20/weakmemory/x86tso-paper.pdf">PDF</a>。以每个线程一个先进先出写缓冲的抽象机器描述 TSO。</li>
+<li>NVIDIA. <em>Parallel Thread Execution ISA</em>, Version 9.4, Chapter 8 Memory Consistency Model 与 §9.7.15.4 membar/fence. <a href="https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#memory-consistency-model">在线文档</a>。本文的 PTX 规则依据。</li>
+</ol>
+
+
+</section>
+
+
+<div id="quarto-appendix" class="default"><section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes"><h2 class="anchored quarto-appendix-heading">Footnotes</h2>
+
+<ol>
+<li id="fn1"><p><a href="https://doi.org/10.1109/2.546611">Adve 与 Gharachorloo，1996</a>，<em>Shared Memory Consistency Models: A Tutorial</em>。<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2"><p><a href="https://www.microsoft.com/en-us/research/wp-content/uploads/2016/12/How-to-Make-a-Multiprocessor-Computer-That-Correctly-Executes-Multiprocess-Programs.pdf">Lamport，1979</a> 的原始定义。<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn3"><p><a href="https://doi.org/10.1109/2.546611">Adve 与 Gharachorloo，1996</a>，Figure 3a。<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn4"><p><a href="https://doi.org/10.1109/2.546611">Adve 与 Gharachorloo，1996</a>，Figure 3b。<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn5"><p><a href="https://doi.org/10.1109/2.546611">Adve 与 Gharachorloo，1996</a>，Figure 3c。<a href="#fnref5" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn6"><p><a href="https://doi.org/10.1109/2.546611">Adve 与 Gharachorloo，1996</a>，Figure 3d。<a href="#fnref6" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn7"><p>Dubois、Scheurich 与 Briggs，<em>Memory Access Buffering in Multiprocessors</em>，ISCA 1986。<a href="#fnref7" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn8"><p>Adve 与 Gharachorloo，1996，第 73–75 页：在一段 SC 执行里与另一操作构成竞争（同一位置、至少一个写、中间没有其他操作隔开）的访问，要单独标出来；WO 原文把两类叫 data 与 synchronization。<a href="#fnref8" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn9"><p>Gharachorloo、Lenoski、Laudon、Gibbons、Gupta 与 Hennessy，<em>Memory Consistency and Event Ordering in Scalable Shared-Memory Multiprocessors</em>，ISCA 1990。<a href="#fnref9" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn10"><p>PTX 文档把这层差别说成 “a slower fence … at the cost of performance”；综述也指出，放开 W→R 的主要收益正是隐藏写的延迟。<a href="#fnref10" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn11"><p>只用 <code>fence.acquire</code> 时，下面的时间线不变，但按 PTX 的定义链会在 C1 断开（累积性，PTX ISA §8.9.5），<a href="#sec-6-3">6.3</a> 再对照。<a href="#fnref11" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn12"><p>循环中还有别的操作时（例如实测程序中的超时判断），ptxas 不删除循环，而是把读移到循环外，只读一次。结果相同：循环中不再读 <code>full</code>。<a href="#fnref12" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn13"><p>另外，普通读即使读到 1，也不构成线程间的通信：<a href="#sec-3-4">3.4</a> 的链中<mark>C1 读到 <code>full</code></mark>这一条边接不上。<a href="#fnref13" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn14"><p>PTX 没有规定循环多久一定读到 1。旧代码常用 <code>volatile</code>，在 PTX 中它相当于 <code>.relaxed.sys</code>。<a href="#fnref14" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn15"><p>实测：两端用 <code>st.release.cta</code>、<code>ld.acquire.cta</code>，两个线程在不同的 CTA 中。640 万轮中有 18.8 万轮读到 <code>full</code> 是 1，<code>data</code> 却仍然是旧值。<a href="#fnref15" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn16"><p>PTX 文档的 SB（Store Buffering）例子也说明，用 <code>fence.acq_rel</code> 时两边都可能读到 0（PTX ISA §8.10.6）。<a href="#fnref16" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn17"><p>PTX 把这个先后叫作 Fence-SC order（PTX ISA §8.9.3），并规定在前的 <code>fence.sc</code> 与在后的 <code>fence.sc</code> synchronize with（§8.9.4）。<a href="#fnref17" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn18"><p>综述把 RC 分成两种：RCsc 在特殊操作之间保持 SC，<code>W→R</code> 也保；RCpc 不保这一对。PTX 的 release、acquire 像 RCpc，需要时用 <code>fence.sc</code> 补（Adve 与 Gharachorloo，1996，第 73 页）。<a href="#fnref18" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn19"><p>PTX ISA §8.10.3 的原子性公理：一个读改写读到某次写的值以后，别的写不能插在那次写和它自己的写之间。前提是双方的 scope 互相包含，见 <a href="#sec-4-2">4.2</a>。<a href="#fnref19" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn20"><p>PTX：<code>atom</code> 不写 <code>.sem</code> 时为 <code>.relaxed</code>，不写 <code>.scope</code> 时为 <code>.gpu</code>。C++ 的 <code>std::atomic</code> 把两件事放在一起：类型保证每次访问不可分割，并提供 <code>fetch_add</code> 等读改写；每次访问的 <code>memory_order</code> 参数给出顺序。PTX 没有<mark>atomic 变量</mark>，只有带标记的访问和 <code>atom</code> 指令。<a href="#fnref20" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn21"><p>PTX ISA §8.10.3 的例子：不同 CTA 中一个 <code>atom.cta.inc</code>、一个 <code>atom.gpu.inc</code>，最终 <code>x</code> 可能是 1。原文：“Atomicity is not guaranteed if the operations are not morally strong.”<a href="#fnref21" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn22"><p>这只是帮助理解的示意，NVIDIA 没有公开实现。<a href="#fnref22" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn23"><p>C++ 里 <code>cuda::atomic_ref&lt;unsigned, cuda::thread_scope_device&gt;(count).fetch_add(1, cuda::memory_order_acq_rel)</code> 编出来就是这一条 <code>atom.add.acq_rel.gpu</code>。<a href="#fnref23" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn24"><p>PTX 没有用一种写法定义另一种，而是把两种写法并列为 release、acquire pattern（PTX ISA §8.8）。<a href="#fnref24" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn25"><p>PTX ISA §8.9.2：“Observation order relates a write W to a read R through an optional sequence of atomic read-modify-write operations.” C++ 中对应的是 release sequence。只有读改写能这样传：如果用普通的 <code>st</code> 写入 2，P 与先加的消费者就接不上。<a href="#fnref25" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn26"><p>这是这台机器、这个编译器上的实现，PTX 不规定。<a href="#fnref26" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn27"><p>PTX ISA §8.4 的表把 <code>red</code> 算作 atomic operation，但不算 read operation；§8.9.2 的链能不能经过 <code>red</code>，PTX 正文没有明说。形式化论文把 <code>red</code> 当作不返回值的 <code>atom</code>，链成立。<a href="#fnref27" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn28"><p>PTX ISA §8.8：“while atomic reductions conceptually perform a strong read as part of its read-modify-write sequence, this strong read does not form an acquire pattern. E.g.: red.add [M], 1; fence.acquire; is not an acquire pattern.” §8.11.1 的例子中，<code>red</code> 内部读到了对方的写，两个线程仍然接不上；原文：“Using the atom instruction instead of red forbids this outcome.”<a href="#fnref28" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn29"><p>PTX 没有给出原因。本文的推断：acquire 要等读的结果返回，后面的操作才能执行；<code>red</code> 不等结果。<a href="#fnref29" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn30"><p><code>bar.arrive</code> 不等待；<code>bar.sync</code> 等到所有参与的线程都到达。PTX 在 <code>bar</code> 的说明里自带这种生产者、消费者的例子。<a href="#fnref30" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn31"><p>PTX ISA §8.9.1.1：异步操作 “are not part of the program order for that thread”。<code>bar</code> 只保证 “prior memory accesses requested by this thread” 在 barrier 完成时对参与的线程可见。<a href="#fnref31" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn32"><p><code>cp.async.wait_all</code> 等于 <code>cp.async.commit_group; cp.async.wait_group 0</code>。只写 <code>wait_group</code> 不够，它只等已经提交成组的拷贝。<a href="#fnref32" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn33"><p>PTX：拷贝的写 “are made visible to the executing thread only after” wait 完成；wait “does not provide any ordering and visibility guarantees for any other memory operation apart from cp.async”。常见写法 <code>cp.async</code> → <code>commit_group</code> → <code>wait_group</code> → <code>__syncthreads()</code> 就是这个原因。<a href="#fnref33" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn34"><p>PTX ISA §8.9.4：“A bar{.cta}.sync or bar{.cta}.red or bar{.cta}.arrive operation synchronizes with a bar{.cta}.sync or bar{.cta}.red operation executed on the same barrier.”<a href="#fnref34" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn35"><p>从 global 搬到 shared 的 <code>cp.async.bulk</code>，完成只能记在 mbarrier 上。PTX：拷贝完成之前读目的地址 “exhibits undefined behavior”。<a href="#fnref35" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn36"><p>PTX：mbarrier 这一轮完成时，“all threads participating in that mbarrier object can access the result of the asynchronous operations”。在内存模型里，mbarrier 只是一个位置：<code>arrive</code> 默认是 release，<code>try_wait</code> 默认是 acquire，配对规则和第 3 节一样。<a href="#fnref36" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn37"><p>TMA 不在 P 的程序顺序里，但 PTX 规定异步操作 “are ordered after prior instructions in the same thread”，所以排在 try_wait 之后。<a href="#fnref37" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn38"><p>示意，NVIDIA 没有公开实现。<a href="#fnref38" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn39"><p>PTX ISA §8.6：“A memory proxy, or a proxy is an abstract label applied to a method of memory access.” §8.9.5：先后只在 “using the generic proxy” 或 “using the same proxy, and by the same thread block” 时保留。<a href="#fnref39" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn40"><p>原文：“bi-directional proxy fences take effect within a single thread and therefore do not have a .scope qualifier.” CUTLASS 的 epilogue 就这样写：从 shared memory 读完，<code>fence_view_async_shared()</code>，再通知 empty。<a href="#fnref40" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn41"><p>原文：“The completion of a cp{.reduce}.async.bulk operation is followed by an implicit generic-async proxy fence.” <code>wgmma</code> 也有同样的一句。<a href="#fnref41" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn42"><p><code>.multicast::cluster</code>：数据和 mbarrier 的完成信号都送到每个目的 CTA 里同一偏移的位置。<a href="#fnref42" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn43"><p>只能等本 CTA 的 mbarrier：“threads can perform only arrive operations but not *_wait on an mbarrier located in shared::cluster space.” 所以 C2 只能远程 arrive。<a href="#fnref43" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn44"><p>地址里的 <code>.shared::cluster</code> 只说 mbarrier 在哪，不说和谁同步：“In contrast, the .shared::<scope> indicates the state space where the mbarrier resides.”<a href="#fnref44" class="footnote-back" role="doc-backlink">↩︎</a></scope></p></li>
+<li id="fn45"><p>PTX mbarrier 的例 4 两端都这样写。CUTLASS 的远程 arrive 不写 scope，按 PTX 规则不构成同步。<a href="#fnref45" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn46"><p>“Performing any mbarrier operation except mbarrier.init on an uninitialized mbarrier object results in undefined behavior.”<a href="#fnref46" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn47"><p>默认的 <code>barrier.cluster.arrive</code> 就是 release，直接写 <code>barrier.cluster.arrive; barrier.cluster.wait;</code> 也对（PTX mbarrier 例 4）。上面的写法只为 init 付 release 的代价，PTX fence 节的例子和 CUTLASS 都这样写。<a href="#fnref47" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn48"><p>PTX：“cp.async is treated as a weak memory operation performed in the generic proxy”；“st.async is performed in the generic proxy.” 其他 proxy 本文不展开：改了 TMA 描述符再交给 TMA 用，要 <code>fence.proxy.tensormap::generic</code>；同一位置用两个虚拟地址访问，要 <code>fence.proxy.alias</code>。<a href="#fnref48" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn49"><p>PTX ISA §8.4 Table 20。表中的 memory fence operation 只列了 <code>membar</code>、<code>fence.sc</code>、<code>fence.acq_rel</code>；<code>fence.release</code>、<code>fence.acquire</code> 不在表里，§8.8 的 pattern 用到它们。<a href="#fnref49" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn50"><p>原文：“The operations are related in program order (i.e, they are both executed by the same thread), or each operation is strong and specifies a scope that includes the thread executing the other operation. Both operations are performed via the same proxy. If both are memory operations, then they overlap completely.”<a href="#fnref50" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn51"><p>原文：“The axioms in the memory consistency model do not apply if a PTX program contains one or more mixed-size data-races. But these axioms are sufficient to describe the behavior of a PTX program with only uniform-size data-races.”<a href="#fnref51" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn52"><p>§8.8 还列了几种写法：release 操作后再接同一位置的 strong 写，异步操作的 strong 写、strong 读配合 fence 等。<a href="#fnref52" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn53"><p>形式化论文 §3.4：“The PTX model is not multi-copy atomic. Informally speaking, this means store values may become visible to some threads (e.g., to threads sharing the same L1 cache as the issuing thread) before others.”<a href="#fnref53" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+</ol>
+</section></div></main> <!-- /main -->
+<div id="ptx-lab" role="complementary" aria-label="与章节对应的交互时间线" hidden="">
+  <div id="ptx-lab-figure"></div>
+</div>
+<script src="ptx-memory-consistency/timeline.js?v=3"></script>
+<script src="ptx-memory-consistency/variables.js?v=2"></script>
+<script src="ptx-memory-consistency/intro-phases.js?v=2"></script>
+<script src="ptx-memory-consistency/code-cases.js?v=12"></script>
+<script src="ptx-memory-consistency/code-run.js?v=6"></script>
+<script src="ptx-memory-consistency/quadrants.js?v=3"></script>
+<script src="ptx-memory-consistency/reader.js?v=8"></script>
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/zhen8838\.github\.io");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script src="https://utteranc.es/client.js" repo="zhen8838/zhen8838.github.io" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
