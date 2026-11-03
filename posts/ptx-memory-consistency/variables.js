@@ -6,7 +6,7 @@
 
   function colorize(root) {
     if (!root) return;
-    for (const target of root.querySelectorAll('code, .tl-code, .tl-val, .cr-src')) {
+    for (const target of root.querySelectorAll('code, .tl-code, .tl-val, .cr-src, .cr-val')) {
       const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT);
       const nodes = [];
       while (walker.nextNode()) {

@@ -1,7 +1,7 @@
 /*
  * 代码 + 时间线合成一张图：每条通道的上方是它自己的代码行，下方是它自己的时间轴。
  * 点「运行」代码逐行高亮、时间点逐个打上去，跑完给出结果。
- * 记号沿用时间线那一套：● 发出、◆ 落地、后面接长虚线表示还能更晚；
+ * 记号沿用时间线那一套：● 发出、◆ 完成（写生效或读到值）、后面接长虚线表示还能更晚；
  * 跨通道的数据转移画箭头，橙＝读到、蓝＝保序、红色虚线＝反序。
  */
 (function (global) {
@@ -52,16 +52,21 @@ function tailIcon() {
 
 const LEGEND = [
   ['shape', 'iss'], ['shape', 'dia'], ['tail', null], ['shape', 'sc'],
-  ['arrow', 'rf'], ['arrow', 'keep'], ['arrow', 'rev'],
+  ['arrow', 'rf'], ['arrow', 'keep'], ['arrow', 'rev'], ['arrow', 'free'], ['arrow', 'order'], ['arrow', 'sync'],
 ];
 const LEGEND_TEXT = {
-  iss: '发出', dia: '落地', tail: '还能更晚', sc: 'fence',
-  rf: '读到', keep: '保序', rev: '反序',
+  iss: '发出', dia: '完成', tail: '还能更晚', sc: 'fence',
+  rf: '读到', keep: '保序', rev: '反序', free: '不受约束', order: 'fence.sc 的先后', sync: 'barrier 同步',
 };
+// 只在用到时才进图例
+const OPTIONAL = new Set(['free', 'order', 'sync']);
 
-function legendNode() {
+function legendNode(spec) {
+  const used = new Set();
+  for (const st of Object.values(spec.states)) for (const e of st.edges || []) used.add(e.kind);
   const legend = div('tl-legend');
   for (const [type, kind] of LEGEND) {
+    if (OPTIONAL.has(kind) && !used.has(kind)) continue;
     const item = document.createElement('span');
     const glyph = type === 'tail' ? tailIcon() : type === 'arrow' ? arrowIcon(kind) : icon(kind);
     item.append(glyph, document.createTextNode(LEGEND_TEXT[kind || 'tail']));
@@ -75,7 +80,7 @@ function mount(host, spec) {
   const yOf = tick => (tick + 0.5) * ROW;
 
   // ---- 骨架 ----
-  const card = div('tl-card cr-card');
+  const card = div('tl-card cr-card' + (spec.dense ? ' is-dense' : ''));
   const head = div('tl-head');
   head.append(div('tl-title', spec.title));
 
@@ -108,12 +113,15 @@ function mount(host, spec) {
   card.append(hint);
 
   const body = div('cr-body');
-  card.append(body);
+  // 窄屏时代码放不下，代码和时间轴这一块单独横向滚动，标题、按钮、结果不动
+  const scroller = div('cr-scroll');
+  scroller.append(body);
+  card.append(scroller);
 
   const res = div('tl-res');
   res.hidden = true;
   card.append(res);
-  card.append(legendNode());
+  card.append(legendNode(spec));
   host.append(card);
 
   // 每次 render 重建：列 = 每条通道的各条指令
@@ -121,6 +129,7 @@ function mount(host, spec) {
   let plot = null;
   let canvas = null;
   let resizeObserver = null;
+  let sizing = null;      // { codes: [{ code, span, weight }], perLane, total }
 
   // ---- 回放 ----
   const timers = new Set();
@@ -142,15 +151,17 @@ function mount(host, spec) {
   const railOf = opId => columns.find(c => c.op.id === opId);
 
   function codeOf(lane, index) {
-    const lines = lane.code.slice();
-    let fenceAt = -1;
+    // 开关打开时整段换成 swap.code
+    const lines = (lane.swap && state[lane.swap.key] ? lane.swap.code : lane.code).slice();
     for (const f of spec.fences) {
-      if (!state.fence) continue;
+      if (f.show !== true && !state[f.show || 'fence']) continue;
       if (f.lane != null && f.lane !== index) continue;
-      lines.splice(f.after + 1, 0, f.code);
-      fenceAt = f.after + 1;
+      lines.splice(f.after + 1, 0, f.swap && state[f.swap.key] ? f.swap.code : f.code);
     }
-    return { lines, fenceAt };
+    // 插进来的和本来就写在代码里的 fence 行都标出来
+    const fences = new Set();
+    lines.forEach((text, i) => { if (/^\s*fence\./.test(text)) fences.add(i); });
+    return { lines, fences };
   }
 
   function syncSwitches() {
@@ -167,16 +178,17 @@ function mount(host, spec) {
 
   // ---- 一个 op 在哪些刻度上留记号 ----
   function marksOf(op) {
-    if (op.fence != null) return [{ tick: op.fence, kind: 'sc' }];
-    if (op.read != null) return [{ tick: op.read, kind: 'dia', val: op.val, bad: op.bad }];
+    const label = op.label;
+    if (op.fence != null) return [{ tick: op.fence, kind: 'sc', label }];
+    if (op.read != null) return [{ tick: op.read, kind: 'dia', val: op.val, bad: op.bad, label }];
     if (op.iss != null) return [
       { tick: op.iss, kind: 'iss' },
-      { tick: op.land, kind: 'dia', tail: op.tail, val: op.val, bad: op.bad },
+      { tick: op.land, kind: 'dia', tail: op.tail, val: op.val, bad: op.bad, label },
     ];
-    return [{ tick: op.tick, kind: 'dia' }];
+    return [{ tick: op.tick, kind: 'dia', label }];
   }
 
-  // 箭头的落点：写取落地刻度，读取读取刻度，fence 取自己的位置
+  // 箭头的落点：写取生效刻度，读取读取刻度，fence 取自己的位置
   function anchorOf(op) {
     const col = railOf(op.id);
     if (!col) return null;
@@ -197,8 +209,9 @@ function mount(host, spec) {
     const ux = dx / len, uy = dy / len;
     const x1 = from.x + ux * 7, y1 = from.y + uy * 7;
     const x2 = to.x - ux * 12, y2 = to.y - uy * 12;
-    // 交叉的两条线分别往两边弓，避免重叠成一团
-    const bow = len * 0.11 * (dy > 0 ? 1 : -1);
+    // 交叉的两条线分别往两边弓，避免重叠成一团；
+    // 同一条轴上的两点往左弓出去，不压住轴，也避开轴右边的标签
+    const bow = Math.abs(dx) < 1 ? 18 * uy : len * 0.11 * (dy > 0 ? 1 : -1);
     const cx = (x1 + x2) / 2 - uy * bow, cy = (y1 + y2) / 2 + ux * bow;
     canvas.append(svgEl('path', {
       d: `M${x1},${y1} Q${cx},${cy} ${x2},${y2}`,
@@ -279,10 +292,11 @@ function mount(host, spec) {
     node.append(icon(mark.kind));
     col.rail.append(node);
 
-    if (mark.val != null) {
+    const text = mark.label != null ? mark.label : mark.val;
+    if (text != null) {
       const value = document.createElement('span');
       value.className = 'cr-val' + (mark.bad ? ' bad' : '');
-      value.textContent = mark.val;
+      value.textContent = text;
       value.style.top = y + 'px';
       col.rail.append(value);
     }
@@ -339,6 +353,21 @@ function mount(host, spec) {
     later(() => finish(st), events.length * STEP_MS);
   }
 
+  // 一列时间轴：列头写行号（按线程一条轴时不写）
+  function railCell(head, perLane) {
+    const cell = div('cr-col');
+    const rail = div(perLane ? 'cr-rail cr-rail-lane' : 'cr-rail');
+    rail.style.setProperty('--rows', rows);
+    for (let t = 0; t < rows; t++) {
+      const guide = div('cr-guide');
+      guide.style.top = yOf(t) + 'px';
+      rail.append(guide);
+    }
+    cell.append(div('cr-col-no', head), rail);
+    plot.append(cell);
+    return { cell, rail };
+  }
+
   // ---- 布局：每条通道一列，列里按指令再分通道 ----
   function render() {
     stop();
@@ -357,10 +386,18 @@ function mount(host, spec) {
         .sort((a, b) => a.line - b.line);
       return { lane, li, ops };
     });
-    const total = lanes.reduce((n, l) => n + l.ops.length, 0) || 1;
+    // rails: 'lane' 时每条通道只有一条时间轴，否则每条指令一条
+    const perLane = spec.rails === 'lane';
+    const total = (perLane ? lanes.length : lanes.reduce((n, l) => n + l.ops.length, 0)) || 1;
 
-    body.style.gridTemplateColumns = `26px repeat(${total}, minmax(0, 1fr))`;
-    body.style.columnGap = '12px';
+    // 按线程一条轴时，各通道可以用 width 调宽窄（默认 1）
+    const tracks = perLane
+      ? lanes.map(({ lane }) => `minmax(0, ${lane.width || 1}fr)`).join(' ')
+      : `repeat(${total}, minmax(0, 1fr))`;
+    // 紧凑的卡片列间距小一点，长代码多一点位置
+    const gap = spec.dense ? 8 : 12;
+    body.style.gridTemplateColumns = `26px ${tracks}`;
+    body.style.columnGap = gap + 'px';
 
     const axis = div('cr-axis');
     axis.style.setProperty('--rows', rows);
@@ -372,13 +409,14 @@ function mount(host, spec) {
     plot = div('cr-plot');
     plot.style.gridColumn = `2 / -1`;
     plot.style.gridRow = '3';
-    plot.style.gridTemplateColumns = `repeat(${total}, minmax(0, 1fr))`;
-    plot.style.columnGap = '12px';
+    plot.style.gridTemplateColumns = tracks;
+    plot.style.columnGap = gap + 'px';
     body.append(plot);
 
+    const codes = [];
     let cursor = 2;
     for (const { lane, li, ops } of lanes) {
-      const span = ops.length || 1;
+      const span = perLane ? 1 : ops.length || 1;
       const start = cursor;
       cursor += span;
 
@@ -387,14 +425,14 @@ function mount(host, spec) {
       name.style.gridRow = '1';
       body.append(name);
 
-      const { lines, fenceAt } = codeOf(lane, li);
+      const { lines, fences } = codeOf(lane, li);
       const code = div('cr-code');
       code.style.gridColumn = `${start} / ${start + span}`;
       code.style.gridRow = '2';
       lines.forEach((text, i) => {
         const line = div('cr-line');
         line.dataset.key = li + ':' + i;
-        if (i === fenceAt) line.classList.add('is-fence');
+        if (fences.has(i)) line.classList.add('is-fence');
         const no = document.createElement('span');
         no.className = 'cr-no';
         no.textContent = String(i + 1);
@@ -412,19 +450,16 @@ function mount(host, spec) {
         code.append(line);
       });
       body.append(code);
+      codes.push({ code, span, weight: perLane ? lane.width || 1 : 1 });
 
-      for (const op of ops) {
-        const cell = div('cr-col');
-        const rail = div('cr-rail');
-        rail.style.setProperty('--rows', rows);
-        for (let t = 0; t < rows; t++) {
-          const guide = div('cr-guide');
-          guide.style.top = yOf(t) + 'px';
-          rail.append(guide);
+      if (perLane) {
+        const { cell, rail } = railCell('', true);
+        for (const op of ops) columns.push({ op, lane: li, rail, cell });
+      } else {
+        for (const op of ops) {
+          const { cell, rail } = railCell(String(op.line + 1));
+          columns.push({ op, lane: li, rail, cell });
         }
-        cell.append(div('cr-col-no', String(op.line + 1)), rail);
-        plot.append(cell);
-        columns.push({ op, lane: li, rail, cell });
       }
     }
 
@@ -437,11 +472,39 @@ function mount(host, spec) {
     syncSwitches();
     if (global.PTXVariables) global.PTXVariables.enhance(card);
 
+    sizing = { codes, perLane, total, gap };
+    fitWidth();
     if (typeof ResizeObserver === 'function') {
-      if (!resizeObserver) resizeObserver = new ResizeObserver(() => { if (drawn.size) redrawEdges(); });
+      if (!resizeObserver) resizeObserver = new ResizeObserver(() => { fitWidth(); if (drawn.size) redrawEdges(); });
       resizeObserver.disconnect();
+      // 卡片跟着屏幕变宽变窄；代码字号在窄屏会变小，所以每次都重新量
+      resizeObserver.observe(card);
       if (plot) resizeObserver.observe(plot);
     }
+  }
+
+  // 代码不能挤在一起：量出每段代码最长一行的实际宽度，算出整块至少要多宽
+  function fitWidth() {
+    if (!sizing) return;
+    const { codes, perLane, total, gap } = sizing;
+    const px = v => parseFloat(v) || 0;
+    const weightSum = codes.reduce((n, c) => n + c.weight, 0);
+    let plotNeed = 0;
+    for (const { code, span, weight } of codes) {
+      const cs = getComputedStyle(code);
+      let widest = 0;
+      for (const line of code.querySelectorAll('.cr-line')) {
+        const ls = getComputedStyle(line);
+        widest = Math.max(widest, line.querySelector('.cr-no').offsetWidth + line.querySelector('.cr-src').offsetWidth
+          + px(ls.columnGap) + px(ls.paddingLeft) + px(ls.paddingRight));
+      }
+      const need = widest + px(cs.paddingLeft) + px(cs.paddingRight) + px(cs.borderLeftWidth) + px(cs.borderRightWidth) + 2;
+      // 按线程一条轴时列宽按 weight 分；否则各列一样宽，这段代码横跨 span 列（中间夹着 span - 1 个间隔）
+      plotNeed = Math.max(plotNeed, perLane ? need * weightSum / weight : (need - gap * (span - 1)) / span * total);
+    }
+    // 26px 时间刻度列 + 每列前面一个间隔
+    const min = Math.ceil(26 + gap * total + plotNeed) + 'px';
+    if (body.style.minWidth !== min) body.style.minWidth = min;
   }
 
   function flip(s) {

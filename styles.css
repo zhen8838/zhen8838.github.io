@@ -9,14 +9,19 @@
 
 :root {
   --line-color: #e0e0e0;
-  --text-color: #191b1f;   /* 参考知乎正文：#333 → #191b1f */
+  --text-color: #2b2b2b;   /* 正文不用接近纯黑，降低与白底的对比；Medium 用 #242424，Substack 用 #363737 */
   --text-color-muted: #666;
   --page-bg: #f4f6f9;      /* 页面底色，参考知乎 */
   --code-bg: #efefef;      /* 正文是白卡片，代码块用浅灰 */
+  /* 中文字体按平台找本机已有的：Mac/iOS 苹方，Windows 微软雅黑，Linux 思源黑体；
+     都没有时才用网页字体 Noto Sans SC（排在最后，用不到就不下载） */
+  --font-cjk: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", "Noto Sans SC";
+  /* 标题用锐利的衬线：英文 Times，中文配宋体（Mac 宋体-简，Linux 思源宋体，Windows 宋体） */
+  --font-heading: "Times New Roman", Times, "Liberation Serif", "Songti SC", STSong, "Noto Serif CJK SC", "Source Han Serif SC", SimSun, serif;
 }
 
 body {
-  font-family: "DM Sans", "Noto Sans SC", Georgia, sans-serif;
+  font-family: "DM Sans", var(--font-cjk), sans-serif;
   font-size: 17px;
   line-height: 1.55;
   color: var(--text-color);
@@ -41,7 +46,7 @@ body {
 
 /* Headings - classic magazine style */
 h1, h2, h3, h4, h5, h6 {
-  font-family: Georgia, "Noto Sans SC", "Times New Roman", serif;
+  font-family: var(--font-heading);
   font-weight: 600;
   color: var(--text-color);
   line-height: 1.25;
@@ -50,7 +55,7 @@ h1, h2, h3, h4, h5, h6 {
   margin-bottom: 0.9rem;
 }
 
-/* 字号、行高、段间距对齐 anthropic.com 的文章页：正文 16.7/1.53，h3 21.4/1.25，h2 32/1.2 */
+/* 标题的字号、行高对齐 anthropic.com 的文章页：h3 21.4/1.25，h2 32/1.2；正文的行高、段距见下面「正文排版」 */
 #title-block-header h1.title { font-size: 40px; line-height: 1.15; }
 h1 { font-size: 40px; }
 h2 { font-size: 32px; line-height: 1.20; margin-top: 48px; margin-bottom: 24px; }
@@ -60,12 +65,18 @@ h4 { font-size: 18px; }
 /* 中文长段落避免末行只剩一两个字 */
 p { text-wrap: pretty; }
 
+/* 正文排版：中文笔画多，行高用 1.8（少数派、阮一峰的博客都是 1.8）；
+   段距约 1.25 个字高，段落之间分得开。表格行高单独收紧一点。 */
+#quarto-document-content :is(p, li, blockquote, dd) { line-height: 1.8; }
+#quarto-document-content p { margin-bottom: 1.25em; }
+#quarto-document-content table { line-height: 1.6; }
+
 /* Article titles in listing */
 .quarto-listing h3,
 .quarto-listing .listing-title,
 .quarto-post .title,
 .list-group-item h3 {
-  font-family: Georgia, "Noto Sans SC", "Times New Roman", serif;
+  font-family: var(--font-heading);
   font-size: 28px;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -75,7 +86,7 @@ p { text-wrap: pretty; }
 
 /* Article title on article page */
 .quarto-title h1.title {
-  font-family: Georgia, "Noto Sans SC", "Times New Roman", serif;
+  font-family: var(--font-heading);
   font-size: 28px;
   font-weight: 700;
 }
@@ -83,7 +94,7 @@ p { text-wrap: pretty; }
 /* Listing description / excerpt */
 .quarto-listing .listing-description,
 .quarto-post .description {
-  font-family: "DM Sans", "Noto Sans SC", Georgia, sans-serif;
+  font-family: "DM Sans", var(--font-cjk), sans-serif;
   font-size: 16px;
   line-height: 1.7;
   color: #444;
@@ -133,7 +144,7 @@ a:hover {
 /* Sidebar categories - hover darken */
 .listing-category, .quarto-category,
 .badge.listing-category, .badge.quarto-category {
-  font-family: Georgia, "Noto Sans SC", "Times New Roman", serif !important;
+  font-family: Georgia, var(--font-cjk), "Times New Roman", serif !important;
   font-size: 13px;
   color: var(--text-color-muted);
   transition: color 0.2s;
@@ -146,7 +157,7 @@ a:hover {
 /* Article tags in listing */
 .listing-tag, .quarto-listing .listing-tags span,
 .quarto-post .tags, .quarto-post .metadata a {
-  font-family: Georgia, "Noto Sans SC", "Times New Roman", serif;
+  font-family: Georgia, var(--font-cjk), "Times New Roman", serif;
   font-size: 12px;
   color: #888;
 }
@@ -373,4 +384,71 @@ h1 code, h2 code, h3 code, h4 code, h5 code, h6 code {
 #quarto-document-content b {
   color: #111;
   font-weight: 700;
+}
+
+/* ========================================
+   栏宽与断点（全站文章，目录在左）
+   正文 780 不动。屏幕变窄时的顺序：
+     1. 左边目录先缩（300 → 180）；
+     2. < 1324px：目录不再显示（和 Quarto 窄屏时一样），右栏保持 300；
+     3. 再窄：右栏缩（300 → 250）；
+     4. < 1086px：右栏也去掉，只剩正文，居中；放不下 780 时正文再缩。
+   992px 以下 Quarto 自己的网格会再留一个右栏，这里一并盖掉。
+   各段的最小总宽都比断点小 16px 以上，留给滚动条，不会横向溢出。
+   ======================================== */
+@media (min-width: 1324px) {
+  body.floating #quarto-content.page-layout-article {
+    grid-template-columns: [screen-start screen-start-inset] minmax(16px, 1fr) [page-start page-start-inset] minmax(180px, 300px) [body-start-outset] 8px [body-start body-content-start] 780px [body-content-end body-end] 8px [body-end-outset margin-start] 300px [margin-end page-end-inset page-end] minmax(16px, 1fr) [screen-end-inset screen-end];
+  }
+  /* 目录不要贴到正文，留出 8px */
+  body.floating #quarto-sidebar { grid-column: page-start / body-start-outset; }
+}
+@media (min-width: 1086px) and (max-width: 1323.98px) {
+  body.floating #quarto-content.page-layout-article {
+    grid-template-columns: [screen-start screen-start-inset] minmax(16px, 1fr) [page-start page-start-inset body-start-outset body-start body-content-start] 780px [body-content-end body-end] 8px [body-end-outset margin-start] minmax(250px, 300px) [margin-end page-end-inset page-end] minmax(16px, 1fr) [screen-end-inset screen-end];
+  }
+}
+@media (max-width: 1085.98px) {
+  body.floating #quarto-content.page-layout-article {
+    grid-template-columns: [screen-start screen-start-inset] minmax(16px, 1fr) [page-start page-start-inset body-start-outset body-start body-content-start] minmax(0, 780px) [body-content-end body-end body-end-outset margin-start margin-end page-end-inset page-end] minmax(16px, 1fr) [screen-end-inset screen-end];
+  }
+  #quarto-document-content { min-width: 0; }
+}
+@media (max-width: 1323.98px) {
+  body.floating #quarto-sidebar { display: none; }
+}
+
+/* 三栏是同一种容器：白底 + 1px 描边 + 10px 圆角 */
+.sidebar,
+#quarto-sidebar {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+#TOC,
+nav[role="doc-toc"],
+#quarto-document-content {
+  background-color: #fff;
+  border: 1px solid var(--line-color);
+  border-radius: 10px;
+}
+#TOC,
+nav[role="doc-toc"] {
+  padding: 12px 14px;
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
+}
+/* 正文卡片内边距：卡片宽 780，文字行宽 730 */
+#quarto-document-content {
+  padding: 24px 24px;
+  box-sizing: border-box;
+}
+@media (max-width: 991.98px) {
+  #quarto-document-content { width: auto; padding: 16px 14px; border-radius: 8px; }
+}
+/* 三栏顶部对齐：都从顶栏下方 16px 开始 */
+#TOC, #quarto-document-content { margin-top: 16px; }
+/* 窄屏时表格放不下，表格自己横向滚动，不撑宽整页 */
+@media (max-width: 767.98px) {
+  #quarto-document-content table.table { display: block; max-width: 100%; overflow-x: auto; }
 }

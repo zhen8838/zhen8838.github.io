@@ -18,8 +18,6 @@ code span.dv, code span.bn, code span.fl, code span.cn, code span.il { color: in
 #ptx-lab[hidden] { display: none !important; }
 #ptx-lab-figure { min-width: 0; }
 #ptx-lab .tl-card { width: 100% !important; }
-.ptx-pending { color: #687181; border-left: 2px solid #dce2eb; padding-left: 16px; margin: 1.25rem 0; }
-.ptx-pending p { margin: 0; }
 .ptx-inline-figure { margin: 1.5rem 0; }
 .ptx-inline-figure:empty { display: none; }
 #quarto-margin-sidebar { display: none; }
@@ -49,19 +47,9 @@ code span.dv, code span.bn, code span.fl, code span.cn, code span.il { color: in
   .ptx-program-table { min-width: 600px; }
   .ptx-program-table pre.sourceCode { padding: 10px; }
 }
-/* 宽屏：目录 300 / 正文 780 / 图 300，左右等宽 → 正文居中 */
-@media (min-width: 1440px) {
-  #quarto-content {
-    grid-template-columns: [screen-start] minmax(24px, 1fr) [page-start page-start-inset] 300px [body-start-outset] 8px [body-start body-content-start] minmax(0, 780px) [body-content-end body-end] 8px [body-end-outset margin-start] 300px [margin-end page-end-inset page-end] minmax(24px, 1fr) [screen-end];
-  }
-}
-/* 中屏：目录先缩到 220，图保持 280；左侧补 60px 空列，正文仍然居中 */
-@media (min-width: 1240px) and (max-width: 1439.98px) {
-  #quarto-content {
-    grid-template-columns: [screen-start] minmax(24px, 1fr) [comp-start] 60px [page-start page-start-inset] 220px [body-start-outset] 8px [body-start body-content-start] minmax(0, 720px) [body-content-end body-end] 8px [body-end-outset margin-start] 280px [margin-end page-end-inset page-end] minmax(24px, 1fr) [screen-end];
-  }
-}
-@media (min-width: 1240px) {
+/* 栏宽和断点在全站 styles.css 里，这里只放本篇右栏的图卡。
+ * 断点要和 styles.css、reader.js 一致：≥ 1086px 有右栏，图卡放在右栏；更窄时放进正文。 */
+@media (min-width: 1086px) {
   #ptx-lab {
     display: block;
     grid-column: margin-start / margin-end;
@@ -77,54 +65,9 @@ code span.dv, code span.bn, code span.fl, code span.cn, code span.il { color: in
   }
   .ptx-inline-figure { display: none; }
 }
-/* 大纲栏不要贴到正文，留出和右侧一样的 8px */
-@media (min-width: 992px) {
-  #quarto-sidebar {
-    grid-column: page-start / body-start-outset;
-  }
-}
-/* 中屏以下：图卡改为正文内嵌，右侧留出与目录等宽的空列，正文仍居中 */
-@media (min-width: 992px) and (max-width: 1239.98px) {
-  #quarto-content {
-    grid-template-columns: [screen-start] minmax(20px, 1fr) [page-start page-start-inset] minmax(140px, 200px) [body-start-outset] 8px [body-start body-content-start] minmax(0, 700px) [body-content-end body-end] 8px [body-end-outset margin-start] minmax(140px, 200px) [margin-end page-end-inset page-end] minmax(20px, 1fr) [screen-end];
-  }
-}
-@media (max-width: 1239px) {
-  #quarto-document-content { min-width: 0; }
+@media (max-width: 1085.98px) {
   .ptx-inline-figure .tl-card { max-width: 550px; margin-inline: auto; }
 }
-
-/* 三列都是同一种容器：白底 + 1px 描边 + 10px 圆角 */
-.sidebar,
-#quarto-sidebar {
-  background: transparent;
-  border: 0;
-  padding: 0;
-}
-#TOC,
-nav[role="doc-toc"],
-#quarto-document-content {
-  background-color: #fff;
-  border: 1px solid var(--line-color);
-  border-radius: 10px;
-}
-#TOC,
-nav[role="doc-toc"] {
-  padding: 12px 14px;
-  max-height: calc(100vh - 96px);
-  overflow-y: auto;
-}
-/* 正文卡片内边距，正文实际行宽仍是 700px */
-#quarto-document-content {
-  padding: 24px 24px;
-  box-sizing: border-box;
-}
-@media (max-width: 991.98px) {
-  #quarto-document-content { width: auto; padding: 16px 14px; border-radius: 8px; }
-}
-
-/* 三栏顶部对齐：都从 header 下方 16px 开始（图卡靠 sticky 的 top 值对齐） */
-#TOC, #quarto-document-content { margin-top: 16px; }
 
 /* 正文里的控件和普通图片一样，上下留一样的间距 */
 [data-code-run] { margin: 1.5rem 0; }
@@ -139,19 +82,61 @@ nav[role="doc-toc"] {
 
 /* 四象限坐标系 */
 .qd-svg { display: block; width: 100%; height: auto; }
-.qd-box { fill: #fff; stroke: var(--tl-rule); stroke-width: 1.2; }
-.qd-node.is-on .qd-box { stroke: var(--tl-po); stroke-width: 1.6; fill: color-mix(in srgb, var(--tl-po) 6%, #fff); }
-.qd-code { font: 600 12.5px var(--tl-mono); fill: var(--tl-ink); }
-.qd-kind { font: 10.5px var(--tl-body); fill: var(--tl-muted); }
+.qd-box { fill: var(--tl-bg); stroke: var(--tl-rule); stroke-width: 1.2; }
+.qd-node.is-on .qd-box { stroke: var(--tl-po); stroke-width: 1.6; fill: color-mix(in srgb, var(--tl-po) 6%, var(--tl-bg)); }
+.qd-node.is-empty .qd-box { stroke-dasharray: 3 3; }
+.qd-code { font: 600 11px var(--tl-mono); fill: var(--tl-ink); }
+.qd-dot { font: 14px var(--tl-mono); fill: var(--tl-muted); }
 .qd-axis { font: 12px var(--tl-body); fill: var(--tl-muted); }
-.qd-edge { fill: none; stroke-width: 1.6; stroke: var(--tl-po); }
-.qd-head { fill: var(--tl-po); stroke: none; }
-.qd-edge-label { font: 10.5px var(--tl-mono); fill: var(--tl-po); }
+.qd-fence { stroke: var(--tl-ink); stroke-width: 3; }
+.qd-edge { fill: none; stroke-width: 1.6; }
+.qd-head { stroke: none; }
+.qd-e-keep { stroke: var(--tl-po); stroke-width: 2.6; }
+.qd-h-keep { fill: var(--tl-po); }
+.qd-e-free { stroke: var(--tl-muted); stroke-dasharray: 3 4; }
+.qd-h-free { fill: var(--tl-muted); }
 .qd-tag { font: 600 11.5px var(--tl-mono); color: var(--tl-po); border: 1px solid var(--tl-po); border-radius: 999px; padding: 1px 8px; }
 .qd-note { font-size: 12px; color: var(--tl-muted); line-height: 1.5; }
 
 
-/* 正文里始终显示的时间线（侧栏已被象限图占用） */
-.ptx-body-figure { margin: 1.5rem 0; }
-.ptx-body-figure:empty { display: none; }
-.ptx-body-figure .tl-card { max-width: 550px; margin-inline: auto; }
+
+/* 代码与机器码对照（3.5、4.5）：每行一个 span，行号用计数器；红＝被删掉，蓝＝要看的行 */
+.ptx-asm-table th { width: auto; }
+.ptx-asm-table th:first-child { width: 64px; }
+.ptx-asm-table th[scope="row"] { padding: 10px 8px; font: 400 12px var(--tl-body); color: var(--tl-muted); text-align: right; vertical-align: top; }
+.ptx-asm-table th code { font-size: 12px; }
+.ptx-asm-table pre.ptx-prog { min-height: 0; padding: 8px 0; counter-reset: ln; }
+.ptx-asm-table .ln { display: block; padding-right: 12px; counter-increment: ln; }
+.ptx-asm-table .ln::before {
+  content: counter(ln); display: inline-block; width: 2.6em; padding-right: .9em;
+  text-align: right; color: var(--tl-muted); opacity: .65;
+}
+.ptx-asm-table .ln.is-gone { background: color-mix(in srgb, var(--tl-bad) 14%, transparent); }
+.ptx-asm-table .ln.is-kept { background: color-mix(in srgb, var(--tl-po) 14%, transparent); }
+.ptx-asm-table .ln.is-gone::before { color: var(--tl-bad); opacity: 1; font-weight: 700; }
+.ptx-asm-table .ln.is-kept::before { color: var(--tl-po); opacity: 1; font-weight: 700; }
+
+/* 5.3 两条访问路径图：颜色沿用时间线变量，暗色模式跟着变 */
+.ptx-paths { margin: 1.5rem 0; }
+.ptx-paths svg { display: block; width: 100%; min-width: 560px; height: auto; }
+.ptx-paths .pp-box { fill: var(--tl-bg); stroke: var(--tl-rule); stroke-width: 1.4; }
+.ptx-paths .pp-path { fill: var(--tl-bg); stroke-width: 2; }
+.ptx-paths .pp-generic { stroke: var(--tl-po); }
+.ptx-paths .pp-async { stroke: var(--tl-rf); }
+.ptx-paths text { text-anchor: middle; font: 14px var(--tl-body); fill: var(--tl-ink); }
+.ptx-paths .pp-title { font-weight: 700; font-size: 15px; }
+.ptx-paths .pp-code { font: 13.5px var(--tl-mono); }
+.ptx-paths .pp-note { font: 12px var(--tl-body); fill: var(--tl-muted); }
+.ptx-paths .pp-small { font-size: 12px; }
+.ptx-paths .pp-line { fill: none; stroke: var(--tl-muted); stroke-width: 1.6; }
+.ptx-paths .pp-line.pp-c-generic { stroke: var(--tl-po); }
+.ptx-paths .pp-line.pp-c-async { stroke: var(--tl-rf); }
+.ptx-paths .pp-head { fill: var(--tl-muted); }
+.ptx-paths .pp-fence { fill: none; stroke: var(--tl-sync); stroke-width: 2.2; stroke-dasharray: 5 3; }
+.ptx-paths .pp-head-f { fill: var(--tl-sync); }
+.ptx-paths .pp-c-generic { fill: var(--tl-po); }
+.ptx-paths .pp-c-async { fill: var(--tl-rf); }
+.ptx-paths text.pp-c-fence, .ptx-paths span.pp-c-fence { fill: var(--tl-sync); color: var(--tl-sync); }
+.ptx-paths .pp-key { font-weight: 700; }
+.ptx-paths .pp-flag { fill: var(--tl-sync); color: var(--tl-sync); }
+.ptx-paths figcaption { display: grid; gap: 2px; margin-top: 6px; font-size: 13px; color: var(--tl-muted); }
