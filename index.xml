@@ -10,7 +10,760 @@
 <atom:link href="https://zhen8838.github.io/index.xml" rel="self" type="application/rss+xml"/>
 <description>A blog built with Quarto</description>
 <generator>quarto-1.8.27</generator>
-<lastBuildDate>Wed, 28 Oct 2026 16:00:00 GMT</lastBuildDate>
+<lastBuildDate>Wed, 18 Nov 2026 16:00:00 GMT</lastBuildDate>
+<item>
+  <title>探索 Apple ANE: 硬件架构与指令集</title>
+  <link>https://zhen8838.github.io/posts/apple-ane-isa.html</link>
+  <description><![CDATA[ 
+
+
+
+
+<p>Apple 神经引擎(Apple Neural Engine,ANE)是 Apple 芯片中的神经网络加速器,2017 年随 A11 首次出现。应用通过 Core ML 使用 ANE。本文使用 M2 Pro,它的 ANE 代号是 H14,有 16 个核。Apple 公布的算力是每秒 15.8 万亿次运算,即 <a href="https://www.apple.com/newsroom/2023/01/apple-unveils-m2-pro-and-m2-max-next-generation-chips-for-next-level-workflows/">15.8 TOPS</a>。A15 的 16 核 ANE 的数字相同,Apple 给出的 fp16 峰值吞吐是 <a href="https://machinelearning.apple.com/research/neural-engine-transformers">15.8 TFLOPS</a>。ANE 内部有两个计算单元和一块片上 SRAM:NE 做卷积,PE 做逐元素运算、池化和归约。</p>
+<!--more-->
+<style>
+/* 大图按屏幕高度缩放,一屏能看全 */
+img.fit-screen { max-height: 85vh; width: auto; justify-self: center; }
+</style>
+<section id="架构总览" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="架构总览">1. 架构总览</h2>
+<div class="quarto-figure quarto-figure-center page-columns page-full">
+<figure class="figure page-columns page-full">
+<p class="page-columns page-full"><img src="https://zhen8838.github.io/posts/apple-ane-isa/overview.svg" class="fit-screen img-fluid figure-img column-page"></p>
+<figcaption>ANE 总览。右上是 DRAM。左边是 TD1 的内容。右下是 ANE:任务管理器和配置地址空间是控制面,NE、PE、L2 和 3 个 DMA 是数据面。数据面按专利 US12229657B2 的 Fig. 3–5 画,灰色数字是专利中的编号。</figcaption>
+</figure>
+</div>
+<p>DRAM 存放程序<sup>1</sup>、权重和特征图。ANE 执行程序的步骤:</p>
+<ol type="1">
+<li>任务管理器<sup>2</sup>从 DRAM 读下一条 TD<sup>3</sup>(图中右上的虚线)。</li>
+<li>如果 TD 的 header<sup>4</sup> 有 DTID<sup>5</sup>,任务管理器等待 tid 等于 DTID 的 TD 完成。</li>
+<li>任务管理器把每个 packet<sup>6</sup> 的值写到配置地址空间<sup>7</sup>(图中左侧的虚线)。一个 packet 写一个块<sup>8</sup>。TD 没有写的字取默认值,不继承上一条 TD。</li>
+<li>数据面按配置寄存器的值执行任务(模块和连接来自专利 <a href="https://patents.google.com/patent/US12229657B2/en">US12229657B2</a> 的实施例,未实测):
+<ul>
+<li>TileDMA-Src<sup>9</sup> 把输入从 DRAM 读到 L2<sup>10</sup>。</li>
+<li>KernelDMA<sup>11</sup> 把权重读到 NE<sup>12</sup>。</li>
+<li>NE 和 PE<sup>13</sup> 从 L2 读输入,把结果写到 L2。</li>
+<li>TileDMA-Dst 把输出从 L2 写到 DRAM。</li>
+</ul></li>
+<li>任务管理器读下一条 TD,直到最后一条。最后一条 TD 的 header 有结尾标记。</li>
+</ol>
+<p>专利中 NE 和 PE 的内部结构:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>单元</th>
+<th>数据经过的模块</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>NE</td>
+<td>输入缓冲 → MAC(多个 MAD 和一个累加器)→ 后处理 → 输出电路。核提取把 KernelDMA 送来的权重解压,送进 MAD</td>
+</tr>
+<tr class="even">
+<td>PE</td>
+<td>格式转换 → 水平滤波 → 行缓冲 → 垂直滤波 → 后处理 → 格式转换</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="指令集" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="指令集">2. 指令集</h2>
+<p>ANE 是寄存器配置型(CSR-configured)加速器:软件写<a href="https://en.wikipedia.org/wiki/Hardware_register">配置寄存器</a>,硬件按配置执行一个任务。<a href="https://nvdla.org/hw/v1/hwarch.html">NVDLA</a> 和 <a href="https://pypi.org/project/ethos-u-vela/">Arm Ethos-U</a> 属于同一类。NVDLA 把一次配置和执行称为 <a href="https://nvdla.org/glossary.html">hw-layer</a>,Ethos-U 把这种程序称为命令流(command stream)。</p>
+<p>Apple 没有公开 ANE 的指令格式。GitHub 上的项目给出了 TD 和配置寄存器的定义:<a href="https://github.com/eiln/ane">eiln/ane</a>、<a href="https://github.com/tinygrad/tinygrad/tree/v0.10.3/extra/accel/ane">tinygrad</a>、<a href="https://github.com/freedomtan/coreml_to_ane_hwx">coreml_to_ane_hwx</a>、<a href="https://github.com/maderix/mil-hwx-compiler">mil-hwx-compiler</a>。本文把这些定义汇总成一个文件 <code>ane_isa.py</code>。</p>
+<p>本文把一条 TD 称为一条指令,把配置寄存器的格式称为指令集。一条 TD 是一组写操作,每个写操作把一个值写到一个配置寄存器地址。写完后,硬件按 <code>Common.task_type</code> 启动一个任务。操作码是寄存器字段 <code>Common.task_type</code>,TD 的 header 中没有操作码。</p>
+<div class="quarto-figure quarto-figure-center page-columns page-full">
+<figure class="figure page-columns page-full">
+<p class="page-columns page-full"><img src="https://zhen8838.github.io/posts/apple-ane-isa/isa.svg" class="fit-screen img-fluid figure-img column-page"></p>
+<figcaption>从配置地址空间到 TD 二进制。左边是配置地址空间,PE 块展开成位格。中间是 <code>ane_isa.py</code> 中 PE 块的声明。右边是 <code>.hwx</code> 中的 TD,一行是一个地址的字。</figcaption>
+</figure>
+</div>
+<p><code>ane_isa.py</code> 用 4 种记录描述指令集。每个事实声明一次,编码器、解码器和反汇编器从记录生成,做法和 LLVM TableGen 相同。</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>记录</th>
+<th>描述的对象</th>
+<th>例子</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>BitField</code></td>
+<td>一个字段:值的类型,和位置 <code>at(地址, 高位, 低位)</code></td>
+<td><code>op: BitField[PEOp, at(0x0900, 4, 2)]</code></td>
+</tr>
+<tr class="even">
+<td><code>Block</code></td>
+<td>一个块:地址范围,和块中的 <code>BitField</code></td>
+<td><code>class PE(Block, base=0x0900, end=0x0914)</code></td>
+</tr>
+<tr class="odd">
+<td><code>Op</code></td>
+<td>一种 <code>task_type</code>,和它的子操作字段</td>
+<td><code>PEBinary(op=PEOp.ADD)</code></td>
+</tr>
+<tr class="even">
+<td><code>TD</code></td>
+<td>一条 TD:header 和 packet 序列</td>
+<td><code>TD.build({...}, tid=1)</code></td>
+</tr>
+</tbody>
+</table>
+<p>值的类型有 3 种:<code>IntEnum</code>、<code>float</code>(16 位字段是 fp16,32 位字段是 fp32)、<code>int</code>。<code>RAW</code> 标记位置已确定、语义未知的字段。260 个字段中,31 个的语义已验证。</p>
+<p>用这些记录构造和解码一条 TD:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1">td <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> TD.build({<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">**</span>PEBinary(op<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>PEOp.ADD), Common.win: <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">16</span>, Common.hin: <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">32</span>}, tid<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>)</span>
+<span id="cb1-2">raw <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> td.to_bytes()                           <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 52 字节</span></span>
+<span id="cb1-3"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">assert</span> TD.from_bytes(raw).to_bytes() <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">==</span> raw   <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 解码后再编码, 字节相同</span></span></code></pre></div></div>
+<hr>
+</section>
+<section id="运行时" class="level2">
+<h2 class="anchored" data-anchor-id="运行时">3. 运行时</h2>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://zhen8838.github.io/posts/apple-ane-isa/runtime.svg" class="img-fluid figure-img"></p>
+<figcaption>运行时。</figcaption>
+</figure>
+</div>
+<p>CPU 把整个程序提交给 ANE 一次。任务管理器对每条 TD 执行 4 步,直到最后一条 TD:</p>
+<ol type="1">
+<li>按顺序从 DRAM 读一条 TD。</li>
+<li>如果 TD 有 DTID,等待 tid 等于 DTID 的 TD 完成。</li>
+<li>写配置寄存器。</li>
+<li>按 <code>task_type</code> 把任务交给 NE 或 PE。</li>
+</ol>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">for</span> td <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">in</span> program:              <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 按 .hwx 中的顺序</span></span>
+<span id="cb2-2">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">if</span> td.dtid <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">is</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">not</span> <span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">None</span>:     <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># header 的第 9 个字, 少数 TD 有</span></span>
+<span id="cb2-3">        wait(td.dtid)           <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 等待 tid == DTID 的 TD 完成</span></span>
+<span id="cb2-4">    regs <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> defaults()           <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># TD 不写的字取默认值</span></span>
+<span id="cb2-5">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">for</span> addr, value <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">in</span> td.writes:</span>
+<span id="cb2-6">        regs[addr] <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> value</span>
+<span id="cb2-7">    dispatch(regs)              <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># task_type 是 NE: 交给 NE; 其他: 交给 PE</span></span>
+<span id="cb2-8">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">if</span> td.is_last:              <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># header 的 log_events 有结尾标记</span></span>
+<span id="cb2-9">        <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">break</span></span></code></pre></div></div>
+<p><code>wait</code> 和 <code>dispatch</code> 是从 TD 格式推断的,未在硬件上验证。</p>
+<p><strong>TD 的存放。</strong> TD 在 <code>.hwx</code> 中连续存放,16 字节对齐。TD 没有跳转,也没有指向下一条 TD 的指针。本机的 70 个 <code>.hwx</code> 中,第一条 TD 的 <code>log_events</code> 都是 0x8,最后一条都是 0x22。推断 0x22 是结尾标记。</p>
+<p><strong>DTID。</strong> Apple 自带的 H14S 模型有 2534 条 TD,其中 199 条有 DTID。这 199 条都是 NE 任务,其中 103 条等待的是上一条 TD。例子:</p>
+<pre><code>tid  task_type     DTID
+69   NE BYPASS
+70   NE CONV
+71   PE_EW_UNARY
+72   NE CONV       71     # 等待 TD71 完成
+73   NE BYPASS</code></pre>
+<p>TD72 等待它的上一条 TD71。如果硬件串行执行 TD,这个等待没有作用。推断(未在硬件上验证):NE 和 PE 可以同时工作,没有 DTID 的 TD 不等待前面的 TD 完成。</p>
+<p><strong>提交开销。</strong> 本机实测:模型有一条 TD 时,一次推理最少需要 0.10–0.12 ms。编译器把整个模型的 TD 放在同一个 <code>.hwx</code> 中,CPU 提交一次,TD 之间的切换由任务管理器完成。H14S 的 2534 条 TD 在同一个 <code>.hwx</code> 中。如果逐条提交,开销约为 2534 × 0.1 ms ≈ 250 ms。</p>
+<hr>
+</section>
+<section id="编译器" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="编译器">4. 编译器</h2>
+<section id="一条-td-的能力" class="level3">
+<h3 class="anchored" data-anchor-id="一条-td-的能力">4.1 一条 TD 的能力</h3>
+<p>ANE 有两个计算单元:NE 做卷积,PE 做逐元素运算。<code>task_type</code> 选择计算单元:<code>NE</code> 选 NE,6 种 <code>PE_*</code> 选 PE。用 PyTorch 表示:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> torch.nn.functional <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">as</span> F</span>
+<span id="cb4-2"></span>
+<span id="cb4-3"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># NE: 卷积 (task_type = NE)</span></span>
+<span id="cb4-4"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># NE.op 还可以选 POOL、EW_MUL、EW_SQUARE 和 BYPASS(不计算, 只搬数据)</span></span>
+<span id="cb4-5"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> ne_conv(x, w, stride<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>):</span>
+<span id="cb4-6">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># x: [cin, hin, win]      cin ≤ 65536, hin ≤ 16384, win ≤ 16384</span></span>
+<span id="cb4-7">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># w: [cout, cin, kh, kw]  cout ≤ 65536, kh ≤ 32, kw ≤ 32</span></span>
+<span id="cb4-8">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">#                         类型 uint8 / int8 / fp16</span></span>
+<span id="cb4-9">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># stride: 1 或 2</span></span>
+<span id="cb4-10">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> F.conv2d(x, w, stride<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>stride)</span>
+<span id="cb4-11"></span>
+<span id="cb4-12"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># PE: 逐元素运算, 可以再接一个归约 (task_type = PE_*)</span></span>
+<span id="cb4-13"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> pe(a, b, op, <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">reduce</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">None</span>):</span>
+<span id="cb4-14">    y <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> op(a, b)              <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># add / mul / max / min</span></span>
+<span id="cb4-15">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">if</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">reduce</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">is</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">not</span> <span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">None</span>:</span>
+<span id="cb4-16">        y <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">reduce</span>(y)         <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># sum / avg / max / min</span></span>
+<span id="cb4-17">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> y</span></code></pre></div></div>
+<p>张量按 <code>[通道, 高, 宽]</code> 存放,宽这一维在内存中连续。<code>ne_conv</code> 注释中的参数上限来自编译器 setter 的范围检查。</p>
+</section>
+<section id="一个矩阵乘" class="level3 page-columns page-full">
+<h3 class="anchored" data-anchor-id="一个矩阵乘">4.2 一个矩阵乘</h3>
+<p>NE 没有矩阵乘。编译器用 1×1 卷积计算 <code>C = A @ B</code>(A 是 M × K,B 是 K × N):</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>矩阵乘</th>
+<th>1×1 卷积</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>K</td>
+<td>输入通道</td>
+</tr>
+<tr class="even">
+<td>M</td>
+<td>宽</td>
+</tr>
+<tr class="odd">
+<td>N</td>
+<td>输出通道</td>
+</tr>
+<tr class="even">
+<td>B</td>
+<td>权重</td>
+</tr>
+</tbody>
+</table>
+<p>测试模型是用 coremltools 写的 <code>C = A @ B</code>:M = 256,K = N = 2048,fp16,B 是常量。在本机编译,用 <code>ane_isa.py</code> 解码,得到 9 条 TD:</p>
+<div class="column-page">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 30%">
+<col style="width: 65%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>标准写法</th>
+<th>ANE 上的写法(9 条 TD)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># A: [256, 2048]</span></span>
+<span id="cb5-2"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># B: [2048, 2048]</span></span>
+<span id="cb5-3">C <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> A <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">@</span> B</span>
+<span id="cb5-4"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># C: [256, 2048]</span></span></code></pre></div></div></td>
+<td><div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># A: [256, 1, 2048], 在 DRAM</span></span>
+<span id="cb6-2"></span>
+<span id="cb6-3"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># TD0: NE BYPASS, 不计算, 只转置</span></span>
+<span id="cb6-4"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># [2048, 1, 256], 留在 L2</span></span>
+<span id="cb6-5">At <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> A.permute(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>)</span>
+<span id="cb6-6"></span>
+<span id="cb6-7"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># TD1..TD8: NE CONV, 每条算 C 的 256 列</span></span>
+<span id="cb6-8"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">for</span> j <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">in</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">range</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">8</span>):</span>
+<span id="cb6-9">    n <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">slice</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">256</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> j, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">256</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> (j <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>))</span>
+<span id="cb6-10">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># [256, 2048, 1, 1], 1 MiB, 从 DRAM 读</span></span>
+<span id="cb6-11">    w <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> B[:, n].T[:, :, <span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">None</span>, <span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">None</span>]</span>
+<span id="cb6-12">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># [256, 1, 256], 128 KiB, 写到 L2</span></span>
+<span id="cb6-13">    Ct <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> ne_conv(At, w)</span>
+<span id="cb6-14">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 转置后写回 DRAM</span></span>
+<span id="cb6-15">    C[:, :, n] <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> Ct.permute(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>)</span></code></pre></div></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+<ul>
+<li>形状来自 TD 的 <code>cin</code>、<code>hin</code>、<code>win</code>、<code>cout</code>。</li>
+<li>存储位置来自 TD 写了哪些 DMA 块。TD1–TD8 都不写 TileDMA-Src,输入 <code>At</code> 在 L2 中。</li>
+<li><code>permute</code> 对应 <code>Common.output_transpose</code>(编译器中的名称)。“转置”这个语义是从前后 TD 的形状推断的。</li>
+<li>以上来自编译结果,没有在硬件上执行。</li>
+</ul>
+</section>
+<section id="两个连续的矩阵乘" class="level3 page-columns page-full">
+<h3 class="anchored" data-anchor-id="两个连续的矩阵乘">4.3 两个连续的矩阵乘</h3>
+<p><code>D = (A @ B) @ W</code>,W 是 2048 × 2048 的常量。编译得到 17 条 TD:</p>
+<div class="column-page">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 34%">
+<col style="width: 59%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>标准写法</th>
+<th>ANE 上的写法(17 条 TD)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># A: [256, 2048]</span></span>
+<span id="cb7-2"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># B, W: [2048, 2048]</span></span>
+<span id="cb7-3">H <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> A <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">@</span> B</span>
+<span id="cb7-4">D <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> H <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">@</span> W</span>
+<span id="cb7-5"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># D: [256, 2048]</span></span></code></pre></div></div></td>
+<td><div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># A: [256, 1, 2048], 在 DRAM</span></span>
+<span id="cb8-2"></span>
+<span id="cb8-3"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># TD0: NE BYPASS, 只转置</span></span>
+<span id="cb8-4"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># [2048, 1, 256], 写回 DRAM</span></span>
+<span id="cb8-5">At <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> A.permute(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>)</span>
+<span id="cb8-6"></span>
+<span id="cb8-7"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># TD1..TD8: NE CONV, 算 H = A @ B</span></span>
+<span id="cb8-8"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># TD1 先把 At 从 DRAM 读进 L2</span></span>
+<span id="cb8-9"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">for</span> j <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">in</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">range</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">8</span>):</span>
+<span id="cb8-10">    n <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">slice</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">256</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> j, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">256</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> (j <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>))</span>
+<span id="cb8-11">    w <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> B[:, n].T[:, :, <span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">None</span>, <span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">None</span>]</span>
+<span id="cb8-12">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># [256, 1, 256], 留在 L2, 不转置</span></span>
+<span id="cb8-13">    Ht[n] <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> ne_conv(At, w)</span>
+<span id="cb8-14"></span>
+<span id="cb8-15"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># TD9..TD16: NE CONV, 算 D = H @ W</span></span>
+<span id="cb8-16"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">for</span> j <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">in</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">range</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">8</span>):</span>
+<span id="cb8-17">    p <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">slice</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">256</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> j, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">256</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> (j <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>))</span>
+<span id="cb8-18">    w <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> W[:, p].T[:, :, <span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">None</span>, <span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">None</span>]</span>
+<span id="cb8-19">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Ht: [2048, 1, 256], 整个从 L2 读</span></span>
+<span id="cb8-20">    Dt <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> ne_conv(Ht, w)</span>
+<span id="cb8-21">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 转置后写回 DRAM</span></span>
+<span id="cb8-22">    D[:, :, p] <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> Dt.permute(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>)</span></code></pre></div></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>和 4.2 的区别:</p>
+<ol type="1">
+<li>H 不写回 DRAM。TD1–TD8 都不写 TileDMA-Dst,8 块 H 存放在 L2 的 0xe0000、0xc0000 … 0x0,每块 128 KiB。TD9–TD16 都不写 TileDMA-Src,从 L2 读 H。</li>
+<li>H 不转置。<code>ne_conv</code> 的输出 <code>Ht</code> 是 <code>[N, 1, M]</code>,和下一个 <code>ne_conv</code> 的输入格式相同。TD1–TD8 的 <code>output_transpose</code> 是 0。</li>
+</ol>
+<p>L2 中的张量被多条 TD 复用:<code>At</code> 被 TD1–TD8 复用,A 从 DRAM 读一次;H 被 TD9–TD16 复用。每条 CONV 更换一块权重。</p>
+</section>
+<section id="编译整个模型" class="level3">
+<h3 class="anchored" data-anchor-id="编译整个模型">4.4 编译整个模型</h3>
+<p>编译器对整个模型做下面的工作,输出是 TD 序列:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 80%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>工作</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>算子映射</td>
+<td>把每个算子分解成 NE / PE 任务。例子:矩阵乘 → 1×1 CONV(4.2)</td>
+</tr>
+<tr class="even">
+<td>布局选择</td>
+<td>决定每个张量怎样放进 <code>[通道, 高, 宽]</code>,减少 BYPASS 转置。H14S 有 699 条 BYPASS、575 条 CONV</td>
+</tr>
+<tr class="odd">
+<td>分块</td>
+<td>按 L2 和权重缓冲的大小分块。例子:4.2 中 B 分成 8 块</td>
+</tr>
+<tr class="even">
+<td>融合</td>
+<td>把相邻算子的中间结果保留在 L2 中,不写回 DRAM。例子:4.3 中的 H</td>
+</tr>
+<tr class="odd">
+<td>L2 分配</td>
+<td>给保留在 L2 中的张量分配地址。例子:H 的 8 块存放在 0xe0000 … 0x0</td>
+</tr>
+<tr class="even">
+<td>调度与同步</td>
+<td>决定 TD 的顺序,给需要等待的 TD 加 DTID</td>
+</tr>
+<tr class="odd">
+<td>常量处理</td>
+<td>在编译时把权重排成卷积需要的格式,选择 fp16 / int8</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+</section>
+<section id="使用流程" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="使用流程">5. 使用流程</h2>
+<p>ANE 通过 Core ML 使用:开发者提供 Core ML 模型,系统把模型编译成 TD 序列并执行。</p>
+<div class="quarto-figure quarto-figure-center page-columns page-full">
+<figure class="figure page-columns page-full">
+<p class="page-columns page-full"><img src="https://zhen8838.github.io/posts/apple-ane-isa/pipeline.svg" class="fit-screen img-fluid figure-img column-page"></p>
+<figcaption>ANE 的使用流程。左边是流程:方框是模型和文件,箭头的左边是步骤,右边是工具和执行这一步的时间。右边的 3 个框从左边的节点展开:<code>model.mil</code> 的内容、ANE 编译的阶段、<code>model.hwx</code> 的段。</figcaption>
+</figure>
+</div>
+<section id="文件格式" class="level3">
+<h3 class="anchored" data-anchor-id="文件格式">5.1 文件格式</h3>
+<p><code>.mlpackage</code> 中的 <code>model.mlmodel</code> 是 protobuf,内容是 MIL 程序。MIL(Model Intermediate Language)是 coremltools 的中间表示。<code>coremlc</code> 把它输出成文本格式的 <code>model.mil</code>。图中的 <code>model.mil</code> 是本机 <code>coremlc</code> 对一个 3×3 卷积模型的输出。</p>
+<p><code>weight.bin</code> 存放常量的值。文件头是 64 字节,每个常量有 64 字节的常量头(magic 是 0xDEADBEEF)。MIL 中 <code>BLOBFILE</code> 的 <code>offset</code> 是常量头的位置。</p>
+</section>
+<section id="ane-编译" class="level3">
+<h3 class="anchored" data-anchor-id="ane-编译">5.2 ANE 编译</h3>
+<p>第 ③ 步的输入是 <code>model.mil</code> 和 <code>weight.bin</code>,输出是 <code>model.hwx</code>。4.4 的工作在这一步完成。Apple 的编译器是私有框架 ANECompiler,没有公开文档。图中的阶段来自 <a href="https://github.com/maderix/mil-hwx-compiler">mil-hwx-compiler</a> 的 README。它是第 ③ 步的开源实现,不调用 ANECompiler。</p>
+<p>和 4.4 的对应关系:分解对应算子映射,结构融合对应融合,SRAM 规划对应 L2 分配。mil-hwx-compiler 的结果来自 M4,本文没有在 H14 上运行它。</p>
+<p>4.2 和 4.3 的 TD 来自第 ① 步到第 ③ 步的输出。</p>
+</section>
+<section id="加载和执行" class="level3">
+<h3 class="anchored" data-anchor-id="加载和执行">5.3 加载和执行</h3>
+<p>第 ④ 步由系统完成:</p>
+<ol type="1">
+<li>Core ML 请求 <code>aned</code> 加载模型。<code>aned</code> 是 ANE 的系统守护进程。</li>
+<li><code>aned</code> 在缓存(<code>/Library/Caches/com.apple.aned</code>)中查找 <code>model.hwx</code>。如果缓存中没有,<code>aned</code> 请求编译服务执行第 ③ 步,把 <code>model.hwx</code> 存放在缓存中。</li>
+<li><code>aned</code> 把 <code>model.hwx</code> 交给内核驱动,内核驱动创建程序。</li>
+<li>每次推理时,应用用 IOSurface 提供输入和输出,CPU 把整个程序提交一次(见第 3 节)。</li>
+</ol>
+<p>模型中 ANE 不支持的算子由 Core ML 放到 CPU 或 GPU 上执行。</p>
+<p>步骤 1 到 3 来自 <code>aned</code> 的静态分析和 mil-hwx-compiler 的文档,没有动态跟踪。</p>
+<hr>
+</section>
+</section>
+<section id="参考" class="level2">
+<h2 class="anchored" data-anchor-id="参考">参考</h2>
+<ul>
+<li>maderix,<a href="https://maderix.substack.com/p/inside-the-m4-apple-neural-engine">Inside the M4 Apple Neural Engine</a></li>
+<li><a href="https://github.com/maderix/mil-hwx-compiler">maderix/mil-hwx-compiler</a></li>
+<li><a href="https://github.com/maderix/ANE">maderix/ANE</a></li>
+<li><a href="https://github.com/apple/coremltools">apple/coremltools</a></li>
+<li><a href="https://github.com/eiln/ane">eiln/ane</a></li>
+<li><a href="https://github.com/freedomtan/coreml_to_ane_hwx">freedomtan/coreml_to_ane_hwx</a></li>
+<li><a href="https://github.com/tinygrad/tinygrad">tinygrad/tinygrad</a></li>
+<li><a href="https://github.com/apple-oss-distributions/xnu">apple-oss-distributions/xnu</a></li>
+<li>Apple,<a href="https://patents.google.com/patent/US12229657B2/en">US12229657B2: Multi-mode planar engine for neural processor</a></li>
+</ul>
+
+
+</section>
+
+
+<div id="quarto-appendix" class="default"><section id="footnotes" class="footnotes footnotes-end-of-document"><h2 class="anchored quarto-appendix-heading">Footnotes</h2>
+
+<ol>
+<li id="fn1"><p>程序:DRAM 中顺序存放的 TD。↩︎</p></li>
+<li id="fn2"><p>任务管理器:读 TD、写配置寄存器的单元。名称来自专利。↩︎</p></li>
+<li id="fn3"><p>TD(Task Descriptor,任务描述符):ANE 的一条指令。一条 TD 配置一个任务:一层,或一层的一块。↩︎</p></li>
+<li id="fn4"><p>header:TD 的头部。内容是 TD 的编号(tid)和依赖(DTID)。↩︎</p></li>
+<li id="fn5"><p>DTID:一个 tid。有 DTID 的 TD 依赖这个 tid 对应的 TD。↩︎</p></li>
+<li id="fn6"><p>packet:TD 中的一组寄存器写操作。↩︎</p></li>
+<li id="fn7"><p>配置地址空间:ANE 片上的配置寄存器,地址是 0x0000–0x1a18,共 186 个字。一个字是 32 位。↩︎</p></li>
+<li id="fn8"><p>块:配置地址空间中的一段,配置一个硬件单元。共 7 个块:Common、L2、PE、NE、TileDMA-Src、TileDMA-Dst、KernelDMA。↩︎</p></li>
+<li id="fn9"><p>TileDMA-Src、TileDMA-Dst:搬运特征图的单元。Src 的方向是 DRAM → L2,Dst 的方向是 L2 → DRAM。↩︎</p></li>
+<li id="fn10"><p>L2:片上 SRAM,存放 NE 和 PE 的输入和结果。↩︎</p></li>
+<li id="fn11"><p>KernelDMA:搬运权重(kernel)的单元,方向是 DRAM → NE。↩︎</p></li>
+<li id="fn12"><p>NE(Neural Engine):计算单元,做卷积。↩︎</p></li>
+<li id="fn13"><p>PE(Planar Engine):计算单元,做逐元素运算、池化、归约。↩︎</p></li>
+</ol>
+</section></div> ]]></description>
+  <category>体系结构</category>
+  <guid>https://zhen8838.github.io/posts/apple-ane-isa.html</guid>
+  <pubDate>Wed, 18 Nov 2026 16:00:00 GMT</pubDate>
+</item>
 <item>
   <title>从数据交接理解 GPU 内存一致性</title>
   <link>https://zhen8838.github.io/posts/ptx-memory-consistency.html</link>
@@ -43673,335 +44426,6 @@ font-style: inherit;">;</span></span></code></pre></div></div>
   <category>运筹学</category>
   <guid>https://zhen8838.github.io/posts/ampl-learn.html</guid>
   <pubDate>Fri, 14 Jun 2024 06:46:02 GMT</pubDate>
-</item>
-<item>
-  <title>Constraints Solver Internals</title>
-  <link>https://zhen8838.github.io/posts/constraints-solver-internals.html</link>
-  <description><![CDATA[ 
-
-
-
-
-<!-- 添加介绍 -->
-<p>关于ortools中<code>Constraints Solver</code>的内部逻辑.</p>
-<!--more-->
-<p>首先是数据结构:</p>
-<pre class="plantuml"><code>@startuml
-
-class Decision {
-  &lt;color:green&gt; 表示在搜索树中的一个选择点, Apply向右, Refute向左. &lt;/color&gt;
-  + void {abstract} Apply(Solver* s)&lt;color:green&gt; // 决策执行时调用 &lt;/color&gt;
-  + void {abstract} Refute(Solver* s) &lt;color:green&gt; // 回溯后调用 &lt;/color&gt;
-  + void {abstract} Accept(DecisionVisitor* visitor)
-}
-
-class Solver {
-  + DefaultSolverParameters() ConstraintSolverParameters
-  + AddConstraint(Constraint*)
-  + Solve(DecisionBuilder*, vector&lt;SearchMonitor*&gt;)
-}
-
-class DecisionBuilder {
-  &lt;color:green&gt; 构造搜索树 &lt;/color&gt;
-  + Decision* Next(Solver*)  &lt;color:green&gt; 返回下一步决策, 如果为空则结束. &lt;/color&gt;
-  + void AppendMonitors(Solver*, vector&lt;SearchMonitor*&gt;*) &lt;color:green&gt; 搜索开始前添加monitor. &lt;/color&gt;
-  + void Accept(ModelVisitor*)
-}
-
-class RestoreAssignment {
-  &lt;color:green&gt; 只执行一次, 将Assignment全部恢复到Var &lt;/color&gt;
-}
-
-DecisionBuilder &lt;|-- RestoreAssignment
-
-class StoreAssignment {
-  &lt;color:green&gt; 只执行一次, 将Var当前值存储到Assignment &lt;/color&gt;
-}
-
-DecisionBuilder &lt;|-- StoreAssignment
-
-DecisionBuilder *--- Decision
-
-class Demon {
-  &lt;color:green&gt; 传播队列的基础元素, 负责在变量值域中传播变量的约束以及删除不满足约束的值 &lt;/color&gt;
-  &lt;color:green&gt; 主要思想是附加到变量上监听变量的修改. &lt;/color&gt;
-  + void {abstract} Run(Solver* s) &lt;color:green&gt; //  &lt;/color&gt;
-  + DemonPriority {abstract} priority() &lt;color:green&gt; // 执行的优先级 &lt;/color&gt;
-  + void inhibit(Solver* s) &lt;color:green&gt; // 在当前位置抑制demon &lt;/color&gt;
-  + void desinhibit(Solver* s) &lt;color:green&gt; // 解除之前的抑制 &lt;/color&gt;
-}
-
-class PropagationBaseObject {
-  + Solver* solver() 
-  + void FreezeQueue()
-  + void UnfreezeQueue()
-  + void EnqueueDelayedDemon(Demon* const d)
-  + void EnqueueVar(Demon* const d)
-  + void ExecuteAll(const SimpleRevFIFO&lt;Demon*&gt;&amp; demons)
-  + void EnqueueAll(const SimpleRevFIFO&lt;Demon*&gt;&amp; demons)
-}
-
-abstract class Constraint {
-  &lt;color:green&gt; 建模约束 &lt;/color&gt;
-  + void {abstract} Post() &lt;color:green&gt; // 在solve过程中将demon附加到var上. &lt;/color&gt;
-  + void {abstract} InitialPropagate() &lt;color:green&gt; // 初始化传播, 在Post之后调用 &lt;/color&gt;
-  void PostAndPropagate() &lt;color:green&gt; // 在root节点是同时做两件事 &lt;/color&gt;
-  + void {abstract} Accept(ModelVisitor* visitor)
-  bool IsCastConstraint() &lt;color:green&gt; // 是否是cast到integer &lt;/color&gt;
-  + IntVar*{abstract} Var(); &lt;color:green&gt; // 返回代表约束满足的bool var, 如果为Null表示不支持 &lt;/color&gt;
-} 
-
-PropagationBaseObject &lt;|-- Constraint
-
-class CastConstraint {
-  &lt;color:green&gt; 特殊的约束 &lt;/color&gt;
-  + IntVar* target_var() 
-}
-
-Constraint &lt;|-- CastConstraint
-
-class IntExpr {
-  &lt;color:green&gt; 整数表达式, 建模的基础, 可以进行如下操作 &lt;/color&gt;
-  &lt;color:green&gt;  1. 查询边界值 &lt;/color&gt;
-  &lt;color:green&gt;  2. 设定边界值 &lt;/color&gt;
-  &lt;color:green&gt;  3. 监听边界值改变 &lt;/color&gt;
-  &lt;color:green&gt;  4. 构造对应var &lt;/color&gt;
-  + int64_t  {abstract} Min();
-  + void  {abstract} SetMin(int64_t m);
-  + int64_t  {abstract} Max();
-  + void  {abstract} SetMax(int64_t m);
-  + void  {abstract} Range(int64_t* l, int64_t* u);
-  + void  {abstract} SetRange(int64_t l, int64_t u);
-  + void  {abstract} SetValue(int64_t v);
-  + bool  {abstract} Bound();
-  + bool  {abstract} IsVar();
-  + IntVar* {abstract}  Var();
-  + void  {abstract} WhenRange(Demon* d);
-}
-
-PropagationBaseObject &lt;|-- IntExpr
-
-class IntVar {
-  &lt;color:green&gt; Var也是表达式 &lt;/color&gt;
-  + int64_t {abstract} Value()
-  + void {abstract} RemoveValue(int64_t v)
-  + void {abstract} RemoveInterval(int64_t l, int64_t u)
-  + void {abstract} RemoveValues(const std::vector&lt;int64_t&gt;&amp; values);
-  + void {abstract} SetValues(const std::vector&lt;int64_t&gt;&amp; values);
-  + void {abstract} WhenBound(Demon* d)
-  + void WhenBound(Solver::Closure closure)
-  + void WhenBound(Solver::Action action)
-  + void {abstract} WhenDomain(Demon* d)
-  + void WhenDomain(Solver::Closure closure)
-  + void WhenDomain(Solver::Action action)
-  + uint64_t {abstract} Size()
-  + bool {abstract} Contains(int64_t v)
-  + IntVarIterator*{abstract}  MakeHoleIterator(bool reversible)
-  + IntVarIterator*{abstract}  MakeDomainIterator(bool reversible)
-  + int64_t {abstract} OldMin()
-  + int64_t {abstract} OldMax()
-  + int {abstract} VarType() const;
-  + IntVar* {abstract} IsEqual(int64_t constant)
-  + IntVar* {abstract} IsDifferent(int64_t constant)
-  + IntVar* {abstract} IsGreaterOrEqual(int64_t constant)
-  + IntVar* {abstract} IsLessOrEqual(int64_t constant)
-  + int index()
-}
-
-IntExpr &lt;|-- IntVar
-
-
-abstract class SearchMonitor {
-  + void {abstract} EnterSearch()
-  + void {abstract} RestartSearch()
-  + void {abstract} ExitSearch()
-  + void {abstract} BeginNextDecision(DecisionBuilder* b)
-  + void {abstract} EndNextDecision(DecisionBuilder* b, Decision* d)
-  + void {abstract} ApplyDecision(Decision* d)
-  + void {abstract} RefuteDecision(Decision* d)
-  + void {abstract} AfterDecision(Decision* d, bool apply)
-  + void {abstract} BeginFail()
-  + void {abstract} EndFail()
-  + void {abstract} BeginInitialPropagation()
-  + void {abstract} EndInitialPropagation()
-  + bool {abstract} AcceptSolution()
-  + bool {abstract} AtSolution()
-  + void {abstract} NoMoreSolutions()
-  + bool {abstract} LocalOptimum()
-  + bool {abstract} AcceptDelta(Assignment* delta, Assignment* deltadelta)
-  + void {abstract} AcceptNeighbor()
-  + void {abstract} AcceptUncheckedNeighbor()
-  + bool {abstract} IsUncheckedSolutionLimitReached(
-  + void {abstract} PeriodicCheck()
-  + int {abstract} ProgressPercent()
-  + void {abstract} Accept(ModelVisitor* visitor)
-  + void {abstract} Install() &lt;b&gt;&lt;color:green&gt; // 注册自身&lt;/color&gt; 
-}
-
-class SolutionCollector {
-  &lt;color:green&gt; 收集添加过的变量 &lt;/color&gt;
-  + void Add(IntVar* var)
-  + void Add(const std::vector&lt;IntVar*&gt;&amp; vars)
-  + void Add(IntervalVar* var)
-  + void Add(const std::vector&lt;IntervalVar*&gt;&amp; vars)
-  + void Add(SequenceVar* var)
-  + void Add(const std::vector&lt;SequenceVar*&gt;&amp; vars)
-  + void AddObjective(IntVar* objective)
-  + void AddObjectives(const std::vector&lt;IntVar*&gt;&amp; objectives)
-}
-
-SearchMonitor &lt;|-- SolutionCollector
-
-class ObjectiveMonitor {
-  &lt;color:green&gt; 优化目标监控基类 &lt;/color&gt;
-  + IntVar* ObjectiveVar(int index)
-  + IntVar* MinimizationVar(int index)
-  + int64_t Step(int index)
-  + bool Maximize(int index)
-  + int64_t BestValue(int index)
-  + int Size()
-  + void EnterSearch()
-  + bool AtSolution()
-  + bool AcceptDelta(Assignment* delta, Assignment* deltadelta)
-  + void Accept(ModelVisitor* visitor)
-}
-
-SearchMonitor &lt;|-- ObjectiveMonitor
-
-class OptimizeVar {
-  &lt;color:green&gt; 概括目标, 指定方向, 变量, 步幅即可 &lt;/color&gt;
-  + int64_t best()
-  + IntVar* var()
-  + void BeginNextDecision(DecisionBuilder* db)
-  + void RefuteDecision(Decision* d)
-  + bool AtSolution()
-  + bool AcceptSolution()
-  + void ApplyBound()
-}
-
-ObjectiveMonitor &lt;|-- OptimizeVar
-
-
-class SearchLimit {
-  + void EnterSearch() 
-  + void BeginNextDecision(DecisionBuilder* b) 
-  + void PeriodicCheck() 
-  + void RefuteDecision(Decision* d) 
-  + void Install()
-  + bool crossed() &lt;b&gt;&lt;color:green&gt; // 检查limit是否已经失败 &lt;/color&gt;  
-  + bool Check() &lt;b&gt;&lt;color:green&gt; // 检查limit状态 &lt;/color&gt;  
-  + bool {abstract} CheckWithOffset(absl::Duration offset) &lt;b&gt;&lt;color:green&gt; // 自定义检查方法 &lt;/color&gt;  
-}
-
-SearchMonitor &lt;|-- SearchLimit
-
-class RegularLimit {
-  &lt;color:green&gt; 基于搜索时间/探索分支数/失败错误来限制搜索 &lt;/color&gt;
-  + bool CheckWithOffset(absl::Duration offset)
-} 
-
-class ImprovementSearchLimit {
-  &lt;color:green&gt;基于目标变量的改善率或者词典序进行限制.&lt;/color&gt;
-  + int64_t wall_time()
-  + int64_t branches()
-  + int64_t failures()
-  + int64_t solutions()
-  + bool CheckWithOffset(absl::Duration offset)
-} 
-
-SearchLimit &lt;|-- RegularLimit
-SearchLimit &lt;|-- ImprovementSearchLimit
-
-
-class IntervalVar {
-  &lt;color:green&gt;包含duration的var.&lt;/color&gt;
-}
-
-PropagationBaseObject &lt;|-- IntervalVar
-
-class SequenceVar {
-  &lt;color:green&gt;包含多个IntervalVar.&lt;/color&gt;
-  + IntervalVar* Interval(int index)
-}
-
-PropagationBaseObject &lt;|-- SequenceVar
-
-class AssignmentElement {
-
-}
-class IntVarElement {
-
-}
-
-AssignmentElement &lt;|-- IntVarElement
-
-class IntervalVarElement {
-
-}
-
-AssignmentElement &lt;|-- IntervalVarElement
-
-class SequenceVarElement {
-
-}
-
-AssignmentElement &lt;|-- SequenceVarElement
-
-class Assignment {
-  &lt;color:green&gt; 包含domain到var的映射, 用于展示solution.&lt;/color&gt;
-  + void Clear();
-  + bool Empty()
-  + int Size()
-  + int NumIntVars()
-  + int NumIntervalVars()
-  + int NumSequenceVars()
-  + void Store()
-  + void Restore()
-  + bool Load(const std::string&amp; filename)
-}
-
-PropagationBaseObject &lt;|-- Assignment
-
-class Pack {
-  &lt;color:green&gt; 多个var映射到bin的约束. &lt;/color&gt;
-  + void AddWeightedSumLessOrEqualConstantDimension(const std::vector&lt;int64_t&gt;&amp; weights, const std::vector&lt;int64_t&gt;&amp; bounds);
-  + void AddWeightedSumLessOrEqualConstantDimension(Solver::IndexEvaluator1 weights, const std::vector&lt;int64_t&gt;&amp; bounds);
-  + void AddWeightedSumLessOrEqualConstantDimension(Solver::IndexEvaluator2 weights, const std::vector&lt;int64_t&gt;&amp; bounds);
-  + void AddWeightedSumEqualVarDimension(const std::vector&lt;int64_t&gt;&amp; weights,const std::vector&lt;IntVar*&gt;&amp; loads);
-  + void AddWeightedSumEqualVarDimension(Solver::IndexEvaluator2 weights,const std::vector&lt;IntVar*&gt;&amp; loads);
-  + void AddSumVariableWeightsLessOrEqualConstantDimension(const std::vector&lt;IntVar*&gt;&amp; usage, const std::vector&lt;int64_t&gt;&amp; capacity);
-  + void AddWeightedSumOfAssignedDimension(const std::vector&lt;int64_t&gt;&amp; weights,IntVar* cost_var);
-  + void AddCountUsedBinDimension(IntVar* count_var);
-  + void AddCountAssignedItemsDimension(IntVar* count_var);
-}
-
-Constraint &lt;|-- Pack
-
-
-Constraint &lt;|-- DisjunctiveConstraint
-
-
-@enduml</code></pre>
-<p>其中整个优化模型由IntExpr和Constraints构成. 构建好约束后通过 DecisionBuilder来生成Decision, 每个Decision会给变量进行分配值, 分配好值</p>
-<pre class="plantuml"><code>@startuml
-NextSolution -&gt; BeginInitialPropagation
-NextSolution &lt;- BeginInitialPropagation
-NextSolution -&gt; Next : DecisionBuilder.Next() 
-Next -&gt; Apply : Decision.Apply() 
-Apply -&gt; SetValue  : Decision.Apply() 
-SetValue -&gt; EnqueueVar : EnqueueVar the Demon Handler
-EnqueueVar -&gt; Queue.Process : when freeze_level_ == 0
-Queue.Process -&gt; Demon.Run : pop the enqueued demons and run it
-Demon.Run -&gt; Var.ExecuteAll : exec the the constraints
-@enduml</code></pre>
-<!-- DecisionBuilder -> Decision -->
-
-
-
- ]]></description>
-  <category>运筹学</category>
-  <guid>https://zhen8838.github.io/posts/constraints-solver-internals.html</guid>
-  <pubDate>Wed, 08 May 2024 03:24:39 GMT</pubDate>
 </item>
 </channel>
 </rss>
